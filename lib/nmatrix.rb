@@ -43,7 +43,7 @@ class NMatrix
   end
 
   # TODO: Make this actually pretty.
-  def pretty_print
+  def pretty_print(q=nil)
     raise(NotImplementedError, "can only print rank 2 matrices") unless rank == 2
     (0...shape[0]).each do |i|
       arr = []
