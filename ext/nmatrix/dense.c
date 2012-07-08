@@ -96,7 +96,7 @@ void dense_slice_with_copping(DENSE_STORAGE *dest, DENSE_STORAGE *src,
 
   size_t i;
 
-  if (src->rank - n > 2) {
+  if (src->rank - n > 1) {
     for (i=0; i < lens[n]; i++) {
     dense_slice_with_copping(dest, src, lens,
         psrc + src->strides[n]*i, pdest + dest->strides[n]*i,
