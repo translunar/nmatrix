@@ -1337,6 +1337,13 @@ VALUE nm_mref(int argc, VALUE* argv, VALUE self) {
   return nm_xslice(argc, argv, RefFuncs[NM_STYPE(self)], nm_delete, self);
 }
 
+/* Check matrix for refernce */
+VALUE nm_is_ref(VALUE self) {
+  if (NM_STYPE(self) == S_DENSE) // While only for dense
+    return ((DENSE_STORAGE*)NM_STORAGE(self))->src == NM_STORAGE(self)? Qfalse : Qtrue;
+
+  return Qfalse;
+}
 
 /*
  * Modify the contents of an NMatrix in the given cell
@@ -1901,6 +1908,7 @@ static VALUE nm_hermitian(VALUE self) {
 
 
 
+
 void Init_nmatrix() {
     /* Require Complex class */
     //rb_require("complex");
@@ -1931,6 +1939,8 @@ void Init_nmatrix() {
     rb_define_method(cNMatrix, "[]", nm_mref, -1);
     rb_define_method(cNMatrix, "slice", nm_mget, -1);
     rb_define_method(cNMatrix, "[]=", nm_mset, -1);
+    rb_define_method(cNMatrix, "is_ref?", nm_is_ref, 0);
+
     rb_define_method(cNMatrix, "rank", nm_rank, 0);
     rb_define_alias(cNMatrix, "dim", "rank");
     rb_define_method(cNMatrix, "shape", nm_shape, 0);

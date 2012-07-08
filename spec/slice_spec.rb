@@ -5,6 +5,16 @@ describe "Slice operation" do
     @m = NMatrix.new(:dense, [3,3], (0..9).to_a, :int32)
   end
 
+  it "should have #is_ref? method" do
+    a = @m[0..1, 0..1]
+    b = @m.slice(0..1, 0..1)
+
+
+    @m.is_ref?.should be_false
+    a.is_ref?.should be_true
+    b.is_ref?.should be_false
+  end
+
   context "with copping" do
     it 'should return an NMatrix' do
       n = @m.slice(0..1,0..1)
