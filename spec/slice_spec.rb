@@ -15,6 +15,11 @@ describe "Slice operation" do
     b.is_ref?.should be_false
   end
 
+  it "reference should compare with non-refernce" do
+    #TODO
+    @m.slice(1..2,0..1).should == @m[1..2, 0..1]
+  end
+
   context "with copping" do
     it 'should return an NMatrix' do
       n = @m.slice(0..1,0..1)
@@ -25,9 +30,9 @@ describe "Slice operation" do
       n = @m.slice(1..2,0..1)
       n.shape.should eql([2,2])
 
-      n[0,0].should == @m[1,0]
-      n[0,0] = -9
-      @m[1,0].should eql(3)
+      n[1,1].should == @m[2,1]
+      n[1,1] = -9
+      @m[2,1].should eql(7)
     end
 
     it 'should return a 1x2 matrix with refs to self elements' do
