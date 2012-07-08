@@ -170,6 +170,10 @@ void dense_storage_set(DENSE_STORAGE* s, SLICE* slice, void* val) {
   memcpy((char*)(s->elements) + dense_storage_pos(s, slice->coords) * nm_sizeof[s->dtype], val, nm_sizeof[s->dtype]); 
 }
 
+VALUE dense_is_ref(DENSE_STORAGE* s)
+{
+  return s->src == s ? Qfalse : Qtrue;
+}
 
 DENSE_STORAGE* copy_dense_storage(DENSE_STORAGE* rhs) {
   DENSE_STORAGE* lhs;

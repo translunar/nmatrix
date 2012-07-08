@@ -812,4 +812,9 @@ void* yale_storage_ref(YALE_STORAGE* s, SLICE* slice) {
   return YALE_A(s, nm_sizeof[s->dtype], s->shape[0]);
 }
 
+VALUE yale_is_ref(YALE_STORAGE* s)
+{
+  return Qfalse;
+}
+
 #endif

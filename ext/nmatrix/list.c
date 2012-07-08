@@ -146,6 +146,10 @@ void* list_storage_ref(LIST_STORAGE* s, SLICE* slice) {
   else   return s->default_val;
 }
 
+VALUE list_is_ref(LIST_STORAGE* s)
+{
+  return Qfalse;
+}
 
 /* Returns the value pointer (not the node) for some key. Note that it doesn't free the memory
  * for the value stored in the node -- that pointer gets returned! Only the node is destroyed.

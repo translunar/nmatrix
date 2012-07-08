@@ -412,6 +412,12 @@ nm_stype_slice_t RefFuncs = {
   yale_storage_ref
 };
 
+nm_stype_check_ref_t IsRefFuncs = {
+  dense_is_ref,
+  list_is_ref,
+  yale_is_ref
+};
+
 
 VALUE nm_dense_set(STORAGE* s, SLICE* slice, VALUE val) {
   void* v = ALLOCA_N(char, nm_sizeof[s->dtype]);
@@ -1339,10 +1345,7 @@ VALUE nm_mref(int argc, VALUE* argv, VALUE self) {
 
 /* Check matrix for refernce */
 VALUE nm_is_ref(VALUE self) {
-  if (NM_STYPE(self) == S_DENSE) // While only for dense
-    return ((DENSE_STORAGE*)NM_STORAGE(self))->src == NM_STORAGE(self)? Qfalse : Qtrue;
-
-  return Qfalse;
+  return IsRefFuncs[NM_STYPE(self)](NM_STORAGE(self));
 }
 
 /*
