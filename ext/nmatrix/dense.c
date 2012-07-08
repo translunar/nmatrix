@@ -65,33 +65,48 @@ bool dense_is_symmetric(const DENSE_STORAGE* mat, int lda, bool hermitian) {
 }
 
 
-size_t dense_storage_pos(DENSE_STORAGE* s, SLICE* slice) {
-  size_t k, l;
-  size_t inner, outer = 0;
-  for (k = 0; k < s->rank; ++k) {
-    inner = slice->coords[k] + s->offset[k];
-    for (l = k+1; l < s->rank; ++l) {
-      inner *= ((DENSE_STORAGE*)s->src)->shape[l];
-    }
-    outer += inner;
-  }
-  return outer;
+size_t dense_storage_pos(const DENSE_STORAGE* s, const size_t* coords) {
+  size_t i;
+  size_t pos = 0;
+
+  for (i = 0; i < s->rank; i++)
+    pos += (coords[i] + s->offset[i]) * (s->strides[i]);
+
+  return pos;
 }
 
+size_t* dense_calc_strides(size_t* shape, size_t rank)
+{
+  size_t i, j;
+  size_t* strides = calloc(sizeof(*shape), rank);
 
+  if (!strides)
+    rb_raise(rb_eNoMemError, "Memory error");
 
+  for (i = 0; i < rank; i++) {
+    strides[i] = 1;
+    for (j = i + 1; j < rank; j++) {
+      strides[i] *= shape[j];
+    }
+  }
+  
+  return strides;
+}
+
+/* Get slice or one elements */
 void* dense_storage_get(DENSE_STORAGE* s, SLICE* slice) {
   DENSE_STORAGE *ns;
 
   if (slice->is_one_el)
-    return (char*)(s->elements) + dense_storage_pos(s, slice) * nm_sizeof[s->dtype];
-  else {
+    return (char*)(s->elements) + dense_storage_pos(s, slice->coords) * nm_sizeof[s->dtype];
+  else { // Make references  
     ns = ALLOC( DENSE_STORAGE );
 
     ns->rank       = s->rank;
     ns->shape      = slice->lens;
     ns->dtype      = s->dtype;
     ns->offset     = slice->coords;
+    ns->strides    = s->strides; 
     ns->elements   = s->elements;
     
     s->count++;
@@ -104,8 +119,7 @@ void* dense_storage_get(DENSE_STORAGE* s, SLICE* slice) {
 
 /* Does not free passed-in value! Different from list_storage_insert. */
 void dense_storage_set(DENSE_STORAGE* s, SLICE* slice, void* val) {
-  memcpy((char*)(s->elements) + dense_storage_pos(s, slice) * nm_sizeof[s->dtype], val, nm_sizeof[s->dtype]);
-}
+  memcpy((char*)(s->elements) + dense_storage_pos(s, slice->coords) * nm_sizeof[s->dtype], val, nm_sizeof[s->dtype]); }
 
 
 DENSE_STORAGE* copy_dense_storage(DENSE_STORAGE* rhs) {
@@ -121,7 +135,7 @@ DENSE_STORAGE* copy_dense_storage(DENSE_STORAGE* rhs) {
   lhs = create_dense_storage(rhs->dtype, shape, rhs->rank, NULL, 0);
 
   if (lhs && count) // ensure that allocation worked before copying
-    memcpy(lhs->elements, rhs->elements, nm_sizeof[rhs->dtype] * count);
+    memcpy(lhs->elements, rhs->elements, nm_sizeof[rhs->dtype] * count); 
 
   return lhs;
 }
@@ -147,8 +161,6 @@ DENSE_STORAGE* cast_copy_dense_storage(DENSE_STORAGE* rhs, int8_t new_dtype) {
 
   return lhs;
 }
-
-
 
 // Copy a set of default values into dense
 static inline void cast_copy_dense_list_default(void* lhs, void* default_val, int8_t l_dtype, int8_t r_dtype, size_t* pos, const size_t* shape, size_t rank, size_t max_elements, size_t recursions) {
@@ -275,6 +287,8 @@ DENSE_STORAGE* scast_copy_dense_yale(const YALE_STORAGE* rhs, int8_t l_dtype) {
 }
 
 
+
+
 // Note that elements and elements_length are for initial value(s) passed in. If they are the correct length, they will
 // be used directly. If not, they will be concatenated over and over again into a new elements array. If elements is NULL,
 // the new elements array will not be initialized.
@@ -289,6 +303,7 @@ DENSE_STORAGE* create_dense_storage(int8_t dtype, size_t* shape, size_t rank, vo
   s->shape      = shape;
   s->dtype      = dtype;
   s->offset     = calloc(sizeof(size_t),rank);
+  s->strides    = dense_calc_strides(shape, rank);
   s->count      = 1;
   s->src        = s;
 
@@ -316,17 +331,18 @@ DENSE_STORAGE* create_dense_storage(int8_t dtype, size_t* shape, size_t rank, vo
   return s;
 }
 
-
 void delete_dense_storage(DENSE_STORAGE* s) {
   if (s) { // sometimes Ruby passes in NULL storage for some reason (probably on copy construction failure)
     if(s->count <= 1) {
       free(s->shape);
       free(s->offset);
+      free(s->strides);
       free(s->elements);
       free(s);
     }
   }
 }
+
 void delete_dense_storage_ref(DENSE_STORAGE* s) {
   if (s) { // sometimes Ruby passes in NULL storage for some reason (probably on copy construction failure)
     ((DENSE_STORAGE*)s->src)->count--;
@@ -343,7 +359,6 @@ void mark_dense_storage(void* m) {
 
   if (m) {
     storage = (DENSE_STORAGE*)(((NMATRIX*)m)->storage);
-    //fprintf(stderr, "mark_dense_storage\n");
     if (storage && storage->dtype == NM_ROBJ)
       for (i = 0; i < count_dense_storage_elements(storage); ++i)
         rb_gc_mark(*((VALUE*)((char*)(storage->elements) + i*nm_sizeof[NM_ROBJ])));

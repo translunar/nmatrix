@@ -1928,7 +1928,7 @@ void Init_nmatrix() {
     */
     rb_define_method(cNMatrix, "eql?", nm_eqeq, 1);
     rb_define_method(cNMatrix, "dot", nm_multiply, 1);
-    //rb_define_alias(cNMatrix, "equal?", "eql?");
+    rb_define_alias(cNMatrix, "==", "eql?");
 
     rb_define_method(cNMatrix, "symmetric?", nm_symmetric, 0);
     rb_define_method(cNMatrix, "hermitian?", nm_hermitian, 0);

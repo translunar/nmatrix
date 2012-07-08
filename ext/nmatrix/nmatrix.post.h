@@ -77,7 +77,7 @@ size_t          count_dense_storage_elements(const DENSE_STORAGE* s);
 bool            dense_storage_eqeq(const DENSE_STORAGE*, const DENSE_STORAGE*);
 bool            dense_is_symmetric(const DENSE_STORAGE*, int, bool);
 
-size_t          dense_storage_pos(DENSE_STORAGE* s, SLICE* slice);
+size_t          dense_storage_pos(const DENSE_STORAGE* s, const size_t* coords);
 void*           dense_storage_get(DENSE_STORAGE* s, SLICE* slice);
 void            dense_storage_set(DENSE_STORAGE* s, SLICE* slice, void* val);
 

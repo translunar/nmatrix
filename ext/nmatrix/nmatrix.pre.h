@@ -243,6 +243,7 @@ typedef struct dense_s {
   size_t    rank;
   size_t*   shape;
   size_t*   offset;
+  size_t*   strides;
   int       count;
   void*     src;
   void*     elements;
