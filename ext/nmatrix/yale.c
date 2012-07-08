@@ -783,6 +783,10 @@ char yale_storage_set(YALE_STORAGE* s, SLICE* slice, void* v) {
 
 }
 
+void* yale_storage_get(YALE_STORAGE* s, SLICE* slice) {
+  /* TODO */
+  rb_raise(rb_eNotImpError, "This type slicing not supported yet");
+}
 
 void* yale_storage_ref(YALE_STORAGE* s, SLICE* slice) {
   size_t* coords = slice->coords;

@@ -93,8 +93,13 @@ size_t* dense_calc_strides(size_t* shape, size_t rank)
   return strides;
 }
 
-/* Get slice or one elements */
+/* Get slice or one elements with copping */
 void* dense_storage_get(DENSE_STORAGE* s, SLICE* slice) {
+  rb_raise(rb_eNotImpError, "This type slicing not supported yet");
+}
+
+/* Get slice or one elements be refs*/
+void* dense_storage_ref(DENSE_STORAGE* s, SLICE* slice) {
   DENSE_STORAGE *ns;
 
   if (slice->is_one_el)

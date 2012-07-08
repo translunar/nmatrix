@@ -122,10 +122,14 @@ static NODE* list_find(LIST* list, size_t key) {
   return NULL;
 }
 
+void* list_storage_get(LIST_STORAGE* s, SLICE* slice) {
+  /* TODO */
+  rb_raise(rb_eNotImpError, "This type slicing not supported yet");
+}
 
 
 /* Get the contents of some set of coordinates. Note: Does not make a copy! Don't free! */
-void* list_storage_get(LIST_STORAGE* s, SLICE* slice) {
+void* list_storage_ref(LIST_STORAGE* s, SLICE* slice) {
   //LIST_STORAGE* s = (LIST_STORAGE*)(t);
   size_t r;
   NODE*  n;
