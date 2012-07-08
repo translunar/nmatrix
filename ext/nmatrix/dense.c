@@ -75,8 +75,7 @@ size_t dense_storage_pos(const DENSE_STORAGE* s, const size_t* coords) {
   return pos;
 }
 
-size_t* dense_calc_strides(size_t* shape, size_t rank)
-{
+size_t* dense_calc_strides(size_t* shape, size_t rank) {
   size_t i, j;
   size_t* strides = calloc(sizeof(*shape), rank);
 
@@ -93,12 +92,56 @@ size_t* dense_calc_strides(size_t* shape, size_t rank)
   return strides;
 }
 
-/* Get slice or one elements with copping */
-void* dense_storage_get(DENSE_STORAGE* s, SLICE* slice) {
-  rb_raise(rb_eNotImpError, "This type slicing not supported yet");
+/* The recursive slicing for N-dimension matrix */
+void dense_recur_slice(DENSE_STORAGE *src, DENSE_STORAGE *dest,
+    size_t* lens,
+    size_t psrc, size_t pdest,
+    size_t n) {
+
+  size_t i;
+
+  if (src->rank - n > 2) {
+    for (i=0; i < lens[n]; i++) {
+    dense_recur_slice(src, dest, lens,
+        psrc + src->strides[n]*i, pdest + dest->strides[n]*i,
+        n + 1);
+    }
+  }
+  else {
+    memcpy((char*)dest->elements + pdest*nm_sizeof[dest->dtype], 
+        (char*)src->elements + psrc*nm_sizeof[src->dtype], 
+        src->shape[n]*nm_sizeof[dest->dtype]);
+  }
+
 }
 
-/* Get slice or one elements be refs*/
+/* Get slice or one elements with copping */
+void* dense_storage_get(DENSE_STORAGE* s, SLICE* slice) {
+   DENSE_STORAGE *ns;
+   size_t count;
+
+  if (slice->is_one_el)
+    return (char*)(s->elements) + dense_storage_pos(s, slice->coords) * nm_sizeof[s->dtype];
+  else { // Make references  
+    ns = ALLOC( DENSE_STORAGE );
+
+    ns->rank       = s->rank;
+    ns->shape      = slice->lens;
+    ns->dtype      = s->dtype;
+    ns->offset     = calloc(sizeof(size_t),ns->rank);
+    ns->strides    = dense_calc_strides(ns->shape, ns->rank);
+    ns->count      = 1;
+    ns->src        = NULL;
+
+    count         = count_dense_storage_elements(s);
+    ns->elements = ALLOC_N(char, nm_sizeof[ns->dtype]*count);
+
+    dense_recur_slice(s, ns, slice->lens, dense_storage_pos(s, slice->coords), 0, 0);
+    return ns;
+  }
+}
+
+/* Get slice or one elements by refs*/
 void* dense_storage_ref(DENSE_STORAGE* s, SLICE* slice) {
   DENSE_STORAGE *ns;
 
@@ -124,7 +167,8 @@ void* dense_storage_ref(DENSE_STORAGE* s, SLICE* slice) {
 
 /* Does not free passed-in value! Different from list_storage_insert. */
 void dense_storage_set(DENSE_STORAGE* s, SLICE* slice, void* val) {
-  memcpy((char*)(s->elements) + dense_storage_pos(s, slice->coords) * nm_sizeof[s->dtype], val, nm_sizeof[s->dtype]); }
+  memcpy((char*)(s->elements) + dense_storage_pos(s, slice->coords) * nm_sizeof[s->dtype], val, nm_sizeof[s->dtype]); 
+}
 
 
 DENSE_STORAGE* copy_dense_storage(DENSE_STORAGE* rhs) {

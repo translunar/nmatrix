@@ -12,13 +12,32 @@ describe "Slice operation" do
     end
 
     it 'should return a copy of 2x2 matrix to self elements' do
-      n = @m[1..2,0..1]
+      n = @m.slice(1..2,0..1)
       n.shape.should eql([2,2])
 
       n[0,0].should == @m[1,0]
       n[0,0] = -9
       @m[1,0].should eql(3)
     end
+
+    it 'should return a 1x2 matrix with refs to self elements' do
+      n = @m.slice(0,1..2)
+      n.shape.should eql([1,2])
+
+      n[0,0].should == @m[0,1]
+      n[0,0] = -9
+      @m[0,1].should eql(1)
+    end
+
+    it 'should return a 2x1 matrix with refs to self elements' do
+      n = @m.slice(0..1,1)
+      n.shape.should eql([2,1])
+
+      n[0,0].should == @m[0,1]
+      n[0,0] = -9
+      @m[0,1].should eql(1)
+    end
+
   end
 
   
@@ -45,11 +64,6 @@ describe "Slice operation" do
       n[0,0] = -9
       @m[0,1].should eql(-9)
     end
-
-    # it 'should return refirence == original' do
-    #   n = @m[0..2, 0..2]
-    #   n.should == 
-    # end
 
     it 'should return a 2x1 matrix with refs to self elements' do
       n = @m[0..1,1]
