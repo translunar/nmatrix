@@ -2,7 +2,7 @@
 typedef void     (*nm_setfunc_t[NM_TYPES][NM_TYPES])(); // copy functions
 typedef void     (*nm_incfunc_t[NM_TYPES])();           // increment functions
 typedef void*    (*nm_stype_slice_t[S_TYPES])(STORAGE*, SLICE*);        // get/ref
-typedef VALUE    (*nm_stype_check_ref_t[S_TYPES])(STORAGE*);                // is_ref?
+typedef bool      (*nm_stype_check_ref_t[S_TYPES])(const STORAGE*);                // is_ref?
 typedef VALUE    (*nm_stype_ins_t[S_TYPES])(STORAGE*, SLICE*, VALUE); // insert
 typedef STORAGE* (*nm_create_storage_t[S_TYPES])();
 typedef STORAGE* (*nm_cast_copy_storage_t[S_TYPES])();
@@ -72,7 +72,7 @@ DENSE_STORAGE*  create_dense_storage(int8_t dtype, size_t* shape, size_t rank, v
 void            delete_dense_storage_ref(DENSE_STORAGE* s);
 void            delete_dense_storage(DENSE_STORAGE* s);
 void            mark_dense_storage(void* s);
-DENSE_STORAGE*  cast_copy_dense_storage(DENSE_STORAGE* rhs, int8_t new_dtype);
+DENSE_STORAGE*  cast_copy_dense_storage(const DENSE_STORAGE* rhs, int8_t new_dtype);
 
 size_t          count_dense_storage_elements(const DENSE_STORAGE* s);
 bool            dense_storage_eqeq(const DENSE_STORAGE*, const DENSE_STORAGE*);
@@ -83,18 +83,18 @@ size_t          dense_storage_pos(const DENSE_STORAGE* s, const size_t* coords);
 void*           dense_storage_get(DENSE_STORAGE* s, SLICE* slice);
 void*           dense_storage_ref(DENSE_STORAGE* s, SLICE* slice);
 void            dense_storage_set(DENSE_STORAGE* s, SLICE* slice, void* val);
-VALUE           dense_is_ref(DENSE_STORAGE* s);
+bool            dense_is_ref(const DENSE_STORAGE* s);
 
 /* list.c */
 LIST_STORAGE*   create_list_storage(int8_t dtype, size_t* shape, size_t rank, void* init_val);
 void            delete_list_storage(LIST_STORAGE* s);
 void            mark_list_storage(void* s);
-LIST_STORAGE*   cast_copy_list_storage(LIST_STORAGE* rhs, int8_t new_dtype);
+LIST_STORAGE*   cast_copy_list_storage(const LIST_STORAGE* rhs, int8_t new_dtype);
 size_t          count_storage_max_elements(const STORAGE*);
 
 void*           list_storage_ref(LIST_STORAGE* s, SLICE* slice);
 void*           list_storage_get(LIST_STORAGE* s, SLICE* slice);
-VALUE           list_is_ref(LIST_STORAGE* s);
+bool            list_is_ref(const LIST_STORAGE* s);
 
 void*           list_storage_insert(LIST_STORAGE* s, SLICE* slice, void* val);
 void*           list_storage_remove(LIST_STORAGE* s, SLICE* slice);
@@ -107,13 +107,13 @@ YALE_STORAGE*   create_yale_storage_from_old_yale(int8_t dtype, size_t* shape, c
 void            init_yale_storage(YALE_STORAGE* s);
 void            delete_yale_storage(YALE_STORAGE* s);
 void            mark_yale_storage(void* s);
-YALE_STORAGE*   cast_copy_yale_storage(YALE_STORAGE* rhs, int8_t new_dtype);
+YALE_STORAGE*   cast_copy_yale_storage(const YALE_STORAGE* rhs, int8_t new_dtype);
 bool            yale_storage_eqeq(const YALE_STORAGE*, const YALE_STORAGE*);
 
 void*           yale_storage_get(YALE_STORAGE* s, SLICE* slice);
 void*           yale_storage_ref(YALE_STORAGE* s, SLICE* slice);
 char            yale_storage_set(YALE_STORAGE* s, SLICE* slice, void* v);
-VALUE           yale_is_ref(YALE_STORAGE* s);
+bool            yale_is_ref(const YALE_STORAGE* s);
 
 YALE_STORAGE*   create_merged_yale_storage(const YALE_STORAGE*, const YALE_STORAGE*);
 

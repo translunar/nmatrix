@@ -146,9 +146,9 @@ void* list_storage_ref(LIST_STORAGE* s, SLICE* slice) {
   else   return s->default_val;
 }
 
-VALUE list_is_ref(LIST_STORAGE* s)
+bool list_is_ref(const LIST_STORAGE* s)
 {
-  return Qfalse;
+  return false;
 }
 
 /* Returns the value pointer (not the node) for some key. Note that it doesn't free the memory
@@ -475,7 +475,7 @@ LIST_STORAGE* copy_list_storage(LIST_STORAGE* rhs) {
 }
 
 
-LIST_STORAGE* cast_copy_list_storage(LIST_STORAGE* rhs, int8_t new_dtype) {
+LIST_STORAGE* cast_copy_list_storage(const LIST_STORAGE* rhs, int8_t new_dtype) {
   LIST_STORAGE* lhs;
   size_t* shape;
   void* default_val = ALLOC_N(char, nm_sizeof[rhs->dtype]);

@@ -1345,7 +1345,7 @@ VALUE nm_mref(int argc, VALUE* argv, VALUE self) {
 
 /* Check matrix for refernce */
 VALUE nm_is_ref(VALUE self) {
-  return IsRefFuncs[NM_STYPE(self)](NM_STORAGE(self));
+  return IsRefFuncs[NM_STYPE(self)](NM_STORAGE(self)) ? Qtrue : Qfalse;
 }
 
 /*

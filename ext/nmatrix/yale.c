@@ -373,7 +373,7 @@ YALE_STORAGE* copy_yale_storage(YALE_STORAGE* rhs) {
 
 
 // copy constructor
-YALE_STORAGE* cast_copy_yale_storage(YALE_STORAGE* rhs, int8_t new_dtype) {
+YALE_STORAGE* cast_copy_yale_storage(const YALE_STORAGE* rhs, int8_t new_dtype) {
   y_size_t size;
   YALE_STORAGE* lhs;
 
@@ -812,9 +812,9 @@ void* yale_storage_ref(YALE_STORAGE* s, SLICE* slice) {
   return YALE_A(s, nm_sizeof[s->dtype], s->shape[0]);
 }
 
-VALUE yale_is_ref(YALE_STORAGE* s)
+bool yale_is_ref(const YALE_STORAGE* s)
 {
-  return Qfalse;
+  return false;
 }
 
 #endif

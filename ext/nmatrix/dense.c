@@ -43,11 +43,6 @@ size_t count_dense_storage_elements(const DENSE_STORAGE* s) {
 }
 
 
-// Do these two dense matrices of the same dtype have exactly the same contents?
-bool dense_storage_eqeq(const DENSE_STORAGE* left, const DENSE_STORAGE* right) {
-  return ElemEqEq[left->dtype][0](left->elements, right->elements, count_dense_storage_elements(left), nm_sizeof[left->dtype]);
-}
-
 // Is this dense matrix symmetric about the diagonal?
 bool dense_is_symmetric(const DENSE_STORAGE* mat, int lda, bool hermitian) {
   unsigned int i, j;
@@ -64,7 +59,7 @@ bool dense_is_symmetric(const DENSE_STORAGE* mat, int lda, bool hermitian) {
   return true;
 }
 
-
+/* Calculate element's number of dense matrix */
 size_t dense_storage_pos(const DENSE_STORAGE* s, const size_t* coords) {
   size_t i;
   size_t pos = 0;
@@ -75,6 +70,7 @@ size_t dense_storage_pos(const DENSE_STORAGE* s, const size_t* coords) {
   return pos;
 }
 
+/* Strides store offsets in straightforward array of element for each dimension. */
 size_t* dense_calc_strides(size_t* shape, size_t rank) {
   size_t i, j;
   size_t* strides = calloc(sizeof(*shape), rank);
@@ -93,7 +89,7 @@ size_t* dense_calc_strides(size_t* shape, size_t rank) {
 }
 
 /* The recursive slicing for N-dimension matrix */
-void dense_recur_slice(DENSE_STORAGE *src, DENSE_STORAGE *dest,
+void dense_slice_with_copping(DENSE_STORAGE *dest, DENSE_STORAGE *src,
     size_t* lens,
     size_t psrc, size_t pdest,
     size_t n) {
@@ -102,7 +98,7 @@ void dense_recur_slice(DENSE_STORAGE *src, DENSE_STORAGE *dest,
 
   if (src->rank - n > 2) {
     for (i=0; i < lens[n]; i++) {
-    dense_recur_slice(src, dest, lens,
+    dense_slice_with_copping(dest, src, lens,
         psrc + src->strides[n]*i, pdest + dest->strides[n]*i,
         n + 1);
     }
@@ -136,7 +132,7 @@ void* dense_storage_get(DENSE_STORAGE* s, SLICE* slice) {
     count         = count_dense_storage_elements(s);
     ns->elements = ALLOC_N(char, nm_sizeof[ns->dtype]*count);
 
-    dense_recur_slice(s, ns, slice->lens, dense_storage_pos(s, slice->coords), 0, 0);
+    dense_slice_with_copping(ns, s, slice->lens, dense_storage_pos(s, slice->coords), 0, 0);
     return ns;
   }
 }
@@ -164,18 +160,19 @@ void* dense_storage_ref(DENSE_STORAGE* s, SLICE* slice) {
   }
 }
 
-
 /* Does not free passed-in value! Different from list_storage_insert. */
 void dense_storage_set(DENSE_STORAGE* s, SLICE* slice, void* val) {
   memcpy((char*)(s->elements) + dense_storage_pos(s, slice->coords) * nm_sizeof[s->dtype], val, nm_sizeof[s->dtype]); 
 }
 
-VALUE dense_is_ref(DENSE_STORAGE* s)
-{
-  return s->src == s ? Qfalse : Qtrue;
+bool dense_is_ref(const DENSE_STORAGE* s) {
+  if (s->src == s)
+    return false;
+
+  return true;
 }
 
-DENSE_STORAGE* copy_dense_storage(DENSE_STORAGE* rhs) {
+DENSE_STORAGE* copy_dense_storage(const DENSE_STORAGE* rhs) {
   DENSE_STORAGE* lhs;
   size_t count = count_dense_storage_elements(rhs), p;
   size_t* shape = ALLOC_N(size_t, rhs->rank);
@@ -188,32 +185,55 @@ DENSE_STORAGE* copy_dense_storage(DENSE_STORAGE* rhs) {
   lhs = create_dense_storage(rhs->dtype, shape, rhs->rank, NULL, 0);
 
   if (lhs && count) // ensure that allocation worked before copying
-    memcpy(lhs->elements, rhs->elements, nm_sizeof[rhs->dtype] * count); 
+    if (dense_is_ref(rhs)) 
+      dense_slice_with_copping(lhs, rhs->src, rhs->shape, 0, 0, 0); // slice all matrix
+    else
+      memcpy(lhs->elements, rhs->elements, nm_sizeof[rhs->dtype] * count); 
 
   return lhs;
 }
 
 
-DENSE_STORAGE* cast_copy_dense_storage(DENSE_STORAGE* rhs, int8_t new_dtype) {
-  DENSE_STORAGE* lhs;
-  size_t count = count_dense_storage_elements(rhs), p;
-  size_t* shape = ALLOC_N(size_t, rhs->rank);
+DENSE_STORAGE* cast_copy_dense_storage(const DENSE_STORAGE* rhs, int8_t new_dtype) {
+  DENSE_STORAGE *lhs, *tmp;
+  size_t count, p;
+  size_t* shape;
+
+
+  if (new_dtype == rhs->dtype)
+    return copy_dense_storage(rhs); 
+  
+  count = count_dense_storage_elements(rhs);
+  shape = ALLOC_N(size_t, rhs->rank);
   if (!shape) return NULL;
 
   // copy shape array
   for (p = 0; p < rhs->rank; ++p) shape[p] = rhs->shape[p];
 
   lhs = create_dense_storage(new_dtype, shape, rhs->rank, NULL, 0);
-
   if (lhs && count) // ensure that allocation worked before copying
-    if (lhs->dtype == rhs->dtype)
-      memcpy(lhs->elements, rhs->elements, nm_sizeof[rhs->dtype] * count);
+    if (dense_is_ref(rhs)) {
+      tmp = copy_dense_storage(rhs);
+      SetFuncs[lhs->dtype][tmp->dtype](count, lhs->elements, nm_sizeof[lhs->dtype], tmp->elements, nm_sizeof[tmp->dtype]);
+      delete_dense_storage(tmp);
+    }
     else
       SetFuncs[lhs->dtype][rhs->dtype](count, lhs->elements, nm_sizeof[lhs->dtype], rhs->elements, nm_sizeof[rhs->dtype]);
 
 
   return lhs;
 }
+
+// Do these two dense matrices of the same dtype have exactly the same contents?
+bool dense_storage_eqeq(const DENSE_STORAGE* left, const DENSE_STORAGE* right) {
+  DENSE_STORAGE *a, *b;
+
+  a = (dense_is_ref(left) ? copy_dense_storage(left) : left);
+  b = (dense_is_ref(right) ? copy_dense_storage(right) : right);
+
+  return ElemEqEq[a->dtype][0](a->elements, b->elements, count_dense_storage_elements(a), nm_sizeof[b->dtype]);
+}
+
 
 // Copy a set of default values into dense
 static inline void cast_copy_dense_list_default(void* lhs, void* default_val, int8_t l_dtype, int8_t r_dtype, size_t* pos, const size_t* shape, size_t rank, size_t max_elements, size_t recursions) {
