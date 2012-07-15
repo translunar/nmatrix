@@ -146,12 +146,17 @@ void* dense_storage_ref(DENSE_STORAGE* s, SLICE* slice) {
   else { // Make references  
     ns = ALLOC( DENSE_STORAGE );
 
-    ns->rank       = s->rank;
-    ns->shape      = slice->lens;
-    ns->dtype      = s->dtype;
-    ns->offset     = slice->coords;
-    ns->strides    = s->strides; 
-    ns->elements   = s->elements;
+    ns->rank      = s->rank;
+    ns->dtype     = s->dtype;
+
+    ns->offset    = calloc(sizeof(*ns->offset), ns->rank);
+    ns->shape     = calloc(sizeof(*ns->offset), ns->rank);
+    
+    memcpy(ns->offset, slice->coords, sizeof(*ns->offset)*ns->rank);
+    memcpy(ns->shape, slice->lens, sizeof(*ns->shape)*ns->rank);
+  
+    ns->strides   = s->strides;
+    ns->elements  = s->elements;
     
     s->count++;
     ns->src = (void*)s;
@@ -228,8 +233,13 @@ DENSE_STORAGE* cast_copy_dense_storage(const DENSE_STORAGE* rhs, int8_t new_dtyp
 bool dense_storage_eqeq(const DENSE_STORAGE* left, const DENSE_STORAGE* right) {
   DENSE_STORAGE *a, *b;
 
-  a = (dense_is_ref(left) ? copy_dense_storage(left) : left);
-  b = (dense_is_ref(right) ? copy_dense_storage(right) : right);
+  /* FIXME: Very strange behavior! The GC calls directly the method with non-initialized data. */
+  if (left->rank != right->rank)
+    return false;
+
+  a = (dense_is_ref(left) ? copy_dense_storage(left) : left); 
+  b = (dense_is_ref(right) ? copy_dense_storage(right) : right); 
+
 
   return ElemEqEq[a->dtype][0](a->elements, b->elements, count_dense_storage_elements(a), nm_sizeof[b->dtype]);
 }

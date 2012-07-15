@@ -1290,6 +1290,7 @@ VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLICE*), vo
   void* v;
 
   if (NM_RANK(self) == (size_t)(argc)) {
+    // FIXE: Free slice
     slice = get_slice((size_t)(argc), argv, self);
     // TODO: Slice for List, Yale types
     if (slice->is_one_el == 0) {
@@ -1307,11 +1308,12 @@ VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLICE*), vo
     else {
       v = ALLOC(VALUE);
       SetFuncs[NM_ROBJ][NM_DTYPE(self)](1, v, 0,
-                (*slice_func)(NM_STORAGE(self), slice), 0);
+                RefFuncs[NM_STYPE(self)](NM_STORAGE(self), slice), 0);
       return *(VALUE*)v;
     }
-                              
-  } else if (NM_RANK(self) < (size_t)(argc)) {
+    free(slice);                           
+  } 
+  else if (NM_RANK(self) < (size_t)(argc)) {
     rb_raise(rb_eArgError, "Coordinates given exceed matrix rank");
   } else {
     rb_raise(rb_eNotImpError, "This type slicing not supported yet");
@@ -1969,6 +1971,7 @@ void Init_nmatrix() {
     */
     rb_define_method(cNMatrix, "eql?", nm_eqeq, 1);
     rb_define_method(cNMatrix, "dot", nm_multiply, 1);
+    //TODO: Method #eql? is rigorous variant of #== without casting
     rb_define_alias(cNMatrix, "==", "eql?");
 
     rb_define_method(cNMatrix, "symmetric?", nm_symmetric, 0);
