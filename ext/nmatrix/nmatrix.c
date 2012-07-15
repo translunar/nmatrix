@@ -1288,9 +1288,9 @@ VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLICE*), vo
   NMATRIX* mat;
   SLICE* slice;  
   void* v;
+  VALUE result = Qnil;
 
   if (NM_RANK(self) == (size_t)(argc)) {
-    // FIXE: Free slice
     slice = get_slice((size_t)(argc), argv, self);
     // TODO: Slice for List, Yale types
     if (slice->is_one_el == 0) {
@@ -1299,7 +1299,7 @@ VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLICE*), vo
         mat = ALLOC(NMATRIX);
         mat->stype = NM_STYPE(self);
         mat->storage = (*slice_func)(NM_STORAGE(self), slice);
-        return Data_Wrap_Struct(cNMatrix, MarkFuncs[mat->stype], delete_func, mat);
+        result = Data_Wrap_Struct(cNMatrix, MarkFuncs[mat->stype], delete_func, mat);
       } 
       else  {
         rb_raise(rb_eNotImpError, "This type slicing not supported yet");
@@ -1309,7 +1309,7 @@ VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLICE*), vo
       v = ALLOC(VALUE);
       SetFuncs[NM_ROBJ][NM_DTYPE(self)](1, v, 0,
                 RefFuncs[NM_STYPE(self)](NM_STORAGE(self), slice), 0);
-      return *(VALUE*)v;
+      result = *(VALUE*)v;
     }
     free(slice);                           
   } 
@@ -1318,7 +1318,7 @@ VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLICE*), vo
   } else {
     rb_raise(rb_eNotImpError, "This type slicing not supported yet");
   }
-  return Qnil;
+  return result;
 }
 
 /*
