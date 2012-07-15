@@ -140,6 +140,7 @@ void* dense_storage_get(DENSE_STORAGE* s, SLICE* slice) {
 /* Get slice or one elements by refs*/
 void* dense_storage_ref(DENSE_STORAGE* s, SLICE* slice) {
   DENSE_STORAGE *ns;
+  size_t i;
 
   if (slice->is_one_el)
     return (char*)(s->elements) + dense_storage_pos(s, slice->coords) * nm_sizeof[s->dtype];
@@ -152,14 +153,16 @@ void* dense_storage_ref(DENSE_STORAGE* s, SLICE* slice) {
     ns->offset    = calloc(sizeof(*ns->offset), ns->rank);
     ns->shape     = calloc(sizeof(*ns->offset), ns->rank);
     
-    memcpy(ns->offset, slice->coords, sizeof(*ns->offset)*ns->rank);
-    memcpy(ns->shape, slice->lens, sizeof(*ns->shape)*ns->rank);
+    for (i = 0; i < ns->rank; i++) {
+      ns->offset[i] = slice->coords[i] + s->offset[i];
+      ns->shape[i] = slice->lens[i];
+    }
   
     ns->strides   = s->strides;
     ns->elements  = s->elements;
     
-    s->count++;
-    ns->src = (void*)s;
+    ((DENSE_STORAGE*)s->src)->count++;
+    ns->src = s->src;
 
     return ns;
   }

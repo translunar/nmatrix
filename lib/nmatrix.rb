@@ -50,7 +50,13 @@ class NMatrix
       (0...shape[1]).each do |j|
         arr << (self[i,j].nil? ? "nil" : self[i,j])
       end
-      puts arr.join("  ")
+      if q 
+        q.group(1, "","\n") do
+          q.seplist(arr, lambda{ q.text "  " }, :each)  { |v| q.text v.to_s } 
+        end
+      else
+        puts arr.join("  ")
+      end
     end
     nil
   end
