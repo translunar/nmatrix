@@ -188,7 +188,7 @@ DENSE_STORAGE* copy_dense_storage(const DENSE_STORAGE* rhs) {
 
   if (lhs && count) // ensure that allocation worked before copying
     if (dense_is_ref(rhs)) 
-      dense_slice_with_copping(lhs, rhs->src, rhs->shape, 0, 0, 0); // slice all matrix
+      dense_slice_with_copping(lhs, rhs->src, rhs->shape,  dense_storage_pos(rhs->src, rhs->offset), 0, 0); // slice all matrix
     else
       memcpy(lhs->elements, rhs->elements, nm_sizeof[rhs->dtype] * count); 
 
@@ -196,7 +196,8 @@ DENSE_STORAGE* copy_dense_storage(const DENSE_STORAGE* rhs) {
 }
 
 
-DENSE_STORAGE* cast_copy_dense_storage(const DENSE_STORAGE* rhs, int8_t new_dtype) { DENSE_STORAGE *lhs, *tmp;
+DENSE_STORAGE* cast_copy_dense_storage(const DENSE_STORAGE* rhs, int8_t new_dtype) { 
+  DENSE_STORAGE *lhs, *tmp;
   size_t count, p;
   size_t* shape;
 
@@ -231,7 +232,7 @@ bool dense_storage_eqeq(const DENSE_STORAGE* left, const DENSE_STORAGE* right) {
   if (left->rank != right->rank)
     return false;
 
-  return ElemEqEq[a->dtype][0](left->elements, right->elements, count_dense_storage_elements(left), nm_sizeof[right->dtype]);
+  return ElemEqEq[left->dtype][0](left->elements, right->elements, count_dense_storage_elements(left), nm_sizeof[right->dtype]);
 }
 
 
