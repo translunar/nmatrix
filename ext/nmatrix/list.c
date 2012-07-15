@@ -34,8 +34,8 @@
 #include "nmatrix.h"
 
 extern VALUE nm_eStorageTypeError;
-extern nm_eqeq_t ElemEqEq;
-
+extern bool (*ElemEqEq[NM_TYPES][2])(const void*, const void*, const int, const int);
+extern const int nm_sizeof[NM_TYPES];
 
 /* Calculate the max number of elements in the list storage structure, based on shape and rank */
 inline size_t count_storage_max_elements(const STORAGE* s) {
@@ -122,10 +122,14 @@ static NODE* list_find(LIST* list, size_t key) {
   return NULL;
 }
 
+void* list_storage_get(LIST_STORAGE* s, SLICE* slice) {
+  /* TODO */
+  rb_raise(rb_eNotImpError, "This type slicing not supported yet");
+}
 
 
 /* Get the contents of some set of coordinates. Note: Does not make a copy! Don't free! */
-void* list_storage_get(LIST_STORAGE* s, SLICE* slice) {
+void* list_storage_ref(LIST_STORAGE* s, SLICE* slice) {
   //LIST_STORAGE* s = (LIST_STORAGE*)(t);
   size_t r;
   NODE*  n;
@@ -142,6 +146,10 @@ void* list_storage_get(LIST_STORAGE* s, SLICE* slice) {
   else   return s->default_val;
 }
 
+bool list_is_ref(const LIST_STORAGE* s)
+{
+  return false;
+}
 
 /* Returns the value pointer (not the node) for some key. Note that it doesn't free the memory
  * for the value stored in the node -- that pointer gets returned! Only the node is destroyed.
@@ -467,7 +475,7 @@ LIST_STORAGE* copy_list_storage(LIST_STORAGE* rhs) {
 }
 
 
-LIST_STORAGE* cast_copy_list_storage(LIST_STORAGE* rhs, int8_t new_dtype) {
+LIST_STORAGE* cast_copy_list_storage(const LIST_STORAGE* rhs, int8_t new_dtype) {
   LIST_STORAGE* lhs;
   size_t* shape;
   void* default_val = ALLOC_N(char, nm_sizeof[rhs->dtype]);

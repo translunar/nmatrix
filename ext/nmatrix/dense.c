@@ -31,7 +31,8 @@
 #include <ruby.h>
 
 #include "nmatrix.h"
-extern nm_eqeq_t ElemEqEq;
+extern bool (*ElemEqEq[NM_TYPES][2])(const void*, const void*, const int, const int);
+extern const int nm_sizeof[NM_TYPES];
 
 /* Calculate the number of elements in the dense storage structure, based on shape and rank */
 size_t count_dense_storage_elements(const DENSE_STORAGE* s) {
@@ -41,11 +42,6 @@ size_t count_dense_storage_elements(const DENSE_STORAGE* s) {
   return count;
 }
 
-
-// Do these two dense matrices of the same dtype have exactly the same contents?
-bool dense_storage_eqeq(const DENSE_STORAGE* left, const DENSE_STORAGE* right) {
-  return ElemEqEq[left->dtype][0](left->elements, right->elements, count_dense_storage_elements(left), nm_sizeof[left->dtype]);
-}
 
 // Is this dense matrix symmetric about the diagonal?
 bool dense_is_symmetric(const DENSE_STORAGE* mat, int lda, bool hermitian) {
@@ -63,83 +59,177 @@ bool dense_is_symmetric(const DENSE_STORAGE* mat, int lda, bool hermitian) {
   return true;
 }
 
+/* Calculate element's number of dense matrix */
+size_t dense_storage_pos(const DENSE_STORAGE* s, const size_t* coords) {
+  size_t i;
+  size_t pos = 0;
 
-size_t dense_storage_pos(DENSE_STORAGE* s, SLICE* slice) {
-  size_t k, l;
-  size_t inner, outer = 0;
-  for (k = 0; k < s->rank; ++k) {
-    inner = slice->coords[k] + s->offset[k];
-    for (l = k+1; l < s->rank; ++l) {
-      inner *= ((DENSE_STORAGE*)s->src)->shape[l];
-    }
-    outer += inner;
-  }
-  return outer;
+  for (i = 0; i < s->rank; i++)
+    pos += (coords[i] + s->offset[i]) * (s->strides[i]);
+
+  return pos;
 }
 
+/* Strides store offsets in straightforward array of element for each dimension. */
+size_t* dense_calc_strides(size_t* shape, size_t rank) {
+  size_t i, j;
+  size_t* strides = calloc(sizeof(*shape), rank);
 
+  NM_CHECK_ALLOC(strides);
 
+  for (i = 0; i < rank; i++) {
+    strides[i] = 1;
+    for (j = i + 1; j < rank; j++) {
+      strides[i] *= shape[j];
+    }
+  }
+  
+  return strides;
+}
+
+/* The recursive slicing for N-dimension matrix */
+void dense_slice_with_copping(DENSE_STORAGE *dest, DENSE_STORAGE *src,
+    size_t* lens,
+    size_t psrc, size_t pdest,
+    size_t n) {
+
+  size_t i;
+
+  if (src->rank - n > 1) {
+    for (i=0; i < lens[n]; i++) {
+    dense_slice_with_copping(dest, src, lens,
+        psrc + src->strides[n]*i, pdest + dest->strides[n]*i,
+        n + 1);
+    }
+  }
+  else {
+    memcpy((char*)dest->elements + pdest*nm_sizeof[dest->dtype], 
+        (char*)src->elements + psrc*nm_sizeof[src->dtype], 
+        dest->shape[n]*nm_sizeof[dest->dtype]);
+  }
+
+}
+
+/* Get slice or one elements with copping */
 void* dense_storage_get(DENSE_STORAGE* s, SLICE* slice) {
-  DENSE_STORAGE *ns;
+   DENSE_STORAGE *ns;
+   size_t count;
 
   if (slice->is_one_el)
-    return (char*)(s->elements) + dense_storage_pos(s, slice) * nm_sizeof[s->dtype];
-  else {
+    return (char*)(s->elements) + dense_storage_pos(s, slice->coords) * nm_sizeof[s->dtype];
+  else { // Make references  
     ns = ALLOC( DENSE_STORAGE );
+
+    NM_CHECK_ALLOC(ns);
 
     ns->rank       = s->rank;
     ns->shape      = slice->lens;
     ns->dtype      = s->dtype;
-    ns->offset     = slice->coords;
-    ns->elements   = s->elements;
+
+    ns->offset     = calloc(sizeof(size_t),ns->rank);
+    NM_CHECK_ALLOC(ns->offset);
+
+    ns->strides    = dense_calc_strides(ns->shape, ns->rank);
+    ns->count      = 1;
+    ns->src        = ns;
+
+    count         = count_dense_storage_elements(s);
+
+    ns->elements = ALLOC_N(char, nm_sizeof[ns->dtype]*count);
+    NM_CHECK_ALLOC(ns->elements);
+
+    dense_slice_with_copping(ns, s, slice->lens, dense_storage_pos(s, slice->coords), 0, 0);
+    return ns;
+  }
+}
+
+/* Get slice or one elements by refs*/
+void* dense_storage_ref(DENSE_STORAGE* s, SLICE* slice) {
+  DENSE_STORAGE *ns;
+  size_t i;
+
+  if (slice->is_one_el)
+    return (char*)(s->elements) + dense_storage_pos(s, slice->coords) * nm_sizeof[s->dtype];
+  else { // Make references  
+    ns = ALLOC( DENSE_STORAGE );
+    NM_CHECK_ALLOC(ns);
+
+    ns->rank      = s->rank;
+    ns->dtype     = s->dtype;
+
+    ns->offset    = calloc(sizeof(*ns->offset), ns->rank);
+    NM_CHECK_ALLOC(ns->offset);
+
+    ns->shape     = calloc(sizeof(*ns->offset), ns->rank);
+    NM_CHECK_ALLOC(ns->shape);
     
-    s->count++;
-    ns->src = (void*)s;
+    for (i = 0; i < ns->rank; i++) {
+      ns->offset[i] = slice->coords[i] + s->offset[i];
+      ns->shape[i] = slice->lens[i];
+    }
+  
+    ns->strides   = s->strides;
+    ns->elements  = s->elements;
+    
+    ((DENSE_STORAGE*)s->src)->count++;
+    ns->src = s->src;
 
     return ns;
   }
 }
 
-
 /* Does not free passed-in value! Different from list_storage_insert. */
 void dense_storage_set(DENSE_STORAGE* s, SLICE* slice, void* val) {
-  memcpy((char*)(s->elements) + dense_storage_pos(s, slice) * nm_sizeof[s->dtype], val, nm_sizeof[s->dtype]);
+  memcpy((char*)(s->elements) + dense_storage_pos(s, slice->coords) * nm_sizeof[s->dtype], val, nm_sizeof[s->dtype]); 
 }
 
+bool dense_is_ref(const DENSE_STORAGE* s) {
+  return s->src != s;
+}
 
-DENSE_STORAGE* copy_dense_storage(DENSE_STORAGE* rhs) {
+DENSE_STORAGE* copy_dense_storage(const DENSE_STORAGE* rhs) {
   DENSE_STORAGE* lhs;
-  size_t count = count_dense_storage_elements(rhs), p;
-  size_t* shape = ALLOC_N(size_t, rhs->rank);
-  if (!shape) return NULL;
+  size_t count = count_dense_storage_elements(rhs);
 
-  // copy shape array
-  for (p = 0; p < rhs->rank; ++p)
-    shape[p] = rhs->shape[p];
+  size_t* shape = ALLOC_N(size_t, rhs->rank);
+  NM_CHECK_ALLOC(shape);
+  memcpy(shape, rhs->shape, sizeof(*shape) * rhs->rank);
 
   lhs = create_dense_storage(rhs->dtype, shape, rhs->rank, NULL, 0);
 
   if (lhs && count) // ensure that allocation worked before copying
-    memcpy(lhs->elements, rhs->elements, nm_sizeof[rhs->dtype] * count);
+    if (dense_is_ref(rhs)) 
+      dense_slice_with_copping(lhs, rhs->src, rhs->shape,  dense_storage_pos(rhs->src, rhs->offset), 0, 0); // slice all matrix
+    else
+      memcpy(lhs->elements, rhs->elements, nm_sizeof[rhs->dtype] * count); 
 
   return lhs;
 }
 
 
-DENSE_STORAGE* cast_copy_dense_storage(DENSE_STORAGE* rhs, int8_t new_dtype) {
-  DENSE_STORAGE* lhs;
-  size_t count = count_dense_storage_elements(rhs), p;
-  size_t* shape = ALLOC_N(size_t, rhs->rank);
-  if (!shape) return NULL;
+DENSE_STORAGE* cast_copy_dense_storage(const DENSE_STORAGE* rhs, int8_t new_dtype) { 
+  DENSE_STORAGE *lhs, *tmp;
+  size_t count;
+  size_t* shape;
 
-  // copy shape array
-  for (p = 0; p < rhs->rank; ++p) shape[p] = rhs->shape[p];
+
+  if (new_dtype == rhs->dtype)
+    return copy_dense_storage(rhs); 
+  
+  count = count_dense_storage_elements(rhs);
+
+  shape = ALLOC_N(size_t, rhs->rank);
+  NM_CHECK_ALLOC(shape);
+  memcpy(shape, rhs->shape, sizeof(*shape) * rhs->rank);
 
   lhs = create_dense_storage(new_dtype, shape, rhs->rank, NULL, 0);
-
   if (lhs && count) // ensure that allocation worked before copying
-    if (lhs->dtype == rhs->dtype)
-      memcpy(lhs->elements, rhs->elements, nm_sizeof[rhs->dtype] * count);
+    if (dense_is_ref(rhs)) {
+      tmp = copy_dense_storage(rhs);
+      NM_CHECK_ALLOC(tmp);
+      SetFuncs[lhs->dtype][tmp->dtype](count, lhs->elements, nm_sizeof[lhs->dtype], tmp->elements, nm_sizeof[tmp->dtype]);
+      delete_dense_storage(tmp);
+    }
     else
       SetFuncs[lhs->dtype][rhs->dtype](count, lhs->elements, nm_sizeof[lhs->dtype], rhs->elements, nm_sizeof[rhs->dtype]);
 
@@ -147,6 +237,14 @@ DENSE_STORAGE* cast_copy_dense_storage(DENSE_STORAGE* rhs, int8_t new_dtype) {
   return lhs;
 }
 
+// Do these two dense matrices of the same dtype have exactly the same contents?
+bool dense_storage_eqeq(const DENSE_STORAGE* left, const DENSE_STORAGE* right) {
+  /* FIXME: Very strange behavior! The GC calls directly the method with non-initialized data. */
+  if (left->rank != right->rank)
+    return false;
+
+  return ElemEqEq[left->dtype][0](left->elements, right->elements, count_dense_storage_elements(left), nm_sizeof[right->dtype]);
+}
 
 
 // Copy a set of default values into dense
@@ -274,6 +372,8 @@ DENSE_STORAGE* scast_copy_dense_yale(const YALE_STORAGE* rhs, int8_t l_dtype) {
 }
 
 
+
+
 // Note that elements and elements_length are for initial value(s) passed in. If they are the correct length, they will
 // be used directly. If not, they will be concatenated over and over again into a new elements array. If elements is NULL,
 // the new elements array will not be initialized.
@@ -288,6 +388,7 @@ DENSE_STORAGE* create_dense_storage(int8_t dtype, size_t* shape, size_t rank, vo
   s->shape      = shape;
   s->dtype      = dtype;
   s->offset     = calloc(sizeof(size_t),rank);
+  s->strides    = dense_calc_strides(shape, rank);
   s->count      = 1;
   s->src        = s;
 
@@ -315,20 +416,21 @@ DENSE_STORAGE* create_dense_storage(int8_t dtype, size_t* shape, size_t rank, vo
   return s;
 }
 
-
 void delete_dense_storage(DENSE_STORAGE* s) {
   if (s) { // sometimes Ruby passes in NULL storage for some reason (probably on copy construction failure)
-    if(s->count <= 1) {
+    if(s->count-- == 1) {
       free(s->shape);
       free(s->offset);
+      free(s->strides);
       free(s->elements);
       free(s);
     }
   }
 }
+
 void delete_dense_storage_ref(DENSE_STORAGE* s) {
   if (s) { // sometimes Ruby passes in NULL storage for some reason (probably on copy construction failure)
-    ((DENSE_STORAGE*)s->src)->count--;
+    delete_dense_storage(s->src);
     free(s->shape);
     free(s->offset);
     free(s);
@@ -342,7 +444,6 @@ void mark_dense_storage(void* m) {
 
   if (m) {
     storage = (DENSE_STORAGE*)(((NMATRIX*)m)->storage);
-    //fprintf(stderr, "mark_dense_storage\n");
     if (storage && storage->dtype == NM_ROBJ)
       for (i = 0; i < count_dense_storage_elements(storage); ++i)
         rb_gc_mark(*((VALUE*)((char*)(storage->elements) + i*nm_sizeof[NM_ROBJ])));

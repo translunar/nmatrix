@@ -41,8 +41,6 @@ ID nm_id_list, nm_id_dense;
 ID nm_id_mult, nm_id_multeq;
 ID nm_id_add;
 
-#include "dtypes.c"
-
 #ifdef BENCHMARK
 double get_time() {
   struct timeval t;
@@ -52,6 +50,62 @@ double get_time() {
 }
 #endif
 
+
+//TODO: Auto-generate this
+const int nm_sizeof[NM_TYPES] = {
+  0,
+  sizeof(u_int8_t),
+  sizeof(int8_t),
+  sizeof(int16_t),
+  sizeof(int32_t),
+  sizeof(int64_t),
+  sizeof(float),
+  sizeof(double),
+  sizeof(complex64),
+  sizeof(complex128),
+  sizeof(rational32),
+  sizeof(rational64),
+  sizeof(rational128),
+  sizeof(VALUE),
+  0,
+};
+
+
+const char *nm_dtypestring[] = {
+  "none",
+  "byte",
+  "int8",
+  "int16",
+  "int32",
+  "int64",
+  "float32",
+  "float64",
+  "complex64",
+  "complex128",
+  "rational32",
+  "rational64",
+  "rational128",
+  "object",
+  "dtypes",
+};
+
+const int8_t Upcast[15][15] = {
+  { NM_NONE, NM_NONE, NM_NONE, NM_NONE, NM_NONE, NM_NONE, NM_NONE, NM_NONE, NM_NONE, NM_NONE, NM_NONE, NM_NONE, NM_NONE, NM_NONE, NM_NONE },
+  { NM_NONE, NM_BYTE, NM_INT8, NM_INT16, NM_INT32, NM_INT64, NM_FLOAT32, NM_FLOAT64, NM_COMPLEX64, NM_COMPLEX128, NM_RATIONAL32, NM_RATIONAL64, NM_RATIONAL128, NM_ROBJ, NM_NONE },
+  { NM_NONE, NM_INT8, NM_INT8, NM_INT16, NM_INT32, NM_INT64, NM_FLOAT32, NM_FLOAT64, NM_COMPLEX64, NM_COMPLEX128, NM_RATIONAL32, NM_RATIONAL64, NM_RATIONAL128, NM_ROBJ, NM_NONE },
+  { NM_NONE, NM_INT16, NM_INT16, NM_INT16, NM_INT32, NM_INT64, NM_FLOAT32, NM_FLOAT64, NM_COMPLEX64, NM_COMPLEX128, NM_RATIONAL32, NM_RATIONAL64, NM_RATIONAL128, NM_ROBJ, NM_NONE },
+  { NM_NONE, NM_INT32, NM_INT32, NM_INT32, NM_INT32, NM_INT64, NM_FLOAT32, NM_FLOAT64, NM_COMPLEX64, NM_COMPLEX128, NM_RATIONAL32, NM_RATIONAL64, NM_RATIONAL128, NM_ROBJ, NM_NONE },
+  { NM_NONE, NM_INT64, NM_INT64, NM_INT64, NM_INT64, NM_INT64, NM_FLOAT32, NM_FLOAT64, NM_COMPLEX64, NM_COMPLEX128, NM_RATIONAL32, NM_RATIONAL64, NM_RATIONAL128, NM_ROBJ, NM_NONE },
+  { NM_NONE, NM_FLOAT32, NM_FLOAT32, NM_FLOAT32, NM_FLOAT32, NM_FLOAT32, NM_FLOAT32, NM_FLOAT64, NM_COMPLEX64, NM_COMPLEX128, NM_FLOAT64, NM_FLOAT64, NM_FLOAT64, NM_ROBJ, NM_NONE },
+  { NM_NONE, NM_FLOAT64, NM_FLOAT64, NM_FLOAT64, NM_FLOAT64, NM_FLOAT64, NM_FLOAT64, NM_FLOAT64, NM_COMPLEX128, NM_COMPLEX128, NM_FLOAT64, NM_FLOAT64, NM_FLOAT64, NM_ROBJ, NM_NONE },
+  { NM_NONE, NM_COMPLEX64, NM_COMPLEX64, NM_COMPLEX64, NM_COMPLEX64, NM_COMPLEX64, NM_COMPLEX64, NM_COMPLEX128, NM_COMPLEX64, NM_COMPLEX128, NM_COMPLEX64, NM_COMPLEX64, NM_COMPLEX64, NM_ROBJ, NM_NONE },
+  { NM_NONE, NM_COMPLEX128, NM_COMPLEX128, NM_COMPLEX128, NM_COMPLEX128, NM_COMPLEX128, NM_COMPLEX128, NM_COMPLEX128, NM_COMPLEX128, NM_COMPLEX128, NM_COMPLEX128, NM_COMPLEX128, NM_COMPLEX128, NM_ROBJ, NM_NONE },
+  { NM_NONE, NM_RATIONAL32, NM_RATIONAL32, NM_RATIONAL32, NM_RATIONAL32, NM_RATIONAL32, NM_FLOAT64, NM_FLOAT64, NM_COMPLEX64, NM_COMPLEX128, NM_RATIONAL32, NM_RATIONAL64, NM_RATIONAL128, NM_ROBJ, NM_NONE },
+  { NM_NONE, NM_RATIONAL64, NM_RATIONAL64, NM_RATIONAL64, NM_RATIONAL64, NM_RATIONAL64, NM_FLOAT64, NM_FLOAT64, NM_COMPLEX64, NM_COMPLEX128, NM_RATIONAL64, NM_RATIONAL64, NM_RATIONAL128, NM_ROBJ, NM_NONE },
+  { NM_NONE, NM_RATIONAL128, NM_RATIONAL128, NM_RATIONAL128, NM_RATIONAL128, NM_RATIONAL128, NM_FLOAT64, NM_FLOAT64, NM_COMPLEX64, NM_COMPLEX128, NM_RATIONAL128, NM_RATIONAL128, NM_RATIONAL128, NM_ROBJ, NM_NONE },
+  { NM_NONE, NM_ROBJ, NM_ROBJ, NM_ROBJ, NM_ROBJ, NM_ROBJ, NM_ROBJ, NM_ROBJ, NM_ROBJ, NM_ROBJ, NM_ROBJ, NM_ROBJ, NM_ROBJ, NM_ROBJ, NM_NONE },
+  { NM_NONE, NM_NONE, NM_NONE, NM_NONE, NM_NONE, NM_NONE, NM_NONE, NM_NONE, NM_NONE, NM_NONE, NM_NONE, NM_NONE, NM_NONE, NM_NONE, NM_NONE },
+};
 
 const char *nm_stypestring[] = {
   "dense",
@@ -82,204 +136,6 @@ nm_mark_t MarkFuncs = {
 };
 
 
-nm_gemv_t GemvFuncs = {
-  NULL,
-  cblas_bgemv_,
-  cblas_i8gemv_,
-  cblas_i16gemv_,
-  cblas_i32gemv_,
-  cblas_i64gemv_,
-  cblas_sgemv_,
-  cblas_dgemv_,
-  cblas_cgemv_,
-  cblas_zgemv_,
-  cblas_r32gemv_,
-  cblas_r64gemv_,
-  cblas_r128gemv_,
-  NULL
-};
-
-
-nm_gemm_t GemmFuncs = { // by NM_TYPES
-  NULL,
-  cblas_bgemm_,
-  cblas_i8gemm_,
-  cblas_i16gemm_,
-  cblas_i32gemm_,
-  cblas_i64gemm_,
-  cblas_sgemm_,
-  cblas_dgemm_,
-  cblas_cgemm_,
-  cblas_zgemm_,
-  cblas_r32gemm_,
-  cblas_r64gemm_,
-  cblas_r128gemm_,
-  cblas_vgemm_
-};
-
-static void TransposeTypeErr(y_size_t n, y_size_t m, YALE_PARAM A, YALE_PARAM B, bool move) {
-  rb_raise(nm_eDataTypeError, "illegal operation with this matrix type");
-}
-
-
-// First dimension is dtype, second dimension is index dtype (so lots of nulls)
-nm_smmp_transpose_t SparseTransposeFuncs = {
-  {TransposeTypeErr, TransposeTypeErr, TransposeTypeErr, TransposeTypeErr, TransposeTypeErr, TransposeTypeErr}, // NM_NONE
-  {TransposeTypeErr, TransposeTypeErr, i8_b_transp_, i16_b_transp_, i32_b_transp_, i64_b_transp_}, // NM_BYTE
-  {TransposeTypeErr, TransposeTypeErr, i8_i8_transp_, i16_i8_transp_, i32_i8_transp_, i64_i8_transp_}, // NM_INT8
-  {TransposeTypeErr, TransposeTypeErr, i8_i16_transp_, i16_i16_transp_, i32_i16_transp_, i64_i16_transp_}, // NM_INT16
-  {TransposeTypeErr, TransposeTypeErr, i8_i32_transp_, i16_i32_transp_, i32_i32_transp_, i64_i32_transp_}, // NM_INT32
-  {TransposeTypeErr, TransposeTypeErr, i8_i64_transp_, i16_i64_transp_, i32_i64_transp_, i64_i64_transp_}, // NM_INT64
-  {TransposeTypeErr, TransposeTypeErr, i8_f32_transp_, i16_f32_transp_, i32_f32_transp_, i64_f32_transp_}, // NM_FLOAT32
-  {TransposeTypeErr, TransposeTypeErr, i8_f64_transp_, i16_f64_transp_, i32_f64_transp_, i64_f64_transp_}, // NM_FLOAT64
-  {TransposeTypeErr, TransposeTypeErr, i8_c64_transp_, i16_c64_transp_, i32_c64_transp_, i64_c64_transp_}, // NM_COMPLEX64
-  {TransposeTypeErr, TransposeTypeErr, i8_c128_transp_, i16_c128_transp_, i32_c128_transp_, i64_c128_transp_}, // NM_COMPLEX128
-  {TransposeTypeErr, TransposeTypeErr, i8_r32_transp_, i16_r32_transp_, i32_r32_transp_, i64_r32_transp_}, // NM_RATIONAL32
-  {TransposeTypeErr, TransposeTypeErr, i8_r64_transp_, i16_r64_transp_, i32_r64_transp_, i64_r64_transp_}, // NM_RATIONAL64
-  {TransposeTypeErr, TransposeTypeErr, i8_r128_transp_, i16_r128_transp_, i32_r128_transp_, i64_r128_transp_}, // NM_RATIONAL128
-  {TransposeTypeErr, TransposeTypeErr, i8_v_transp_, i16_v_transp_, i32_v_transp_, i64_v_transp_}  // NM_ROBJ
-};
-
-/*
-// Currently commented out because dense_transpose_generic is about the same speed. Let's resurrect this when we write
-// an in-place transpose (e.g., transpose!).
-
-static void DenseTransTypeErr(int M, int N, void* A, int lda, void* B, int ldb, bool move) {
-  rb_raise(nm_eDataTypeError, "illegal operation with this matrix type");
-}
-
-nm_dense_transpose_t DenseTransposeFuncs = {
-  DenseTransTypeErr,
-  btransp,
-  i8transp,
-  i16transp,
-  i32transp,
-  i64transp,
-  f32transp,
-  f64transp,
-  c64transp,
-  c128transp,
-  r32transp,
-  r64transp,
-  r128transp,
-  vtransp
-}; */
-
-
-static void SmmpTypeErr(y_size_t n, y_size_t m, YALE_PARAM A, YALE_PARAM B, YALE_PARAM C) {
-  rb_raise(nm_eDataTypeError, "illegal operation with this matrix type");
-}
-
-// First dimension is dtype, second dimension is index dtype (so lots of nulls)
-nm_smmp_t SmmpFuncs = {
-  {SmmpTypeErr, SmmpTypeErr, SmmpTypeErr, SmmpTypeErr, SmmpTypeErr, SmmpTypeErr}, // NM_NONE
-  {SmmpTypeErr, SmmpTypeErr, i8_b_smmp, i16_b_smmp, i32_b_smmp, i64_b_smmp}, // NM_BYTE
-  {SmmpTypeErr, SmmpTypeErr, i8_i8_smmp, i16_i8_smmp, i32_i8_smmp, i64_i8_smmp}, // NM_INT8
-  {SmmpTypeErr, SmmpTypeErr, i8_i16_smmp, i16_i16_smmp, i32_i16_smmp, i64_i16_smmp}, // NM_INT16
-  {SmmpTypeErr, SmmpTypeErr, i8_i32_smmp, i16_i32_smmp, i32_i32_smmp, i64_i32_smmp}, // NM_INT32
-  {SmmpTypeErr, SmmpTypeErr, i8_i64_smmp, i16_i64_smmp, i32_i64_smmp, i64_i64_smmp}, // NM_INT64
-  {SmmpTypeErr, SmmpTypeErr, i8_f32_smmp, i16_f32_smmp, i32_f32_smmp, i64_f32_smmp}, // NM_FLOAT32
-  {SmmpTypeErr, SmmpTypeErr, i8_f64_smmp, i16_f64_smmp, i32_f64_smmp, i64_f64_smmp}, // NM_FLOAT64
-  {SmmpTypeErr, SmmpTypeErr, i8_c64_smmp, i16_c64_smmp, i32_c64_smmp, i64_c64_smmp}, // NM_COMPLEX64
-  {SmmpTypeErr, SmmpTypeErr, i8_c128_smmp, i16_c128_smmp, i32_c128_smmp, i64_c128_smmp}, // NM_COMPLEX128
-  {SmmpTypeErr, SmmpTypeErr, i8_r32_smmp, i16_r32_smmp, i32_r32_smmp, i64_r32_smmp}, // NM_RATIONAL32
-  {SmmpTypeErr, SmmpTypeErr, i8_r64_smmp, i16_r64_smmp, i32_r64_smmp, i64_r64_smmp}, // NM_RATIONAL64
-  {SmmpTypeErr, SmmpTypeErr, i8_r128_smmp, i16_r128_smmp, i32_r128_smmp, i64_r128_smmp}, // NM_RATIONAL128
-  {SmmpTypeErr, SmmpTypeErr, i8_v_smmp, i16_v_smmp, i32_v_smmp, i64_v_smmp}  // NM_ROBJ
-};
-
-
-static inline DENSE_PARAM cblas_params_for_multiply(const DENSE_STORAGE* left, const DENSE_STORAGE* right, const DENSE_STORAGE* result, bool vector) {
-  DENSE_PARAM p;
-
-  p.A = left->elements;
-  p.B = right->elements;    // for vector, this is actually x
-  p.C = result->elements;   // vector Y
-
-  p.M = left->shape[0];
-  p.lda = left->shape[1];
-
-  if (vector) {
-    p.N = left->shape[1];
-
-    p.ldb = 1;  // incX
-    p.ldc = 1;  // incY
-  } else {
-    p.N = right->shape[1];
-    p.K = left->shape[1];
-
-    p.ldb = right->shape[1];
-    p.ldc = result->shape[1];
-  }
-
-  switch(left->dtype) {
-  case NM_FLOAT32:
-  case NM_FLOAT64:
-    p.alpha.d[0] = 1.0;
-    p.beta.d[0] = 0.0;
-    break;
-
-  case NM_COMPLEX64:
-    p.alpha.c[0].r = 1.0;
-    p.alpha.c[0].i = 0.0;
-    p.beta.c[0].r = 0.0;
-    p.beta.c[0].i = 0.0;
-    break;
-
-  case NM_COMPLEX128:
-    p.alpha.z.r = 1.0;
-    p.alpha.z.i = 0.0;
-    p.beta.z.r = 0.0;
-    p.beta.z.i = 0.0;
-    break;
-
-  case NM_BYTE:
-    p.alpha.b[0] = 1;
-    p.beta.b[0] = 0;
-    break;
-
-  case NM_INT8:
-  case NM_INT16:
-  case NM_INT32:
-  case NM_INT64:
-    p.alpha.i[0] = 1;
-    p.beta.i[0]  = 0;
-    break;
-
-  case NM_RATIONAL32:
-    p.alpha.r[0].n = 1;
-    p.alpha.r[0].d = 1;
-    p.beta.r[0].n = 0;
-    p.beta.r[0].d = 1;
-    break;
-
-  case NM_RATIONAL64:
-    p.alpha.ra[0].n = 1;
-    p.alpha.ra[0].d = 1;
-    p.beta.ra[0].n = 0;
-    p.beta.ra[0].d = 1;
-    break;
-
-  case NM_RATIONAL128:
-    p.alpha.rat.n = 1;
-    p.alpha.rat.d = 1;
-    p.beta.rat.n = 0;
-    p.beta.rat.d = 1;
-    break;
-
-  case NM_ROBJ:
-    p.alpha.v[0] = INT2FIX(1);
-    p.beta.v[0]  = RUBY_ZERO;
-    break;
-
-  default:
-    rb_raise(nm_eDataTypeError, "unexpected dtype");
-
-  }
-
-  return p;
-}
-
 
 static NMATRIX* multiply_matrix_dense_casted(STORAGE_PAIR casted_storage, size_t* resulting_shape, bool vector) {
   DENSE_STORAGE *left  = (DENSE_STORAGE*)(casted_storage.left),
@@ -288,14 +144,72 @@ static NMATRIX* multiply_matrix_dense_casted(STORAGE_PAIR casted_storage, size_t
 
   // We can safely get dtype from the casted matrices; post-condition of binary_storage_cast_alloc is that dtype is the
   // same for left and right.
-  int8_t dtype = left->dtype;
+
+  // int8_t dtype = left->dtype;
+
+  char *pAlpha = ALLOCA_N(char, nm_sizeof[left->dtype]),
+       *pBeta  = ALLOCA_N(char, nm_sizeof[left->dtype]);
 
   // Create result storage.
-  result = create_dense_storage(dtype, resulting_shape, 2, NULL, 0);
+  result = create_dense_storage(left->dtype, resulting_shape, 2, NULL, 0);
+
+  switch(left->dtype) {
+  case NM_FLOAT32:
+    *(float*)pAlpha = 1.0;
+    *(float*)pBeta  = 0.0;
+    break;
+  case NM_FLOAT64:
+    *(double*)pAlpha = 1.0;
+    *(double*)pBeta  = 0.0;
+    break;
+  case NM_COMPLEX64:
+    *(complex64*)pAlpha = (struct complex64) { 1.0, 0.0 };
+    *(complex64*)pBeta  = (struct complex64) { 0.0, 0.0 };
+    break;
+  case NM_COMPLEX128:
+    *(complex128*)pAlpha = (struct complex128) { 1.0, 0.0 };
+    *(complex128*)pBeta  = (struct complex128) { 0.0, 0.0 };
+    break;
+  case NM_BYTE:
+  case NM_INT8:
+    *(int8_t*)pAlpha = 1;
+    *(int8_t*)pBeta  = 0;
+    break;
+  case NM_INT16:
+    *(int16_t*)pAlpha = 1;
+    *(int16_t*)pBeta  = 0;
+    break;
+  case NM_INT32:
+    *(int32_t*)pAlpha = 1;
+    *(int32_t*)pBeta  = 0;
+    break;
+  case NM_INT64:
+    *(int64_t*)pAlpha = 1;
+    *(int64_t*)pBeta  = 0;
+    break;
+  case NM_RATIONAL32:
+    *(rational32*)pAlpha = (struct rational32) { 1, 1 };
+    *(rational32*)pBeta  = (struct rational32) { 0, 1 };
+    break;
+  case NM_RATIONAL64:
+    *(rational64*)pAlpha = (struct rational64) { 1, 1 };
+    *(rational64*)pBeta  = (struct rational64) { 0, 1 };
+    break;
+  case NM_RATIONAL128:
+    *(rational128*)pAlpha = (struct rational128) { 1, 1 };
+    *(rational128*)pBeta  = (struct rational128) { 0, 1 };
+    break;
+  case NM_ROBJ:
+    *(VALUE*)pAlpha = INT2FIX(1);
+    *(VALUE*)pBeta  = INT2FIX(0);
+    break;
+  default:
+    rb_raise(nm_eDataTypeError, "unexpected dtype");
+  }
 
   // Do the multiplication
-  if (vector) GemvFuncs[dtype](CblasRowMajor, CblasNoTrans, cblas_params_for_multiply(left, right, result, true));
-  else        GemmFuncs[dtype](CblasRowMajor, CblasNoTrans, CblasNoTrans, cblas_params_for_multiply(left, right, result, false));
+  if (vector) Gemv[left->dtype](CblasNoTrans, left->shape[0], left->shape[1], pAlpha, left->elements, left->shape[1], right->elements, 1, pBeta, result->elements, 1);
+  else        Gemm[left->dtype](CblasNoTrans, CblasNoTrans, right->shape[1], left->shape[0], left->shape[1], pAlpha, right->elements, right->shape[1], left->elements, left->shape[1], pBeta, result->elements, result->shape[1]);
 
   return nm_create(S_DENSE, result);
 }
@@ -305,28 +219,21 @@ static NMATRIX* multiply_matrix_yale_casted(STORAGE_PAIR casted_storage, size_t*
   YALE_STORAGE *left  = (YALE_STORAGE*)(casted_storage.left),
                *right = (YALE_STORAGE*)(casted_storage.right),
                *result;
-  YALE_PARAM A, B, C;
 
   // We can safely get dtype from the casted matrices; post-condition of binary_storage_cast_alloc is that dtype is the
   // same for left and right.
-  int8_t dtype = left->dtype;
+  // int8_t dtype = left->dtype;
 
   // Create result storage.
-  result = create_yale_storage(dtype, resulting_shape, 2, left->capacity + right->capacity);
+  result = create_yale_storage(left->dtype, resulting_shape, 2, left->capacity + right->capacity);
   init_yale_storage(result);
 
-  // Set multiplication parameters
-  A.ia = A.ja = left->ija;
-  A.a  = left->a;
-  B.ia = B.ja = right->ija;
-  B.a  = right->a;
-  C.ia = C.ja = result->ija;
-  C.a  = result->a;
-
-  A.diag = B.diag = C.diag = true;
-
   // Do the multiplication
-  SmmpFuncs[dtype][left->index_dtype](result->shape[0], result->shape[1], A, B, C);
+  Symbmm[left->index_dtype](result->shape[0], result->shape[1], left->ija, left->ija, true, right->ija, right->ija, true, result->ija, true);
+  Numbmm[left->dtype][left->index_dtype](result->shape[0], result->shape[1], left->ija, left->ija, left->a, true, right->ija, right->ija, right->a, true, result->ija, result->ija, result->a, true);
+
+  // Sort the columns
+  SmmpSortColumns[left->dtype][left->index_dtype](result->shape[0], result->ija, result->ija, result->a);
 
   return nm_create(S_YALE, result);
 }
@@ -346,66 +253,8 @@ nm_matrix_multiply_op_t CastedMultiplyFuncs = {
 };
 
 
-nm_d_elementwise_binary_op_t DenseElementwiseFuncs = { // only for dense!
-  NULL,
-  nm_d_b_elementwise,
-  nm_d_i8_elementwise,
-  nm_d_i16_elementwise,
-  nm_d_i32_elementwise,
-  nm_d_i64_elementwise,
-  nm_d_f32_elementwise,
-  nm_d_f64_elementwise,
-  nm_d_c64_elementwise,
-  nm_d_c128_elementwise,
-  nm_d_r32_elementwise,
-  nm_d_r64_elementwise,
-  nm_d_r128_elementwise,
-  nm_d_v_elementwise,
-  NULL
-};
-
-nm_det_t DenseDetExact = {
-  NULL,
-  bdet_exact,
-  i8det_exact,
-  i16det_exact,
-  i32det_exact,
-  i64det_exact,
-  f32det_exact,
-  f64det_exact,
-  c64det_exact,
-  c128det_exact,
-  r32det_exact,
-  r64det_exact,
-  r128det_exact,
-  vdet_exact,
-  NULL
-};
-
-static void EwTypeErr(y_size_t n, enum NMatrix_Ops op, void* ija, void* ijb, void* ijc, void* a, void* b, void* c) {
-  rb_raise(nm_eDataTypeError, "illegal operation with this matrix type");
-}
-
-// First dimension is dtype, second dimension is index dtype (so lots of nulls)
-nm_y_elementwise_binary_op_t YaleElementwiseFuncs = { // only for yale!
-  {EwTypeErr, EwTypeErr, EwTypeErr, EwTypeErr,  EwTypeErr,  EwTypeErr},
-  {EwTypeErr, EwTypeErr, EwTypeErr, EwTypeErr,  EwTypeErr,  EwTypeErr},
-  {EwTypeErr, EwTypeErr, i8_i8_ew,  i16_i8_ew,  i32_i8_ew,  i64_i8_ew},
-  {EwTypeErr, EwTypeErr, i8_i16_ew, i16_i16_ew, i32_i16_ew, i64_i16_ew},
-  {EwTypeErr, EwTypeErr, i8_i32_ew, i16_i32_ew, i32_i32_ew, i64_i32_ew},
-  {EwTypeErr, EwTypeErr, i8_i64_ew, i16_i64_ew, i32_i64_ew, i64_i64_ew},
-  {EwTypeErr, EwTypeErr, i8_f32_ew, i16_f32_ew, i32_f32_ew, i64_f32_ew},
-  {EwTypeErr, EwTypeErr, i8_f64_ew, i16_f64_ew, i32_f64_ew, i64_f64_ew},
-  {EwTypeErr, EwTypeErr, i8_c64_ew, i16_c64_ew, i32_c64_ew, i64_c64_ew},
-  {EwTypeErr, EwTypeErr, i8_c128_ew,i16_c128_ew,i32_c128_ew,i64_c128_ew},
-  {EwTypeErr, EwTypeErr, i8_r32_ew, i16_r32_ew, i32_r32_ew, i64_r32_ew},
-  {EwTypeErr, EwTypeErr, i8_r64_ew, i16_r64_ew, i32_r64_ew, i64_r64_ew},
-  {EwTypeErr, EwTypeErr, i8_r128_ew,i16_r128_ew,i32_r128_ew,i64_r128_ew},
-  {EwTypeErr, EwTypeErr, i8_v_ew,   i16_v_ew,   i32_v_ew,   i64_v_ew}
-};
-
-
-static NMATRIX* elementwise_dense_casted(STORAGE_PAIR casted_storage, char op) {
+//static NMATRIX* elementwise_dense_casted(STORAGE_PAIR casted_storage, char op) {
+static NMATRIX* ew_hom_dense_casted(STORAGE_PAIR casted_storage, char op) {
   DENSE_STORAGE *left  = (DENSE_STORAGE*)(casted_storage.left),
                 *right = (DENSE_STORAGE*)(casted_storage.right),
                 *result;
@@ -423,36 +272,36 @@ static NMATRIX* elementwise_dense_casted(STORAGE_PAIR casted_storage, char op) {
   result = create_dense_storage(dtype, shape, left->rank, NULL, 0);
 
   // Do the operation
-  DenseElementwiseFuncs[dtype](left->elements, right->elements, result->elements, count_dense_storage_elements(result), op);
+  EwDenseHom[dtype](left->elements, right->elements, result->elements, count_dense_storage_elements(result), op);
 
   return nm_create(S_DENSE, result);
 }
 
 
-static NMATRIX* elementwise_list_casted(STORAGE_PAIR casted_storage, char op) {
+static NMATRIX* ew_hom_list_casted(STORAGE_PAIR casted_storage, char op) {
   rb_raise(rb_eNotImpError, "elementwise operations not implemented for list-of-list matrices");
   return NULL;
 }
 
 
-static NMATRIX* elementwise_yale_casted(STORAGE_PAIR casted_storage, char op) {
+//static NMATRIX* elementwise_yale_casted(STORAGE_PAIR casted_storage, char op) {
+static NMATRIX* ew_hom_yale_casted(STORAGE_PAIR casted_storage, enum MathHomOps op) {
   YALE_STORAGE *left  = (YALE_STORAGE*)(casted_storage.left),
                *right = (YALE_STORAGE*)(casted_storage.right);
   YALE_STORAGE *result = create_merged_yale_storage(left, right);
 
   fprintf(stderr, "result: %d, %d\n", result->dtype, result->index_dtype);
 
-  //fprintf(stderr, "Remember to fix elementwise for yale!\n");
-  YaleElementwiseFuncs[result->dtype][result->index_dtype](result->shape[0], result->shape[1], op, left->ija, right->ija, result->ija, left->a, right->a, result->a);
+  EwYaleHom[result->dtype][result->index_dtype](left->a, right->a, result->a, left->ija, right->ija, result->ija, result->shape[0], result->shape[1], op);
 
   return nm_create(S_YALE, result);
 }
 
 
 nm_elementwise_binary_op_casted_t CastedElementwiseFuncs = {
-  elementwise_dense_casted,
-  elementwise_list_casted,
-  elementwise_yale_casted
+  ew_hom_dense_casted,
+  ew_hom_list_casted,
+  ew_hom_yale_casted
 };
 
 
@@ -463,28 +312,28 @@ nm_compare_t EqEqFuncs = {
 };
 
 
-inline bool numeqeq(const void* x, const void* y, const size_t len, const size_t dtype_size) {
+inline bool eqeq_generic(const void* x, const void* y, const int len, const int dtype_size) {
   return (!memcmp(x, y, len * dtype_size));
 }
 
-
+// TODO: Make this auto-generated in some future version of CSquare.
 // element eqeq -- like memcmp but handles 0.0 == -0.0 for complex and floating points.
 // Second dimension is for hermitians -- complex conjugate. Use 0 for regular equality and 1 for conjugate equality.
-nm_eqeq_t ElemEqEq = {
+bool (*ElemEqEq[NM_TYPES][2])(const void*, const void*, const int, const int) = {
   {NULL, NULL},
-  {numeqeq, numeqeq}, // byte
-  {numeqeq, numeqeq}, // int8
-  {numeqeq, numeqeq}, // int16
-  {numeqeq, numeqeq}, // int32
-  {numeqeq, numeqeq}, // int64
-  {f32eqeq, f32eqeq}, // float32
-  {f64eqeq, f64eqeq}, // float64
-  {c64eqeq, c64conjeq}, // complex64
-  {c128eqeq, c128conjeq}, // complex128
-  {numeqeq, numeqeq}, // rational32
-  {numeqeq, numeqeq}, // rational64
-  {numeqeq, numeqeq}, // rational128
-  {numeqeq, numeqeq}  // Ruby object
+  {eqeq_generic, eqeq_generic}, // byte
+  {eqeq_generic, eqeq_generic}, // int8
+  {eqeq_generic, eqeq_generic}, // int16
+  {eqeq_generic, eqeq_generic}, // int32
+  {eqeq_generic, eqeq_generic}, // int64
+  {eqeq_f32, eqeq_f32}, // float32
+  {eqeq_f64, eqeq_f64}, // float64
+  {eqeq_c64, conjeq_c64}, // complex64
+  {eqeq_c128, conjeq_c128}, // complex128
+  {eqeq_generic, eqeq_generic}, // rational32
+  {eqeq_generic, eqeq_generic}, // rational64
+  {eqeq_generic, eqeq_generic}, // rational128
+  {eqeq_generic, eqeq_generic}  // Ruby object
 };
 
 
@@ -551,11 +400,22 @@ nm_scast_copy_storage_t ScastCopyFuncs = {
   {scast_copy_yale_dense, scast_copy_yale_list, cast_copy_yale_storage}
 };
 
-
-nm_stype_ref_t RefFuncs = {
+nm_stype_slice_t GetFuncs = {
   dense_storage_get,
   list_storage_get,
+  yale_storage_get
+};
+
+nm_stype_slice_t RefFuncs = {
+  dense_storage_ref,
+  list_storage_ref,
   yale_storage_ref
+};
+
+nm_stype_check_ref_t IsRefFuncs = {
+  dense_is_ref,
+  list_is_ref,
+  yale_is_ref
 };
 
 
@@ -1033,7 +893,7 @@ static VALUE nm_scast_copy(VALUE self, VALUE new_stype_symbol, VALUE new_dtype_s
 
 // Cast a single matrix to a new dtype (unless it's already casted, then just return it). Helper for binary_storage_cast_alloc.
 static inline STORAGE* storage_cast_alloc(NMATRIX* matrix, int8_t new_dtype) {
-  if (matrix->storage->dtype == new_dtype) return matrix->storage;
+  if (matrix->storage->dtype == new_dtype && !IsRefFuncs[matrix->stype](matrix->storage)) return matrix->storage;
   else                                     return CastCopyFuncs[matrix->stype](matrix->storage, new_dtype);
 }
 
@@ -1194,7 +1054,7 @@ static VALUE nm_elementwise(VALUE leftv, VALUE rightv, char op) {
  * Not available for list matrices. You should cast to a yale or dense matrix first.
  */
 static VALUE nm_ew_add(VALUE left, VALUE right) {
-  return nm_elementwise(left, right, '+');
+  return nm_elementwise(left, right, NM_MATHOP_ADD);
 }
 
 /*
@@ -1205,7 +1065,7 @@ static VALUE nm_ew_add(VALUE left, VALUE right) {
  * Not available for list matrices. You should cast to a yale or dense matrix first.
  */
 static VALUE nm_ew_subtract(VALUE left, VALUE right) {
-  return nm_elementwise(left, right, '-');
+  return nm_elementwise(left, right, NM_MATHOP_SUB);
 }
 
 /*
@@ -1218,7 +1078,7 @@ static VALUE nm_ew_subtract(VALUE left, VALUE right) {
  * For dot product, use +dot+ instead.
  */
 static VALUE nm_ew_multiply(VALUE left, VALUE right) {
-  return nm_elementwise(left, right, '*');
+  return nm_elementwise(left, right, NM_MATHOP_MUL);
 }
 
 /*
@@ -1229,7 +1089,19 @@ static VALUE nm_ew_multiply(VALUE left, VALUE right) {
  * Not available for list matrices. You should cast to a yale or dense matrix first.
  */
 static VALUE nm_ew_divide(VALUE left, VALUE right) {
-  return nm_elementwise(left, right, '/');
+  return nm_elementwise(left, right, NM_MATHOP_DIV);
+}
+
+
+/*
+ * Matrix element-wise modulus/norm.
+ *
+ * The two matrices must be of the same stype (for now). If dtype differs, an upcast will occur.
+ *
+ * Not available for list matrices. You should cast to a yale or dense matrix first.
+ */
+static VALUE nm_ew_mod(VALUE left, VALUE right) {
+  return nm_elementwise(left, right, NM_MATHOP_MOD);
 }
 
 
@@ -1244,7 +1116,7 @@ static VALUE nm_ew_divide(VALUE left, VALUE right) {
  * want, use +cast+.
  */
 static VALUE nm_ew_eqeq(VALUE left, VALUE right) {
-  return nm_elementwise(left, right, NM_OP_EQEQ);
+  return nm_elementwise(left, right, NM_MATHOP_EQEQ);
 }
 
 /*
@@ -1258,7 +1130,7 @@ static VALUE nm_ew_eqeq(VALUE left, VALUE right) {
  * want, use +cast+.
  */
 static VALUE nm_ew_leq(VALUE left, VALUE right) {
-  return nm_elementwise(left, right, NM_OP_LTE);
+  return nm_elementwise(left, right, NM_MATHOP_LTE);
 }
 
 
@@ -1273,7 +1145,7 @@ static VALUE nm_ew_leq(VALUE left, VALUE right) {
  * want, use +cast+.
  */
 static VALUE nm_ew_geq(VALUE left, VALUE right) {
-  return nm_elementwise(left, right, NM_OP_GTE);
+  return nm_elementwise(left, right, NM_MATHOP_GTE);
 }
 
 
@@ -1288,7 +1160,7 @@ static VALUE nm_ew_geq(VALUE left, VALUE right) {
  * want, use +cast+.
  */
 static VALUE nm_ew_lt(VALUE left, VALUE right) {
-  return nm_elementwise(left, right, '<');
+  return nm_elementwise(left, right, NM_MATHOP_LT);
 }
 
 
@@ -1303,7 +1175,7 @@ static VALUE nm_ew_lt(VALUE left, VALUE right) {
  * want, use +cast+.
  */
 static VALUE nm_ew_gt(VALUE left, VALUE right) {
-  return nm_elementwise(left, right, '>');
+  return nm_elementwise(left, right, NM_MATHOP_GT);
 }
 
 
@@ -1318,7 +1190,7 @@ static VALUE nm_ew_gt(VALUE left, VALUE right) {
  * want, use +cast+.
  */
 static VALUE nm_ew_neq(VALUE left, VALUE right) {
-  return nm_elementwise(left, right, NM_OP_NEQ);
+  return nm_elementwise(left, right, NM_MATHOP_NEQ);
 }
 
 
@@ -1412,43 +1284,71 @@ static SLICE* get_slice(size_t rank, VALUE* c, VALUE self) {
   return slice;
 }
 
-
-/*
- * Access the contents of an NMatrix at given coordinates.
- *
- *     n[3,3]  # => 5.0
- *
- */
-VALUE nm_mref(int argc, VALUE* argv, VALUE self) {
+VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLICE*), void (*delete_func)(NMATRIX*), VALUE self) {
   NMATRIX* mat;
   SLICE* slice;  
   void* v;
+  VALUE result = Qnil;
 
   if (NM_RANK(self) == (size_t)(argc)) {
     slice = get_slice((size_t)(argc), argv, self);
     // TODO: Slice for List, Yale types
-    if (NM_STYPE(self) == S_DENSE && slice->is_one_el == 0) {
+    if (slice->is_one_el == 0) {
 
-      mat = ALLOC(NMATRIX);
-      mat->stype = S_DENSE; 
-      mat->storage = RefFuncs[NM_STYPE(self)](NM_STORAGE(self), slice);
-      return Data_Wrap_Struct(cNMatrix, MarkFuncs[mat->stype], nm_delete_ref, mat);
+      if (NM_STYPE(self) == S_DENSE) {
+        mat = ALLOC(NMATRIX);
+        mat->stype = NM_STYPE(self);
+        mat->storage = (*slice_func)(NM_STORAGE(self), slice);
+        result = Data_Wrap_Struct(cNMatrix, MarkFuncs[mat->stype], delete_func, mat);
+      } 
+      else  {
+        rb_raise(rb_eNotImpError, "This type slicing not supported yet");
+      }
     } 
     else {
       v = ALLOC(VALUE);
       SetFuncs[NM_ROBJ][NM_DTYPE(self)](1, v, 0,
                 RefFuncs[NM_STYPE(self)](NM_STORAGE(self), slice), 0);
-      return *(VALUE*)v;
+      result = *(VALUE*)v;
     }
-                              
-  } else if (NM_RANK(self) < (size_t)(argc)) {
+    free(slice);                           
+  } 
+  else if (NM_RANK(self) < (size_t)(argc)) {
     rb_raise(rb_eArgError, "Coordinates given exceed matrix rank");
   } else {
     rb_raise(rb_eNotImpError, "This type slicing not supported yet");
   }
-  return Qnil;
+  return result;
 }
 
+/*
+ * Access the contents of an NMatrix at given coordinates with copping.
+ *
+ *     n.slice(3,3)  # => 5.0
+ *     n.slice(0..1,0..1) #=> matrix [2,2]
+ *
+ */
+VALUE nm_mget(int argc, VALUE* argv, VALUE self) {
+  return nm_xslice(argc, argv, GetFuncs[NM_STYPE(self)], nm_delete, self);
+}
+
+
+
+/*
+ * Access the contents of an NMatrix at given coordinates by reference. 
+ *
+ *     n[3,3]  # => 5.0
+ *     n[0..1,0..1] #=> matrix [2,2]
+ *
+ */
+VALUE nm_mref(int argc, VALUE* argv, VALUE self) {
+  return nm_xslice(argc, argv, RefFuncs[NM_STYPE(self)], nm_delete, self);
+}
+
+/* Check matrix for refernce */
+VALUE nm_is_ref(VALUE self) {
+  return IsRefFuncs[NM_STYPE(self)](NM_STORAGE(self)) ? Qtrue : Qfalse;
+}
 
 /*
  * Modify the contents of an NMatrix in the given cell
@@ -1573,84 +1473,16 @@ static VALUE nm_cblas_gemm(VALUE self,
                            VALUE beta,
                            VALUE c, VALUE ldc)
 {
-  struct cblas_param_t p = cblas_params_for_multiply(((DENSE_STORAGE*)(NM_STORAGE(a))), ((DENSE_STORAGE*)(NM_STORAGE(b))), ((DENSE_STORAGE*)(NM_STORAGE(c))), false);
-  p.M = FIX2INT(m);
-  p.N = FIX2INT(n);
-  p.K = FIX2INT(k);
+  char *pAlpha = ALLOCA_N(char, nm_sizeof[NM_DTYPE(c)]),
+       *pBeta  = ALLOCA_N(char, nm_sizeof[NM_DTYPE(c)]);
 
-  p.lda = FIX2INT(lda);
-  p.ldb = FIX2INT(ldb);
-  p.ldc = FIX2INT(ldc);
+  SetFuncs[NM_DTYPE(c)][NM_ROBJ](1, pAlpha, 0, &alpha, 0);
+  SetFuncs[NM_DTYPE(c)][NM_ROBJ](1, pBeta, 0, &beta, 0);
 
-  switch(NM_DTYPE(c)) {
-  case NM_FLOAT32:
-  case NM_FLOAT64:
-    p.alpha.d[0] = NUM2DBL(alpha);
-    p.beta.d[0] = NUM2DBL(beta);
-    break;
-
-  case NM_COMPLEX64:
-    p.alpha.c[0].r = REAL2DBL(alpha);
-    p.alpha.c[0].i = IMAG2DBL(alpha);
-    p.beta.c[0].r = REAL2DBL(beta);
-    p.beta.c[0].i = IMAG2DBL(beta);
-    break;
-
-  case NM_COMPLEX128:
-    p.alpha.z.r = REAL2DBL(alpha);
-    p.alpha.z.i = IMAG2DBL(alpha);
-    p.beta.z.r = REAL2DBL(beta);
-    p.beta.z.i = IMAG2DBL(beta);
-    break;
-
-  case NM_BYTE:
-    p.alpha.b[0] = FIX2INT(alpha);
-    p.beta.b[0] = FIX2INT(beta);
-    break;
-
-  case NM_INT8:
-  case NM_INT16:
-  case NM_INT32:
-  case NM_INT64:
-    p.alpha.i[0] = FIX2INT(alpha);
-    p.beta.i[0]  = FIX2INT(beta);
-    break;
-
-  case NM_RATIONAL32:
-    p.alpha.r[0].n = NUMER2INT(alpha);
-    p.alpha.r[0].d = DENOM2INT(alpha);
-    p.beta.r[0].n = NUMER2INT(beta);
-    p.beta.r[0].d = DENOM2INT(beta);
-    break;
-
-  case NM_RATIONAL64:
-    p.alpha.ra[0].n = NUMER2INT(alpha);
-    p.alpha.ra[0].d = DENOM2INT(alpha);
-    p.beta.ra[0].n = NUMER2INT(beta);
-    p.beta.ra[0].d = DENOM2INT(beta);
-    break;
-
-  case NM_RATIONAL128:
-    p.alpha.rat.n = NUMER2INT(alpha);
-    p.alpha.rat.d = DENOM2INT(alpha);
-    p.beta.rat.n = NUMER2INT(beta);
-    p.beta.rat.d = DENOM2INT(beta);
-    break;
-
-  case NM_ROBJ:
-    p.alpha.v[0] = alpha;
-    p.beta.v[0]  = beta;
-    break;
-
-  default:
-    rb_raise(nm_eDataTypeError, "unexpected dtype");
-
-  }
-
-  /* fprintf(stderr, "cblas_gemm: %d %d %d %d %d %f %d %d %f %d\n", trans_a_, trans_b_,
-         m_, n_, k_, alpha_, lda_, ldb_, beta_, ldc_); */
-
-  GemmFuncs[NM_DTYPE(c)](CblasRowMajor, gemm_op_sym(trans_a), gemm_op_sym(trans_b), p);
+  Gemm[NM_DTYPE(c)](gemm_op_sym(trans_a), gemm_op_sym(trans_b), FIX2INT(n), FIX2INT(m), FIX2INT(k), pAlpha,
+                    ((DENSE_STORAGE*)(NM_STORAGE(b)))->elements, FIX2INT(ldb),
+                    ((DENSE_STORAGE*)(NM_STORAGE(a)))->elements, FIX2INT(lda), pBeta,
+                    ((DENSE_STORAGE*)(NM_STORAGE(c)))->elements, FIX2INT(ldc));
 
   return Qtrue;
 }
@@ -1684,42 +1516,20 @@ static VALUE nm_cblas_gemv(VALUE self,
                            VALUE a, VALUE lda,
                            VALUE x, VALUE incx,
                            VALUE beta,
-                           VALUE y, VALUE incy) {
+                           VALUE y, VALUE incy)
+{
 
-  struct cblas_param_t p;
-  p.M = FIX2INT(m);
-  p.N = FIX2INT(n);
-  p.A = ((DENSE_STORAGE*)(NM_STORAGE(a)))->elements;
-  p.B = ((DENSE_STORAGE*)(NM_STORAGE(x)))->elements;
-  p.C = ((DENSE_STORAGE*)(NM_STORAGE(y)))->elements;
-  p.lda = FIX2INT(lda);
-  p.ldb = FIX2INT(incx);
-  p.ldc = FIX2INT(incy);
+  char *pAlpha = ALLOCA_N(char, nm_sizeof[NM_DTYPE(y)]),
+       *pBeta  = ALLOCA_N(char, nm_sizeof[NM_DTYPE(y)]);
 
-  switch(NM_DTYPE(y)) {
-  case NM_FLOAT32:
-  case NM_FLOAT64:
-    p.alpha.d[0] = REAL2DBL(alpha);
-    p.beta.d[0]  = REAL2DBL(beta);
-    break;
-  case NM_COMPLEX64:
-    p.alpha.c[0].r = REAL2DBL(alpha);
-    p.alpha.c[0].i = IMAG2DBL(alpha);
-    p.beta.c[0].r = REAL2DBL(beta);
-    p.beta.c[0].i = IMAG2DBL(beta);
-    break;
-  case NM_COMPLEX128:
-    p.alpha.z.r = REAL2DBL(alpha);
-    p.alpha.z.i = IMAG2DBL(alpha);
-    p.beta.z.r = REAL2DBL(beta);
-    p.beta.z.i = IMAG2DBL(beta);
-    break;
-  }
+  SetFuncs[NM_DTYPE(y)][NM_ROBJ](1, pAlpha, 0, &alpha, 0);
+  SetFuncs[NM_DTYPE(y)][NM_ROBJ](1, pBeta, 0, &beta, 0);
 
-  /* fprintf(stderr, "cblas_gemm: %d %d %d %d %d %f %d %d %f %d\n", trans_a_, trans_b_,
-         m_, n_, k_, alpha_, lda_, ldb_, beta_, ldc_); */
-
-  GemvFuncs[NM_DTYPE(y)](CblasRowMajor, gemm_op_sym(trans_a), p);
+  Gemv[NM_ROBJ](gemm_op_sym(trans_a),
+                FIX2INT(m), FIX2INT(n), pAlpha,
+                ((DENSE_STORAGE*)(NM_STORAGE(a)))->elements, FIX2INT(lda),
+                ((DENSE_STORAGE*)(NM_STORAGE(x)))->elements, FIX2INT(incx), pBeta,
+                ((DENSE_STORAGE*)(NM_STORAGE(y)))->elements, FIX2INT(incy));
 
   return Qtrue;
 }
@@ -1929,7 +1739,7 @@ static VALUE nm_det_exact(VALUE self) {
   if (m->storage->rank != 2 || m->storage->shape[0] != m->storage->shape[1]) return Qnil;
 
   // Calculate the determinant and then assign it to the return value
-  DenseDetExact[NM_DTYPE(self)](m->storage->shape[0], ((DENSE_STORAGE*)(m->storage))->elements, m->storage->shape[0], result);
+  DetExact[NM_DTYPE(self)](m->storage->shape[0], ((DENSE_STORAGE*)(m->storage))->elements, m->storage->shape[0], result);
   SetFuncs[NM_ROBJ][NM_DTYPE(self)](1, &ret, 0, result, 0);
 
   return ret;
@@ -1983,7 +1793,7 @@ static NMATRIX* transpose_new_yale(NMATRIX* self_m, size_t* shape) {
   A.diag = true;
 
   // call the appropriate function pointer
-  SparseTransposeFuncs[ self_m->storage->dtype ][ ((YALE_STORAGE*)(self_m->storage))->index_dtype ](shape[0], shape[1], A, B, true);
+  Transp[ self_m->storage->dtype ][ ((YALE_STORAGE*)(self_m->storage))->index_dtype ](shape[0], shape[1], A.ia, A.ja, A.a, A.diag, B.ia, B.ja, B.a, true);
 
   return result;
 }
@@ -2103,6 +1913,7 @@ static VALUE nm_hermitian(VALUE self) {
 
 
 
+
 void Init_nmatrix() {
     /* Require Complex class */
     //rb_require("complex");
@@ -2131,7 +1942,10 @@ void Init_nmatrix() {
     rb_define_method(cNMatrix, "cast", nm_scast_copy, 2);
 
     rb_define_method(cNMatrix, "[]", nm_mref, -1);
+    rb_define_method(cNMatrix, "slice", nm_mget, -1);
     rb_define_method(cNMatrix, "[]=", nm_mset, -1);
+    rb_define_method(cNMatrix, "is_ref?", nm_is_ref, 0);
+
     rb_define_method(cNMatrix, "rank", nm_rank, 0);
     rb_define_alias(cNMatrix, "dim", "rank");
     rb_define_method(cNMatrix, "shape", nm_shape, 0);
@@ -2146,15 +1960,19 @@ void Init_nmatrix() {
     rb_define_method(cNMatrix, "/", nm_ew_divide, 1);
     rb_define_method(cNMatrix, "+", nm_ew_add, 1);
     rb_define_method(cNMatrix, "-", nm_ew_subtract, 1);
+    rb_define_method(cNMatrix, "%", nm_ew_mod, 1);
+    /* // TODO: Write new elementwise code for boolean operations
     rb_define_method(cNMatrix, "==", nm_ew_eqeq, 1);
     rb_define_method(cNMatrix, "!=", nm_ew_neq, 1);
     rb_define_method(cNMatrix, "<=", nm_ew_leq, 1);
     rb_define_method(cNMatrix, ">=", nm_ew_geq, 1);
     rb_define_method(cNMatrix, "<", nm_ew_lt, 1);
     rb_define_method(cNMatrix, ">", nm_ew_gt, 1);
+    */
     rb_define_method(cNMatrix, "eql?", nm_eqeq, 1);
     rb_define_method(cNMatrix, "dot", nm_multiply, 1);
-    //rb_define_alias(cNMatrix, "equal?", "eql?");
+    //TODO: Method #eql? is rigorous variant of #== without casting
+    rb_define_alias(cNMatrix, "==", "eql?");
 
     rb_define_method(cNMatrix, "symmetric?", nm_symmetric, 0);
     rb_define_method(cNMatrix, "hermitian?", nm_hermitian, 0);

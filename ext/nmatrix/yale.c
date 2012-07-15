@@ -42,9 +42,9 @@
 
 #include "nmatrix.h"
 
-extern nm_eqeq_t ElemEqEq;
+extern bool (*ElemEqEq[NM_TYPES][2])(const void*, const void*, const int, const int);
 extern VALUE nm_eStorageTypeError;
-
+extern const int nm_sizeof[NM_TYPES];
 
 extern const char *nm_dtypestring[];
 
@@ -373,7 +373,7 @@ YALE_STORAGE* copy_yale_storage(YALE_STORAGE* rhs) {
 
 
 // copy constructor
-YALE_STORAGE* cast_copy_yale_storage(YALE_STORAGE* rhs, int8_t new_dtype) {
+YALE_STORAGE* cast_copy_yale_storage(const YALE_STORAGE* rhs, int8_t new_dtype) {
   y_size_t size;
   YALE_STORAGE* lhs;
 
@@ -783,6 +783,10 @@ char yale_storage_set(YALE_STORAGE* s, SLICE* slice, void* v) {
 
 }
 
+void* yale_storage_get(YALE_STORAGE* s, SLICE* slice) {
+  /* TODO */
+  rb_raise(rb_eNotImpError, "This type slicing not supported yet");
+}
 
 void* yale_storage_ref(YALE_STORAGE* s, SLICE* slice) {
   size_t* coords = slice->coords;
@@ -806,6 +810,11 @@ void* yale_storage_ref(YALE_STORAGE* s, SLICE* slice) {
 
   // return a pointer that happens to be zero
   return YALE_A(s, nm_sizeof[s->dtype], s->shape[0]);
+}
+
+bool yale_is_ref(const YALE_STORAGE* s)
+{
+  return false;
 }
 
 #endif

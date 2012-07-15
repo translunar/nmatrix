@@ -37,22 +37,26 @@ require File.join(File.dirname(__FILE__), "array.rb") # Load Array extensions
 
 
 class NMatrix
-  VERSION = '0.0.1'
-
   # Read and write extensions for NMatrix. These are only loaded when needed.
   module IO
     autoload(:Matlab, File.join(File.dirname(__FILE__), 'nmatrix', 'io', 'matlab.rb'))
   end
 
   # TODO: Make this actually pretty.
-  def pretty_print
+  def pretty_print(q=nil)
     raise(NotImplementedError, "can only print rank 2 matrices") unless rank == 2
     (0...shape[0]).each do |i|
       arr = []
       (0...shape[1]).each do |j|
         arr << (self[i,j].nil? ? "nil" : self[i,j])
       end
-      puts arr.join("  ")
+      if q 
+        q.group(1, "","\n") do
+          q.seplist(arr, lambda{ q.text "  " }, :each)  { |v| q.text v.to_s } 
+        end
+      else
+        puts arr.join("  ")
+      end
     end
     nil
   end
