@@ -375,6 +375,7 @@ extern VALUE cNMatrix;
 #define NM_MIN(a,b) (((a)>(b))?(b):(a))
 #define NM_SWAP(a,b,tmp) {(tmp)=(a);(a)=(b);(b)=(tmp);}
 
+#define NM_CHECK_ALLOC(x) if (!x) rb_raise(rb_eNoMemError, "Memory error");
 //#define NUM2REAL(v) NUM2DBL( rb_funcall((v),nm_id_real,0) ) // deprecated
 #define REAL2DBL(v) NUM2DBL( rb_funcall((v),nm_id_real,0) )
 //#define NUM2IMAG(v) NUM2DBL( rb_funcall((v),nm_id_imag,0) ) // deprecated

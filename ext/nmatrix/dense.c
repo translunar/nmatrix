@@ -75,8 +75,7 @@ size_t* dense_calc_strides(size_t* shape, size_t rank) {
   size_t i, j;
   size_t* strides = calloc(sizeof(*shape), rank);
 
-  if (!strides)
-    rb_raise(rb_eNoMemError, "Memory error");
+  NM_CHECK_ALLOC(strides);
 
   for (i = 0; i < rank; i++) {
     strides[i] = 1;
@@ -106,7 +105,7 @@ void dense_slice_with_copping(DENSE_STORAGE *dest, DENSE_STORAGE *src,
   else {
     memcpy((char*)dest->elements + pdest*nm_sizeof[dest->dtype], 
         (char*)src->elements + psrc*nm_sizeof[src->dtype], 
-        src->shape[n]*nm_sizeof[dest->dtype]);
+        dest->shape[n]*nm_sizeof[dest->dtype]);
   }
 
 }
@@ -121,16 +120,23 @@ void* dense_storage_get(DENSE_STORAGE* s, SLICE* slice) {
   else { // Make references  
     ns = ALLOC( DENSE_STORAGE );
 
+    NM_CHECK_ALLOC(ns);
+
     ns->rank       = s->rank;
     ns->shape      = slice->lens;
     ns->dtype      = s->dtype;
+
     ns->offset     = calloc(sizeof(size_t),ns->rank);
+    NM_CHECK_ALLOC(ns->offset);
+
     ns->strides    = dense_calc_strides(ns->shape, ns->rank);
     ns->count      = 1;
     ns->src        = ns;
 
     count         = count_dense_storage_elements(s);
+
     ns->elements = ALLOC_N(char, nm_sizeof[ns->dtype]*count);
+    NM_CHECK_ALLOC(ns->elements);
 
     dense_slice_with_copping(ns, s, slice->lens, dense_storage_pos(s, slice->coords), 0, 0);
     return ns;
@@ -146,12 +152,16 @@ void* dense_storage_ref(DENSE_STORAGE* s, SLICE* slice) {
     return (char*)(s->elements) + dense_storage_pos(s, slice->coords) * nm_sizeof[s->dtype];
   else { // Make references  
     ns = ALLOC( DENSE_STORAGE );
+    NM_CHECK_ALLOC(ns);
 
     ns->rank      = s->rank;
     ns->dtype     = s->dtype;
 
     ns->offset    = calloc(sizeof(*ns->offset), ns->rank);
+    NM_CHECK_ALLOC(ns->offset);
+
     ns->shape     = calloc(sizeof(*ns->offset), ns->rank);
+    NM_CHECK_ALLOC(ns->shape);
     
     for (i = 0; i < ns->rank; i++) {
       ns->offset[i] = slice->coords[i] + s->offset[i];
@@ -179,13 +189,11 @@ bool dense_is_ref(const DENSE_STORAGE* s) {
 
 DENSE_STORAGE* copy_dense_storage(const DENSE_STORAGE* rhs) {
   DENSE_STORAGE* lhs;
-  size_t count = count_dense_storage_elements(rhs), p;
-  size_t* shape = ALLOC_N(size_t, rhs->rank);
-  if (!shape) return NULL;
+  size_t count = count_dense_storage_elements(rhs);
 
-  // copy shape array
-  for (p = 0; p < rhs->rank; ++p)
-    shape[p] = rhs->shape[p];
+  size_t* shape = ALLOC_N(size_t, rhs->rank);
+  NM_CHECK_ALLOC(shape);
+  memcpy(shape, rhs->shape, sizeof(*shape) * rhs->rank);
 
   lhs = create_dense_storage(rhs->dtype, shape, rhs->rank, NULL, 0);
 
@@ -201,7 +209,7 @@ DENSE_STORAGE* copy_dense_storage(const DENSE_STORAGE* rhs) {
 
 DENSE_STORAGE* cast_copy_dense_storage(const DENSE_STORAGE* rhs, int8_t new_dtype) { 
   DENSE_STORAGE *lhs, *tmp;
-  size_t count, p;
+  size_t count;
   size_t* shape;
 
 
@@ -209,16 +217,16 @@ DENSE_STORAGE* cast_copy_dense_storage(const DENSE_STORAGE* rhs, int8_t new_dtyp
     return copy_dense_storage(rhs); 
   
   count = count_dense_storage_elements(rhs);
-  shape = ALLOC_N(size_t, rhs->rank);
-  if (!shape) return NULL;
 
-  // copy shape array
-  for (p = 0; p < rhs->rank; ++p) shape[p] = rhs->shape[p];
+  shape = ALLOC_N(size_t, rhs->rank);
+  NM_CHECK_ALLOC(shape);
+  memcpy(shape, rhs->shape, sizeof(*shape) * rhs->rank);
 
   lhs = create_dense_storage(new_dtype, shape, rhs->rank, NULL, 0);
   if (lhs && count) // ensure that allocation worked before copying
     if (dense_is_ref(rhs)) {
       tmp = copy_dense_storage(rhs);
+      NM_CHECK_ALLOC(tmp);
       SetFuncs[lhs->dtype][tmp->dtype](count, lhs->elements, nm_sizeof[lhs->dtype], tmp->elements, nm_sizeof[tmp->dtype]);
       delete_dense_storage(tmp);
     }
@@ -422,8 +430,7 @@ void delete_dense_storage(DENSE_STORAGE* s) {
 
 void delete_dense_storage_ref(DENSE_STORAGE* s) {
   if (s) { // sometimes Ruby passes in NULL storage for some reason (probably on copy construction failure)
-    if (((DENSE_STORAGE*)s->src)->count == 1)
-      delete_dense_storage(s->src);
+    delete_dense_storage(s->src);
     free(s->shape);
     free(s->offset);
     free(s);
