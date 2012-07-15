@@ -171,10 +171,7 @@ void dense_storage_set(DENSE_STORAGE* s, SLICE* slice, void* val) {
 }
 
 bool dense_is_ref(const DENSE_STORAGE* s) {
-  if (s->src == s)
-    return false;
-
-  return true;
+  return s->src != s;
 }
 
 DENSE_STORAGE* copy_dense_storage(const DENSE_STORAGE* rhs) {
@@ -199,8 +196,7 @@ DENSE_STORAGE* copy_dense_storage(const DENSE_STORAGE* rhs) {
 }
 
 
-DENSE_STORAGE* cast_copy_dense_storage(const DENSE_STORAGE* rhs, int8_t new_dtype) {
-  DENSE_STORAGE *lhs, *tmp;
+DENSE_STORAGE* cast_copy_dense_storage(const DENSE_STORAGE* rhs, int8_t new_dtype) { DENSE_STORAGE *lhs, *tmp;
   size_t count, p;
   size_t* shape;
 
@@ -231,17 +227,11 @@ DENSE_STORAGE* cast_copy_dense_storage(const DENSE_STORAGE* rhs, int8_t new_dtyp
 
 // Do these two dense matrices of the same dtype have exactly the same contents?
 bool dense_storage_eqeq(const DENSE_STORAGE* left, const DENSE_STORAGE* right) {
-  DENSE_STORAGE *a, *b;
-
   /* FIXME: Very strange behavior! The GC calls directly the method with non-initialized data. */
   if (left->rank != right->rank)
     return false;
 
-  a = (dense_is_ref(left) ? copy_dense_storage(left) : left); 
-  b = (dense_is_ref(right) ? copy_dense_storage(right) : right); 
-
-
-  return ElemEqEq[a->dtype][0](a->elements, b->elements, count_dense_storage_elements(a), nm_sizeof[b->dtype]);
+  return ElemEqEq[a->dtype][0](left->elements, right->elements, count_dense_storage_elements(left), nm_sizeof[right->dtype]);
 }
 
 
@@ -416,7 +406,7 @@ DENSE_STORAGE* create_dense_storage(int8_t dtype, size_t* shape, size_t rank, vo
 
 void delete_dense_storage(DENSE_STORAGE* s) {
   if (s) { // sometimes Ruby passes in NULL storage for some reason (probably on copy construction failure)
-    if(s->count <= 1) {
+    if(s->count-- == 1) {
       free(s->shape);
       free(s->offset);
       free(s->strides);
@@ -428,7 +418,8 @@ void delete_dense_storage(DENSE_STORAGE* s) {
 
 void delete_dense_storage_ref(DENSE_STORAGE* s) {
   if (s) { // sometimes Ruby passes in NULL storage for some reason (probably on copy construction failure)
-    ((DENSE_STORAGE*)s->src)->count--;
+    if (((DENSE_STORAGE*)s->src)->count == 1)
+      delete_dense_storage(s->src);
     free(s->shape);
     free(s->offset);
     free(s);
