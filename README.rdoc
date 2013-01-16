@@ -53,12 +53,12 @@ Finally, try compiling again.
 
 Create a new NMatrix from a ruby array: 
 
-  	>> NMatrix.new([2, 3], [0, 1, 2, 3, 4, 5], :int64).pp
-	    [0, 1, 2]
-	    [3, 4, 5]
-  	=> nil
+    >> NMatrix.new([2, 3], [0, 1, 2, 3, 4, 5], :int64).pp
+      [0, 1, 2]
+      [3, 4, 5]
+    => nil
 
-Create a new NMatrix using the shortcut +N[]+:
+Create a new NMatrix using the +N+ shortcut:
 
   	>> m = N[ [2, 3, 4], [7, 8, 9] ]
   	=> #<NMatrix:0x007f8e121b6cf8shape:[2,3] dtype:int32 stype:dense> 
@@ -66,7 +66,7 @@ Create a new NMatrix using the shortcut +N[]+:
   	  [2, 3, 4]
   	  [7, 8, 9]
 
-If you want to learn more about how to create a matrix, {read the guide in our wiki}{https://github.com/SciRuby/nmatrix/wiki/How-to-create-a-NMatrix}.
+If you want to learn more about how to create a matrix, {read the guide in our wiki}[https://github.com/SciRuby/nmatrix/wiki/How-to-create-a-NMatrix].
 
 We will add more examples here soon. :)
 
