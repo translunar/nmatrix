@@ -219,18 +219,18 @@ inline static void cblas_gemm(const enum CBLAS_ORDER order,
  * For documentation: http://www.netlib.org/lapack/double/dgetrf.f
  */
 template <typename DType>
-inline static bool cblas_gemv(const enum CBLAS_TRANSPOSE trans_a,
-                              int m, int n,
-                              void* alpha,
-                              void* a, int lda,
-                              void* x, int incx,
-                              void* beta,
-                              void* y, int incy)
+inline static bool cblas_gemv(const enum CBLAS_TRANSPOSE trans,
+                              const int m, const int n,
+                              const void* alpha,
+                              const void* a, const int lda,
+                              const void* x, const int incx,
+                              const void* beta,
+                              void* y, const int incy)
 {
-  return gemv<DType>(trans_a,
-                     m, n, reinterpret_cast<DType*>(alpha),
-                     reinterpret_cast<DType*>(a), lda,
-                     reinterpret_cast<DType*>(x), incx, reinterpret_cast<DType*>(beta),
+  return gemv<DType>(trans,
+                     m, n, reinterpret_cast<const DType*>(alpha),
+                     reinterpret_cast<const DType*>(a), lda,
+                     reinterpret_cast<const DType*>(x), incx, reinterpret_cast<const DType*>(beta),
                      reinterpret_cast<DType*>(y), incy);
 }
 
@@ -591,7 +591,7 @@ static VALUE nm_cblas_gemv(VALUE self,
                            VALUE beta,
                            VALUE y, VALUE incy)
 {
-  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::cblas_gemv, bool, const enum CBLAS_TRANSPOSE trans_a, int m, int n, void* alpha, void* a, int lda, void* x, int incx, void* beta, void* y, int incy);
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::cblas_gemv, bool, const enum CBLAS_TRANSPOSE, const int, const int, const void*, const void*, const int, const void*, const int, const void*, void*, const int)
 
   nm::dtype_t dtype = NM_DTYPE(a);
 

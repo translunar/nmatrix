@@ -59,7 +59,9 @@ module NMatrix::BLAS
     	if a.dtype == :complex64 or a.dtype == :complex128
     		alpha = Complex(1.0, 0.0) if alpha == 1.0
     		beta  = Complex(0.0, 0.0) if beta  == 0.0
-    	end
+      end
+
+      y ||= NMatrix.new([m, n], a.dtype)
 
     	::NMatrix::BLAS.cblas_gemv(transpose_a, m, n, alpha, a, lda, x, incx, beta, y, incy)
 

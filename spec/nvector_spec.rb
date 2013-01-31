@@ -40,7 +40,7 @@ describe NVector do
     v[0].should == 1.555
   end
   
-  it "transpose() changes raw and coloumn stored structure" do
+  it "transpose() changes raw and column stored structure" do
     v = NVector.new 5, :float64
     v = v.transpose
     v.shape[0].should == 1

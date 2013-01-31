@@ -707,7 +707,6 @@ static DENSE_STORAGE* matrix_multiply(const STORAGE_PAIR& casted_storage, size_t
   *pAlpha = 1;
   *pBeta = 0;
   // Do the multiplication
-
   if (vector) nm::math::gemv<DType>(CblasNoTrans, left->shape[0], left->shape[1], pAlpha,
                                     reinterpret_cast<DType*>(left->elements), left->shape[1],
                                     reinterpret_cast<DType*>(right->elements), 1, pBeta,
