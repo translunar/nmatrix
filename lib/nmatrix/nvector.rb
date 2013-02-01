@@ -84,6 +84,11 @@ class NVector < NMatrix
 
 	def dim; 1; end
 
+  # shorthand for the dominant shape component
+  def size
+    shape[0] > 1 ? shape[0] : shape[1]
+  end
+
 	# TODO: Make this actually pretty.
 	def pretty_print
 		dim = @orientation == :row ? 1 : 0

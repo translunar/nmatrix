@@ -48,6 +48,10 @@ module NMatrix::BLAS
     end
 
     def gemv(a, x, y = nil, alpha = 1.0, beta = 0.0, transpose_a = false, m = nil, n = nil, lda = nil, incx = nil, incy = nil)
+      raise ArgumentError, 'Expected dense NMatrices as first two arguments.' unless a.is_a?(NMatrix) and x.is_a?(NMatrix) and a.stype == :dense and x.stype == :dense
+     	raise ArgumentError, 'Expected nil or dense NMatrix as third argument.' unless y.nil? or (y.is_a?(NMatrix) and y.stype == :dense)
+     	raise ArgumentError, 'NMatrix dtype mismatch.'													unless a.dtype == x.dtype and (y ? a.dtype == y.dtype : true)
+
     	m ||= transpose_a ? a.shape[1] : a.shape[0]
     	n ||= transpose_a ? a.shape[0] : a.shape[1]
 
@@ -66,6 +70,21 @@ module NMatrix::BLAS
     	::NMatrix::BLAS.cblas_gemv(transpose_a, m, n, alpha, a, lda, x, incx, beta, y, incy)
 
     	return y
+    end
+
+    def rot(x, y, c, s, incx = 1, incy = 1, n = nil)
+      raise ArgumentError, 'Expected dense NMatrices as first two arguments.' unless x.is_a?(NMatrix) and y.is_a?(NMatrix) and x.stype == :dense and y.stype == :dense
+     	raise ArgumentError, 'NMatrix dtype mismatch.'													unless x.dtype == y.dtype
+      raise ArgumentError, 'Need to supply n for non-standard incx, incy values' if n.nil? && incx != 1 && incx != -1 && incy != 1 && incy != -1
+
+      n ||= x.size > y.size ? y.size : x.size
+
+      xx = x.clone
+      yy = y.clone
+
+      ::NMatrix::BLAS.cblas_rot(n, xx, incx, yy, incy, c, s)
+
+      return [xx,yy]
     end
 
   end
