@@ -358,6 +358,7 @@ static VALUE nm_dim(VALUE self);
 static VALUE nm_shape(VALUE self);
 static VALUE nm_capacity(VALUE self);
 static VALUE nm_each(VALUE nmatrix);
+static VALUE nm_each_sparse_with_indices(VALUE nmatrix);
 
 static SLICE* get_slice(size_t dim, VALUE* c, VALUE self);
 static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLICE*), void (*delete_func)(NMATRIX*), VALUE self);
@@ -450,6 +451,7 @@ void Init_nmatrix() {
 		//rb_define_method(cNMatrix, "transpose!", nm_transpose_self, 0);
 		rb_define_method(cNMatrix, "complex_conjugate!", nm_complex_conjugate_bang, 0);
 		rb_define_method(cNMatrix, "each", nm_each, 0);
+		rb_define_method(cNMatrix, "each_sparse_with_indices", nm_each_sparse_with_indices, 0);
 		rb_define_method(cNMatrix, "==",	  nm_eqeq,				1);
 		rb_define_method(cNMatrix, "+",			nm_ew_add,			1);
 		rb_define_method(cNMatrix, "-",			nm_ew_subtract,	1);
@@ -536,6 +538,7 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "complex_conjugate!", (METHOD)nm_complex_conjugate_bang, 0);
 
 	rb_define_method(cNMatrix, "each", (METHOD)nm_each, 0);
+	rb_define_method(cNMatrix, "each_sparse_with_indices", (METHOD)nm_each_sparse_with_indices, 0);
 
 	rb_define_method(cNMatrix, "==",	  (METHOD)nm_eqeq,				1);
 

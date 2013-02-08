@@ -181,6 +181,52 @@ describe NMatrix do
         n[0,1].should == 1
       end
 
+      # Tests Ruby object versus any C dtype (in this case we use :int64)
+      [:object, :int64].each do |dtype|
+        c = dtype == :object ? "Ruby object" : "non-Ruby object"
+        context c do
+          it "allows iteration of matrices" do
+            pending("yale and list not implemented yet") unless storage_type == :dense
+            n = NMatrix.new(:dense, [3,3], [1,2,3,4,5,6,7,8,9], dtype)
+            n.each do |x|
+              puts x
+            end
+          end
+
+          it "allows sparse iteration of matrices" do
+            pending("dense and list not implemented yet") unless storage_type == :yale
+            n = NMatrix.new(:yale, [3,3], :int64)
+            n[0,0] = 1
+            n[0,1] = 2
+            n[2,2] = 3
+            n[2,1] = 4
+
+            values = []
+            is = []
+            js = []
+            n.each_sparse_with_indices do |v,i,j|
+              values << v
+              is << i
+              js << j
+            end
+
+            if storage_type == :yale
+              values.should == [1,0,3,2,4]
+              is.should     == [0,1,2,0,2]
+              js.should     == [0,1,2,1,1]
+            elsif storage_type == :list
+              values.should == [1,2,4,3]
+              is.should     == [0,0,2,2]
+              js.should     == [0,1,2,1]
+            elsif storage_type == :dense
+              values.should == [1,2,0,0,0,0,0,3,4]
+              is.should     == [0,0,0,1,1,1,2,2,2]
+              js.should     == [0,1,2,0,1,2,0,1,2]
+            end
+          end
+        end
+      end
+
     end
 
     # dense and list, not yale
@@ -207,20 +253,6 @@ describe NMatrix do
   it "handles dense construction" do
     NMatrix.new(3,0)[1,1].should == 0
     lambda { NMatrix.new(3,:int8)[1,1] }.should_not raise_error
-  end
-
-  it "allows iteration of Ruby object matrices" do
-    n = NMatrix.new(:dense, [3,3], [1,2,3,4,5,6,7,8,9], :object)
-    n.each do |x|
-      puts x
-    end
-  end
-
-  it "allows iteration of non-Ruby object matrices" do
-    n = NMatrix.new(:dense, [3,3], [1,2,3,4,5,6,7,8,9], :int64)
-    n.each do |x|
-      puts x
-    end
   end
 
   it "calculates the complex conjugate in-place" do
