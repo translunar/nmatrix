@@ -1149,7 +1149,7 @@ static STORAGE* matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resu
 extern "C" {
 
 void nm_init_yale_functions() {
-	#ifdef 0
+	#ifdef RDOC
 	  rb_define_method(cNMatrix_YaleFunctions, "yale_ija", nm_ija, 0);
 	  rb_define_method(cNMatrix_YaleFunctions, "yale_a", nm_a, 0);
 	  rb_define_method(cNMatrix_YaleFunctions, "yale_size", nm_size, 0);

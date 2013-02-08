@@ -428,7 +428,7 @@ static double get_time(void);
 
 void Init_nmatrix() {
 	
-	#ifdef 0
+	#ifdef RDOC
 		rb_define_singleton_method(cNMatrix, "upcast", nm_upcast, 2);
 		rb_define_singleton_method(cNMatrix, "itype_by_shape", nm_itype_by_shape, 1);	
 		rb_define_method(cNMatrix, "initialize", nm_init, -1);
