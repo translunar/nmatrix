@@ -188,6 +188,62 @@ void nm_dense_storage_mark(void* storage_base) {
 // Accessors //
 ///////////////
 
+
+/*
+ * Each: Yield objects directly (suitable only for a dense matrix of Ruby objects).
+ */
+static VALUE nm_dense_each_direct(VALUE nm) {
+  DENSE_STORAGE* s = NM_STORAGE_DENSE(nm);
+
+  RETURN_ENUMERATOR(nm, 0, 0);
+
+  for (size_t i = 0; i < nm_storage_count_max_elements(s); ++i)
+    rb_yield( reinterpret_cast<VALUE*>(s->elements)[i] );
+
+  return nm;
+}
+
+/*
+ * Each: Copy matrix elements into Ruby VALUEs before operating on them (suitable for a dense matrix).
+ */
+static VALUE nm_dense_each_indirect(VALUE nm) {
+  DENSE_STORAGE* s = NM_STORAGE_DENSE(nm);
+
+  RETURN_ENUMERATOR(nm, 0, 0);
+
+  for (size_t i = 0; i < nm_storage_count_max_elements(s); ++i) {
+    VALUE v = rubyobj_from_cval((char*)(s->elements) + i*DTYPE_SIZES[NM_DTYPE(nm)], NM_DTYPE(nm)).rval;
+    rb_yield( v ); // yield to the copy we made
+  }
+
+  return nm;
+}
+
+
+/*
+ * Borrowed this function from NArray. Handles 'each' iteration on a dense
+ * matrix.
+ *
+ * Additionally, handles separately matrices containing VALUEs and matrices
+ * containing other types of data.
+ */
+VALUE nm_dense_each(VALUE nmatrix) {
+  volatile VALUE nm = nmatrix; // Not sure this actually does anything.
+
+  if (NM_DTYPE(nm) == nm::RUBYOBJ) {
+
+    // matrix of Ruby objects -- yield those objects directly
+    return nm_dense_each_direct(nm);
+
+  } else {
+
+    // We're going to copy the matrix element into a Ruby VALUE and then operate on it. This way user can't accidentally
+    // modify it and cause a seg fault.
+    return nm_dense_each_indirect(nm);
+  }
+}
+
+
 /*
  * Get a slice or one element, using copying.
  *

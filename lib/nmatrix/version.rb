@@ -23,13 +23,6 @@
 #++
 
 class NMatrix
-  module VERSION #:nodoc:
-    # Based on Rails. https://github.com/rails/rails/blob/master/version.rb
-    MAJOR = '0'
-    MINOR = '0'
-    TINY = '2'
-
-    STRING = [MAJOR, MINOR, TINY].compact.join('.')
-  end
+  VERSION = "0.0.3"
 end
 

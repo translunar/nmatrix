@@ -293,7 +293,7 @@ size_t max_size(YALE_STORAGE* s) {
 ///////////////
 
 /*
- * Returns a slice of YALE_STORAGE object by coppy
+ * Returns a slice of YALE_STORAGE object by copy
  *
  * Slicing-related.
  */
@@ -1138,7 +1138,57 @@ static STORAGE* matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resu
   return reinterpret_cast<STORAGE*>(result);
 }
 
-}} // end of namespace nm::yale_storage.
+
+} // end of namespace nm::yale_storage
+
+
+template <bool Direct, typename IType, typename DType>
+static VALUE yale_each_sparse_with_indices(VALUE nm) {
+  YALE_STORAGE* s = NM_STORAGE_YALE(nm);
+  DType* a    = reinterpret_cast<DType*>(s->a);
+  IType* ija  = reinterpret_cast<IType*>(s->ija);
+
+  // If we don't have a block, return an enumerator.
+  RETURN_ENUMERATOR(nm, 0, 0);
+
+  // Iterate along diagonal
+  for (size_t k = 0; k < s->shape[0]; ++k) {
+    VALUE ii = LONG2NUM(k),
+          jj = LONG2NUM(k);
+    if (Direct) {
+      rb_yield_values(3, &(a[k]), ii, jj );  // yield element, i, j
+    } else {
+      VALUE v = rubyobj_from_cval(&(a[k]), NM_DTYPE(nm)).rval;
+      rb_yield_values(3, v, ii, jj );
+    }
+  }
+
+  // Iterate through non-diagonal elements, row by row
+  for (long i = 0; i < s->shape[0]; ++i) {
+    long p      = static_cast<long>( ija[i]   ),
+         next_p = static_cast<long>( ija[i+1] );
+
+    if (next_p == p) continue; // empty row
+
+    for (; p < next_p; ++p) {
+      long j = static_cast<long>(ija[p]);
+      VALUE ii = LONG2NUM(i),
+            jj = LONG2NUM(j);
+
+      if (Direct) {
+        rb_yield_values(3, &(ija[p]), ii, jj );
+      } else {
+        VALUE v = rubyobj_from_cval(&(a[p]), NM_DTYPE(nm)).rval;
+        rb_yield_values(3, v, ii, jj );
+      }
+    }
+  }
+
+  return nm;
+}
+
+
+} // end of namespace nm.
 
 ///////////////////
 // Ruby Bindings //
@@ -1149,7 +1199,7 @@ static STORAGE* matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resu
 extern "C" {
 
 void nm_init_yale_functions() {
-	#ifdef 0
+	#ifdef RDOC
 	  rb_define_method(cNMatrix_YaleFunctions, "yale_ija", nm_ija, 0);
 	  rb_define_method(cNMatrix_YaleFunctions, "yale_a", nm_a, 0);
 	  rb_define_method(cNMatrix_YaleFunctions, "yale_size", nm_size, 0);
@@ -1179,6 +1229,26 @@ void nm_init_yale_functions() {
 /////////////////
 // C ACCESSORS //
 /////////////////
+
+
+
+VALUE nm_yale_each_sparse_with_indices(VALUE nmatrix) {
+  nm::dtype_t d = NM_DTYPE(nmatrix);
+  nm::itype_t i = NM_ITYPE(nmatrix);
+
+  NAMED_BOOL_ITYPE_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_each_sparse_with_indices, VALUE, VALUE)
+
+  if (NM_DTYPE(nmatrix) == nm::RUBYOBJ) {
+
+    // matrix of Ruby objects -- yield those objects directly
+    return ttable[true][i][d](nmatrix);
+
+  } // else:
+  // Copy the matrix element into a Ruby VALUE and then operate on it.
+  return ttable[false][i][d](nmatrix);
+
+}
+
 
 /*
  * C accessor for inserting some value in a matrix (or replacing an existing cell).
