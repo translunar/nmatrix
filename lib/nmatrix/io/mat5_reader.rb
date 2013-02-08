@@ -93,7 +93,7 @@ module NMatrix::IO::Matlab
 
       #
       # call-seq:
-      #     write_packed(packedio, options = {}) -> 
+      #     write_packed(packedio, options = {}) ->
       #
       # * *Arguments* :
       #   - ++ -> 

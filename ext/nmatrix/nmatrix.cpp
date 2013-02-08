@@ -672,7 +672,7 @@ static void nm_delete_ref(NMATRIX* mat) {
  *
  * Get the data type (dtype) of a matrix, e.g., :byte, :int8, :int16, :int32,
  * :int64, :float32, :float64, :complex64, :complex128, :rational32,
- * :rational64, :rational128, or :object (a Ruby object).
+ * :rational64, :rational128, or :object (the last is a Ruby object).
  */
 static VALUE nm_dtype(VALUE self) {
   ID dtype = rb_intern(DTYPE_NAMES[NM_DTYPE(self)]);
@@ -723,58 +723,7 @@ static VALUE nm_upcast(VALUE self, VALUE t1, VALUE t2) {
   return ID2SYM(rb_intern( DTYPE_NAMES[ Upcast[d1][d2] ] ));
 }
 
-/*
- * Each: Yield objects directly (suitable only for a dense matrix of Ruby objects).
- */
-static VALUE nm_dense_each_direct(VALUE nm) {
-  DENSE_STORAGE* s = NM_STORAGE_DENSE(nm);
 
-  RETURN_ENUMERATOR(nm, 0, 0);
-
-  for (size_t i = 0; i < nm_storage_count_max_elements(s); ++i)
-    rb_yield( reinterpret_cast<VALUE*>(s->elements)[i] );
-
-  return nm;
-}
-
-/*
- * Each: Copy matrix elements into Ruby VALUEs before operating on them (suitable for a dense matrix).
- */
-static VALUE nm_dense_each_indirect(VALUE nm) {
-  DENSE_STORAGE* s = NM_STORAGE_DENSE(nm);
-
-  RETURN_ENUMERATOR(nm, 0, 0);
-
-  for (size_t i = 0; i < nm_storage_count_max_elements(s); ++i) {
-    VALUE v = rubyobj_from_cval((char*)(s->elements) + i*DTYPE_SIZES[NM_DTYPE(nm)], NM_DTYPE(nm)).rval;
-    rb_yield( v ); // yield to the copy we made
-  }
-
-  return nm;
-}
-
-/*
- * Borrowed this function from NArray. Handles 'each' iteration on a dense
- * matrix.
- *
- * Additionally, handles separately matrices containing VALUEs and matrices
- * containing other types of data.
- */
-static VALUE nm_dense_each(VALUE nmatrix) {
-  volatile VALUE nm = nmatrix; // Not sure this actually does anything.
-
-  if (NM_DTYPE(nm) == nm::RUBYOBJ) {
-
-    // matrix of Ruby objects -- yield those objects directly
-    return nm_dense_each_direct(nm);
-
-  } else {
-
-    // We're going to copy the matrix element into a Ruby VALUE and then operate on it. This way user can't accidentally
-    // modify it and cause a seg fault.
-    return nm_dense_each_indirect(nm);
-  }
-}
 
 /*
  * call-seq:
@@ -794,6 +743,24 @@ static VALUE nm_each(VALUE nmatrix) {
     rb_raise(rb_eNotImpError, "only dense matrix's each method works right now");
   }
 }
+
+/*
+ * Iterate over the sparse entries of any matrix. For dense and yale, this iterates over non-zero
+ * entries; for list, this iterates over non-default entries. Yields dim+1 values for each entry:
+ * i, j, ..., and the entry itself.
+ */
+static VALUE nm_each_sparse_with_indices(VALUE nmatrix) {
+  volatile VALUE nm = nmatrix;
+
+  switch(NM_STYPE(nm)) {
+  case nm::YALE_STORE:
+    return nm_yale_each_sparse_with_indices(nm);
+  default:
+    rb_raise(rb_eNotImpError, "only yale matrix's each_sparse_with_indices method works right now");
+  }
+}
+
+
 
 /*
  * Equality operator. Returns a single true or false value indicating whether

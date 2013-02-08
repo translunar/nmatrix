@@ -46,8 +46,8 @@ class NVector < NMatrix
   # * *Returns* :
   #   -
   #
-	def initialize(length, values = 0, dtype = nil)
-		super(:dense, [length, 1], values, dtype)
+	def initialize(length, *args)
+		super(:dense, [length, 1], *args)
     orientation
   end
 

@@ -23,7 +23,8 @@
 #
 # == blas.rb
 #
-# This file contains the BLAS functions supported.
+# This file contains the safer accessors for the BLAS functions
+# supported by NMatrix.
 #++
 
 module NMatrix::BLAS
@@ -101,7 +102,7 @@ module NMatrix::BLAS
     	# For argument descriptions, see: http://www.netlib.org/blas/dgemm.f
     	::NMatrix::BLAS.cblas_gemm(:row, transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc)
 
-    	c
+    	return c
     end
 
     #
@@ -153,7 +154,7 @@ module NMatrix::BLAS
 
     	::NMatrix::BLAS.cblas_gemv(transpose_a, m, n, alpha, a, lda, x, incx, beta, y, incy)
 
-    	y
+    	return y
     end
 
     #
@@ -189,7 +190,7 @@ module NMatrix::BLAS
 
       ::NMatrix::BLAS.cblas_rot(n, xx, incx, yy, incy, c, s)
 
-      [xx,yy]
+      return [xx,yy]
     end
   end
 end

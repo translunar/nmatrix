@@ -97,6 +97,7 @@ extern "C" {
   // Accessors //
   ///////////////
 
+  VALUE nm_yale_each_sparse_with_indices(VALUE nmatrix);
   void* nm_yale_storage_get(STORAGE* s, SLICE* slice);
   void*	nm_yale_storage_ref(STORAGE* s, SLICE* slice);
   char  nm_yale_storage_set(STORAGE* storage, SLICE* slice, void* v);

@@ -28,7 +28,7 @@
 #++
 
 require_relative './shortcuts.rb'
-require_relative "./lapack.rb"
+require_relative './lapack.rb'
 
 class NMatrix
 	# Read and write extensions for NMatrix. These are only loaded when needed.
