@@ -107,7 +107,8 @@ namespace nm {
 		fun<nm::Complex128>,																\
 		fun<nm::Rational32>,																\
 		fun<nm::Rational64>,																\
-		fun<nm::Rational128> 																\
+		fun<nm::Rational128>, 															\
+		fun<nm::RubyObject>                                 \
 	};
 
 #define NAMED_DTYPE_TEMPLATE_TABLE_NO_ROBJ(name, fun, ret, ...) \
@@ -123,7 +124,7 @@ namespace nm {
 		fun<nm::Complex128>,																\
 		fun<nm::Rational32>,																\
 		fun<nm::Rational64>,																\
-		fun<nm::Rational128>,																\
+		fun<nm::Rational128>																\
 	};
 
 /*
@@ -616,21 +617,6 @@ namespace nm {
 {fun<nm::EW_GEQ, uint64_t, uint8_t>,fun<nm::EW_GEQ, uint64_t, int8_t>,fun<nm::EW_GEQ, uint64_t, int16_t>,fun<nm::EW_GEQ, uint64_t, int32_t>,fun<nm::EW_GEQ, uint64_t, int64_t>,fun<nm::EW_GEQ, uint64_t, float32_t>,fun<nm::EW_GEQ, uint64_t, float64_t>,fun<nm::EW_GEQ, uint64_t, nm::Complex64>,fun<nm::EW_GEQ, uint64_t, nm::Complex128>,fun<nm::EW_GEQ, uint64_t, nm::Rational32>,fun<nm::EW_GEQ, uint64_t, nm::Rational64>,fun<nm::EW_GEQ, uint64_t, nm::Rational128>,fun<nm::EW_GEQ, uint64_t, nm::RubyObject>}}};
 
 
-#define NAMED_BOOL_ITYPE_DTYPE_TEMPLATE_TABLE(name,  fun,  ret,  ...) \
-	static ret (*(name)[2][nm::NUM_ITYPES][nm::NUM_DTYPES])(__VA_ARGS__) = { \
-		{ \
-      {fun<false, uint8_t, uint8_t>,fun<false, uint8_t, int8_t>,fun<false, uint8_t, int16_t>,fun<false, uint8_t, int32_t>,fun<false, uint8_t, int64_t>,fun<false, uint8_t, float32_t>,fun<false, uint8_t, float64_t>,fun<false, uint8_t, nm::Complex64>,fun<false, uint8_t, nm::Complex128>,fun<false, uint8_t, nm::Rational32>,fun<false, uint8_t, nm::Rational64>,fun<false, uint8_t, nm::Rational128>,fun<false, uint8_t, nm::RubyObject>},\
-      {fun<false, uint16_t, uint8_t>,fun<false, uint16_t, int8_t>,fun<false, uint16_t, int16_t>,fun<false, uint16_t, int32_t>,fun<false, uint16_t, int64_t>,fun<false, uint16_t, float32_t>,fun<false, uint16_t, float64_t>,fun<false, uint16_t, nm::Complex64>,fun<false, uint16_t, nm::Complex128>,fun<false, uint16_t, nm::Rational32>,fun<false, uint16_t, nm::Rational64>,fun<false, uint16_t, nm::Rational128>,fun<false, uint16_t, nm::RubyObject>},\
-      {fun<false, uint32_t, uint8_t>,fun<false, uint32_t, int8_t>,fun<false, uint32_t, int16_t>,fun<false, uint32_t, int32_t>,fun<false, uint32_t, int64_t>,fun<false, uint32_t, float32_t>,fun<false, uint32_t, float64_t>,fun<false, uint32_t, nm::Complex64>,fun<false, uint32_t, nm::Complex128>,fun<false, uint32_t, nm::Rational32>,fun<false, uint32_t, nm::Rational64>,fun<false, uint32_t, nm::Rational128>,fun<false, uint32_t, nm::RubyObject>},\
-      {fun<false, uint64_t, uint8_t>,fun<false, uint64_t, int8_t>,fun<false, uint64_t, int16_t>,fun<false, uint64_t, int32_t>,fun<false, uint64_t, int64_t>,fun<false, uint64_t, float32_t>,fun<false, uint64_t, float64_t>,fun<false, uint64_t, nm::Complex64>,fun<false, uint64_t, nm::Complex128>,fun<false, uint64_t, nm::Rational32>,fun<false, uint64_t, nm::Rational64>,fun<false, uint64_t, nm::Rational128>,fun<false, uint64_t, nm::RubyObject>}  \
-    }, \
-    {  \
-      {fun<true, uint8_t, uint8_t>,fun<true, uint8_t, int8_t>,fun<true, uint8_t, int16_t>,fun<true, uint8_t, int32_t>,fun<true, uint8_t, int64_t>,fun<true, uint8_t, float32_t>,fun<true, uint8_t, float64_t>,fun<true, uint8_t, nm::Complex64>,fun<true, uint8_t, nm::Complex128>,fun<true, uint8_t, nm::Rational32>,fun<true, uint8_t, nm::Rational64>,fun<true, uint8_t, nm::Rational128>,fun<true, uint8_t, nm::RubyObject>},\
-      {fun<true, uint16_t, uint8_t>,fun<true, uint16_t, int8_t>,fun<true, uint16_t, int16_t>,fun<true, uint16_t, int32_t>,fun<true, uint16_t, int64_t>,fun<true, uint16_t, float32_t>,fun<true, uint16_t, float64_t>,fun<true, uint16_t, nm::Complex64>,fun<true, uint16_t, nm::Complex128>,fun<true, uint16_t, nm::Rational32>,fun<true, uint16_t, nm::Rational64>,fun<true, uint16_t, nm::Rational128>,fun<true, uint16_t, nm::RubyObject>},\
-      {fun<true, uint32_t, uint8_t>,fun<true, uint32_t, int8_t>,fun<true, uint32_t, int16_t>,fun<true, uint32_t, int32_t>,fun<true, uint32_t, int64_t>,fun<true, uint32_t, float32_t>,fun<true, uint32_t, float64_t>,fun<true, uint32_t, nm::Complex64>,fun<true, uint32_t, nm::Complex128>,fun<true, uint32_t, nm::Rational32>,fun<true, uint32_t, nm::Rational64>,fun<true, uint32_t, nm::Rational128>,fun<true, uint32_t, nm::RubyObject>},\
-      {fun<true, uint64_t, uint8_t>,fun<true, uint64_t, int8_t>,fun<true, uint64_t, int16_t>,fun<true, uint64_t, int32_t>,fun<true, uint64_t, int64_t>,fun<true, uint64_t, float32_t>,fun<true, uint64_t, float64_t>,fun<true, uint64_t, nm::Complex64>,fun<true, uint64_t, nm::Complex128>,fun<true, uint64_t, nm::Rational32>,fun<true, uint64_t, nm::Rational64>,fun<true, uint64_t, nm::Rational128>,fun<true, uint64_t, nm::RubyObject>} \
-    } \
-  };
 
 /*
  * Defines a static array that holds function pointers to left dtype, right

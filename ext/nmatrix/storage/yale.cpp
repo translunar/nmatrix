@@ -42,6 +42,7 @@
 #include <ruby.h>
 #include <algorithm>  // std::min
 #include <cstdio>     // std::fprintf
+#include <iostream>
 
 /*
  * Project Includes
@@ -1142,49 +1143,90 @@ static STORAGE* matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resu
 } // end of namespace nm::yale_storage
 
 
-template <bool Direct, typename IType, typename DType>
-static VALUE yale_each_sparse_with_indices(VALUE nm) {
-  YALE_STORAGE* s = NM_STORAGE_YALE(nm);
-  DType* a    = reinterpret_cast<DType*>(s->a);
-  IType* ija  = reinterpret_cast<IType*>(s->ija);
+template <typename DType, typename IType>
+struct yale_each_sparse_with_indices_helper {
+  static VALUE iterate(VALUE nm) {
 
-  // If we don't have a block, return an enumerator.
-  RETURN_ENUMERATOR(nm, 0, 0);
+    YALE_STORAGE* s = NM_STORAGE_YALE(nm);
+    DType* a    = reinterpret_cast<DType*>(s->a);
+    IType* ija  = reinterpret_cast<IType*>(s->ija);
 
-  // Iterate along diagonal
-  for (size_t k = 0; k < s->shape[0]; ++k) {
-    VALUE ii = LONG2NUM(k),
-          jj = LONG2NUM(k);
-    if (Direct) {
-      rb_yield_values(3, &(a[k]), ii, jj );  // yield element, i, j
-    } else {
+    // If we don't have a block, return an enumerator.
+    RETURN_ENUMERATOR(nm, 0, 0);
+
+    // Iterate along diagonal
+    for (size_t k = 0; k < s->shape[0]; ++k) {
+      VALUE ii = LONG2NUM(k),
+            jj = LONG2NUM(k);
+
       VALUE v = rubyobj_from_cval(&(a[k]), NM_DTYPE(nm)).rval;
       rb_yield_values(3, v, ii, jj );
     }
-  }
 
-  // Iterate through non-diagonal elements, row by row
-  for (long i = 0; i < s->shape[0]; ++i) {
-    long p      = static_cast<long>( ija[i]   ),
-         next_p = static_cast<long>( ija[i+1] );
+    // Iterate through non-diagonal elements, row by row
+    for (long i = 0; i < s->shape[0]; ++i) {
+      long p      = static_cast<long>( ija[i]   ),
+           next_p = static_cast<long>( ija[i+1] );
 
-    if (next_p == p) continue; // empty row
+      for (; p < next_p; ++p) {
+        long j = static_cast<long>(ija[p]);
+        VALUE ii = LONG2NUM(i),
+              jj = LONG2NUM(j);
 
-    for (; p < next_p; ++p) {
-      long j = static_cast<long>(ija[p]);
-      VALUE ii = LONG2NUM(i),
-            jj = LONG2NUM(j);
-
-      if (Direct) {
-        rb_yield_values(3, &(ija[p]), ii, jj );
-      } else {
         VALUE v = rubyobj_from_cval(&(a[p]), NM_DTYPE(nm)).rval;
         rb_yield_values(3, v, ii, jj );
       }
     }
-  }
 
-  return nm;
+    return nm;
+  }
+};
+
+
+template <typename IType>
+struct yale_each_sparse_with_indices_helper<RubyObject, IType> {
+  static VALUE iterate(VALUE nm) {
+
+    YALE_STORAGE* s = NM_STORAGE_YALE(nm);
+    RubyObject* a   = reinterpret_cast<RubyObject*>(s->a);
+    IType* ija      = reinterpret_cast<IType*>(s->ija);
+
+    // If we don't have a block, return an enumerator.
+    RETURN_ENUMERATOR(nm, 0, 0);
+
+    // Iterate along diagonal
+    for (size_t k = 0; k < s->shape[0]; ++k) {
+      VALUE ii = LONG2NUM(k),
+            jj = LONG2NUM(k);
+      rb_yield_values(3, a[k].rval, ii, jj );  // yield element, i, j
+    }
+
+    // Iterate through non-diagonal elements, row by row
+    for (long i = 0; i < s->shape[0]; ++i) {
+      long p      = static_cast<long>( ija[i]   ),
+           next_p = static_cast<long>( ija[i+1] );
+
+      for (; p < next_p; ++p) {
+        long j = static_cast<long>(ija[p]);
+        VALUE ii = LONG2NUM(i),
+              jj = LONG2NUM(j);
+
+        rb_yield_values(3, a[p].rval, ii, jj );
+      }
+    }
+
+    return nm;
+  }
+};
+
+
+/*
+ * This function and the two helper structs enable us to use partial template specialization.
+ * See also: http://stackoverflow.com/questions/6623375/c-template-specialization-on-functions
+ */
+template <typename DType, typename IType>
+static VALUE yale_each_sparse_with_indices(VALUE nm) {
+  return yale_each_sparse_with_indices_helper<DType, IType>::iterate(nm);
 }
 
 
@@ -1236,17 +1278,9 @@ VALUE nm_yale_each_sparse_with_indices(VALUE nmatrix) {
   nm::dtype_t d = NM_DTYPE(nmatrix);
   nm::itype_t i = NM_ITYPE(nmatrix);
 
-  NAMED_BOOL_ITYPE_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_each_sparse_with_indices, VALUE, VALUE)
+  NAMED_LI_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_each_sparse_with_indices, VALUE, VALUE)
 
-  if (NM_DTYPE(nmatrix) == nm::RUBYOBJ) {
-
-    // matrix of Ruby objects -- yield those objects directly
-    return ttable[true][i][d](nmatrix);
-
-  } // else:
-  // Copy the matrix element into a Ruby VALUE and then operate on it.
-  return ttable[false][i][d](nmatrix);
-
+  return ttable[d][i](nmatrix);
 }
 
 

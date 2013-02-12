@@ -220,6 +220,20 @@ static VALUE nm_dense_each_indirect(VALUE nm) {
 }
 
 
+
+VALUE nm_dense_each_with_indices(VALUE nmatrix) {
+  volatile VALUE nm = nmatrix;
+
+  RETURN_ENUMERATOR(nm, 0, 0);
+
+  if (NM_DTYPE(nm) == nm::RUBYOBJ) {
+
+  } else {
+
+  }
+}
+
+
 /*
  * Borrowed this function from NArray. Handles 'each' iteration on a dense
  * matrix.

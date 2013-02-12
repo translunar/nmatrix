@@ -195,7 +195,8 @@ describe NMatrix do
 
           it "allows sparse iteration of matrices" do
             pending("dense and list not implemented yet") unless storage_type == :yale
-            n = NMatrix.new(:yale, [3,3], :int64)
+            n = NMatrix.new(:yale, [3,3], dtype)
+            n.extend NMatrix::YaleFunctions
             n[0,0] = 1
             n[0,1] = 2
             n[2,2] = 3
