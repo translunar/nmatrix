@@ -79,6 +79,7 @@ void						nm_dense_storage_mark(void*);
 ///////////////
 
 VALUE nm_dense_each(VALUE nmatrix);
+VALUE nm_dense_each_with_indices(VALUE nmatrix);
 void*	nm_dense_storage_get(STORAGE* s, SLICE* slice);
 void*	nm_dense_storage_ref(STORAGE* s, SLICE* slice);
 void	nm_dense_storage_set(STORAGE* s, SLICE* slice, void* val);

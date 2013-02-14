@@ -189,47 +189,39 @@ void nm_dense_storage_mark(void* storage_base) {
 ///////////////
 
 
-/*
- * Each: Yield objects directly (suitable only for a dense matrix of Ruby objects).
- */
-static VALUE nm_dense_each_direct(VALUE nm) {
-  DENSE_STORAGE* s = NM_STORAGE_DENSE(nm);
-
-  RETURN_ENUMERATOR(nm, 0, 0);
-
-  for (size_t i = 0; i < nm_storage_count_max_elements(s); ++i)
-    rb_yield( reinterpret_cast<VALUE*>(s->elements)[i] );
-
-  return nm;
-}
-
-/*
- * Each: Copy matrix elements into Ruby VALUEs before operating on them (suitable for a dense matrix).
- */
-static VALUE nm_dense_each_indirect(VALUE nm) {
-  DENSE_STORAGE* s = NM_STORAGE_DENSE(nm);
-
-  RETURN_ENUMERATOR(nm, 0, 0);
-
-  for (size_t i = 0; i < nm_storage_count_max_elements(s); ++i) {
-    VALUE v = rubyobj_from_cval((char*)(s->elements) + i*DTYPE_SIZES[NM_DTYPE(nm)], NM_DTYPE(nm)).rval;
-    rb_yield( v ); // yield to the copy we made
-  }
-
-  return nm;
-}
-
-
-
 VALUE nm_dense_each_with_indices(VALUE nmatrix) {
   volatile VALUE nm = nmatrix;
 
   RETURN_ENUMERATOR(nm, 0, 0);
 
-  if (NM_DTYPE(nm) == nm::RUBYOBJ) {
+  DENSE_STORAGE* s = NM_STORAGE_DENSE(nm);
 
-  } else {
+  // Create indices and initialize them to zero
+  size_t* coords = ALLOCA_N(size_t, s->dim);
+  memset(coords, 0, sizeof(size_t) * s->dim);
 
+  for (size_t k = 0; k < nm_storage_count_max_elements(s); ++k) {
+
+    VALUE ary = rb_ary_new();
+    if (NM_DTYPE(nm) == nm::RUBYOBJ) rb_ary_push(ary, reinterpret_cast<VALUE*>(s->elements)[k]);
+    else rb_ary_push(ary, rubyobj_from_cval((char*)(s->elements) + k*DTYPE_SIZES[NM_DTYPE(nm)], NM_DTYPE(nm)).rval);
+
+    // update the coordinates
+    for (size_t p = 1; p <= s->dim; ++p) {
+      coords[s->dim - p]++;
+
+      if (coords[s->dim - p] < s->shape[s->dim - p]) break;
+      else
+        coords[s->dim - p] = 0;
+        // and then continue down the loop, incrementing j instead of i
+    }
+
+    for (size_t p = 0; p < s->dim; ++p) {
+      rb_ary_push(ary, INT2FIX(coords[s->dim - p]));
+    }
+
+    // yield the array which now consists of the value and the indices
+    rb_yield(ary);
   }
 }
 
@@ -243,17 +235,24 @@ VALUE nm_dense_each_with_indices(VALUE nmatrix) {
  */
 VALUE nm_dense_each(VALUE nmatrix) {
   volatile VALUE nm = nmatrix; // Not sure this actually does anything.
+  DENSE_STORAGE* s = NM_STORAGE_DENSE(nm);
+
+  RETURN_ENUMERATOR(nm, 0, 0);
 
   if (NM_DTYPE(nm) == nm::RUBYOBJ) {
 
     // matrix of Ruby objects -- yield those objects directly
-    return nm_dense_each_direct(nm);
+    for (size_t i = 0; i < nm_storage_count_max_elements(s); ++i)
+      rb_yield( reinterpret_cast<VALUE*>(s->elements)[i] );
 
   } else {
 
     // We're going to copy the matrix element into a Ruby VALUE and then operate on it. This way user can't accidentally
     // modify it and cause a seg fault.
-    return nm_dense_each_indirect(nm);
+    for (size_t i = 0; i < nm_storage_count_max_elements(s); ++i) {
+      VALUE v = rubyobj_from_cval((char*)(s->elements) + i*DTYPE_SIZES[NM_DTYPE(nm)], NM_DTYPE(nm)).rval;
+      rb_yield( v ); // yield to the copy we made
+    }
   }
 }
 

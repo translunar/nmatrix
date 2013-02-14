@@ -358,7 +358,7 @@ static VALUE nm_dim(VALUE self);
 static VALUE nm_shape(VALUE self);
 static VALUE nm_capacity(VALUE self);
 static VALUE nm_each(VALUE nmatrix);
-static VALUE nm_each_sparse_with_indices(VALUE nmatrix);
+static VALUE nm_each_stored_with_indices(VALUE nmatrix);
 
 static SLICE* get_slice(size_t dim, VALUE* c, VALUE self);
 static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLICE*), void (*delete_func)(NMATRIX*), VALUE self);
@@ -451,7 +451,7 @@ void Init_nmatrix() {
 		//rb_define_method(cNMatrix, "transpose!", nm_transpose_self, 0);
 		rb_define_method(cNMatrix, "complex_conjugate!", nm_complex_conjugate_bang, 0);
 		rb_define_method(cNMatrix, "each", nm_each, 0);
-		rb_define_method(cNMatrix, "each_sparse_with_indices", nm_each_sparse_with_indices, 0);
+		rb_define_method(cNMatrix, "each_stored_with_indices", nm_each_stored_with_indices, 0);
 		rb_define_method(cNMatrix, "==",	  nm_eqeq,				1);
 		rb_define_method(cNMatrix, "+",			nm_ew_add,			1);
 		rb_define_method(cNMatrix, "-",			nm_ew_subtract,	1);
@@ -538,7 +538,7 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "complex_conjugate!", (METHOD)nm_complex_conjugate_bang, 0);
 
 	rb_define_method(cNMatrix, "each", (METHOD)nm_each, 0);
-	rb_define_method(cNMatrix, "each_sparse_with_indices", (METHOD)nm_each_sparse_with_indices, 0);
+	rb_define_method(cNMatrix, "each_stored_with_indices", (METHOD)nm_each_stored_with_indices, 0);
 
 	rb_define_method(cNMatrix, "==",	  (METHOD)nm_eqeq,				1);
 
@@ -752,14 +752,16 @@ static VALUE nm_each(VALUE nmatrix) {
  * entries; for list, this iterates over non-default entries. Yields dim+1 values for each entry:
  * i, j, ..., and the entry itself.
  */
-static VALUE nm_each_sparse_with_indices(VALUE nmatrix) {
+static VALUE nm_each_stored_with_indices(VALUE nmatrix) {
   volatile VALUE nm = nmatrix;
 
   switch(NM_STYPE(nm)) {
   case nm::YALE_STORE:
-    return nm_yale_each_sparse_with_indices(nm);
+    return nm_yale_each_stored_with_indices(nm);
+  case nm::DENSE_STORE:
+    return nm_dense_each_with_indices(nm);
   default:
-    rb_raise(rb_eNotImpError, "only yale matrix's each_sparse_with_indices method works right now");
+    rb_raise(rb_eNotImpError, "not yet implemented for list matrices");
   }
 }
 

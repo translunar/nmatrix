@@ -1144,7 +1144,7 @@ static STORAGE* matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resu
 
 
 template <typename DType, typename IType>
-struct yale_each_sparse_with_indices_helper {
+struct yale_each_stored_with_indices_helper {
   static VALUE iterate(VALUE nm) {
 
     YALE_STORAGE* s = NM_STORAGE_YALE(nm);
@@ -1184,7 +1184,7 @@ struct yale_each_sparse_with_indices_helper {
 
 
 template <typename IType>
-struct yale_each_sparse_with_indices_helper<RubyObject, IType> {
+struct yale_each_stored_with_indices_helper<RubyObject, IType> {
   static VALUE iterate(VALUE nm) {
 
     YALE_STORAGE* s = NM_STORAGE_YALE(nm);
@@ -1225,8 +1225,8 @@ struct yale_each_sparse_with_indices_helper<RubyObject, IType> {
  * See also: http://stackoverflow.com/questions/6623375/c-template-specialization-on-functions
  */
 template <typename DType, typename IType>
-static VALUE yale_each_sparse_with_indices(VALUE nm) {
-  return yale_each_sparse_with_indices_helper<DType, IType>::iterate(nm);
+static VALUE yale_each_stored_with_indices(VALUE nm) {
+  return yale_each_stored_with_indices_helper<DType, IType>::iterate(nm);
 }
 
 
@@ -1274,11 +1274,11 @@ void nm_init_yale_functions() {
 
 
 
-VALUE nm_yale_each_sparse_with_indices(VALUE nmatrix) {
+VALUE nm_yale_each_stored_with_indices(VALUE nmatrix) {
   nm::dtype_t d = NM_DTYPE(nmatrix);
   nm::itype_t i = NM_ITYPE(nmatrix);
 
-  NAMED_LI_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_each_sparse_with_indices, VALUE, VALUE)
+  NAMED_LI_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_each_stored_with_indices, VALUE, VALUE)
 
   return ttable[d][i](nmatrix);
 }

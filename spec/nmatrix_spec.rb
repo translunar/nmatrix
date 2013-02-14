@@ -193,10 +193,9 @@ describe NMatrix do
             end
           end
 
-          it "allows sparse iteration of matrices" do
-            pending("dense and list not implemented yet") unless storage_type == :yale
-            n = NMatrix.new(:yale, [3,3], dtype)
-            n.extend NMatrix::YaleFunctions
+          it "allows storage-based iteration of matrices" do
+            pending("list not implemented yet") if storage_type == :list
+            n = storage_type == :yale ? NMatrix.new(storage_type, [3,3], dtype) : NMatrix.new(storage_type, [3,3], 0, dtype)
             n[0,0] = 1
             n[0,1] = 2
             n[2,2] = 3
@@ -205,7 +204,7 @@ describe NMatrix do
             values = []
             is = []
             js = []
-            n.each_sparse_with_indices do |v,i,j|
+            n.each_stored_with_indices do |v,i,j|
               values << v
               is << i
               js << j
