@@ -206,6 +206,13 @@ VALUE nm_dense_each_with_indices(VALUE nmatrix) {
     if (NM_DTYPE(nm) == nm::RUBYOBJ) rb_ary_push(ary, reinterpret_cast<VALUE*>(s->elements)[k]);
     else rb_ary_push(ary, rubyobj_from_cval((char*)(s->elements) + k*DTYPE_SIZES[NM_DTYPE(nm)], NM_DTYPE(nm)).rval);
 
+    for (size_t p = 0; p < s->dim; ++p) {
+      rb_ary_push(ary, INT2FIX(coords[p]));
+    }
+
+    // yield the array which now consists of the value and the indices
+    rb_yield(ary);
+
     // update the coordinates
     for (size_t p = 1; p <= s->dim; ++p) {
       coords[s->dim - p]++;
@@ -215,13 +222,6 @@ VALUE nm_dense_each_with_indices(VALUE nmatrix) {
         coords[s->dim - p] = 0;
         // and then continue down the loop, incrementing j instead of i
     }
-
-    for (size_t p = 0; p < s->dim; ++p) {
-      rb_ary_push(ary, INT2FIX(coords[s->dim - p]));
-    }
-
-    // yield the array which now consists of the value and the indices
-    rb_yield(ary);
   }
 }
 

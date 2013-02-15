@@ -219,7 +219,7 @@ describe NMatrix do
               is.should     == [0,0,2,2]
               js.should     == [0,1,2,1]
             elsif storage_type == :dense
-              values.should == [1,2,0,0,0,0,0,3,4]
+              values.should == [1,2,0,0,0,0,0,4,3]
               is.should     == [0,0,0,1,1,1,2,2,2]
               js.should     == [0,1,2,0,1,2,0,1,2]
             end
