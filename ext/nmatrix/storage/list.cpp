@@ -177,8 +177,7 @@ VALUE list_each_stored_with_indices(VALUE nmatrix) {
   // First attempt
   //NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::list_each_stored_with_indices, VALUE, VALUE);
   // Second attempt... 
-  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::list_each_stored_with_indices, VALUE* nmatrix);
-  
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::list_each_stored_with_indices, VALUE* nm_list);
 
   return ttable[d](nmatrix);
 }
@@ -568,7 +567,7 @@ struct list_each_stored_with_indices_helper {
   static VALUE iterate(VALUE nm) {
     LIST_STORAGE* s = NM_STORAGE_LIST(nm);
     LIST* rows = reinterpret_cast<LIST*>(s->rows);
-    LDType* data = reinterpret_cast<LDType*>(s->data);
+    LDType* data = reinterpret_cast<LDType*>(s->src);
 
     // If we don't have a block, return an enumerator.
     RETURN_ENUMERATOR(nm, 0, 0);
