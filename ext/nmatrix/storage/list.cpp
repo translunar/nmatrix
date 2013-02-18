@@ -177,10 +177,10 @@ VALUE list_each_stored_with_indices(VALUE nmatrix) {
   // First attempt
   //NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::list_each_stored_with_indices, VALUE, VALUE);
   // Second attempt... 
-  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::list_each_stored_with_indices, VALUE, const VALUE* nmatrix);
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::list_each_stored_with_indices, VALUE* nmatrix);
   
 
-  return ttable[d][d](nmatrix);
+  return ttable[d](nmatrix);
 }
 
 
