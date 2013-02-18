@@ -171,7 +171,14 @@ VALUE list_each_stored_with_indices(VALUE nmatrix) {
   nm::dtype_t d = NM_DTYPE(nmatrix);
   //nm::itype_t i = NM_ITYPE(nmatrix);
 
-  NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::list_each_stored_with_indices, VALUE, VALUE)
+  // reference one...
+	//NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::list_storage::eqeq, bool, const LIST_STORAGE* left, const LIST_STORAGE* right);
+
+  // First attempt
+  //NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::list_each_stored_with_indices, VALUE, VALUE);
+  // Second attempt... 
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::list_each_stored_with_indices, VALUE, const VALUE* nmatrix);
+  
 
   return ttable[d][d](nmatrix);
 }
@@ -556,14 +563,6 @@ STORAGE* nm_list_storage_copy_transposed(const STORAGE* rhs_base) {
 
 namespace list_storage {
 
-/*
- * This function and helper structs enable the ::each_stored_with_indices method
- */
-template <typename LDType, typename RDType>
-static VALUE list_each_stored_with_indices(VALUE nm) {
-  return list_each_stored_with_indices_helper<DType, IType>::iterate(nm);
-}
-
 template <typename LDType, typename RDType>
 struct list_each_stored_with_indices_helper {
   static VALUE iterate(VALUE nm) {
@@ -589,6 +588,14 @@ struct list_each_stored_with_indices_helper {
   }
 };
 
+
+/*
+ * This function and helper structs enable the ::each_stored_with_indices method
+ */
+template <typename LDType, typename RDType>
+static VALUE list_each_stored_with_indices(VALUE nm) {
+  return list_each_stored_with_indices_helper<LDType, RDType>::iterate(nm);
+}
 
 /*
  * List storage copy constructor for changing dtypes.
