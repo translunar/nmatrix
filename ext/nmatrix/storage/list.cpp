@@ -165,6 +165,21 @@ void nm_list_storage_mark(void* storage_base) {
 ///////////////
 
 /*
+ * Each stored iterator, brings along the indices
+ */
+VALUE list_each_stored_with_indices(VALUE nmatrix) {
+  nm::dtype_t d = NM_DTYPE(nmatrix);
+  //nm::itype_t i = NM_ITYPE(nmatrix);
+
+  NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::list_each_stored_with_indices, VALUE, VALUE)
+
+  return ttable[d][d](nmatrix);
+}
+
+
+
+
+/*
  * Documentation goes here.
  */
 NODE* list_storage_get_single_node(LIST_STORAGE* s, SLICE* slice)
@@ -523,7 +538,7 @@ STORAGE* nm_list_storage_cast_copy(const STORAGE* rhs, dtype_t new_dtype) {
 }
 
 
-/*
+/* Each stored iterator, brings along the indices
  * List storage copy constructor for transposing.
  */
 STORAGE* nm_list_storage_copy_transposed(const STORAGE* rhs_base) {
@@ -540,6 +555,40 @@ STORAGE* nm_list_storage_copy_transposed(const STORAGE* rhs_base) {
 /////////////////////////
 
 namespace list_storage {
+
+/*
+ * This function and helper structs enable the ::each_stored_with_indices method
+ */
+template <typename LDType, typename RDType>
+static VALUE list_each_stored_with_indices(VALUE nm) {
+  return list_each_stored_with_indices_helper<DType, IType>::iterate(nm);
+}
+
+template <typename LDType, typename RDType>
+struct list_each_stored_with_indices_helper {
+  static VALUE iterate(VALUE nm) {
+    LIST_STORAGE* s = NM_STORAGE_LIST(nm);
+    LIST* rows = reinterpret_cast<LIST*>(s->rows);
+    LDType* data = reinterpret_cast<LDType*>(s->data);
+
+    // If we don't have a block, return an enumerator.
+    RETURN_ENUMERATOR(nm, 0, 0);
+
+    // Iterate along each row, returning the value and index for each non-default entry
+    for (size_t i = 0; i < s->shape[0]; ++i) {
+      VALUE j = 0;
+      VALUE size_of_list_row = sizeof(LIST[i])
+      for ( size_t j = 0; j < size_of_list_row; ++j) {
+        VALUE jj = rubyobj_from_cval(&(rows[i][j]), NM_DTYPE(nm)).rval;
+        VALUE v = rubyobj_from_cval(&(data[i][j]), NM_DTYPE(nm)).rval;
+        rb_yield_values(3, v, i, jj);
+      }
+    }
+    
+    return nm;
+  }
+};
+
 
 /*
  * List storage copy constructor for changing dtypes.
