@@ -167,23 +167,61 @@ void nm_list_storage_mark(void* storage_base) {
 /*
  * Each stored iterator, brings along the indices
  */
-VALUE list_each_stored_with_indices(VALUE nmatrix) {
-  nm::dtype_t d = NM_DTYPE(nmatrix);
-  //nm::itype_t i = NM_ITYPE(nmatrix);
+VALUE nm_list_each_stored_with_indices(VALUE nmatrix) {
+  volatile VALUE nm = nmatrix;
 
-  // reference one...
-	//NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::list_storage::eqeq, bool, const LIST_STORAGE* left, const LIST_STORAGE* right);
+  // If we don't have a block, return an enumerator.
+  RETURN_ENUMERATOR(nm, 0, 0);
 
-  // First attempt
-  //NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::list_each_stored_with_indices, VALUE, VALUE);
-  // Second attempt... 
-  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::list_each_stored_with_indices, VALUE* nm_list);
+  LIST_STORAGE* s = NM_STORAGE_LIST(nmatrix);
 
-  return ttable[d](nmatrix);
+  // Create indices and initialize to zero
+  size_t* coords = ALLOCA_N(size_t, s->dim);
+  memset(coords, 0, sizeof(size_t) * s->dim);
+	
+	printf("Coords %zu\n", (unsigned long) coords);
+	printf("s->dim %zu\n", (unsigned long) s->dim);
+  // GOOFING OFF
+  //LIST* rows = reinterpret_cast<LIST*>(s->rows);
+  //d data = reinterpret_cast<d*>(s->src); // COMPILE ERROR, doesn't recognize d
+
+  // Iterate along each row, returning the value and index for each non-default entry
+  for (size_t i = 0; i < nm_storage_count_max_elements(s); ++i) {
+
+    printf("Inside the outer loop s->src %zu\n", (unsigned long) s->src);
+    VALUE ary = rb_ary_new();
+    if (NM_DTYPE(nm) == nm::RUBYOBJ) {
+      rb_ary_push(ary, reinterpret_cast<VALUE*>(s->src)[i]);
+    } else {
+      rb_ary_push(ary, rubyobj_from_cval((char*)(s->src) + i*DTYPE_SIZES[NM_DTYPE(nm)], NM_DTYPE(nm)).rval);
+    }
+
+    for (size_t p = 0; p < s->dim; ++p) {
+      printf("coords[p] %zu\n", (unsigned long) coords[p]);
+      rb_ary_push(ary, INT2FIX(coords[p]));
+    }
+    rb_yield(ary);
+    
+    // update the coordinates
+    for (size_t p = 1; p <= s->dim; ++p) {
+      coords[s->dim -p]++;
+      if (coords[s->dim -p] < s->shape[s->dim -p]) break;
+      else
+        coords[s->dim - p] = 0;
+      // and then continue down the loop, incrementing j instead of i
+    }
+    /* // OLD STUFF, from YALE?
+    VALUE j = 0;
+    VALUE size_of_list_row = sizeof(LIST[i])
+      for ( size_t j = 0; j < size_of_list_row; ++j) {
+        VALUE jj = rubyobj_from_cval(&(rows[i][j]), NM_DTYPE(nm)).rval;
+        VALUE v = rubyobj_from_cval(&(data[i][j]), NM_DTYPE(nm)).rval;
+        rb_yield_values(3, v, i, jj);
+      }
+      */
+    return nm;
+  }
 }
-
-
-
 
 /*
  * Documentation goes here.
@@ -561,40 +599,6 @@ STORAGE* nm_list_storage_copy_transposed(const STORAGE* rhs_base) {
 /////////////////////////
 
 namespace list_storage {
-
-template <typename LDType, typename RDType>
-struct list_each_stored_with_indices_helper {
-  static VALUE iterate(VALUE nm) {
-    LIST_STORAGE* s = NM_STORAGE_LIST(nm);
-    LIST* rows = reinterpret_cast<LIST*>(s->rows);
-    LDType* data = reinterpret_cast<LDType*>(s->src);
-
-    // If we don't have a block, return an enumerator.
-    RETURN_ENUMERATOR(nm, 0, 0);
-
-    // Iterate along each row, returning the value and index for each non-default entry
-    for (size_t i = 0; i < s->shape[0]; ++i) {
-      VALUE j = 0;
-      VALUE size_of_list_row = sizeof(LIST[i])
-      for ( size_t j = 0; j < size_of_list_row; ++j) {
-        VALUE jj = rubyobj_from_cval(&(rows[i][j]), NM_DTYPE(nm)).rval;
-        VALUE v = rubyobj_from_cval(&(data[i][j]), NM_DTYPE(nm)).rval;
-        rb_yield_values(3, v, i, jj);
-      }
-    }
-    
-    return nm;
-  }
-};
-
-
-/*
- * This function and helper structs enable the ::each_stored_with_indices method
- */
-template <typename LDType, typename RDType>
-static VALUE list_each_stored_with_indices(VALUE nm) {
-  return list_each_stored_with_indices_helper<LDType, RDType>::iterate(nm);
-}
 
 /*
  * List storage copy constructor for changing dtypes.

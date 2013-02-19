@@ -186,7 +186,7 @@ describe NMatrix do
         c = dtype == :object ? "Ruby object" : "non-Ruby object"
         context c do
           it "allows iteration of matrices" do
-            pending("yale and list not implemented yet") unless storage_type == :dense
+            #pending("yale and list not implemented yet") unless storage_type == :dense
             n = NMatrix.new(:dense, [3,3], [1,2,3,4,5,6,7,8,9], dtype)
             n.each do |x|
               puts x
@@ -194,8 +194,11 @@ describe NMatrix do
           end
 
           it "allows storage-based iteration of matrices" do
-            pending("list not implemented yet") if storage_type == :list
+            #pending("list not implemented yet") if storage_type == :list
             n = storage_type == :yale ? NMatrix.new(storage_type, [3,3], dtype) : NMatrix.new(storage_type, [3,3], 0, dtype)
+            if not n
+              n = NMatrix.new(storage_type, [3,3], dtype)
+            end
             n[0,0] = 1
             n[0,1] = 2
             n[2,2] = 3
@@ -215,6 +218,7 @@ describe NMatrix do
               is.should     == [0,1,2,0,2]
               js.should     == [0,1,2,1,1]
             elsif storage_type == :list
+              puts "TESTING STORAGE_TYPE :list on #each_stored_with_indices"
               values.should == [1,2,4,3]
               is.should     == [0,0,2,2]
               js.should     == [0,1,2,1]
@@ -222,6 +226,8 @@ describe NMatrix do
               values.should == [1,2,0,0,0,0,0,4,3]
               is.should     == [0,0,0,1,1,1,2,2,2]
               js.should     == [0,1,2,0,1,2,0,1,2]
+            else 
+              values.should_not be_empty()
             end
           end
         end
