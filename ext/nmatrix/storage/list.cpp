@@ -179,8 +179,11 @@ VALUE nm_list_each_stored_with_indices(VALUE nmatrix) {
   size_t* coords = ALLOCA_N(size_t, s->dim);
   memset(coords, 0, sizeof(size_t) * s->dim);
 	
-	printf("Coords %zu\n", (unsigned long) coords);
-	printf("s->dim %zu\n", (unsigned long) s->dim);
+  printf("Coords[0] %zd\n",  coords[0]);
+	printf("Coords[1] %zd\n",  coords[1]);
+	printf("s->dim %zd\n", s->dim);
+	printf("s->shape[0] %zd\n", s->shape[0]);
+	printf("s->shape[1] %zd\n", s->shape[1]);
   // GOOFING OFF
   //LIST* rows = reinterpret_cast<LIST*>(s->rows);
   //d data = reinterpret_cast<d*>(s->src); // COMPILE ERROR, doesn't recognize d
@@ -197,19 +200,29 @@ VALUE nm_list_each_stored_with_indices(VALUE nmatrix) {
     }
 
     for (size_t p = 0; p < s->dim; ++p) {
-      printf("coords[p] %zu\n", (unsigned long) coords[p]);
+      printf("push loop: coords[p] %zd\n", coords[p]);
       rb_ary_push(ary, INT2FIX(coords[p]));
     }
+    printf("Exited the push loop\n");
     rb_yield(ary);
+    printf("Yielded and came back\n");
     
     // update the coordinates
     for (size_t p = 1; p <= s->dim; ++p) {
+  printf("s->shape - p: %zd\n", s->shape[2-p]);
+      printf("update loop: coords[p] %zd\n", coords[p]);
+      printf("update loop: coords[s->dim-p] %zd\n", coords[s->dim-p]);
       coords[s->dim -p]++;
+      printf("update loop: coords[s->dim-p]++ %zd\n", coords[s->dim-p]);
+      printf("update loop conditional: prev < s->shape[s->dim -p]? %zd\n", s->shape[s->dim -p]);
       if (coords[s->dim -p] < s->shape[s->dim -p]) break;
       else
+        printf("update loop: else statement\n");
         coords[s->dim - p] = 0;
       // and then continue down the loop, incrementing j instead of i
     }
+    printf("Exited the update loop\n");
+    printf("returning without an error?");
     /* // OLD STUFF, from YALE?
     VALUE j = 0;
     VALUE size_of_list_row = sizeof(LIST[i])
@@ -219,6 +232,8 @@ VALUE nm_list_each_stored_with_indices(VALUE nmatrix) {
         rb_yield_values(3, v, i, jj);
       }
       */
+    printf("returning without an error?");
+    printf("Returning without error");
     return nm;
   }
 }
