@@ -178,65 +178,28 @@ extern "C" {
     size_t* coords = ALLOCA_N(size_t, s->dim);
     memset(coords, 0, sizeof(size_t) * s->dim);
 
-    //std::cerr << "Coords[0] " << coords[0] << std::endl;
-    std::cerr << "Coords[1] " << coords[1] << "\n";
-    std::cerr << "s->dim " << s->dim << "\n";
-    std::cerr << "s->shape[0] " << s->shape[0] << "\n";
-    std::cerr << "s->shape[1] " << s->shape[1] << "\n";
-
-    // Drop into each row to iterate through them?
-    for (size_t j = 0; j < s->dim; ++j) {
-
-      
+    // Set up the LIST and NODE
+    LIST* l = s->rows;
+    NODE* curr = l->first;
     // Iterate along each row, returning the value and index for each non-default entry
-    for (size_t i = 0; i < nm_storage_count_max_elements(s); ++i) {
-
-      std::cerr << "Inside the outer loop s->rows " << s->rows << "\n";
-      std::cerr << s->rows[0][i] << "\tWhy does this fail:? (s->rows)[i]);" << "\n";
-      //std::cerr << "Why does this fail:? reinterpret_cast<VALUE*>(s->src)[i]);" << reinterpret_cast<VALUE*>(s->rows[i]) << std::endl;
+    while (curr) {
       VALUE ary = rb_ary_new();
+
       if (NM_DTYPE(nmatrix) == nm::RUBYOBJ) {
-        //rb_ary_push(ary, reinterpret_cast<VALUE*>(s->src)[i]);
+        std::cerr << curr->val << std::endl;
+        std::cerr << reinterpret_cast<VALUE>(curr->val) << std::endl;
+        std::cerr << curr->key << std::endl;
+        rb_ary_push(ary, reinterpret_cast<VALUE>(curr->val) );
+        rb_ary_push(ary, INT2FIX(curr->key) );
+        std::cerr << ary << std::endl;
       } else {
-        rb_ary_push(ary, rubyobj_from_cval((char*)(s->src) + i*DTYPE_SIZES[NM_DTYPE(nmatrix)], NM_DTYPE(nmatrix)).rval);
+        // What is the function of the addition of the i*DTYPE_SIZES[NM_DTYPE(nmatrix)], NM_DTYPE(nmatrix)????
+        //rb_ary_push(ary, rubyobj_from_cval((char*)(curr->val) + i*DTYPE_SIZES[NM_DTYPE(nmatrix)], NM_DTYPE(nmatrix)).rval);
+       // Push the coordinates at the same time...  
       }
-
-      for (size_t p = 0; p < s->dim; ++p) {
-        std::cerr << "push loop: coords[p] " << coords[p] << "\n";
-        //rb_ary_push(ary, INT2FIX(coords[p]));
-      }
-      std::cerr << "Exited the push loop\n";
       rb_yield(ary);
-      std::cerr << "Yielded and came back\n";
-
-      // update the coordinates
-      for (size_t p = 1; p <= s->dim; ++p) {
-        std::cerr << "s->shape - p: " << s->shape[2-p] << "\n";
-        std::cerr << "update loop: coords[p] " << coords[p] << "\n";
-        std::cerr << "update loop: coords[s->dim-p] " << coords[s->dim-p] << "\n";
-        coords[s->dim -p]++;
-        std::cerr << "update loop: coords[s->dim-p]++ " << coords[s->dim-p] << "\n";
-        std::cerr << "update loop conditional: prev < s->shape[s->dim -p]? " << s->shape[s->dim -p] << "\n";
-        if (coords[s->dim -p] < s->shape[s->dim -p]) break;
-        else
-          std::cerr << "update loop: else statement\n";
-        coords[s->dim - p] = 0;
-        // and then continue down the loop, incrementing j instead of i
-      }
-      std::cerr << "Exited the update loop\n";
-      std::cerr << "returning without an error?\n";
-      /* // OLD STUFF, from YALE?
-         VALUE j = 0;
-         VALUE size_of_list_row = sizeof(LIST[i])
-         for ( size_t j = 0; j < size_of_list_row; ++j) {
-         VALUE jj = rubyobj_from_cval(&(rows[i][j]), NM_DTYPE(nmatrix)).rval;
-         VALUE v = rubyobj_from_cval(&(data[i][j]), NM_DTYPE(nmatrix)).rval;
-         rb_yield_values(3, v, i, jj);
-         }
-       */
-      std::cerr << "returning without an error?\n";
-      std::cerr << "Returning without error\n";
-      return nmatrix;
+      // Update the position
+      curr = curr->next;
     }
     return nmatrix;
   }
