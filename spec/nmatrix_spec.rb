@@ -208,6 +208,13 @@ describe NMatrix do
             is = []
             js = []
             n.each_stored_with_indices do |v,i,j|
+              if storage_type == :list
+                puts "EACH_STORED_WITH_INDICES"
+                puts "n"
+                puts n.pp
+                puts "v, i, j"
+                puts "V: #{v}, I: #{i}, J: #{j}"
+              end
               values << v
               is << i
               js << j

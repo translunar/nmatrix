@@ -97,17 +97,31 @@ namespace :spec do
 
   RSPEC_CMD = [ 'ruby', '-S', 'rspec', '-Ilib:ext', SPECDIR ]
 
+  RSPEC_CMD2 = [ 'ruby', '-S', 'rspec', '-Ilib:ext', SPECDIR + "list_each_stored_spec.rb" ]
   #desc "Run the spec for generator.rb"
   #task :generator do |task|
   #  run 'rspec spec/generator_spec.rb'
   #end
 
   desc "Run specs under GDB."
-  task :gdb => [ :compile ] do |task|
+  namespace :gdb  do 
+
+    ran = false
+    desc "Run list_each_stored_with_indices specs under GDB."
+    task :lists => [ :compile ] do |task|
           cmd = [ 'gdb' ] + GDB_OPTIONS
           cmd += [ '--args' ]
-          cmd += RSPEC_CMD
+          cmd += RSPEC_CMD2
           run( *cmd )
+          ran = true
+    end
+    if ran
+      Rake::Task["compile"].invoke
+      cmd = [ 'gdb' ] + GDB_OPTIONS
+      cmd += [ '--args' ]
+      cmd += RSPEC_CMD
+      run( *cmd )
+    end
   end
 
   desc "Run specs under Valgrind."
