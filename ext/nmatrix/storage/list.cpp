@@ -171,9 +171,7 @@ extern "C" {
 
     // If we don't have a block, return an enumerator.
     RETURN_ENUMERATOR(nmatrix, 0, 0);
-
     LIST_STORAGE* s = NM_STORAGE_LIST(nmatrix);
-
     // Create indices and initialize to zero
     size_t* coords = ALLOCA_N(size_t, s->dim);
     memset(coords, 0, sizeof(size_t) * s->dim);
@@ -181,25 +179,53 @@ extern "C" {
     // Set up the LIST and NODE
     LIST* l = s->rows;
     NODE* curr = l->first;
+    VALUE ary = rb_ary_new();
+    rb_define_variable("$nmatrix_temporary_for_testing", &nmatrix);
+    rb_eval_string("puts $nmatrix_temporary_for_testing.pp");
     // Iterate along each row, returning the value and index for each non-default entry
-    while (curr) {
-      VALUE ary = rb_ary_new();
 
-      if (NM_DTYPE(nmatrix) == nm::RUBYOBJ) {
-        std::cerr << curr->val << std::endl;
-        std::cerr << reinterpret_cast<VALUE>(curr->val) << std::endl;
-        std::cerr << curr->key << std::endl;
-        rb_ary_push(ary, reinterpret_cast<VALUE>(curr->val) );
-        rb_ary_push(ary, INT2FIX(curr->key) );
-        std::cerr << ary << std::endl;
-      } else {
-        // What is the function of the addition of the i*DTYPE_SIZES[NM_DTYPE(nmatrix)], NM_DTYPE(nmatrix)????
-        //rb_ary_push(ary, rubyobj_from_cval((char*)(curr->val) + i*DTYPE_SIZES[NM_DTYPE(nmatrix)], NM_DTYPE(nmatrix)).rval);
-       // Push the coordinates at the same time...  
-      }
+    // Iterate through each level of the list... 
+    for (size_t i = 0; i < s->dim; ++i ) {
+      std::cerr << "DIM: " << s->dim << std::endl;
+      std::cerr << "STORAGE: "  << s << std::endl;
+      std::cerr << "LIST: "   << l << std::endl;
+      std::cerr << "NODE: "   << curr << std::endl;
+      // Levels...
+      size_t j = 0;
+      while (curr) {
+        if (NM_DTYPE(nmatrix) == nm::RUBYOBJ) {
+          std::cerr << "I: " << i << std::endl;
+          std::cerr << "J: " << j << std::endl;
+          std::cerr << "CURR->val: " << curr->val << "\treinterpret_cast: " << reinterpret_cast<VALUE>(curr->val) << std::endl;
+          std::cerr << "reinterpret_cast<VALUE*>(curr->val): " << reinterpret_cast<VALUE*>(curr->val) << std::endl;
+          std::cerr << "TYPE: reinterpret_cast<VALUE*>(curr->val): " << TYPE(reinterpret_cast<VALUE*>(curr->val) ) << std::endl;
+          std::cerr << "*reinterpret_cast<VALUE*>(curr->val): " << *reinterpret_cast<VALUE*>(curr->val) << std::endl;
+          std::cerr << "TYPE: *reinterpret_cast<VALUE*>(curr->val): " << TYPE(*reinterpret_cast<VALUE*>(curr->val) ) << std::endl;
+          std::cerr << "reinterpret_cast<NODE*>(curr->val): " << reinterpret_cast<NODE*>(curr->val) << std::endl;
+          std::cerr << "reinterpret_cast<LIST*>(curr->val): " << reinterpret_cast<LIST*>(curr->val) << std::endl;
+          std::cerr << "*reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->val): " << *reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->val) << std::endl;
+          std::cerr << "TYPE(*reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->val)): " << TYPE(*reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->val) ) << std::endl;
+          std::cerr << "(curr->val): " << curr->val << std::endl;
+          std::cerr << "KEY: " << curr->key << std::endl;
+          //rb_ary_push(ary, reinterpret_cast<VALUE>(curr->val) );
+          //rb_ary_push(ary, *(reinterpret_cast<VALUE*>(curr->val)) );
+          rb_ary_push(ary, INT2FIX(curr->val) );
+          rb_ary_push(ary, INT2FIX(curr->key) );
+          std::cerr << "ARY: " << ary << std::endl;
+        } else {
+          // What is the function of the addition of the i*DTYPE_SIZES[NM_DTYPE(nmatrix)], NM_DTYPE(nmatrix)????
+          //rb_ary_push(ary, rubyobj_from_cval((char*)(curr->val) + i*DTYPE_SIZES[NM_DTYPE(nmatrix)], NM_DTYPE(nmatrix)).rval);
+          // Push the coordinates at the same time...  
+        }
+        if (curr == curr->next) {
+          std::cerr << "We are going to break now..." << std::endl;
+          break;
+        }
+        j++;
+        curr = curr->next;
+      } // 
       rb_yield(ary);
       // Update the position
-      curr = curr->next;
     }
     return nmatrix;
   }
@@ -523,7 +549,7 @@ extern "C" {
         int j = j_curr->key - s->offset[1];
         if (j < 0 || j >= (int)s->shape[1]) continue;
 
-        if (i != j)  	++count;
+        if (i != j)    ++count;
       }
     }
 
@@ -772,9 +798,9 @@ namespace list_storage {
 
       LIST* new_level = NULL;
 
-      NODE* l_node		= left->first,
-        * r_node		= right->first,
-        * dest_node	= NULL;
+      NODE* l_node    = left->first,
+        * r_node    = right->first,
+        * dest_node  = NULL;
 
       for (index = 0; index < shape[level]; ++index) {
         if (l_node == NULL and r_node == NULL) {
@@ -984,9 +1010,9 @@ namespace list_storage {
 
       LIST* new_level = NULL;
 
-      NODE* l_node		= left->first,
-        * r_node		= right->first,
-        * dest_node	= NULL;
+      NODE* l_node    = left->first,
+        * r_node    = right->first,
+        * dest_node  = NULL;
 
       for (index = 0; index < shape[level]; ++index) {
         if (l_node == NULL and r_node == NULL) {
@@ -1064,7 +1090,7 @@ namespace list_storage {
               new_level = nm::list::create();
               dest_node = nm::list::insert_helper(dest, dest_node, index, new_level);
 
-              ew_op_prime<op, LDType, RDType>(new_level, d_default,	&EMPTY_LIST, l_default,
+              ew_op_prime<op, LDType, RDType>(new_level, d_default,  &EMPTY_LIST, l_default,
                   reinterpret_cast<LIST*>(r_node->val), r_default,
                   shape, last_level, level + 1);
             }
@@ -1089,8 +1115,8 @@ namespace list_storage {
               new_level = nm::list::create();
               dest_node = nm::list::insert_helper(dest, dest_node, index, new_level);
 
-              ew_op_prime<op, LDType, RDType>(new_level, d_default,	reinterpret_cast<LIST*>(l_node->val), l_default,
-                  &EMPTY_LIST, r_default,	shape, last_level, level + 1);
+              ew_op_prime<op, LDType, RDType>(new_level, d_default,  reinterpret_cast<LIST*>(l_node->val), l_default,
+                  &EMPTY_LIST, r_default,  shape, last_level, level + 1);
             }
 
             l_node = l_node->next;
