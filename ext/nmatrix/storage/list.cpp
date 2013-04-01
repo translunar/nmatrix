@@ -179,51 +179,94 @@ extern "C" {
     // Set up the LIST and NODE
     LIST* l = s->rows;
     NODE* curr = l->first;
+    NODE* prev_curr ;
     VALUE ary = rb_ary_new();
     rb_define_variable("$nmatrix_temporary_for_testing", &nmatrix);
     rb_eval_string("puts $nmatrix_temporary_for_testing.pp");
     // Iterate along each row, returning the value and index for each non-default entry
+    // REFERENCE TYPES:
+    std::cerr << "TYPES: " << std::endl;
+    std::cerr << "\tNODE : " << typeid(NODE).hash_code() << std::endl;
+    std::cerr << "\tNODE*: " << typeid(NODE*).hash_code() << std::endl;
+    std::cerr << "\tLIST : " << typeid(LIST).hash_code() << std::endl;
+    std::cerr << "\tLIST*: " << typeid(LIST*).hash_code() << std::endl;
+    std::cerr << "\tVALUE  : " << typeid(VALUE).hash_code() << std::endl;
+    std::cerr << "\tsize_t : " << typeid(size_t).hash_code() << std::endl;
+    std::cerr << "\tVALUE* : " << typeid(VALUE*).hash_code() << std::endl;
+    std::cerr << "\tsize_t*: " << typeid(size_t*).hash_code() << std::endl;
+    std::cerr << "\tary: " << typeid(ary).hash_code() << std::endl;
+    std::cerr << "\tl: " << typeid(l).hash_code() << std::endl;
+    std::cerr << "\tcurr: " << typeid(curr).hash_code() << std::endl;
+    // Levels...
+    while (curr and curr != prev_curr) { // LOOPS through the j (rows)
+      NODE* subnode = reinterpret_cast<LIST*>(curr->val)->first;
+      NODE* prev_node;
+      while (subnode != prev_node) {
+        std::cerr << "subnode: " << subnode << std::endl;
+        //        void* val = reinterpret_cast<VALUE*>(subnode->val);
+        size_t row = curr->key;
+        size_t col = subnode->key;
+        std::cerr << "DESIRED OUTPUT: " << *reinterpret_cast<VALUE*>(reinterpret_cast<NODE*>(subnode)->val) << ", " << row << ", " << col << std::endl;
+        // Update the loop
+        prev_node = subnode;
+        subnode = subnode->next;
+      }
+      /*
+      if (NM_DTYPE(nmatrix) == nm::RUBYOBJ) {
+        std::cerr << "RUBYOBJ" << std::endl;
+        std::cerr << "DESIRED OUTPUT: " << *reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->val) << ", " << curr->key << ", " << reinterpret_cast<LIST*>(curr->val)->first->key << std::endl;
+        std::cerr << "DESIRED OUTPUT: " << *reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->next->val) << ", " << curr->key << ", " << reinterpret_cast<LIST*>(curr->val)->first->next->key << std::endl;
+        std::cerr << "typeid(curr->val).hash_code(): " << typeid(curr->val).hash_code() << std::endl;
+        std::cerr << "typeid(curr->key).hash_code(): " << typeid(curr->key).hash_code() << std::endl;
+        std::cerr << "typeid(curr->next->val).hash_code(): " << typeid(*reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->val)).hash_code() << std::endl;
+        /*std::cerr << "\tR: " << r << std::endl;
+          std::cerr << "\tJ: " << j << std::endl;
+          std::cerr << "\tCURR->val: " << curr->val << "\treinterpret_cast: " << reinterpret_cast<VALUE>(curr->val) << std::endl;
+          std::cerr << "\tKEY: " << curr->key << std::endl;
+          std::cerr << "\t*reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->val): " << *reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->val) << std::endl;
+          std::cerr << "\treinterpret_cast<LIST*>(curr->val)->first->key): " << reinterpret_cast<LIST*>(curr->val)->first->key << std::endl;
+          std::cerr << "\t\t*reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->next->val): " << *reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->next->val) << std::endl;
+          std::cerr << "\t\treinterpret_cast<LIST*>(curr->val)->first->next->key: " << reinterpret_cast<LIST*>(curr->val)->first->next->key << std::endl;
+          std::cerr << "\t\t\t*reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(reinterpret_cast<LIST*>(curr->val)->first->next->val)->first->next->val): " << *reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->next->val) << std::endl;
+          std::cerr << "\t\t\treinterpret_cast<LIST*>(curr->val)->first->next->first->next->key: " << reinterpret_cast<LIST*>(curr->val)->first->next->key << std::endl;
+        //rb_ary_push(ary, reinterpret_cast<VALUE>(curr->val) );
+        std::cerr << "\trow_node->val: " << row_node->val << "\treinterpret_cast<VALUE*>(row_node->val): " << *reinterpret_cast<VALUE*>(row_node->val) << std::endl;
+        std::cerr << "\trow_node->next->val: " << row_node->next->val << "\treinterpret_cast<VALUE*>(row_node->next->val): " << *reinterpret_cast<VALUE*>(row_node->next->val) << std::endl;
+        std::cerr << "row_node->next->key" << row_node->next->key << std::endl;
+        //rb_ary_push(ary, reinterpret_cast<VALUE*>(row_node->val));
+        rb_ary_push(ary, INT2FIX(curr->key) );
+        //          std::cerr << "ARY: " << ary << std::endl;
+      } else {
+        // What is the function of the addition of the i*DTYPE_SIZES[NM_DTYPE(nmatrix)], NM_DTYPE(nmatrix)????
+        //rb_ary_push(ary, rubyobj_from_cval((char*)(curr->val) + i*DTYPE_SIZES[NM_DTYPE(nmatrix)], NM_DTYPE(nmatrix)).rval);
+        // Push the coordinates at the same time...  
+        std::cerr << "NOT A RUBYOBJ" << std::endl;
+        std::cerr << "DESIRED OUTPUT: " << *reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->val) << ", " << curr->key << ", " << reinterpret_cast<LIST*>(curr->val)->first->key << std::endl;
+        std::cerr << "DESIRED OUTPUT: " << *reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->next->val) << ", " << curr->key << ", " << reinterpret_cast<LIST*>(curr->val)->first->next->key << std::endl;
+        std::cerr << "typeid(curr->val).hash_code(): " << typeid(curr->val).hash_code() << std::endl;
+        std::cerr << "typeid(curr->key).hash_code(): " << typeid(curr->key).hash_code() << std::endl;
+        std::cerr << "typeid(curr->next->val).hash_code(): " << typeid(*reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->val)).hash_code() << std::endl;
+        /*
+           std::cerr << "\tcurr: " << curr << std::endl;
+           std::cerr << "\tCURR->val: " << curr->val << "\treinterpret_cast: " << reinterpret_cast<VALUE>(curr->val) << std::endl;
+           std::cerr << "\tKEY: " << curr->key << std::endl;
+           std::cerr << "\t*reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->val): " << *reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->val) << std::endl;
+           std::cerr << "\treinterpret_cast<LIST*>(curr->val)->first->key): " << reinterpret_cast<LIST*>(curr->val)->first->key << std::endl;
+           std::cerr << "\t\t*reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->next->val): " << *reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->next->val) << std::endl;
+           std::cerr << "\t\treinterpret_cast<LIST*>(curr->val)->first->next->key: " << reinterpret_cast<LIST*>(curr->val)->first->next->key << std::endl;
+           std::cerr << "\t\t\t*reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(reinterpret_cast<LIST*>(curr->val)->first->next->val)->first->next->val): " << *reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->next->val) << std::endl;
+           std::cerr << "\t\t\treinterpret_cast<LIST*>(curr->val)->first->next->first->next->key: " << reinterpret_cast<LIST*>(curr->val)->first->next->key << std::endl;
 
-    // Iterate through each level of the list... 
-    for (size_t i = 0; i < s->dim; ++i ) {
-      std::cerr << "DIM: " << s->dim << std::endl;
-      std::cerr << "STORAGE: "  << s << std::endl;
-      std::cerr << "LIST: "   << l << std::endl;
-      std::cerr << "NODE: "   << curr << std::endl;
-      // Levels...
-      size_t j = 0;
-      while (curr) {
-        if (NM_DTYPE(nmatrix) == nm::RUBYOBJ) {
-          std::cerr << "I: " << i << std::endl;
-          std::cerr << "J: " << j << std::endl;
-          std::cerr << "CURR->val: " << curr->val << "\treinterpret_cast: " << reinterpret_cast<VALUE>(curr->val) << std::endl;
-          std::cerr << "reinterpret_cast<VALUE*>(curr->val): " << reinterpret_cast<VALUE*>(curr->val) << std::endl;
-          std::cerr << "TYPE: reinterpret_cast<VALUE*>(curr->val): " << TYPE(reinterpret_cast<VALUE*>(curr->val) ) << std::endl;
-          std::cerr << "*reinterpret_cast<VALUE*>(curr->val): " << *reinterpret_cast<VALUE*>(curr->val) << std::endl;
-          std::cerr << "TYPE: *reinterpret_cast<VALUE*>(curr->val): " << TYPE(*reinterpret_cast<VALUE*>(curr->val) ) << std::endl;
-          std::cerr << "reinterpret_cast<NODE*>(curr->val): " << reinterpret_cast<NODE*>(curr->val) << std::endl;
-          std::cerr << "reinterpret_cast<LIST*>(curr->val): " << reinterpret_cast<LIST*>(curr->val) << std::endl;
-          std::cerr << "*reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->val): " << *reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->val) << std::endl;
-          std::cerr << "TYPE(*reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->val)): " << TYPE(*reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->val) ) << std::endl;
-          std::cerr << "(curr->val): " << curr->val << std::endl;
-          std::cerr << "KEY: " << curr->key << std::endl;
-          //rb_ary_push(ary, reinterpret_cast<VALUE>(curr->val) );
-          //rb_ary_push(ary, *(reinterpret_cast<VALUE*>(curr->val)) );
-          rb_ary_push(ary, INT2FIX(curr->val) );
-          rb_ary_push(ary, INT2FIX(curr->key) );
-          std::cerr << "ARY: " << ary << std::endl;
-        } else {
-          // What is the function of the addition of the i*DTYPE_SIZES[NM_DTYPE(nmatrix)], NM_DTYPE(nmatrix)????
-          //rb_ary_push(ary, rubyobj_from_cval((char*)(curr->val) + i*DTYPE_SIZES[NM_DTYPE(nmatrix)], NM_DTYPE(nmatrix)).rval);
-          // Push the coordinates at the same time...  
-        }
-        if (curr == curr->next) {
-          std::cerr << "We are going to break now..." << std::endl;
-          break;
-        }
-        j++;
-        curr = curr->next;
-      } // 
+           std::cerr << "\trow_node->val: " << row_node->val << "\treinterpret_cast<VALUE*>(row_node->val): " << *reinterpret_cast<VALUE*>(row_node->val) << std::endl;
+           std::cerr << "\trow_node->next->val: " << row_node->next->val << "\treinterpret_cast<VALUE*>(row_node->next->val): " << *reinterpret_cast<VALUE*>(row_node->next->val) << std::endl;
+           std::cerr << "row_node->next->key: " << row_node->next->key << "\ttype: " << typeid(row_node->next->key).hash_code() << std::endl;
+           std::cerr << "v, i, j: " << *reinterpret_cast<VALUE*>(row_node->val) << ", " << INT2FIX(curr->key) << ", " << INT2FIX(row_node->key) << std::endl;
+           rb_ary_push(ary, *reinterpret_cast<VALUE*>(row_node->val));
+           rb_ary_push(ary, INT2FIX(curr->key));
+        rb_ary_push(ary, Qnil); //reinterpret_cast<VALUE>(row_node->key) );
+      }
+    */
+      curr = curr->next;
       rb_yield(ary);
       // Update the position
     }
