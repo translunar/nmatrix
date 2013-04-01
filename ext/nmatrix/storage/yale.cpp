@@ -329,6 +329,7 @@ void* get(YALE_STORAGE* storage, SLICE* slice) {
   }
 
   size_t request_capacity = shape[0] + ndnz + 1;
+  fprintf(stderr, "yale get copy: shape0=%d, shape1=%d, ndnz=%d, request_capacity=%d\n", shape[0], shape[1], ndnz, request_capacity);
   YALE_STORAGE* ns = nm_yale_storage_create(storage->dtype, shape, 2, request_capacity);
 
   if (ns->capacity < request_capacity)
@@ -344,32 +345,40 @@ void* get(YALE_STORAGE* storage, SLICE* slice) {
   for (i = 0; i < shape[0]; ++i) {
     k = i + offset[0];
     for (j = 0; j < shape[1]; ++j) {
+      bool found = false;
       l = j + offset[1];
     
       // Get value from source matrix
-      if (k == l) val = src_a[k];
-      else {
+      if (k == l) {
+        if (src_a[k] != 0) { // don't bother copying non-zero values from the diagonal
+          val = src_a[k];
+          found = true;
+        }
+      } else {
         // copy one non-diagonal element
-        for (size_t c = src_ija[k]; c < src_ija[k+1]; ++c) {
+        for (size_t c = src_ija[k]; !found && c < src_ija[k+1]; ++c) {
           if (src_ija[c] == l) {
-            val = src_a[c];
-            break;
+            val   = src_a[c];
+            found = true;
           }
         }
       }
 
-      // Set value to destination matrix
-      if (i == j)  dst_a[i] = val; 
-      else { 
-        // copy non-diagonal element
-        dst_ija[ija] = j;
-        dst_a[ija] = val;
+      if (found) {
+        // Set value in destination matrix
+        if (i == j) {
+          dst_a[i] = val;
+        } else {
+          // copy non-diagonal element
+          dst_ija[ija] = j;
+          dst_a[ija] = val;
 
-        ++ija;
-        for (size_t c = i + 1; c <= shape[0]; ++c) {
-          dst_ija[c] = ija;
+          ++ija;
+          for (size_t c = i + 1; c <= shape[0]; ++c) {
+            dst_ija[c] = ija;
+          }
         }
-      } 
+      }
     }
   }
 
