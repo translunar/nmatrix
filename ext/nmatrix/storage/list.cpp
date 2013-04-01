@@ -184,7 +184,8 @@ extern "C" {
     rb_define_variable("$nmatrix_temporary_for_testing", &nmatrix);
     rb_eval_string("puts $nmatrix_temporary_for_testing.pp");
     // Iterate along each row, returning the value and index for each non-default entry
-    // REFERENCE TYPES:
+    // REFERENCE TYPES: 
+    /*
     std::cerr << "TYPES: " << std::endl;
     std::cerr << "\tNODE : " << typeid(NODE).hash_code() << std::endl;
     std::cerr << "\tNODE*: " << typeid(NODE*).hash_code() << std::endl;
@@ -197,28 +198,13 @@ extern "C" {
     std::cerr << "\tary: " << typeid(ary).hash_code() << std::endl;
     std::cerr << "\tl: " << typeid(l).hash_code() << std::endl;
     std::cerr << "\tcurr: " << typeid(curr).hash_code() << std::endl;
+    */
     // Levels...
-    while (curr and curr != prev_curr) { // LOOPS through the j (rows)
+    while (curr) {
       NODE* subnode = reinterpret_cast<LIST*>(curr->val)->first;
       NODE* prev_node;
-      while (subnode != prev_node) {
-        std::cerr << "subnode: " << subnode << std::endl;
-        //        void* val = reinterpret_cast<VALUE*>(subnode->val);
-        size_t row = curr->key;
-        size_t col = subnode->key;
-        std::cerr << "DESIRED OUTPUT: " << *reinterpret_cast<VALUE*>(reinterpret_cast<NODE*>(subnode)->val) << ", " << row << ", " << col << std::endl;
-        // Update the loop
-        prev_node = subnode;
-        subnode = subnode->next;
-      }
-      /*
-      if (NM_DTYPE(nmatrix) == nm::RUBYOBJ) {
-        std::cerr << "RUBYOBJ" << std::endl;
         std::cerr << "DESIRED OUTPUT: " << *reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->val) << ", " << curr->key << ", " << reinterpret_cast<LIST*>(curr->val)->first->key << std::endl;
         std::cerr << "DESIRED OUTPUT: " << *reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->next->val) << ", " << curr->key << ", " << reinterpret_cast<LIST*>(curr->val)->first->next->key << std::endl;
-        std::cerr << "typeid(curr->val).hash_code(): " << typeid(curr->val).hash_code() << std::endl;
-        std::cerr << "typeid(curr->key).hash_code(): " << typeid(curr->key).hash_code() << std::endl;
-        std::cerr << "typeid(curr->next->val).hash_code(): " << typeid(*reinterpret_cast<VALUE*>(reinterpret_cast<LIST*>(curr->val)->first->val)).hash_code() << std::endl;
         /*std::cerr << "\tR: " << r << std::endl;
           std::cerr << "\tJ: " << j << std::endl;
           std::cerr << "\tCURR->val: " << curr->val << "\treinterpret_cast: " << reinterpret_cast<VALUE>(curr->val) << std::endl;
