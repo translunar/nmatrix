@@ -114,10 +114,10 @@ $srcs = [
 # The next line allows the user to supply --with-atlas-dir=/usr/local/atlas,
 # --with-atlas-lib or --with-atlas-include and tell the compiler where to look
 # for ATLAS. The same for all the others
-#dir_config("lapack", [], ["/usr/local/lib", "/usr/local/atlas/lib"])
+#
 #dir_config("clapack", ["/usr/local/atlas/include"], [])
-#dir_config("cblas", ["/usr/local/atlas/include"], ["/usr/local/lib", "/usr/local/atlas/lib"])
-#dir_config("atlas", ["/usr/local/atlas/include"], ["/usr/local/atlas/lib", "/usr/local/lib", "/usr/lib"])
+#
+#
 
 # Is g++ having trouble finding your header files?
 # Try this:
@@ -125,9 +125,18 @@ $srcs = [
 #   export CPLUS_INCLUDE_PATH=/usr/local/atlas/include
 # (substituting in the path of your cblas.h and clapack.h for the path I used). -- JW 8/27/12
 
-have_library("lapack")
-have_library("cblas")
-have_library("atlas")
+
+unless have_library("lapack")
+  dir_config("lapack", [], ["/usr/local/lib", "/usr/local/atlas/lib"])
+end
+
+unless have_library("cblas")
+  dir_config("cblas", ["/usr/local/atlas/include"], ["/usr/local/lib", "/usr/local/atlas/lib"])
+end
+
+unless have_library("atlas")
+  dir_config("atlas", ["/usr/local/atlas/include"], ["/usr/local/atlas/lib", "/usr/local/lib", "/usr/lib"])
+end
 
 #find_library("lapack", "clapack_dgetrf")
 have_header("clapack.h")
