@@ -106,11 +106,21 @@ describe "Slice operation" do
     end
 
     if stype == :yale
-    context "by reference" do
-      it "should be raise error" do
-        expect{ @m[1..2,1..2] }.to raise_error(NotImplementedError)
+      context "by reference" do
+        it "should raise an error" do
+          expect{ @m[1..2,1..2] }.to raise_error(NotImplementedError)
+        end
       end
-    end
+
+      context "by copy" do
+        it "should correctly preserve zeros" do
+          @m = NMatrix.new(:yale, 3, :int64)
+          column_slice = @m.column(2, :copy)
+          column_slice[0,0].should == 0
+          column_slice[1,0].should == 0
+          column_slice[2,0].should == 0
+        end
+      end
     else
     context "by reference" do
       it 'should return an NMatrix' do

@@ -295,8 +295,6 @@ size_t max_size(YALE_STORAGE* s) {
 
 /*
  * Returns a slice of YALE_STORAGE object by copy
- *
- * Slicing-related.
  */
 template <typename DType,typename IType>
 void* get(YALE_STORAGE* storage, SLICE* slice) {
@@ -339,10 +337,10 @@ void* get(YALE_STORAGE* storage, SLICE* slice) {
    // Initialize the A and IJA arrays
   init<DType,IType>(ns);
   IType *dst_ija = reinterpret_cast<IType*>(ns->ija);
-  DType *dst_a = reinterpret_cast<DType*>(ns->a);
+  DType *dst_a   = reinterpret_cast<DType*>(ns->a);
  
   size_t ija = shape[0] + 1;
-  DType val; 
+  DType val = src_a[storage->shape[0]]; // use 0 as the default for copy
   for (i = 0; i < shape[0]; ++i) {
     k = i + offset[0];
     for (j = 0; j < shape[1]; ++j) {
@@ -351,9 +349,12 @@ void* get(YALE_STORAGE* storage, SLICE* slice) {
       // Get value from source matrix
       if (k == l) val = src_a[k];
       else {
-        // copy non-diagonal element
+        // copy one non-diagonal element
         for (size_t c = src_ija[k]; c < src_ija[k+1]; ++c) {
-          if (src_ija[c] == l) val = src_a[c];
+          if (src_ija[c] == l) {
+            val = src_a[c];
+            break;
+          }
         }
       }
 

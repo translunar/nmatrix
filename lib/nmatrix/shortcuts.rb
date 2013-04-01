@@ -314,6 +314,8 @@ as dimension."
       self[0 ... self.shape[0], column_number]
     end
   end
+
+  alias :col :column
   
   #
   # call-seq:
