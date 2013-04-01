@@ -104,17 +104,25 @@ namespace :spec do
 
   desc "Run specs under GDB."
   task :gdb => [ :compile ] do |task|
-          cmd = [ 'gdb' ] + GDB_OPTIONS
-          cmd += [ '--args' ]
-          cmd += RSPEC_CMD
-          run( *cmd )
+    cmd = [ 'gdb' ] + GDB_OPTIONS
+    cmd += [ '--args' ]
+    cmd += RSPEC_CMD
+    run( *cmd )
+  end
+
+  desc "Run specs under cgdb."
+  task :cgdb => [ :compile ] do |task|
+    cmd = [ 'cgdb' ] + GDB_OPTIONS
+    cmd += [ '--args' ]
+    cmd += RSPEC_CMD
+    run( *cmd )
   end
 
   desc "Run specs under Valgrind."
   task :valgrind => [ :compile ] do |task|
-          cmd = [ 'valgrind' ] + VALGRIND_OPTIONS
-          cmd += RSPEC_CMD
-          run( *cmd )
+    cmd = [ 'valgrind' ] + VALGRIND_OPTIONS
+    cmd += RSPEC_CMD
+    run( *cmd )
   end
 end
 
