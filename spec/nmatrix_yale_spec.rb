@@ -107,6 +107,23 @@ describe NMatrix do
       n.yale_lu.should == [0.2, 0.3, 0.4, nil]
     end
 
+    it "resizes without erasing values" do
+      require 'yaml'
+
+      associations = File.open('spec/nmatrix_yale_resize_test_associations.yaml') { |y| YAML::load(y) }
+
+      n = NMatrix.new(:yale, [618, 2801], associations.size, :byte)
+
+      associations.each_pair do |j,i|
+        n[i,j] = 1
+        n[i,j].should be(1), "Value at #{i},#{j} not inserted correctly!"
+      end
+
+      associations.each_pair do |j,i|
+        n[i,j].should be(1), "Value at #{i},#{j} erased during resize!"
+      end
+    end
+
     it "sets values within rows" do
       n = NMatrix.new(:yale, [3,20], :float64)
       n.extend(NMatrix::YaleFunctions)
