@@ -23,6 +23,9 @@
 #++
 
 class NMatrix
-  VERSION = "0.0.3"
+  # Note that the format of the VERSION string is needed for NMatrix
+  # native IO. If you change the format, please make sure that native
+  # IO can still understand NMatrix::VERSION.
+  VERSION = "0.0.4"
 end
 
