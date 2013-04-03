@@ -1021,7 +1021,7 @@ static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
   		break;
   		
   	case nm::YALE_STORE:
-  		nmatrix->storage = (STORAGE*)nm_yale_storage_create(dtype, shape, dim, init_cap);
+  		nmatrix->storage = (STORAGE*)nm_yale_storage_create(dtype, shape, dim, init_cap, nm::UINT8);
   		nm_yale_storage_init((YALE_STORAGE*)(nmatrix->storage));
   		break;
   }
@@ -1359,7 +1359,7 @@ static VALUE nm_read(int argc, VALUE* argv, VALUE self) {
     f.read(reinterpret_cast<char*>(&ndnz),     sizeof(uint32_t));
     f.read(reinterpret_cast<char*>(&length),   sizeof(uint32_t));
 
-    s = nm_yale_storage_create(dtype, shape, dim, length); // set length as init capacity
+    s = nm_yale_storage_create(dtype, shape, dim, length, itype); // set length as init capacity
 
     read_padded_yale_elements(f, reinterpret_cast<YALE_STORAGE*>(s), length, symm, dtype, itype);
   } else {

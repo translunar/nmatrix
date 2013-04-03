@@ -74,7 +74,7 @@
 
 extern "C" {
   static YALE_STORAGE*  nm_copy_alloc_struct(const YALE_STORAGE* rhs, const nm::dtype_t new_dtype, const size_t new_capacity, const size_t new_size);
-  static YALE_STORAGE*	alloc(nm::dtype_t dtype, size_t* shape, size_t dim);
+  static YALE_STORAGE*	alloc(nm::dtype_t dtype, size_t* shape, size_t dim, nm::itype_t min_itype);
 
   /* Ruby-accessible functions */
   static VALUE nm_size(VALUE self);
@@ -144,7 +144,7 @@ YALE_STORAGE* create_from_old_yale(dtype_t dtype, size_t* shape, void* r_ia, voi
   }
 
   // Having walked through the matrix, we now go about allocating the space for it.
-  YALE_STORAGE* s = alloc(dtype, shape, 2);
+  YALE_STORAGE* s = alloc(dtype, shape, 2, UINT8);
 
   s->capacity = shape[0] + ndnz + 1;
   s->ndnz     = ndnz;
@@ -305,10 +305,10 @@ void* get(YALE_STORAGE* storage, SLICE* slice) {
   shape[0] = slice->lengths[0];
   shape[1] = slice->lengths[1];
 
-  IType *src_ija = reinterpret_cast<IType*>(storage->ija);
-  DType *src_a = reinterpret_cast<DType*>(storage->a);
+  IType* src_ija = reinterpret_cast<IType*>(storage->ija);
+  DType* src_a   = reinterpret_cast<DType*>(storage->a);
 
-  // Calc ndnz
+  // Calc ndnz for the destination
   size_t ndnz  = 0;
   size_t i,j; // indexes of destination matrix
   size_t k,l; // indexes of source matrix
@@ -319,10 +319,15 @@ void* get(YALE_STORAGE* storage, SLICE* slice) {
 
       if (j == i)  continue;
 
-      if (k == l && src_a[k] != 0) ndnz++; // for diagonal element of source         
-      else { // for non-diagonal element 
-        for (size_t c = src_ija[k]; c < src_ija[k+1]; c++) 
-          if (src_ija[c] == l) { ndnz++; break; }
+      if (k == l) { // for diagonal element of source
+        if (src_a[k] != 0) ++ndnz;
+      } else { // for non-diagonal element
+        for (size_t c = src_ija[k]; c < src_ija[k+1]; c++) {
+          if (src_ija[c] == l) {
+            ++ndnz;
+            break;
+          }
+        }
       }
 
     }
@@ -330,15 +335,17 @@ void* get(YALE_STORAGE* storage, SLICE* slice) {
 
   size_t request_capacity = shape[0] + ndnz + 1;
   fprintf(stderr, "yale get copy: shape0=%d, shape1=%d, ndnz=%d, request_capacity=%d\n", shape[0], shape[1], ndnz, request_capacity);
-  YALE_STORAGE* ns = nm_yale_storage_create(storage->dtype, shape, 2, request_capacity);
+  YALE_STORAGE* ns = nm_yale_storage_create(storage->dtype, shape, 2, request_capacity, storage->itype);
 
   if (ns->capacity < request_capacity)
-      rb_raise(nm_eStorageTypeError, "conversion failed; capacity of %ld requested, max allowable is %ld", request_capacity, ns->capacity);
+    rb_raise(nm_eStorageTypeError, "conversion failed; capacity of %ld requested, max allowable is %ld", request_capacity, ns->capacity);
+  if (ns->itype != storage->itype)
+    rb_raise(nm_eStorageTypeError, "itype mismatch");
 
    // Initialize the A and IJA arrays
   init<DType,IType>(ns);
-  IType *dst_ija = reinterpret_cast<IType*>(ns->ija);
-  DType *dst_a   = reinterpret_cast<DType*>(ns->a);
+  IType* dst_ija = reinterpret_cast<IType*>(ns->ija);
+  DType* dst_a   = reinterpret_cast<DType*>(ns->a);
  
   size_t ija = shape[0] + 1;
   DType val = src_a[storage->shape[0]]; // use 0 as the default for copy
@@ -349,7 +356,7 @@ void* get(YALE_STORAGE* storage, SLICE* slice) {
       l = j + offset[1];
     
       // Get value from source matrix
-      if (k == l) {
+      if (k == l) { // source diagonal
         if (src_a[k] != 0) { // don't bother copying non-zero values from the diagonal
           val = src_a[k];
           found = true;
@@ -371,7 +378,7 @@ void* get(YALE_STORAGE* storage, SLICE* slice) {
         } else {
           // copy non-diagonal element
           dst_ija[ija] = j;
-          dst_a[ija] = val;
+          dst_a[ija]   = val;
 
           ++ija;
           for (size_t c = i + 1; c <= shape[0]; ++c) {
@@ -648,7 +655,7 @@ YALE_STORAGE* ew_op(const YALE_STORAGE* left, const YALE_STORAGE* right, dtype_t
 	
 	init_capacity = std::min(left->ndnz + right->ndnz + new_shape[0], new_shape[0] * new_shape[1]);
 	
-	dest	= nm_yale_storage_create(dtype, new_shape, 2, init_capacity);
+	dest	= nm_yale_storage_create(dtype, new_shape, 2, init_capacity, left->itype);
 	da		= reinterpret_cast<DType*>(dest->a);
 	
 	// Calculate diagonal values.
@@ -843,7 +850,7 @@ YALE_STORAGE* ew_op(const YALE_STORAGE* left, const YALE_STORAGE* right, dtype_t
 	// Set the number of non-diagonal non-zero entries in the destination matrix.
 	dest->ndnz = da_index;
 	
-	printf("Number of non-diagonal non-zero entires: %ld\n\n", (unsigned long)(dest->ndnz));
+	printf("Number of non-diagonal non-zero entries: %ld\n\n", (unsigned long)(dest->ndnz));
 	
 	// Set the capacity of the destination matrix.
 	dest->capacity = dest->shape[0] + dest->ndnz + 1;
@@ -944,6 +951,8 @@ static char vector_insert_resize(YALE_STORAGE* s, size_t current_size, size_t po
 
   s->ija = reinterpret_cast<void*>(new_ija);
   s->a   = reinterpret_cast<void*>(new_a);
+
+  fprintf(stderr, "resize\n");
 
   return 'i';
 }
@@ -1127,7 +1136,8 @@ static STORAGE* matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resu
   // int8_t dtype = left->dtype;
 
   // Create result storage.
-  YALE_STORAGE* result = nm_yale_storage_create(left->dtype, resulting_shape, 2, left->capacity + right->capacity);
+  nm::itype_t result_itype = static_cast<uint8_t>(left->itype) < static_cast<uint8_t>(right->itype) ? right->itype : left->itype;
+  YALE_STORAGE* result = nm_yale_storage_create(left->dtype, resulting_shape, 2, left->capacity + right->capacity, result_itype);
   init<DType,IType>(result);
 
   IType* ijl = reinterpret_cast<IType*>(left->ija);
@@ -1384,7 +1394,7 @@ STORAGE* nm_yale_storage_copy_transposed(const STORAGE* rhs_base) {
 
   size_t size   = nm_yale_storage_get_size(rhs);
 
-  YALE_STORAGE* lhs = nm_yale_storage_create(rhs->dtype, shape, 2, size);
+  YALE_STORAGE* lhs = nm_yale_storage_create(rhs->dtype, shape, 2, size, nm::UINT8);
   nm_yale_storage_init(lhs);
 
   NAMED_LI_DTYPE_TEMPLATE_TABLE(transp, nm::math::transpose_yale, void, const size_t n, const size_t m, const void* ia_, const void* ja_, const void* a_, const bool diaga, void* ib_, void* jb_, void* b_, const bool move);
@@ -1484,7 +1494,7 @@ STORAGE* nm_yale_storage_ew_op(nm::ewop_t op, const STORAGE* left, const STORAGE
  * create the storage.
  */
 
-YALE_STORAGE* nm_yale_storage_create(nm::dtype_t dtype, size_t* shape, size_t dim, size_t init_capacity) {
+YALE_STORAGE* nm_yale_storage_create(nm::dtype_t dtype, size_t* shape, size_t dim, size_t init_capacity, nm::itype_t min_itype) {
   YALE_STORAGE* s;
   size_t max_capacity;
 
@@ -1493,7 +1503,7 @@ YALE_STORAGE* nm_yale_storage_create(nm::dtype_t dtype, size_t* shape, size_t di
    	rb_raise(rb_eNotImpError, "Can only support 2D matrices");
   }
 
-  s = alloc(dtype, shape, dim);
+  s = alloc(dtype, shape, dim, min_itype);
   max_capacity = nm::yale_storage::max_size(s);
 
   // Set matrix capacity (and ensure its validity)
@@ -1556,7 +1566,7 @@ void nm_yale_storage_mark(void* storage_base) {
 /*
  * Allocates and initializes the basic struct (but not the IJA or A vectors).
  */
-static YALE_STORAGE* alloc(nm::dtype_t dtype, size_t* shape, size_t dim) {
+static YALE_STORAGE* alloc(nm::dtype_t dtype, size_t* shape, size_t dim, nm::itype_t min_itype) {
   YALE_STORAGE* s;
 
   s = ALLOC( YALE_STORAGE );
@@ -1566,6 +1576,10 @@ static YALE_STORAGE* alloc(nm::dtype_t dtype, size_t* shape, size_t dim) {
   s->shape       = shape;
   s->dim         = dim;
   s->itype       = nm_yale_storage_itype_by_shape(shape);
+
+  // See if a higher itype has been requested.
+  if (static_cast<int8_t>(s->itype) < static_cast<int8_t>(min_itype))
+    s->itype    = min_itype;
 
   return s;
 }

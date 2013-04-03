@@ -485,7 +485,7 @@ namespace yale_storage { // FIXME: Move to yale.cpp
     size_t request_capacity = shape[0] + ndnz + 1;
 
     // Create with minimum possible capacity -- just enough to hold all of the entries
-    YALE_STORAGE* lhs = nm_yale_storage_create(l_dtype, shape, 2, request_capacity);
+    YALE_STORAGE* lhs = nm_yale_storage_create(l_dtype, shape, 2, request_capacity, UINT8);
 
     if (lhs->capacity < request_capacity)
       rb_raise(nm_eStorageTypeError, "conversion failed; capacity of %ld requested, max allowable is %ld", (unsigned long)request_capacity, (unsigned long)(lhs->capacity));
@@ -546,7 +546,7 @@ namespace yale_storage { // FIXME: Move to yale.cpp
     shape[1] = rhs->shape[1];
 
     size_t request_capacity = shape[0] + ndnz + 1;
-    YALE_STORAGE* lhs = nm_yale_storage_create(l_dtype, shape, 2, request_capacity);
+    YALE_STORAGE* lhs = nm_yale_storage_create(l_dtype, shape, 2, request_capacity, UINT8);
 
     if (lhs->capacity < request_capacity)
       rb_raise(nm_eStorageTypeError, "conversion failed; capacity of %ld requested, max allowable is %ld", (unsigned long)request_capacity, (unsigned long)(lhs->capacity));
@@ -614,7 +614,7 @@ extern "C" {
   STORAGE* nm_yale_storage_from_dense(const STORAGE* right, nm::dtype_t l_dtype) {
     NAMED_LRI_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::create_from_dense_storage, YALE_STORAGE*, const DENSE_STORAGE* rhs, nm::dtype_t l_dtype);
 
-    nm::itype_t itype = nm_yale_storage_itype((const YALE_STORAGE*)right);
+    nm::itype_t itype = nm_yale_storage_default_itype((const YALE_STORAGE*)right);
 
     return (STORAGE*)ttable[l_dtype][right->dtype][itype]((const DENSE_STORAGE*)right, l_dtype);
   }
@@ -622,7 +622,7 @@ extern "C" {
   STORAGE* nm_yale_storage_from_list(const STORAGE* right, nm::dtype_t l_dtype) {
     NAMED_LRI_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::create_from_list_storage, YALE_STORAGE*, const LIST_STORAGE* rhs, nm::dtype_t l_dtype);
 
-    nm::itype_t itype = nm_yale_storage_itype((const YALE_STORAGE*)right);
+    nm::itype_t itype = nm_yale_storage_default_itype((const YALE_STORAGE*)right);
 
     return (STORAGE*)ttable[l_dtype][right->dtype][itype]((const LIST_STORAGE*)right, l_dtype);
   }

@@ -86,7 +86,7 @@ extern "C" {
   // Lifecycle //
   ///////////////
 
-  YALE_STORAGE* nm_yale_storage_create(nm::dtype_t dtype, size_t* shape, size_t dim, size_t init_capacity);
+  YALE_STORAGE* nm_yale_storage_create(nm::dtype_t dtype, size_t* shape, size_t dim, size_t init_capacity, nm::itype_t itype);
   YALE_STORAGE* nm_yale_storage_create_from_old_yale(nm::dtype_t dtype, size_t* shape, void* ia, void* ja, void* a, nm::dtype_t from_dtype);
   YALE_STORAGE*	nm_yale_storage_create_merged(const YALE_STORAGE* merge_template, const YALE_STORAGE* other);
   void          nm_yale_storage_delete(STORAGE* s);
@@ -151,7 +151,7 @@ extern "C" {
    * because UINTX_MAX and UINTX_MAX-1 are both reserved for sparse matrix
    * multiplication.
    */
-  inline nm::itype_t nm_yale_storage_itype(const YALE_STORAGE* s) {
+  inline nm::itype_t nm_yale_storage_default_itype(const YALE_STORAGE* s) {
     return nm_yale_storage_itype_by_shape(s->shape);
   }
 
