@@ -334,13 +334,11 @@ void* get(YALE_STORAGE* storage, SLICE* slice) {
   }
 
   size_t request_capacity = shape[0] + ndnz + 1;
-  fprintf(stderr, "yale get copy: shape0=%d, shape1=%d, ndnz=%d, request_capacity=%d\n", shape[0], shape[1], ndnz, request_capacity);
+  //fprintf(stderr, "yale get copy: shape0=%d, shape1=%d, ndnz=%d, request_capacity=%d\n", shape[0], shape[1], ndnz, request_capacity);
   YALE_STORAGE* ns = nm_yale_storage_create(storage->dtype, shape, 2, request_capacity, storage->itype);
 
   if (ns->capacity < request_capacity)
     rb_raise(nm_eStorageTypeError, "conversion failed; capacity of %ld requested, max allowable is %ld", request_capacity, ns->capacity);
-  if (ns->itype != storage->itype)
-    rb_raise(nm_eStorageTypeError, "itype mismatch");
 
    // Initialize the A and IJA arrays
   init<DType,IType>(ns);
