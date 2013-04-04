@@ -105,6 +105,30 @@ class NMatrix
 
   #
   # call-seq:
+  #     to_hash -> Hash
+  #
+  # Create a Ruby Hash from an NMatrix.
+  #
+  def to_hash
+    if stype == :yale
+      h = {}
+      each_stored_with_indices do |val,i,j|
+        next if val == 0 # Don't bother storing the diagonal zero values -- only non-zeros.
+        if h.has_key?(i)
+          h[i][j] = val
+        else
+          h[i] = {j => val}
+        end
+      end
+      h
+    else # dense and list should use a C internal functions.
+      to_hash_c
+    end
+  end
+  alias :to_h :to_hash
+
+  #
+  # call-seq:
   #     invert! -> NMatrix
   #
   # Use LAPACK to calculate the inverse of the matrix (in-place). Only works on

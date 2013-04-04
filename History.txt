@@ -68,14 +68,27 @@
 
 === 0.0.4 / 2013-??-??
 
-* 1 major enhancement
+* 3 major enhancements
 
   * Added a more user-friendly interface for cblas_rot in the form of NMatrix::BLAS::rot
 
-* 1 minor enhancement
+  * Added to_hash for Yale matrices
 
-  * Spec clean-up
+  * Improved source code documentation (by @agarie)
 
-* 1 bug fix:
+* 4 minor enhancements
+
+  * Spec clean-up (by @masaomi)
+
+  * Made it possible to request a different itype internally for Yale matrices
+
+  * Improved space usage of Yale slice-by-copying, which was requesting more space than needed
+
+  * Improved compile-time Mac OS X library searching
+
+* 2 bug fixes:
 
   * NMatrix::BLAS::gemv segfaults
+
+  * Fixed Yale matrix slice-by-copy write error where default itypes (which are based on shape) differ, and a separate problem where incorrect IJA and A entries were written.
+

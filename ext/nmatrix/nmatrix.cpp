@@ -444,8 +444,8 @@ void Init_nmatrix() {
 		rb_define_method(cNMatrix, "[]=", nm_mset, -1);
 		rb_define_method(cNMatrix, "is_ref?", nm_is_ref, 0);
 		rb_define_method(cNMatrix, "dimensions", nm_dim, 0);
-		rb_define_method(cNMatrix, "to_hash", nm_to_hash, 0);
-		rb_define_alias(cNMatrix,  "to_h",    "to_hash");
+		rb_define_protected_method(cNMatrix, "to_hash_c", nm_to_hash, 0); // handles list and dense, which are n-dimensional
+		//rb_define_alias(cNMatrix,  "to_h",    "to_hash");
 		rb_define_method(cNMatrix, "shape", nm_shape, 0);
 		rb_define_method(cNMatrix, "det_exact", nm_det_exact, 0);
 		//rb_define_method(cNMatrix, "transpose!", nm_transpose_self, 0);
@@ -529,8 +529,8 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "is_ref?", (METHOD)nm_is_ref, 0);
 	rb_define_method(cNMatrix, "dimensions", (METHOD)nm_dim, 0);
 
-	rb_define_method(cNMatrix, "to_hash", (METHOD)nm_to_hash, 0);
-	rb_define_alias(cNMatrix,  "to_h",    "to_hash");
+	rb_define_protected_method(cNMatrix, "to_hash_c", (METHOD)nm_to_hash, 0); // handles list and dense, which are n-dimensional
+	//rb_define_alias(cNMatrix,  "to_h",    "to_hash");
 
 	rb_define_method(cNMatrix, "shape", (METHOD)nm_shape, 0);
 	rb_define_method(cNMatrix, "det_exact", (METHOD)nm_det_exact, 0);
@@ -1035,7 +1035,7 @@ static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
  * 
  * Create a Ruby Hash from an NMatrix.
  *
- * Currently only works for list storage.
+ * This is an internal C function which handles list stype only.
  */
 static VALUE nm_to_hash(VALUE self) {
   if (NM_STYPE(self) != nm::LIST_STORE) {
