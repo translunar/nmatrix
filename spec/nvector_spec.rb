@@ -78,6 +78,7 @@ describe NVector do
   end
 
   it "pretty_print() prints values to standard output with a pretty format" do
+    pending "pretty_print formatting is finalized"
     v = NVector.new(5, 0)
     $stdout = StringIO.new
     v.pretty_print
@@ -87,6 +88,7 @@ describe NVector do
   end
 
   it "inspect() formats the output with inspected, namely human readable format" do
+    pending "inspect output is finalized"
     v = NVector.new(5, 0)
     $stdout = StringIO.new
     p v

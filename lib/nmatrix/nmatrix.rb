@@ -70,7 +70,7 @@ class NMatrix
       end
 
       if q.nil?
-        puts arr.join("\n")
+        puts "[" + arr.join("\n") + "]"
       else
         q.group(1, "", "\n") do
           q.seplist(arr, lambda { q.text "  " }, :each)  { |v| q.text v.to_s }
@@ -283,7 +283,7 @@ class NMatrix
   def inspect #:nodoc:
     original_inspect = super()
     original_inspect = original_inspect[0...original_inspect.size-1]
-    original_inspect + inspect_helper.join(" ") + ">"
+    original_inspect + " " + inspect_helper.join(" ") + ">"
   end
 
   def __yale_ary__to_s(sym) #:nodoc:

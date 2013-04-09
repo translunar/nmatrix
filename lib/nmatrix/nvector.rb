@@ -169,16 +169,32 @@ class NVector < NMatrix
   end
 
   # TODO: Make this actually pretty.
-  def pretty_print #:nodoc:
+  def pretty_print(q = nil) #:nodoc:
     dim = @orientation == :row ? 1 : 0
 
-    puts (0...shape[dim]).inject(Array.new) { |a, i| a << self[i] }.join('  ')
+    arr = (0...shape[dim]).inject(Array.new){ |a, i| a << self[i] }
+
+    if q.nil?
+      puts "[" + arr.join("\n") + "]"
+    else
+      q.group(1, "", "\n") do
+        q.seplist(arr, lambda { q.text "  " }, :each)  { |v| q.text v.to_s }
+      end
+    end
   end
 
-  protected
-  def inspect_helper #:nodoc:
-    super() << "orientation:#{self.orientation}"
+  def inspect #:nodoc:
+    original_inspect = super()
+    original_inspect = original_inspect[0...original_inspect.size-1]
+    original_inspect.gsub("@orientation=:#{self.orientation}", "orientation:#{self.orientation}") + ">"
   end
+
+protected
+#  def inspect_helper #:nodoc:
+#    x = (super() << "orientation:#{self.orientation}") #.gsub(" @orientation=:#{self.orientation}", "")
+#    binding.pry
+#    x
+#  end
 
   #
   # call-seq:

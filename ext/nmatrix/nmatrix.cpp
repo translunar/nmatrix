@@ -1702,7 +1702,6 @@ static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
 		nm_dense_storage_ew_op,
 		nm_list_storage_ew_op,
 		nm_yale_storage_ew_op
-//		NULL
 	};
 	
 	NMATRIX *result = ALLOC(NMATRIX), *left;
