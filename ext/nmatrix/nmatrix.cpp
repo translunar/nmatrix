@@ -1744,7 +1744,14 @@ static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
     }
   }
 
-	return Data_Wrap_Struct(cNMatrix, mark[result->stype], nm_delete, result);
+	VALUE result_val = Data_Wrap_Struct(CLASS_OF(left_val), mark[result->stype], nm_delete, result);
+
+	// If we're dealing with a vector, need to make sure the @orientation matches.
+	// FIXME: Eventually we probably need to make this an internal property of NVector.
+	if (CLASS_OF(left_val) == cNVector)
+	  rb_iv_set(result_val, "@orientation", rb_iv_get(left_val, "@orientation"));
+
+	return result_val;
 }
 
 /*
