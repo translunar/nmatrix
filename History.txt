@@ -86,9 +86,10 @@
 
   * Improved compile-time Mac OS X library searching
 
-* 2 bug fixes:
+* 3 bug fixes:
 
   * NMatrix::BLAS::gemv segfaults
 
   * Fixed Yale matrix slice-by-copy write error where default itypes (which are based on shape) differ, and a separate problem where incorrect IJA and A entries were written.
 
+  * NVector-scalar operations and NVector-NVector element-wise options now return an NVector instead of an NMatrix
