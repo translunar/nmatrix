@@ -151,7 +151,7 @@
 #else   /* These are the C versions of the macros. */
 
   #define NM_DECL_ENUM(enum_type, name)   nm_ ## enum_type name
-  #define NM_DECL_STRUCT(type, name)      NM_ ## type      name;
+  #define NM_DECL_STRUCT(type, name)      struct NM_ ## type      name;
 
   #define NM_DEF_STORAGE_ELEMENTS   \
     NM_DECL_ENUM(dtype_t, dtype);   \
@@ -320,9 +320,9 @@ NM_DEF_STRUCT_POST(NMATRIX);  // };
   (rb_obj_is_kind_of(obj, cNVector) == Qtrue)
 
 
+#ifdef __cplusplus
 typedef VALUE (*METHOD)(...);
 
-#ifdef __cplusplus
 //}; // end of namespace nm
 #endif
 
@@ -330,14 +330,20 @@ typedef VALUE (*METHOD)(...);
  * Functions
  */
 
+#ifdef __cplusplus
 extern "C" {
+#endif
+
 	void Init_nmatrix();
-	
+
 	// External API
 	VALUE rb_nmatrix_dense_create(NM_DECL_ENUM(dtype_t, dtype), size_t* shape, size_t dim, void* elements, size_t length);
 	VALUE rb_nvector_dense_create(NM_DECL_ENUM(dtype_t, dtype), void* elements, size_t length);
 
 	NM_DECL_ENUM(dtype_t, nm_dtype_guess(VALUE));   // (This is a function)
+
+#ifdef __cplusplus
 }
+#endif
 
 #endif // NMATRIX_H
