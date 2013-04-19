@@ -148,5 +148,4 @@ describe "math" do
       end
     end
   end
-
 end
