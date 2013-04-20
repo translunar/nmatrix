@@ -228,12 +228,8 @@ describe "Slice operation" do
                 (@m[1,0..2]+1).should eq N[[4, 5, 6]]
               end
 
-              it "compares slices" do 
-                @m[1, 0..2].should eq N[[3,4,5]]
-              end
-
               it "compares slices to scalars" do 
-                (@m[1, 0..2] > 2).should be_true
+                (@m[1, 0..2] > 2).each { |e| (e != 0).should be_true }
               end
 
             end
