@@ -220,8 +220,20 @@ describe "Slice operation" do
                 @m[0...3,0].transpose.should eq N[[0, 3, 6]]
               end
 
-              it "correctly adds slices" do 
+              it "adds slices" do 
                 (N[[0,0,0]] + @m[1,0..2]).should eq N[[3, 4, 5]]
+              end
+
+              it "scalar adds to slices" do 
+                (@m[1,0..2]+1).should eq N[[4, 5, 6]]
+              end
+
+              it "compares slices" do 
+                @m[1, 0..2].should eq N[[3,4,5]]
+              end
+
+              it "compares slices to scalars" do 
+                (@m[1, 0..2] > 2).should be_true
               end
 
             end
