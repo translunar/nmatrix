@@ -105,6 +105,8 @@ describe "Slice operation" do
         end
       end
 
+
+
       if stype == :yale
         context "by reference" do
           it "should raise an error" do
@@ -211,6 +213,19 @@ describe "Slice operation" do
                 end
               end
             end
+
+            context "operations on slice by reference" do 
+
+              it "correctly transposes slices" do
+                @m[0...3,0].transpose.should eq N[[0, 3, 6]]
+              end
+
+              it "correctly adds slices" do 
+                (N[[0,0,0]] + @m[1,0..2]).should eq N[[3, 4, 5]]
+              end
+
+            end
+
           end
 
           it 'should be cleaned up by garbage collector without errors'  do
