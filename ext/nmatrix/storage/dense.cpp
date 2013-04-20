@@ -417,6 +417,25 @@ size_t nm_dense_storage_pos(const DENSE_STORAGE* s, const size_t* coords) {
     pos += (coords[i] + s->offset[i]) * s->stride[i];
 
   return pos;
+
+}
+
+/*
+ * Determine the a set of slice coordinates from linear array position (in elements 
+ * of s) of some set of coordinates (given by slice).  (Inverse of
+ * nm_dense_storage_pos).  
+ *
+ * The parameter coords_out should be a pre-allocated array of size equal to s->dim.
+ */
+void nm_dense_storage_coords(const DENSE_STORAGE* s, const size_t slice_pos, size_t* coords_out) {
+
+  size_t temp_pos = slice_pos;
+
+  for (size_t i = 0; i < s->dim; ++i) {
+    coords_out[i] = (temp_pos - temp_pos % s->stride[i])/s->stride[i] - s->offset[i];
+    temp_pos = temp_pos % s->stride[i];
+  }
+
 }
 
 /*
@@ -653,7 +672,11 @@ bool is_symmetric(const DENSE_STORAGE* mat, int lda) {
 template <ewop_t op, typename LDType, typename RDType>
 static DENSE_STORAGE* ew_op(const DENSE_STORAGE* left, const DENSE_STORAGE* right, const void* rscalar) {
 	unsigned int count;
-	
+  size_t l_count;
+  size_t r_count;
+
+	size_t* temp_coords = (size_t*)calloc(left->dim, sizeof(size_t));
+
 	size_t* new_shape = (size_t*)calloc(left->dim, sizeof(size_t));
 	memcpy(new_shape, left->shape, sizeof(size_t) * left->dim);
 
@@ -671,36 +694,44 @@ static DENSE_STORAGE* ew_op(const DENSE_STORAGE* left, const DENSE_STORAGE* righ
     if (static_cast<uint8_t>(op) < NUM_NONCOMP_EWOPS) { // use left-dtype
 
       for (count = nm_storage_count_max_elements(result); count-- > 0;) {
-        reinterpret_cast<LDType*>(result->elements)[count] = ew_op_switch<op,LDType,RDType>(l_elems[count], r_elems[count]);
+        nm_dense_storage_coords(result, count, temp_coords);
+        l_count = nm_dense_storage_pos(left, temp_coords);
+        r_count = nm_dense_storage_pos(right, temp_coords);
+        
+        reinterpret_cast<LDType*>(result->elements)[count] = ew_op_switch<op,LDType,RDType>(l_elems[l_count], r_elems[r_count]);
       }
 
     } else { // new_dtype is BYTE: comparison operators
       uint8_t* res_elems = reinterpret_cast<uint8_t*>(result->elements);
 
       for (count = nm_storage_count_max_elements(result); count-- > 0;) {
+        nm_dense_storage_coords(result, count, temp_coords);
+        l_count = nm_dense_storage_pos(left, temp_coords);
+        r_count = nm_dense_storage_pos(right, temp_coords);
+
         switch (op) {
           case EW_EQEQ:
-            res_elems[count] = l_elems[count] == r_elems[count];
+            res_elems[count] = l_elems[l_count] == r_elems[r_count];
             break;
 
           case EW_NEQ:
-            res_elems[count] = l_elems[count] != r_elems[count];
+            res_elems[count] = l_elems[l_count] != r_elems[r_count];
             break;
 
           case EW_LT:
-            res_elems[count] = l_elems[count] < r_elems[count];
+            res_elems[count] = l_elems[l_count] < r_elems[r_count];
             break;
 
           case EW_GT:
-            res_elems[count] = l_elems[count] > r_elems[count];
+            res_elems[count] = l_elems[l_count] > r_elems[r_count];
             break;
 
           case EW_LEQ:
-            res_elems[count] = l_elems[count] <= r_elems[count];
+            res_elems[count] = l_elems[l_count] <= r_elems[r_count];
             break;
 
           case EW_GEQ:
-            res_elems[count] = l_elems[count] >= r_elems[count];
+            res_elems[count] = l_elems[l_count] >= r_elems[r_count];
             break;
 
           default:
@@ -715,36 +746,42 @@ static DENSE_STORAGE* ew_op(const DENSE_STORAGE* left, const DENSE_STORAGE* righ
     if (static_cast<uint8_t>(op) < NUM_NONCOMP_EWOPS) { // use left-dtype
 
       for (count = nm_storage_count_max_elements(result); count-- > 0;) {
-        reinterpret_cast<LDType*>(result->elements)[count] = ew_op_switch<op,LDType,RDType>(l_elems[count], *r_elem);
+        nm_dense_storage_coords(result, count, temp_coords);
+        l_count = nm_dense_storage_pos(left, temp_coords);
+
+        reinterpret_cast<LDType*>(result->elements)[count] = ew_op_switch<op,LDType,RDType>(l_elems[l_count], *r_elem);
       }
 
     } else {
       uint8_t* res_elems = reinterpret_cast<uint8_t*>(result->elements);
 
       for (count = nm_storage_count_max_elements(result); count-- > 0;) {
+        nm_dense_storage_coords(result, count, temp_coords);
+        l_count = nm_dense_storage_pos(left, temp_coords);
+        
         switch (op) {
           case EW_EQEQ:
-            res_elems[count] = l_elems[count] == *r_elem;
+            res_elems[count] = l_elems[l_count] == *r_elem;
             break;
 
           case EW_NEQ:
-            res_elems[count] = l_elems[count] != *r_elem;
+            res_elems[count] = l_elems[l_count] != *r_elem;
             break;
 
           case EW_LT:
-            res_elems[count] = l_elems[count] < *r_elem;
+            res_elems[count] = l_elems[l_count] < *r_elem;
             break;
 
           case EW_GT:
-            res_elems[count] = l_elems[count] > *r_elem;
+            res_elems[count] = l_elems[l_count] > *r_elem;
             break;
 
           case EW_LEQ:
-            res_elems[count] = l_elems[count] <= *r_elem;
+            res_elems[count] = l_elems[l_count] <= *r_elem;
             break;
 
           case EW_GEQ:
-            res_elems[count] = l_elems[count] >= *r_elem;
+            res_elems[count] = l_elems[l_count] >= *r_elem;
             break;
 
           default:
@@ -754,7 +791,7 @@ static DENSE_STORAGE* ew_op(const DENSE_STORAGE* left, const DENSE_STORAGE* righ
 
     }
   }
-	
+	free(temp_coords);
 	return result;
 }
 
