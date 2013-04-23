@@ -47,7 +47,6 @@ EOF
 
   gem.required_ruby_version = '>= 1.9.2'
 
-  #gem.add_dependency 'csquare', '~>0.0.2'
   gem.add_dependency 'rdoc', '>=4.0.1'
 
   gem.add_development_dependency 'rake', '~>0.9'
