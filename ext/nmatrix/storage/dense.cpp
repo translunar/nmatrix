@@ -580,6 +580,8 @@ void ref_slice_copy_transposed(const DENSE_STORAGE* rhs, DENSE_STORAGE* lhs) {
     lhs_els[count] = rhs_els[r_coord];
   }
 
+  free(temp_coords);
+
 }
 
 template <typename LDType, typename RDType>
