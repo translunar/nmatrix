@@ -152,7 +152,8 @@ extern "C" {
   static VALUE nm_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1, VALUE k2, VALUE ipiv, VALUE incx);
   static VALUE nm_clapack_scal(VALUE self, VALUE n, VALUE scale, VALUE vector, VALUE incx);
   static VALUE nm_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
-
+  static VALUE nm_clapack_gesvd(VALUE self, VALUE order, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE work, VALUE lwork, VALUE rwork, VALUE info);
+  // static VALUE nm_clapack_gesdd(VALUE self, VALUE order, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE work, VALUE lwork, VALUE iwork, VALUE info); // TODO
 } // end of extern "C" block
 
 ////////////////////
@@ -188,8 +189,69 @@ void det_exact(const int M, const void* A_elements, const int lda, void* result_
   }
 }
 
+/* 
+ * Function BLAS integration test
+ * 
+ */
+template <typename DType>
+bool svd(const CBLAS_TRANSPOSE trans, const int M, const int N, DType* A, ...) {
+  rb_raise(rb_eNotImpError, "only implemented for ATLAS types (float32, float64, complex64, complex128)");
+}
+// STEP #2
 
-
+/*
+ * Function signature conversion for calling CBLAS' gesvd functions as directly as possible.
+ *
+ * For documentation: http://www.netlib.org/lapack/double/dgesvd.f
+ */
+template <typename DType>
+inline static void nm_clapack_gesvd(const enum CBLAS_ORDER order,
+    char* jobu, char* jobvt,  // 'A', 'S', 'O', 'N', will probably default to 'A' which returns in array form
+    int m, const int n,
+    void* a, const int lda,
+    void* s, 
+    void* u, const int ldu,
+    void* vt, const int ldvt,
+    void* work, const int lwork,
+    void* rwork, // Rational number array
+    int info)
+{ 
+  gesvd<DType>(jobu, jobvt, 
+      m, n, 
+      reinterpret_cast<const DType*>(a), lda, 
+      reinterpret_cast<const DType*>(s), 
+      reinterpret_cast<const DType*>(u), ldu, 
+      reinterpret_cast<const DType*>(vt), ldvt, 
+      reinterpret_cast<const DType*>(work), lwork, 
+      info);
+}
+  // Fxns go here
+  // Two options for each datatype, the simple driver, xGESVD, and the divide-and-conquer driver, xGESDD, http://www.netlib.org/lapack/lug/node32.html
+  // xGESDD is much quicker for "large" matrices, but uses more workspace.  I'm not sure what the cut-off is yet. However, http://projects.scipy.org/scipy/ticket/957 suggests that xGESDD is more stable for "extremely ill conditioned matrices"
+/*
+template <typename DType>
+inline static void nm_clapack_gesdd(const enum CBLAS_ORDER order,
+    char* jobz, // 'A', 'S', 'O', 'N', will probably default to 'A' which returns in array form
+    int m, int n, 
+    void* a, const int lda,
+    void* s, 
+    void* u, const int ldu,
+    void* vt, const int ldvt,
+    void* work, const int lwork, 
+    void* iwork, // Integer array
+    int info)
+{
+  gesdd<DType>(jobz,
+      m, n,
+      reinterpret_cast<const DType*>(a), lda,
+      reinterpret_cast<const DType*>(s), 
+      reinterpret_cast<const DType*>(u), ldu, 
+      reinterpret_cast<const DType*>(vt), ldvt, 
+      reinterpret_cast<const DType*>(work), lwork, 
+      reinterpret_cast<const DType*>(iwork),
+      info);
+}
+*/ // EDIT this one out so I can focus on one at a time
 
 /*
  * Function signature conversion for calling CBLAS' gemm functions as directly as possible.
@@ -304,6 +366,8 @@ void nm_math_init_blas() {
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_laswp", (METHOD)nm_clapack_laswp, 7);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_scal",  (METHOD)nm_clapack_scal,  4);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_lauum", (METHOD)nm_clapack_lauum, 5);
+  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_gesvd", (METHOD)nm_clapack_gesvd, 9); // TODO
+ // rb_define_singleton_method(cNMatrix_LAPACK, "clapack_gesdd", (METHOD)nm_clapack_gesdd, 9); // TODO
 
   cNMatrix_BLAS = rb_define_module_under(cNMatrix, "BLAS");
 
@@ -332,6 +396,7 @@ static inline enum CBLAS_TRANSPOSE blas_transpose_sym(VALUE op) {
   else rb_raise(rb_eArgError, "Expected false, :transpose, or :complex_conjugate");
   return CblasNoTrans;
 }
+
 
 /*
  * Interprets cblas argument which could be :left or :right
@@ -744,6 +809,38 @@ static VALUE nm_cblas_herk(VALUE self,
 
 
   return Qtrue;
+}
+
+/* 
+ * Call any of the cblas_xgesvd functions as directly as possible. 
+ * 
+ * xGESVD computes the singular value decomposition (SVD) of a real
+ * M-by-N matrix A, optionally computing the left and/or right singular
+ * vectors. The SVD is written
+ *
+ *      A = U * SIGMA * transpose(V)
+ *
+ * where SIGMA is an M-by-N matrix which is zero except for its
+ * min(m,n) diagonal elements, U is an M-by-M orthogonal matrix, and
+ * V is an N-by-N orthogonal matrix.  The diagonal elements of SIGMA
+ * are the singular values of A; they are real and non-negative, and
+ * are returned in descending order.  The first min(m,n) columns of
+ * U and V are the left and right singular vectors of A.
+ *
+ * Note that the routine returns V**T, not V.
+ */ 
+static VALUE nm_clapack_gesvd(VALUE self, VALUE order, 
+                              VALUE jobu, VALUE jobvt, 
+                              VALUE m, VALUE n, 
+                              VALUE a, VALUE lda, 
+                              VALUE s, 
+                              VALUE u, VALUE ldu, 
+                              VALUE vt, VALUE ldvt, 
+                              VALUE work, VALUE lwork, 
+                              VALUE rwork, 
+                              VALUE info)
+{
+  rb_raise(rb_eNotImpError, "Not implemented yet, just testing");
 }
 
 

@@ -54,9 +54,10 @@ describe NMatrix::LAPACK do
         a[1,1].should == 17.quo(2)
         a[1,2].should == -1
         a[2,0].should == 3.quo(8)
-        # FIXME: these are rounded, == won't work
-        #a[2,1].should == 0.544118
-        #a[2,2].should == 5.294118
+        # FIXME: these are rounded, == won't work  
+          # be_within(TOLERANCE).of(desired_value) should work
+        #a[2,1].should be_within(TOLERANCE).of(0.544118)
+        #a[2,2].should be_within(TOLERANCE).of(5.294118)
       end
 
       it "exposes clapack potrf" do

@@ -758,6 +758,18 @@ inline void gemm_nothrow(const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_TRA
   return;
 }
 
+// Implement the calls for blas_ges?d
+template <typename DType>
+inline void gesvd(const enum CBLAS_ORDER Order )//, ... 
+{
+  rb_raise(rb_eNotImpError, "GESVD: What the heck am I doing?");
+}
+
+template <typename DType>
+inline void gesdd(const enum CBLAS_ORDER Order )//, ... 
+{
+  rb_raise(rb_eNotImpError, "GESDD: What the heck am I doing?");
+}
 
 
 template <typename DType>

@@ -170,6 +170,14 @@ describe NMatrix::BLAS do
         NMatrix::BLAS.gemv(a, x)
       end
 
+      it "exposes gesvd and gesdd via #svd" do 
+        # http://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/mkl_lapack_examples/sgesvd_ex.c.htm
+        a = NMatrix.new([5,6], %w|8.79 9.93 9.83 5.45 3.16 6.11 6.91 5.04 -0.27 7.98 -9.15 -7.93 4.86 4.85 3.01 9.57 1.64 8.83 0.74 5.80 -3.49 4.02 9.80 10.00 4.27 9.84 0.15 -8.99 -6.02 -5.31|, dtype)
+        truth = NMatrix.new(5, [27.47. 22.64, 8.56, 5.99, 2.01], dtype)
+
+        answer = NMatrix::BLAS.svd(a)
+        answer.should == truth
+      end
     end
   end
 end
