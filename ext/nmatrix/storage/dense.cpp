@@ -55,6 +55,9 @@
 
 namespace nm { namespace dense_storage {
 
+  template<typename LDType, typename RDType>
+  void ref_slice_copy_transposed(const DENSE_STORAGE* rhs, DENSE_STORAGE* lhs);
+
   template <typename LDType, typename RDType>
   DENSE_STORAGE* cast_copy(const DENSE_STORAGE* rhs, nm::dtype_t new_dtype);
 	
@@ -542,7 +545,12 @@ STORAGE* nm_dense_storage_copy_transposed(const STORAGE* rhs_base) {
   lhs->offset[0] = rhs->offset[1];
   lhs->offset[1] = rhs->offset[0];
 
-  nm_math_transpose_generic(rhs->shape[0], rhs->shape[1], rhs->elements, rhs->shape[1], lhs->elements, lhs->shape[1], DTYPE_SIZES[rhs->dtype]);
+  if (rhs_base->src == rhs_base) {
+    nm_math_transpose_generic(rhs->shape[0], rhs->shape[1], rhs->elements, rhs->shape[1], lhs->elements, lhs->shape[1], DTYPE_SIZES[rhs->dtype]);
+  } else {
+    NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::dense_storage::ref_slice_copy_transposed, void, const DENSE_STORAGE* rhs, DENSE_STORAGE* lhs);
+    ttable[lhs->dtype][rhs->dtype](rhs, lhs);
+  }
 
   return (STORAGE*)lhs;
 }
@@ -554,6 +562,25 @@ namespace nm { namespace dense_storage {
 /////////////////////////
 // Templated Functions //
 /////////////////////////
+
+template<typename LDType, typename RDType>
+void ref_slice_copy_transposed(const DENSE_STORAGE* rhs, DENSE_STORAGE* lhs) {
+
+  LDType* lhs_els = reinterpret_cast<LDType*>(lhs->elements);
+  RDType* rhs_els = reinterpret_cast<RDType*>(rhs->elements);
+
+  size_t count = nm_storage_count_max_elements(lhs);
+  size_t* temp_coords = (size_t*)calloc(lhs->dim, sizeof(size_t));
+  size_t coord_swap_temp;
+
+  while (count-- > 0) {
+    nm_dense_storage_coords(lhs, count, temp_coords);
+    NM_SWAP(temp_coords[0], temp_coords[1], coord_swap_temp);
+    size_t r_coord = nm_dense_storage_pos(rhs, temp_coords);
+    lhs_els[count] = rhs_els[r_coord];
+  }
+
+}
 
 template <typename LDType, typename RDType>
 DENSE_STORAGE* cast_copy(const DENSE_STORAGE* rhs, dtype_t new_dtype) {
