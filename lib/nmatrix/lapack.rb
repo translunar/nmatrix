@@ -120,6 +120,48 @@ class NMatrix
         clapack_potrs(order, uplo, n, nrhs, a, lda, b, ldb)
       end
 
+      #
+      # call-seq:
+      #     svd(x, y, c, s)
+      #
+      # 
+      #
+      # * *Arguments* :
+      #   - +x+ -> 
+      #   - +y+ -> 
+      #   - +s+ -> 
+      #   - +c+ -> 
+      #   - +incx+ -> 
+      #   - +incy+ -> 
+      #   - +n+ -> 
+      # * *Returns* :
+      #   - Array with the results, in the format [xx, yy]
+      # * *Raises* :
+      #   - +ArgumentError+ -> Expected dense NMatrices as first two arguments.
+      #   - +ArgumentError+ -> Nmatrix dtype mismatch.
+      #   - +ArgumentError+ -> Need to supply n for non-standard incx, incy values.
+      #
+      def svd(x, y, c, s, incx = 1, incy = 1, n = nil)
+        raise ArgumentError, 'Expected dense NMatrices as first two arguments.' unless x.is_a?(NMatrix) and y.is_a?(NMatrix) and x.stype == :dense and y.stype == :dense
+        raise ArgumentError, 'NMatrix dtype mismatch.'													unless x.dtype == y.dtype
+        raise ArgumentError, 'Need to supply n for non-standard incx, incy values' if n.nil? && incx != 1 && incx != -1 && incy != 1 && incy != -1
+
+        if false # gesdd is for large matrices, but I'm not sure what size that should be... 
+          #        ::NMatrix::LAPACK.clapack_gesdd(:row, 
+        else
+          #::NMatrix::LAPACK.clapack_gesvd(:row,
+        end
+
+        # what should this return?
+        case type
+        when :left
+          return a
+        when :right
+          return u
+        else 
+          return s
+        end
+      end # #svd
     end
   end
 end

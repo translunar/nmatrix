@@ -219,9 +219,9 @@ module NMatrix::BLAS
       raise ArgumentError, 'Need to supply n for non-standard incx, incy values' if n.nil? && incx != 1 && incx != -1 && incy != 1 && incy != -1
 
       if false # gesdd is for large matrices, but I'm not sure what size that should be... 
-        ::NMatrix::LAPACK.clapack_gesdd(:row, 
+        #        ::NMatrix::LAPACK.clapack_gesdd(:row, 
       else
-        ::NMatrix::LAPACK.clapack_gesvd(:row,
+        #::NMatrix::LAPACK.clapack_gesvd(:row,
       end
 
       # what should this return?
