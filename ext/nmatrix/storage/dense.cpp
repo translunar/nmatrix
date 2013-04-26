@@ -116,7 +116,7 @@ DENSE_STORAGE* nm_dense_storage_create(nm::dtype_t dtype, size_t* shape, size_t 
 
   if (elements_length == count) {
   	s->elements = elements;
-  	
+    
   } else {
     s->elements = ALLOC_N(char, DTYPE_SIZES[dtype]*count);
 
@@ -203,11 +203,19 @@ VALUE nm_dense_each_with_indices(VALUE nmatrix) {
   size_t* coords = ALLOCA_N(size_t, s->dim);
   memset(coords, 0, sizeof(size_t) * s->dim);
 
-  for (size_t k = 0; k < nm_storage_count_max_elements(s); ++k) {
+  size_t slice_index;
+  size_t* shape_copy = (size_t*) calloc(s->dim, sizeof(size_t));
+  memcpy(shape_copy, s->shape, sizeof(size_t) * s->dim);
 
+  DENSE_STORAGE* sliced_dummy = nm_dense_storage_create(s->dtype, shape_copy, s->dim, calloc(1, sizeof(size_t)), nm_storage_count_max_elements(s));
+  
+
+  for (size_t k = 0; k < nm_storage_count_max_elements(s); ++k) {
+    nm_dense_storage_coords(sliced_dummy, k, coords);
+    slice_index = nm_dense_storage_pos(s, coords);
     VALUE ary = rb_ary_new();
-    if (NM_DTYPE(nm) == nm::RUBYOBJ) rb_ary_push(ary, reinterpret_cast<VALUE*>(s->elements)[k]);
-    else rb_ary_push(ary, rubyobj_from_cval((char*)(s->elements) + k*DTYPE_SIZES[NM_DTYPE(nm)], NM_DTYPE(nm)).rval);
+    if (NM_DTYPE(nm) == nm::RUBYOBJ) rb_ary_push(ary, reinterpret_cast<VALUE*>(s->elements)[slice_index]);
+    else rb_ary_push(ary, rubyobj_from_cval((char*)(s->elements) + slice_index*DTYPE_SIZES[NM_DTYPE(nm)], NM_DTYPE(nm)).rval);
 
     for (size_t p = 0; p < s->dim; ++p) {
       rb_ary_push(ary, INT2FIX(coords[p]));
@@ -216,16 +224,10 @@ VALUE nm_dense_each_with_indices(VALUE nmatrix) {
     // yield the array which now consists of the value and the indices
     rb_yield(ary);
 
-    // update the coordinates
-    for (size_t p = 1; p <= s->dim; ++p) {
-      coords[s->dim - p]++;
-
-      if (coords[s->dim - p] < s->shape[s->dim - p]) break;
-      else
-        coords[s->dim - p] = 0;
-        // and then continue down the loop, incrementing j instead of i
-    }
   }
+
+  nm_dense_storage_delete(sliced_dummy);
+
 }
 
 
@@ -242,21 +244,34 @@ VALUE nm_dense_each(VALUE nmatrix) {
 
   RETURN_ENUMERATOR(nm, 0, 0);
 
+  size_t* temp_coords = (size_t*) calloc(s->dim, sizeof(size_t));
+  size_t sliced_index;
+  size_t* shape_copy = (size_t*) calloc(s->dim, sizeof(size_t));
+  memcpy(shape_copy, s->shape, sizeof(size_t) * s->dim);
+  DENSE_STORAGE* sliced_dummy = nm_dense_storage_create(s->dtype, shape_copy, s->dim, calloc(1, sizeof(size_t)), nm_storage_count_max_elements(s));
+
   if (NM_DTYPE(nm) == nm::RUBYOBJ) {
 
     // matrix of Ruby objects -- yield those objects directly
     for (size_t i = 0; i < nm_storage_count_max_elements(s); ++i)
-      rb_yield( reinterpret_cast<VALUE*>(s->elements)[i] );
+      nm_dense_storage_coords(sliced_dummy, i, temp_coords);
+      sliced_index = nm_dense_storage_pos(s, temp_coords);
+      rb_yield( reinterpret_cast<VALUE*>(s->elements)[sliced_index] );
 
   } else {
 
     // We're going to copy the matrix element into a Ruby VALUE and then operate on it. This way user can't accidentally
     // modify it and cause a seg fault.
     for (size_t i = 0; i < nm_storage_count_max_elements(s); ++i) {
-      VALUE v = rubyobj_from_cval((char*)(s->elements) + i*DTYPE_SIZES[NM_DTYPE(nm)], NM_DTYPE(nm)).rval;
+      nm_dense_storage_coords(sliced_dummy, i, temp_coords);
+      sliced_index = nm_dense_storage_pos(s, temp_coords);
+      VALUE v = rubyobj_from_cval((char*)(s->elements) + sliced_index*DTYPE_SIZES[NM_DTYPE(nm)], NM_DTYPE(nm)).rval;
       rb_yield( v ); // yield to the copy we made
     }
   }
+
+  nm_dense_storage_delete(sliced_dummy);
+  free(temp_coords);
 }
 
 
