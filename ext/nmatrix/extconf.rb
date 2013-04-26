@@ -159,7 +159,7 @@ $objs = %w{nmatrix ruby_constants data/data util/io util/math util/sl_list stora
 CONFIG['CXX'] = 'g++'
 
 def find_newer_gplusplus #:nodoc:
-  [7,6,5,4,3].each do |minor|
+  [8,7,6,5,4,3].each do |minor|
     result = `which g++-4.#{minor}`
     next if result.empty?
     CONFIG['CXX'] = "g++-4.#{minor}"
