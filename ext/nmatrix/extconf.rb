@@ -169,7 +169,7 @@ def find_newer_gplusplus #:nodoc:
 end
 
 def gplusplus_version #:nodoc:
-  `#{CONFIG['CXX']} -v 2>&1`.lines.to_a.last.match(/gcc\sversion\s(\d\.\d.\d)/).captures.first
+  `LANG="en_US" #{CONFIG['CXX']} -v 2>&1`.lines.to_a.last.match(/gcc\sversion\s(\d\.\d.\d)/).captures.first
 end
 
 
