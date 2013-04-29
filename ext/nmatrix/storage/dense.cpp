@@ -152,7 +152,8 @@ void nm_dense_storage_delete(STORAGE* s) {
       free(storage->shape);
       free(storage->offset);
       free(storage->stride);
-      free(storage->elements);
+      if (storage->elements != NULL)
+        free(storage->elements);
       free(storage);
     }
   }
@@ -207,7 +208,7 @@ VALUE nm_dense_each_with_indices(VALUE nmatrix) {
   size_t* shape_copy = ALLOC_N(size_t, s->dim);
   memcpy(shape_copy, s->shape, sizeof(size_t) * s->dim);
 
-  DENSE_STORAGE* sliced_dummy = nm_dense_storage_create(s->dtype, shape_copy, s->dim, ALLOC(size_t), nm_storage_count_max_elements(s));
+  DENSE_STORAGE* sliced_dummy = nm_dense_storage_create(s->dtype, shape_copy, s->dim, NULL, nm_storage_count_max_elements(s));
   
 
   for (size_t k = 0; k < nm_storage_count_max_elements(s); ++k) {
@@ -248,7 +249,7 @@ VALUE nm_dense_each(VALUE nmatrix) {
   size_t sliced_index;
   size_t* shape_copy = ALLOC_N(size_t, s->dim);
   memcpy(shape_copy, s->shape, sizeof(size_t) * s->dim);
-  DENSE_STORAGE* sliced_dummy = nm_dense_storage_create(s->dtype, shape_copy, s->dim, ALLOC(size_t), nm_storage_count_max_elements(s));
+  DENSE_STORAGE* sliced_dummy = nm_dense_storage_create(s->dtype, shape_copy, s->dim, NULL, nm_storage_count_max_elements(s));
 
   if (NM_DTYPE(nm) == nm::RUBYOBJ) {
 
