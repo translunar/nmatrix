@@ -291,4 +291,9 @@ describe NMatrix do
     rescue StopIteration
     end
   end
+
+  it "should iterate through element 256 without a segfault" do
+    t = NVector.random(256)
+    t.each { |x| x + 0 }
+  end
 end
