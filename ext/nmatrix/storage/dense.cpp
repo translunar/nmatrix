@@ -152,7 +152,8 @@ void nm_dense_storage_delete(STORAGE* s) {
       free(storage->shape);
       free(storage->offset);
       free(storage->stride);
-      free(storage->elements);
+      if (storage->elements != NULL)
+        free(storage->elements);
       free(storage);
     }
   }
@@ -204,10 +205,10 @@ VALUE nm_dense_each_with_indices(VALUE nmatrix) {
   memset(coords, 0, sizeof(size_t) * s->dim);
 
   size_t slice_index;
-  size_t* shape_copy = (size_t*) calloc(s->dim, sizeof(size_t));
+  size_t* shape_copy = ALLOC_N(size_t, s->dim);
   memcpy(shape_copy, s->shape, sizeof(size_t) * s->dim);
 
-  DENSE_STORAGE* sliced_dummy = nm_dense_storage_create(s->dtype, shape_copy, s->dim, calloc(1, sizeof(size_t)), nm_storage_count_max_elements(s));
+  DENSE_STORAGE* sliced_dummy = nm_dense_storage_create(s->dtype, shape_copy, s->dim, NULL, nm_storage_count_max_elements(s));
   
 
   for (size_t k = 0; k < nm_storage_count_max_elements(s); ++k) {
@@ -244,11 +245,11 @@ VALUE nm_dense_each(VALUE nmatrix) {
 
   RETURN_ENUMERATOR(nm, 0, 0);
 
-  size_t* temp_coords = (size_t*) calloc(s->dim, sizeof(size_t));
+  size_t* temp_coords = ALLOCA_N(size_t, s->dim);
   size_t sliced_index;
-  size_t* shape_copy = (size_t*) calloc(s->dim, sizeof(size_t));
+  size_t* shape_copy = ALLOC_N(size_t, s->dim);
   memcpy(shape_copy, s->shape, sizeof(size_t) * s->dim);
-  DENSE_STORAGE* sliced_dummy = nm_dense_storage_create(s->dtype, shape_copy, s->dim, calloc(1, sizeof(size_t)), nm_storage_count_max_elements(s));
+  DENSE_STORAGE* sliced_dummy = nm_dense_storage_create(s->dtype, shape_copy, s->dim, NULL, nm_storage_count_max_elements(s));
 
   if (NM_DTYPE(nm) == nm::RUBYOBJ) {
 
@@ -271,7 +272,6 @@ VALUE nm_dense_each(VALUE nmatrix) {
   }
 
   nm_dense_storage_delete(sliced_dummy);
-  free(temp_coords);
 }
 
 
@@ -585,7 +585,7 @@ void ref_slice_copy_transposed(const DENSE_STORAGE* rhs, DENSE_STORAGE* lhs) {
   RDType* rhs_els = reinterpret_cast<RDType*>(rhs->elements);
 
   size_t count = nm_storage_count_max_elements(lhs);
-  size_t* temp_coords = (size_t*)calloc(lhs->dim, sizeof(size_t));
+  size_t* temp_coords = ALLOCA_N(size_t, lhs->dim);
   size_t coord_swap_temp;
 
   while (count-- > 0) {
@@ -594,8 +594,6 @@ void ref_slice_copy_transposed(const DENSE_STORAGE* rhs, DENSE_STORAGE* lhs) {
     size_t r_coord = nm_dense_storage_pos(rhs, temp_coords);
     lhs_els[count] = rhs_els[r_coord];
   }
-
-  free(temp_coords);
 
 }
 
@@ -719,9 +717,9 @@ static DENSE_STORAGE* ew_op(const DENSE_STORAGE* left, const DENSE_STORAGE* righ
   size_t l_count;
   size_t r_count;
 
-	size_t* temp_coords = (size_t*)calloc(left->dim, sizeof(size_t));
+	size_t* temp_coords = ALLOCA_N(size_t, left->dim);
 
-	size_t* new_shape = (size_t*)calloc(left->dim, sizeof(size_t));
+	size_t* new_shape = ALLOC_N(size_t, left->dim);
 	memcpy(new_shape, left->shape, sizeof(size_t) * left->dim);
 
   // Determine the return dtype. This depends on the type of operation we're doing. Usually, it's going to be
@@ -835,7 +833,6 @@ static DENSE_STORAGE* ew_op(const DENSE_STORAGE* left, const DENSE_STORAGE* righ
 
     }
   }
-	free(temp_coords);
 	return result;
 }
 
