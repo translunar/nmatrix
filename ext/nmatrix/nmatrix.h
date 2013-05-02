@@ -113,11 +113,23 @@
    *      return enumerator_init(enumerator_allocate(rb_cEnumerator), obj, meth, argc, argv);
    *    }
    */
-  #define RETURN_ENUMERATOR(obj, argc, argv) do {				            \
+#ifdef RUBY_2
+  // Ruby 2.0 and higher has rb_enumeratorize_with_size instead of rb_enumeratorize.
+  // We want to support both in the simplest way possible.
+  #define RETURN_SIZED_ENUMERATOR(obj, argc, argv, size_fn) do {    \
+    if (!rb_block_given_p())                                        \
+      return rb_enumeratorize_with_size((obj), ID2SYM(rb_frame_this_func()), \
+                (argc), (argv), (size_fn));                         \
+    } while (0)
+  //#define RETURN_ENUMERATOR(obj, argc, argv)  RETURN_SIZED_ENUMERATOR(obj, argc, argv, 0)
+#else
+  #define RETURN_SIZED_ENUMERATOR(obj, argc, argv, size_fn) do {				            \
     if (!rb_block_given_p())					                              \
       return rb_enumeratorize((obj), ID2SYM(rb_frame_this_func()),  \
               (argc), (argv));			                                \
     } while (0)
+  //#define RETURN_SIZED_ENUMERATOR(obj, argc, argv, size_fn)   RETURN_ENUMERATOR(obj, argc, argv)
+#endif
 
   #define NM_DECL_ENUM(enum_type, name)   nm::enum_type name
   #define NM_DECL_STRUCT(type, name)      type          name;

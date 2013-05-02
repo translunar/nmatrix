@@ -1161,6 +1161,14 @@ static STORAGE* matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resu
 } // end of namespace nm::yale_storage
 
 
+// Helper function used only for the RETURN_SIZED_ENUMERATOR macro. Returns the length of
+// the matrix's storage.
+static VALUE nm_yale_enumerator_length(VALUE nmatrix) {
+  long len = nm_yale_storage_get_size(NM_STORAGE_YALE(nmatrix));
+  return LONG2NUM(len);
+}
+
+
 template <typename DType, typename IType>
 struct yale_each_stored_with_indices_helper {
   static VALUE iterate(VALUE nm) {
@@ -1170,7 +1178,7 @@ struct yale_each_stored_with_indices_helper {
     IType* ija  = reinterpret_cast<IType*>(s->ija);
 
     // If we don't have a block, return an enumerator.
-    RETURN_ENUMERATOR(nm, 0, 0);
+    RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_yale_enumerator_length);
 
     // Iterate along diagonal
     for (size_t k = 0; k < s->shape[0]; ++k) {
@@ -1210,7 +1218,7 @@ struct yale_each_stored_with_indices_helper<RubyObject, IType> {
     IType* ija      = reinterpret_cast<IType*>(s->ija);
 
     // If we don't have a block, return an enumerator.
-    RETURN_ENUMERATOR(nm, 0, 0);
+    RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_yale_enumerator_length);
 
     // Iterate along diagonal
     for (size_t k = 0; k < s->shape[0]; ++k) {

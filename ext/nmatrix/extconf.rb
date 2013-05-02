@@ -69,6 +69,11 @@ def create_conf_h(file) #:nodoc:
     hfile.puts "#define #{header_guard}"
     hfile.puts
 
+    # FIXME: Find a better way to do this:
+    if RUBY_VERSION >= '2.0'
+      hfile.puts "#define RUBY_2 1"
+    end
+
     for line in $defs
       line =~ /^-D(.*)/
       hfile.printf "#define %s 1\n", $1
@@ -80,7 +85,7 @@ def create_conf_h(file) #:nodoc:
 end
 
 if RUBY_VERSION < '1.9'
-  raise(NotImplementedError, "Sorry, you need Ruby 1.9!")
+  raise(NotImplementedError, "Sorry, you need at least Ruby 1.9!")
 else
   $INSTALLFILES = [['nmatrix.h', '$(archdir)'], ['nmatrix.hpp', '$(archdir)'], ['nmatrix_config.h', '$(archdir)']]
   if /cygwin|mingw/ =~ RUBY_PLATFORM
