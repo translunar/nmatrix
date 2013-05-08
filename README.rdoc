@@ -149,7 +149,7 @@ writing).
 
 == License
 
-Copyright (c) 2012--13, The Ruby Science Foundation.
+Copyright (c) 2010--13, The Ruby Science Foundation.
 
 All rights reserved.
 

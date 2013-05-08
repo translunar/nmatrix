@@ -1,6 +1,6 @@
 //
-// SciRuby is Copyright (c) 2010 - 2012, Ruby Science Foundation
-// NMatrix is Copyright (c) 2012, Ruby Science Foundation
+// SciRuby is Copyright (c) 2010 - 2013, Ruby Science Foundation
+// NMatrix is Copyright (c) 2013, Ruby Science Foundation
 //
 // Please see LICENSE.txt for additional copyright notices.
 //
