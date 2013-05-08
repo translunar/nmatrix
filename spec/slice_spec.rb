@@ -20,7 +20,7 @@
 #
 # * https://github.com/SciRuby/sciruby/wiki/Contributor-Agreement
 #
-# == slec_spec.rb
+# == slice_spec.rb
 #
 # Test of slice operations.
 #

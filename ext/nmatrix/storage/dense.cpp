@@ -92,13 +92,14 @@ static void slice_copy(DENSE_STORAGE *dest, const DENSE_STORAGE *src, size_t* le
 // Lifecycle //
 ///////////////
 
+
 /*
- * Note that elements and elements_length are for initial value(s) passed in.
- * If they are the correct length, they will be used directly. If not, they
- * will be concatenated over and over again into a new elements array. If
- * elements is NULL, the new elements array will not be initialized.
+ * This creates a dummy with all the properties of dense storage, but no actual elements allocation.
+ *
+ * elements will be NULL when this function finishes. You can clean up with nm_dense_storage_delete, which will
+ * check for that NULL pointer before freeing elements.
  */
-DENSE_STORAGE* nm_dense_storage_create(nm::dtype_t dtype, size_t* shape, size_t dim, void* elements, size_t elements_length) {
+static DENSE_STORAGE* nm_dense_storage_create_dummy(nm::dtype_t dtype, size_t* shape, size_t dim) {
   DENSE_STORAGE* s = ALLOC( DENSE_STORAGE );
 
   s->dim        = dim;
@@ -111,8 +112,23 @@ DENSE_STORAGE* nm_dense_storage_create(nm::dtype_t dtype, size_t* shape, size_t 
   s->stride     = stride(shape, dim);
   s->count      = 1;
   s->src        = s;
-	
-	size_t count  = nm_storage_count_max_elements(s);
+
+	s->elements   = NULL;
+
+  return s;
+}
+
+
+/*
+ * Note that elements and elements_length are for initial value(s) passed in.
+ * If they are the correct length, they will be used directly. If not, they
+ * will be concatenated over and over again into a new elements array. If
+ * elements is NULL, the new elements array will not be initialized.
+ */
+DENSE_STORAGE* nm_dense_storage_create(nm::dtype_t dtype, size_t* shape, size_t dim, void* elements, size_t elements_length) {
+
+  DENSE_STORAGE* s = nm_dense_storage_create_dummy(dtype, shape, dim);
+  size_t count  = nm_storage_count_max_elements(s);
 
   if (elements_length == count) {
   	s->elements = elements;
@@ -141,8 +157,9 @@ DENSE_STORAGE* nm_dense_storage_create(nm::dtype_t dtype, size_t* shape, size_t 
   return s;
 }
 
+
 /*
- * Destructor for dense storage
+ * Destructor for dense storage. Make sure when you update this you also update nm_dense_storage_delete_dummy.
  */
 void nm_dense_storage_delete(STORAGE* s) {
   // Sometimes Ruby passes in NULL storage for some reason (probably on copy construction failure).
@@ -152,7 +169,7 @@ void nm_dense_storage_delete(STORAGE* s) {
       free(storage->shape);
       free(storage->offset);
       free(storage->stride);
-      if (storage->elements != NULL)
+      if (storage->elements != NULL) // happens with dummy objects
         free(storage->elements);
       free(storage);
     }
@@ -216,8 +233,7 @@ VALUE nm_dense_each_with_indices(VALUE nmatrix) {
   size_t* shape_copy = ALLOC_N(size_t, s->dim);
   memcpy(shape_copy, s->shape, sizeof(size_t) * s->dim);
 
-  DENSE_STORAGE* sliced_dummy = nm_dense_storage_create(s->dtype, shape_copy, s->dim, NULL, nm_storage_count_max_elements(s));
-  
+  DENSE_STORAGE* sliced_dummy = nm_dense_storage_create_dummy(s->dtype, shape_copy, s->dim);
 
   for (size_t k = 0; k < nm_storage_count_max_elements(s); ++k) {
     nm_dense_storage_coords(sliced_dummy, k, coords);
@@ -257,7 +273,7 @@ VALUE nm_dense_each(VALUE nmatrix) {
   size_t sliced_index;
   size_t* shape_copy = ALLOC_N(size_t, s->dim);
   memcpy(shape_copy, s->shape, sizeof(size_t) * s->dim);
-  DENSE_STORAGE* sliced_dummy = nm_dense_storage_create(s->dtype, shape_copy, s->dim, NULL, nm_storage_count_max_elements(s));
+  DENSE_STORAGE* sliced_dummy = nm_dense_storage_create_dummy(s->dtype, shape_copy, s->dim);
 
   if (NM_DTYPE(nm) == nm::RUBYOBJ) {
 
