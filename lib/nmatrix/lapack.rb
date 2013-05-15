@@ -123,29 +123,29 @@ class NMatrix
       #
       # call-seq:
       #     svd(x, y, c, s)
-      #
       # 
       #
       # * *Arguments* :
-      #   - +x+ -> 
-      #   - +y+ -> 
-      #   - +s+ -> 
-      #   - +c+ -> 
-      #   - +incx+ -> 
-      #   - +incy+ -> 
-      #   - +n+ -> 
+      #   - +matrix+ -> matrix for which to compute the singular values
+      #   - +type+ -> :both, :left, :right, :none signifying which, if any, of the computed matrices are desired, 
       # * *Returns* :
-      #   - Array with the results, in the format [xx, yy]
+      #   - Array with the result values in an array
       # * *Raises* :
-      #   - +ArgumentError+ -> Expected dense NMatrices as first two arguments.
-      #   - +ArgumentError+ -> Nmatrix dtype mismatch.
-      #   - +ArgumentError+ -> Need to supply n for non-standard incx, incy values.
+      #   - +ArgumentError+ -> Expected dense NMatrix as first argument.
       #
-      def svd(x, y, c, s, incx = 1, incy = 1, n = nil)
-        raise ArgumentError, 'Expected dense NMatrices as first two arguments.' unless x.is_a?(NMatrix) and y.is_a?(NMatrix) and x.stype == :dense and y.stype == :dense
-        raise ArgumentError, 'NMatrix dtype mismatch.'													unless x.dtype == y.dtype
-        raise ArgumentError, 'Need to supply n for non-standard incx, incy values' if n.nil? && incx != 1 && incx != -1 && incy != 1 && incy != -1
-
+      def svd(matrix, type = :none)
+        raise ArgumentError, 'Expected dense NMatrix as first argument.' unless matrix.is_a?(NMatrix) and matrix.stype == :dense
+        #define jobu, jobvt
+        jobu, jobvt = 'N', 'N'
+        case type
+        when :both
+         jobu, jobvt = 'A', 'A'
+        when :left
+          jobu = 'A'
+        when :right
+          jobvt = 'A'
+        end
+        
         if false # gesdd is for large matrices, but I'm not sure what size that should be... 
           #        ::NMatrix::LAPACK.clapack_gesdd(:row, 
         else
@@ -154,12 +154,14 @@ class NMatrix
 
         # what should this return?
         case type
+        when :both
+          [s, a, u]
         when :left
-          return a
+          [s, a]
         when :right
-          return u
-        else 
-          return s
+          [s, u]
+        when :none 
+          s
         end
       end # #svd
     end

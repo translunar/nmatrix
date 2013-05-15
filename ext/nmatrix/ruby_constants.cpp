@@ -60,6 +60,11 @@ ID	nm_rb_real,
 		nm_rb_mul,
 		nm_rb_div,
 
+// Added by Ryan
+    nm_rb_both,
+    nm_rb_none,
+// Continuing
+
 		nm_rb_negate,
 
 		nm_rb_percent,
@@ -122,4 +127,8 @@ void nm_init_ruby_constants(void) {
 	nm_rb_lower             = rb_intern("lower");
 	nm_rb_unit              = rb_intern("unit");
 	nm_rb_nonunit           = rb_intern("nonunit");
+
+  //Added by Ryan
+  nm_rb_both              = rb_intern("both");
+  nm_rb_none              = rb_intern("none");
 }

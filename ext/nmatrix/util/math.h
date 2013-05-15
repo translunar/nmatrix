@@ -628,7 +628,140 @@ inline void laswp(const int N, DType* A, const int lda, const int K1, const int 
     } while (KeepOn);
   }
 }
+/* 
+ * Call any of the cblas_xgesvd functions as directly as possible. 
+ * 
+ * xGESVD computes the singular value decomposition (SVD) of a real
+ * M-by-N matrix A, optionally computing the left and/or right singular
+ * vectors. The SVD is written
+ *
+ *      A = U * SIGMA * transpose(V)
+ *
+ * where SIGMA is an M-by-N matrix which is zero except for its
+ * min(m,n) diagonal elements, U is an M-by-M orthogonal matrix, and
+ * V is an N-by-N orthogonal matrix.  The diagonal elements of SIGMA
+ * are the singular values of A; they are real and non-negative, and
+ * are returned in descending order.  The first min(m,n) columns of
+ * U and V are the left and right singular vectors of A.
+ *
+ * Note that the routine returns V**T, not V.
+ */ 
+/*
+template <typename DType>
+static int clapack_gesvd(const enum CBLAS_ORDER order,
+    char* jobu, char* jobvt,  // 'A', 'S', 'O', 'N', will probably default to 'A' which returns in array form
+    DType* a)
+{
+ // Initialize
+  nm::dtype_t dtype = NM_DTYPE(a);
+  // Build the intermediate data arrays, the u, vt, work... 
+  size_t m = NM_STORAGE_DENSE(a)->shape[0];
+  size_t n = NM_STORAGE_DENSE(a)->shape[1];
+  size_t lda = std::max(1,(int)m);
+  std::cerr << "M: " << m << std::endl;
+  std::cerr << "LDA: " << lda << std::endl;
+  int info;
+  void* s = ALLOCA_N(DType, std::min(m,n));
+  
+  // Call the clapack functions
+  /*gesvd<dtype>(blas_order_sym(order),
+      StringValueCStr(jobu), StringValueCStr(jobvt), 
+      m, n
+      NM_STORAGE_DENSE(a)->elements, lda, 
+      s, 
+      u, FIX2INT(ldu) 
+      vt, FIX2INT(ldvt), 
+      work, FIX2INT(lwork),  
+      rwork,
+      info);
+  */
+/*
 
+  rb_raise(rb_eNotImpError, "Not implemented yet, just testing");
+  return 1;
+}
+*/
+/*inline void gesvd(const enum CBLAS_ORDER order,    
+                  char* jobu, char* jobvt,
+                  int m, const int n,
+                  void* a, const int lda,
+                  void* s, 
+                  void* u, const int ldu,
+                  void* vt, const int ldvt,
+                  void* work, const int lwork,
+                  void* rwork,
+                  int info)
+{
+  rb_raise(rb_eNotImpError, "only implemented for ATLAS types(float32, float64, complex64, complex128)");
+}
+*/
+template <typename DType>
+static inline bool gesvd(char* jobu, char* jobvt,  // 'A', 'S', 'O', 'N', will probably default to 'A' which returns in array form
+    int m, int n,
+    DType* a, int lda,
+    DType* s, 
+    DType* u, int ldu,
+    DType* vt, int ldvt,
+    DType* work, int lwork,
+    DType* rwork, // Rational number array
+    int info) 
+{
+  //DType arr = reinterpret_cast<DType>(a);
+  // This is where I should have various templates kick in...
+  return false;
+}
+// The types which are like doubles
+template <typename DType>
+inline static bool clapack_gesvd(CBLAS_ORDER order, 
+  char* jobu, char* jobvt,
+  //DType* a);
+  int m, int n, 
+  void* a, int lda, 
+  void* s, 
+  void* u, int ldu,  
+  void* vt, int ldvt,
+  void* work, int lwork)
+{
+  DType* input = reinterpret_cast<DType*>(a);
+  DType* output = reinterpret_cast<DType*>(s);
+  DType* left = reinterpret_cast<DType*>(u);
+  DType* right = reinterpret_cast<DType*>(vt);
+  DType* workspace = reinterpret_cast<DType*>(work);
+  DType* rational_workspace = reinterpret_cast<DType*>(rwork);
+
+  return false;
+}
+
+// Types which resemble complex
+template <typename DType>
+inline static bool clapack_gesvd(CBLAS_ORDER order, 
+  char* jobu, char* jobvt,
+  //DType* a);
+  int m, int n, 
+  void* a, int lda, 
+  void* s, 
+  void* u, int ldu,  
+  void* vt, int ldvt,
+  void* work, int lwork)
+{
+  DType* input = reinterpret_cast<DType*>(a);
+  DType* output = reinterpret_cast<DType*>(s);
+  DType* left = reinterpret_cast<DType*>(u);
+  DType* right = reinterpret_cast<DType*>(vt);
+  DType* workspace = reinterpret_cast<DType*>(work);
+  DType* rational_workspace = reinterpret_cast<DType*>(rwork);
+
+  return false;
+}
+
+
+/*
+template <typename DType>
+inline void gesdd(const enum CBLAS_ORDER Order )//, ... 
+{
+  rb_raise(rb_eNotImpError, "GESDD: What the heck am I doing?");
+}
+*/
 
 /*
  * GEneral Matrix Multiplication: based on dgemm.f from Netlib.
@@ -758,18 +891,6 @@ inline void gemm_nothrow(const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_TRA
   return;
 }
 
-// Implement the calls for blas_ges?d
-template <typename DType>
-inline void gesvd(const enum CBLAS_ORDER Order )//, ... 
-{
-  rb_raise(rb_eNotImpError, "GESVD: What the heck am I doing?");
-}
-
-template <typename DType>
-inline void gesdd(const enum CBLAS_ORDER Order )//, ... 
-{
-  rb_raise(rb_eNotImpError, "GESDD: What the heck am I doing?");
-}
 
 
 template <typename DType>
