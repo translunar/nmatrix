@@ -43,7 +43,8 @@ VALGRIND_OPTIONS = [
         "--num-callers=50",
         "--error-limit=no",
         "--partial-loads-ok=yes",
-        "--undef-value-errors=no",
+        "--undef-value-errors=no" #,
+        #"--dsymutil=yes"
 ]
 VALGRIND_MEMORYFILL_OPTIONS = [
         "--freelist-vol=100000000",

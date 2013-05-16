@@ -132,15 +132,15 @@ $srcs = [
 
 
 unless have_library("lapack")
-  dir_config("lapack", [], ["/usr/local/lib", "/usr/local/atlas/lib"])
+  dir_config("lapack", ["/usr/include/atlas"], ["/usr/local/lib", "/usr/local/atlas/lib"])
 end
 
 unless have_library("cblas")
-  dir_config("cblas", ["/usr/local/atlas/include"], ["/usr/local/lib", "/usr/local/atlas/lib"])
+  dir_config("cblas", ["/usr/local/atlas/include", "/usr/include/atlas"], ["/usr/local/lib", "/usr/local/atlas/lib"])
 end
 
 unless have_library("atlas")
-  dir_config("atlas", ["/usr/local/atlas/include"], ["/usr/local/atlas/lib", "/usr/local/lib", "/usr/lib"])
+  dir_config("atlas", ["/usr/local/atlas/include", "/usr/include/atlas"], ["/usr/local/atlas/lib", "/usr/local/lib", "/usr/lib"])
 end
 
 #find_library("lapack", "clapack_dgetrf")
