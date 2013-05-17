@@ -59,20 +59,6 @@ extern "C" {
  * Macros
  */
 
-/*
- * If no block is given, return an enumerator. This copied straight out of ruby's include/ruby/intern.h.
- *
- * rb_enumeratorize is located in enumerator.c.
- *
- *    VALUE rb_enumeratorize(VALUE obj, VALUE meth, int argc, VALUE *argv) {
- *      return enumerator_init(enumerator_allocate(rb_cEnumerator), obj, meth, argc, argv);
- *    }
- */
-#define RETURN_ENUMERATOR(obj, argc, argv) do {				            \
-	if (!rb_block_given_p())					                              \
-	  return rb_enumeratorize((obj), ID2SYM(rb_frame_this_func()),  \
-				    (argc), (argv));			                                \
-  } while (0)
 
 /*
  * Global Variables
