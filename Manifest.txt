@@ -2,9 +2,11 @@ History.txt
 Manifest.txt
 README.rdoc
 LICENSE.txt
+CONTRIBUTING.md
 Rakefile
 Gemfile
 Guardfile
+nmatrix.gemspec
 spec/io_spec.rb
 spec/math_spec.rb
 spec/nmatrix_spec.rb
