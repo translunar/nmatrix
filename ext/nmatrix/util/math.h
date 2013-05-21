@@ -628,6 +628,25 @@ inline void laswp(const int N, DType* A, const int lda, const int K1, const int 
     } while (KeepOn);
   }
 }
+
+
+#ifdef HAVE_CLAPACK_H
+// DOUBLE!!
+inline int gesvd(char* jobu, char* jobvt, 
+    const int M, const int N, 
+    double* a, int lda, 
+    double* s, 
+    double* u, const int ldu,
+    double* vt, const int ldvt,
+    double* work, const int lwork, 
+    int info) {
+
+  //return clapack_dgesvd(jobu, jobvt, M, N, a, lda, s, u, ldu, vt, ldvt, work, lwork, info);
+  //return cblas_dgesvd(jobu, jobvt, M, N, a, lda, s, u, ldu, vt, ldvt, work, lwork, info);
+  return 0;
+}
+#endif
+
 /* 
  * Call any of the cblas_xgesvd functions as directly as possible. 
  * 
@@ -646,115 +665,37 @@ inline void laswp(const int N, DType* A, const int lda, const int K1, const int 
  *
  * Note that the routine returns V**T, not V.
  */ 
-/*
-template <typename DType>
-static int clapack_gesvd(const enum CBLAS_ORDER order,
-    char* jobu, char* jobvt,  // 'A', 'S', 'O', 'N', will probably default to 'A' which returns in array form
-    DType* a)
-{
- // Initialize
-  nm::dtype_t dtype = NM_DTYPE(a);
-  // Build the intermediate data arrays, the u, vt, work... 
-  size_t m = NM_STORAGE_DENSE(a)->shape[0];
-  size_t n = NM_STORAGE_DENSE(a)->shape[1];
-  size_t lda = std::max(1,(int)m);
-  std::cerr << "M: " << m << std::endl;
-  std::cerr << "LDA: " << lda << std::endl;
-  int info;
-  void* s = ALLOCA_N(DType, std::min(m,n));
-  
-  // Call the clapack functions
-  /*gesvd<dtype>(blas_order_sym(order),
-      StringValueCStr(jobu), StringValueCStr(jobvt), 
-      m, n
-      NM_STORAGE_DENSE(a)->elements, lda, 
-      s, 
-      u, FIX2INT(ldu) 
-      vt, FIX2INT(ldvt), 
-      work, FIX2INT(lwork),  
-      rwork,
-      info);
-  */
-/*
-
-  rb_raise(rb_eNotImpError, "Not implemented yet, just testing");
-  return 1;
-}
-*/
-/*inline void gesvd(const enum CBLAS_ORDER order,    
-                  char* jobu, char* jobvt,
-                  int m, const int n,
-                  void* a, const int lda,
-                  void* s, 
-                  void* u, const int ldu,
-                  void* vt, const int ldvt,
-                  void* work, const int lwork,
-                  void* rwork,
-                  int info)
-{
-  rb_raise(rb_eNotImpError, "only implemented for ATLAS types(float32, float64, complex64, complex128)");
-}
-*/
-template <typename DType>
-static inline bool gesvd(char* jobu, char* jobvt,  // 'A', 'S', 'O', 'N', will probably default to 'A' which returns in array form
-    int m, int n,
-    DType* a, int lda,
-    DType* s, 
-    DType* u, int ldu,
-    DType* vt, int ldvt,
-    DType* work, int lwork,
-    DType* rwork, // Rational number array
-    int info) 
-{
-  //DType arr = reinterpret_cast<DType>(a);
-  // This is where I should have various templates kick in...
-  return false;
-}
 // The types which are like doubles
-template <typename DType>
-inline static bool clapack_gesvd(CBLAS_ORDER order, 
-  char* jobu, char* jobvt,
+template <typename DType, typename CSDType>
+inline int clapack_gesvd(const char* jobu, const char* jobvt,
   //DType* a);
   int m, int n, 
   void* a, int lda, 
   void* s, 
-  void* u, int ldu,  
-  void* vt, int ldvt,
-  void* work, int lwork)
+  int ldu,  
+  int ldvt,
+  int lwork)
 {
+  DType* u = ALLOCA_N(DType, ldu);
+  DType* vt = ALLOCA_N(DType, ldvt);
+  DType* work = ALLOCA_N(DType, lwork);
+  if (typeid(DType) != typeid(CSDType)) {
+    CSDType* rwork = ALLOCA_N(CSDType, 5*std::min(m,n));
+  } else {
+    CSDType* rwork = NULL;
+  }
   DType* input = reinterpret_cast<DType*>(a);
   DType* output = reinterpret_cast<DType*>(s);
-  DType* left = reinterpret_cast<DType*>(u);
-  DType* right = reinterpret_cast<DType*>(vt);
-  DType* workspace = reinterpret_cast<DType*>(work);
-  DType* rational_workspace = reinterpret_cast<DType*>(rwork);
+  int info = 0;
 
-  return false;
+  // Rework the fxn to return the proper type, and to format s properly
+#ifdef HAVE_CLAPACK_H
+  rb_raise(rb_eNotImpError, "not yet implemented for non-BLAS dtypes");
+#else
+  rb_raise(rb_eNotImpError, "only LAPACK version implemented thus far");
+#endif
+  return info;
 }
-
-// Types which resemble complex
-template <typename DType>
-inline static bool clapack_gesvd(CBLAS_ORDER order, 
-  char* jobu, char* jobvt,
-  //DType* a);
-  int m, int n, 
-  void* a, int lda, 
-  void* s, 
-  void* u, int ldu,  
-  void* vt, int ldvt,
-  void* work, int lwork)
-{
-  DType* input = reinterpret_cast<DType*>(a);
-  DType* output = reinterpret_cast<DType*>(s);
-  DType* left = reinterpret_cast<DType*>(u);
-  DType* right = reinterpret_cast<DType*>(vt);
-  DType* workspace = reinterpret_cast<DType*>(work);
-  DType* rational_workspace = reinterpret_cast<DType*>(rwork);
-
-  return false;
-}
-
-
 /*
 template <typename DType>
 inline void gesdd(const enum CBLAS_ORDER Order )//, ... 

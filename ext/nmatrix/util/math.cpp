@@ -152,7 +152,7 @@ extern "C" {
   static VALUE nm_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1, VALUE k2, VALUE ipiv, VALUE incx);
   static VALUE nm_clapack_scal(VALUE self, VALUE n, VALUE scale, VALUE vector, VALUE incx);
   static VALUE nm_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
-  static VALUE nm_clapack_gesvd(VALUE self, VALUE order, VALUE jobu, VALUE jobvt, VALUE a);
+  static VALUE nm_clapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE a);
   // static VALUE nm_clapack_gesdd(VALUE self, VALUE order, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE work, VALUE lwork, VALUE iwork); // TODO
 } // end of extern "C" block
 
@@ -341,7 +341,7 @@ void nm_math_init_blas() {
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_laswp", (METHOD)nm_clapack_laswp, 7);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_scal",  (METHOD)nm_clapack_scal,  4);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_lauum", (METHOD)nm_clapack_lauum, 5);
-  //rb_define_singleton_method(cNMatrix_LAPACK, "clapack_gesvd", (METHOD)nm_clapack_gesvd, 4); // TODO
+  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_gesvd", (METHOD)nm_clapack_gesvd, 3); // TODO
  // rb_define_singleton_method(cNMatrix_LAPACK, "clapack_gesdd", (METHOD)nm_clapack_gesdd, 9); // TODO
 
   cNMatrix_BLAS = rb_define_module_under(cNMatrix, "BLAS");
@@ -795,19 +795,22 @@ static VALUE nm_cblas_herk(VALUE self,
  *
  * For documentation: http://www.netlib.org/lapack/double/dgesvd.f
  */
-static VALUE nm_clapack_gesvd(VALUE self, VALUE order, VALUE jobu, VALUE jobvt, VALUE a) { 
+static VALUE nm_clapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE a) { 
   //Raise errors if all dtypes aren't matching...? Here or in the Ruby code
-    //EXAMPLE
-//  ttable[dtype](blas_order_sym(order), blas_uplo_sym(uplo), blas_transpose_sym(trans), FIX2INT(n), FIX2INT(k), pAlpha, NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), pBeta, NM_STORAGE_DENSE(c)->elements, FIX2INT(ldc));
 
-  static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const char* jobu, const char* jobvt, const int m, const int n, void* a, const int lda, void* s, void* u, const int ldu, void* vt, const int ldvt, void* work, const int lwork, void* rwork) = {
+  // Expose the u and vt within the templated fxns
+  // Hence, u, vt, work, rwork are only had within the fxn.  
+  // This means I can never return the right or left sides, until this is restructured
+
+  static int (*ttable[nm::NUM_DTYPES])(const char* jobu, const char* jobvt, const int m, const int n, void* a, const int lda, void* s, const int ldu, const int ldvt, const int lwork) = {
     NULL, NULL, NULL, NULL, NULL,
-    nm::math::clapack_gesvd<float>, 
-    nm::math::clapack_gesvd<double>, 
+    NULL, //nm::math::clapack_gesvd<float, float>, 
+    nm::math::clapack_gesvd<double, double>, 
     // clapack_sgesvd, clapack_dgesvd,
-    nm::math::clapack_gesvd<nm::Complex64>, 
-    nm::math::clapack_gesvd<nm::Complex128>, 
-    NULL, NULL, NULL, NULL
+    NULL, //nm::math::clapack_gesvd<nm::Complex64, float>, 
+    NULL, // nm::math::clapack_gesvd<nm::Complex128, double>, 
+    NULL, NULL, NULL, 
+    NULL //nm::math::clapack_gesvd<nm::RubyObject, nm::RubyObject>
   };
 
   size_t m = NM_STORAGE_DENSE(a)->shape[0];
@@ -815,37 +818,29 @@ static VALUE nm_clapack_gesvd(VALUE self, VALUE order, VALUE jobu, VALUE jobvt, 
   size_t lda = std::max(1, int(m));
   size_t ldu = std::max(1, int(m));
   size_t ldvt = std::max(1, std::min(int(m), int(n)));
+  size_t lwork = 2*std::min(int(m), int(n)) + std::max(int(m), int(n));
+
   // Initialize
   nm::dtype_t dtype = NM_DTYPE(a);
   // GET THE SIZE_OF dtype
   // Build the intermediate data arrays, the u, vt, work... 
   size_t s_size = std::min(m, n);
   void* s = ALLOCA_N(VALUE, s_size);
+  
   if (!ttable[NM_DTYPE(a)]) {
     rb_raise(nm_eDataTypeError, "This matrix operation is not defined for your datatype");
-    return Qnil;
+    return Qfalse;
   } else {
-    ttable[NM_DTYPE(a)]()
+    int resp = ttable[NM_DTYPE(a)](StringValueCStr(jobu),StringValueCStr(jobvt),
+        m, n, 
+        NM_STORAGE_DENSE(a)->elements, lda,
+        s, 
+        ldu, ldvt, lwork);
   }
 
-  // Return s as an array, or am I doing this lower? 
-  VALUE s_array = rb_ary_new2(s_size);
-  for (size_t i = 0; i < s_size; ++i) {
-    rb_ary_store(s_array, i, INT2FIX(s[i]));
-  }
 
-  return s_array;
-  // Call the clapack function
-  /*  nm::math::clapack_gesvd(blas_order_sym(order),
-      StringValueCStr(jobu), StringValueCStr(jobvt), 
-      NM_STORAGE_DENSE(a)->elements, dtype* s);
-      NM_STORAGE_DENSE(a)->elements, lda, 
-      s, 
-      u, FIX2INT(ldu) 
-      vt, FIX2INT(ldvt), 
-      work, FIX2INT(lwork),  
-      rwork);
-      */
+  // S will return from the child function as Ruby converted values, or as an NMatrix, either way... no processing required
+  return *reinterpret_cast<VALUE*>(s);
   // This is where I should handle S, returning it as a Ruby array, perhaps?  I'd rather not have to deal with the casting
   return Qnil;
 }
