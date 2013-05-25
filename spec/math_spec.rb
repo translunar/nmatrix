@@ -50,7 +50,11 @@ describe "math" do
       it "should correctly invert a matrix" do
         a = NMatrix.new(:dense, 3, [1,0,4,1,1,6,-3,0,-10], dtype)
         b = NMatrix.new(:dense, 3, [-5,0,-2,-4,1,-1,1.5,0,0.5], dtype)
-        a.invert!
+        begin
+          a.invert!
+        rescue NotImplementedError => e
+          pending e.to_s
+        end
         a.should == b
       end
     end
