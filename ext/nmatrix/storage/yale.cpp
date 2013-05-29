@@ -85,6 +85,9 @@ extern "C" {
   static VALUE nm_ja(VALUE self);
   static VALUE nm_ija(VALUE self);
 
+  static VALUE nm_vector_insert_by_pos(VALUE self, VALUE pos_, VALUE i_, VALUE jv, VALUE vv);
+
+
 } // end extern "C" block
 
 namespace nm { namespace yale_storage {
@@ -105,10 +108,15 @@ template <typename IType>
 static void						increment_ia_after(YALE_STORAGE* s, IType ija_size, IType i, IType n);
 
 template <typename IType>
+static void           c_increment_ia_after(YALE_STORAGE* s, size_t ija_size, size_t i, size_t n) {
+  increment_ia_after<IType>(s, ija_size, i, n);
+}
+
+template <typename IType>
 static IType				  insert_search(YALE_STORAGE* s, IType left, IType right, IType key, bool* found);
 
 template <typename DType, typename IType>
-static char           vector_insert(YALE_STORAGE* s, size_t pos, size_t* j, DType* val, size_t n, bool struct_only);
+static char           vector_insert(YALE_STORAGE* s, size_t pos, size_t* j, void* val_, size_t n, bool struct_only);
 
 template <typename DType, typename IType>
 static char           vector_insert_resize(YALE_STORAGE* s, size_t current_size, size_t pos, size_t* j, size_t n, bool struct_only);
@@ -964,10 +972,12 @@ static char vector_insert_resize(YALE_STORAGE* s, size_t current_size, size_t po
  *	question.)
  */
 template <typename DType, typename IType>
-static char vector_insert(YALE_STORAGE* s, size_t pos, size_t* j, DType* val, size_t n, bool struct_only) {
+static char vector_insert(YALE_STORAGE* s, size_t pos, size_t* j, void* val_, size_t n, bool struct_only) {
   if (pos < s->shape[0]) {
     rb_raise(rb_eArgError, "vector insert pos is before beginning of ja; this should not happen");
   }
+
+  DType* val = reinterpret_cast<DType*>(val_);
 
   size_t size = get_size<IType>(s);
 
@@ -1280,6 +1290,8 @@ void nm_init_yale_functions() {
   rb_define_method(cNMatrix_YaleFunctions, "yale_ja", (METHOD)nm_ja, 0);
   rb_define_method(cNMatrix_YaleFunctions, "yale_d", (METHOD)nm_d, 0);
   rb_define_method(cNMatrix_YaleFunctions, "yale_lu", (METHOD)nm_lu, 0);
+  rb_define_method(cNMatrix_YaleFunctions, "yale_vector_insert_by_pos", (METHOD)nm_vector_insert_by_pos, 4);
+
   rb_define_const(cNMatrix_YaleFunctions, "YALE_GROWTH_CONSTANT", rb_float_new(nm::yale_storage::GROWTH_CONSTANT));
 }
 
@@ -1324,6 +1336,25 @@ void* nm_yale_storage_get(STORAGE* storage, SLICE* slice) {
   YALE_STORAGE* casted_storage = (YALE_STORAGE*)storage;
   return ttable[casted_storage->dtype][casted_storage->itype](casted_storage, slice);
 }
+
+/*
+ * C accessor for yale_storage::vector_insert
+ */
+static char nm_yale_storage_vector_insert(YALE_STORAGE* s, size_t pos, size_t* js, void* vals, size_t n, bool struct_only, nm::dtype_t dtype, nm::itype_t itype) {
+  NAMED_LI_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::vector_insert, char, YALE_STORAGE*, size_t, size_t*, void*, size_t, bool);
+
+  return ttable[dtype][itype](s, pos, js, vals, n, struct_only);
+}
+
+/*
+ * C accessor for yale_storage::increment_ia_after, typically called after ::vector_insert
+ */
+static void nm_yale_storage_increment_ia_after(YALE_STORAGE* s, size_t ija_size, size_t i, size_t n, nm::itype_t itype) {
+  NAMED_ITYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::c_increment_ia_after, void, YALE_STORAGE*, size_t, size_t, size_t);
+
+  ttable[itype](s, ija_size, i, n);
+}
+
 
 /*
  * C accessor for yale_storage::ref, which returns a pointer to the correct location in a YALE_STORAGE object
@@ -1747,5 +1778,57 @@ static VALUE nm_ija(VALUE self) {
 
   return ary;
 }
+
+/*
+ * call-seq:
+ *     yale_vector_insert_by_pos -> Fixnum
+ *
+ * Insert at position pos an array of non-diagonal elements with column indices given. Note that the column indices and values
+ * must be storage-contiguous -- that is, you can't insert them around existing elements in some row, only amid some
+ * elements in some row. You *can* insert them around a diagonal element, since this is stored separately. This function
+ * may not be used for the insertion of diagonal elements in most cases, as these are already present in the data
+ * structure and are typically modified by replacement rather than insertion.
+ *
+ * You should also not attempt to insert values which are the default (0). These are not supposed to be stored, and may
+ * lead to undefined behavior.
+ *
+ * Example:
+ *    m.yale_vector_insert_by_pos(15, 3, [0,3,4], [1,1,1])
+ *
+ * The example inserts the values 1, 1, and 1 in columns 0, 3, and 4, assumed to be located at position 15 (which
+ * corresponds to row 3).
+ */
+static VALUE nm_vector_insert_by_pos(VALUE self, VALUE pos_, VALUE i_, VALUE jv, VALUE vv) {
+
+  if (RARRAY_LEN(jv) != RARRAY_LEN(vv))
+    rb_raise(rb_eArgError, "lengths must match between j array and value array");
+
+  YALE_STORAGE* s   = NM_STORAGE_YALE(self);
+  nm::dtype_t dtype = NM_DTYPE(self);
+  nm::itype_t itype = NM_ITYPE(self);
+
+  size_t pos = FIX2INT(pos_);  // get the position as a size_t
+  size_t i   = FIX2INT(i_);    // get the row
+  size_t len = RARRAY_LEN(jv); // need length in order to read the arrays in
+
+  // Allocate the j array and the values array
+  size_t* j  = ALLOCA_N(size_t, len);
+  void* vals = ALLOCA_N(char, DTYPE_SIZES[dtype] * len);
+
+  // Copy array contents
+  for (size_t idx = 0; idx < len; ++idx) {
+    j[idx] = FIX2INT(rb_ary_entry(jv, idx));
+    rubyval_to_cval(rb_ary_entry(vv, idx), dtype, (char*)vals + idx * DTYPE_SIZES[dtype]);
+  }
+
+  char ins_type = nm_yale_storage_vector_insert(s, pos, j, vals, len, false, dtype, itype);
+  nm_yale_storage_increment_ia_after(s, s->shape[0], i, len, itype);
+  s->ndnz += len;
+
+  // Return the updated position
+  pos += len;
+  return INT2FIX(pos);
+}
+
 
 } // end of extern "C" block

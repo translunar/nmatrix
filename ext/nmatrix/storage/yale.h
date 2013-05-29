@@ -102,6 +102,9 @@ extern "C" {
   void*	nm_yale_storage_ref(STORAGE* s, SLICE* slice);
   char  nm_yale_storage_set(STORAGE* storage, SLICE* slice, void* v);
 
+  //char  nm_yale_storage_vector_insert(YALE_STORAGE* s, size_t pos, size_t* js, void* vals, size_t n, bool struct_only, nm::dtype_t dtype, nm::itype_t itype);
+  //void  nm_yale_storage_increment_ia_after(YALE_STORAGE* s, size_t ija_size, size_t i, size_t n);
+
   size_t  nm_yale_storage_get_size(const YALE_STORAGE* storage);
 
   ///////////
