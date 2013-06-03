@@ -323,7 +323,7 @@ class NMatrix
   #  is the result of the reduction at that position along the specified
   #  dimension.
   #
-  def reduce_along_dim(dim=0, initial=nil, &bl)
+  def reduce_along_dim(dim=0, initial=nil)
 
     if dim > shape.size then
       raise ArgumentError, "Requested dimension does not exist.  Requested: #{dim}, shape: #{shape}"
@@ -349,7 +349,7 @@ class NMatrix
         first_as_acc = false
         next
       end
-      acc = bl.call(acc, sub_mat)
+      acc = (yield acc, sub_mat)
     end
 
     acc
