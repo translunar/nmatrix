@@ -842,34 +842,51 @@ NMATRIX* nm_create(nm::stype_t stype, STORAGE* storage) {
  *
  * Create a new NMatrix.
  *
- * There are several ways to do this. At a minimum, dimensions and either a dtype or initial values are needed, e.g.,
+ * There are several ways to do this. In every case, the constructor needs to know the dtype, the dimensions, the stype,
+ * and either an initial capacity (:yale) or some number of initial values (:list needs exactly one initial value, but
+ * :dense can accept an array). In many cases, the parameters can be guessed from other parameters.
  *
- *     NMatrix.new(3, :int64)       # square 3x3 dense matrix
- *     NMatrix.new([3,4], :float32) # 3x4 matrix
- *     NMatrix.new(3, 0)            # 3x3 dense matrix initialized to all zeros
- *     NMatrix.new([3,3], [1,2,3])  # [[1,2,3],[1,2,3],[1,2,3]]
+ * Here is the full form for a :dense 3x4 :float64 matrix initialized to alternate the values 0.0, 1.0, and 2.0:
  *
- * NMatrix will try to guess the dtype from the first value in the initial values array.
+ *     NMatrix.new(:dense, [3,4], [0.0, 1.0, 2.0], :float64)
  *
- * You can also provide the stype prior to the dimensions. However, non-dense matrices cannot take initial values, and
- * require a dtype (e.g., :int64):
+ * Since :dense is the default, we can actually leave that out. Additionally, the constructor will parse 0.0 and
+ * interpret that to be a :float64. So we can actually short-hand this as follows:
  *
- *     NMatrix.new(:yale, [4,3], :int64)
- *     NMatrix.new(:list, 5, :rational128)
+ *     NMatrix.new([3,4], [0.0,1,2])
  *
- * For Yale, you can also give an initial size for the non-diagonal component of the matrix:
+ * Note that :list and :yale matrices will not accept a default value array. For list storage, a single default value
+ * is permissible, which will be treated as the background for the sparse matrix and defaults to 0:
  *
- *     NMatrix.new(:yale, [4,3], 2, :int64)
+ *     NMatrix.new(:list, [3,4], 0)     # standard :int64 sparse matrix
+ *     NMatrix.new(:list, [2,3], 1.0)   # :float64 sparse matrix: [[1,1,1],[1,1,1]] (no storage used)
+ *     NMatrix.new(:list, [3,4], [0,1]) # undefined behavior, will probably fill matrix with 0. Avoid this.
  *
- * Finally, you can be extremely specific, and define a matrix very exactly:
+ * For Yale storage, the default value must always be 0. Thus, if you provide an initial value, it will be interpreted
+ * as the initial matrix capacity.
  *
- *     NMatrix.new(:dense, [2,2,2], [0,1,2,3,4,5,6,7], :int8)
+ *     NMatrix.new(:yale, [4,3], :rational128) # Use default initial capacity. Most common.
+ *     NMatrix.new(:yale, [3,4], 1000) # Error! Needs a dtype!
+ *     NMatrix.new(:yale, [3,4], 1000, :int64) # Silly! Why would a 3x4 sparse matrix need storage space of 1,000?
+ *     NMatrix.new(:yale, [3,4], 0.0, :float64) # Totally ignores non-sensical 3rd arg and creates 7 storage instead.
+ *     NMatrix.new(:yale, [3,4], 8, :rational128) # Initial capacity of 8 rationals.
  *
- * There is one additional constructor for advanced users, which takes seven arguments and is only for creating Yale matrices
- * with known IA, JA, and A arrays. This is used primarily internally for IO, e.g., reading Matlab matrices, which are
- * stored in old Yale format.
+ * That leaves only two other notes. First of all, if your matrix is square, you don't need to type [3,3] for 3x3.
+ * Instead, just do 3:
  *
- * Just be careful! There are no overflow warnings in NMatrix.
+ *     NMatrix.new(3, [0,1,2], :rational128)  # dense 3x3 rational matrix consisting of columns of 0s, 1s, and 2s
+ *
+ * Secondly, if you create a dense matrix without initial values, you may see unpredictable results! It'll fill the
+ * matrix with whatever is already in memory, not with zeros.
+ *
+ *     NMatrix.new(:dense, 4, :int64)
+ *        # => [8, 140486578196280, 0, 0]  [0, 0, 0, 0]  [0, 0, 0, 140486608794928]  [140486577962496, -4294967280, 1, 140734734392208]
+ *
+ * There is one additional constructor for advanced users, which takes seven arguments and is only for creating Yale
+ * matrices with known IA, JA, and A arrays. This is used primarily internally for IO, e.g., reading Matlab matrices,
+ * which are stored in old Yale (not our Yale) format. But be careful; there are no overflow warnings. All of these
+ * constructors are defined for power-users. Everyone else should probably resort to the shortcut functions defined in
+ * shortcuts.rb.
  */
 static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
 
