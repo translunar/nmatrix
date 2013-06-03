@@ -407,6 +407,10 @@ describe NMatrix do
       @nm_1d.reduce_along_dim(0).should be_a Enumerator
     end
 
+    it "should return an enumerator for each_along_dim without a block" do
+      @nm_1d.each_along_dim(0).should be_a Enumerator
+    end
+
     it "should iterate correctly for map without a block" do
       en = @nm_1d.map
       en.each { |e| e**2 }.should eq @nm_1d.map { |e| e**2 }
@@ -419,6 +423,18 @@ describe NMatrix do
       en.each { |a, e| a+e }.to_f.should eq 12
       en = @nm_2d.reduce_along_dim(1, 1.0)
       en.each { |a, e| a+e }.should eq N[[2.0],[6.0]]
+    end
+
+    it "should iterate correctly for each_along_dim without a block" do
+      res = NMatrix.zeros_like(@nm_1d[0...1])
+      en = @nm_1d.each_along_dim(0)
+      en.each { |e| res += e }
+      res.to_f.should eq 11
+
+      res = NMatrix.zeros_like (@nm_2d[0...2, 0])
+      en = @nm_2d.each_along_dim(1)
+      en.each { |e| res += e }
+      res.should eq N[[1.0], [5.0]]
     end
 
     context "_like constructors" do

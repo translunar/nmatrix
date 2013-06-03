@@ -301,7 +301,7 @@ class NMatrix
   # @param [Integer] dim the dimension being iterated over.
   #
   def each_along_dim(dim=0) 
-    return enum_for(self, :each_along_dim, dim) unless block_given?
+    return enum_for(:each_along_dim, dim) unless block_given?
     dims = shape
     shape.each_index { |i| dims[i] = 0...(shape[i]) unless i == dim }
     0.upto(shape[dim]-1) do |i|
