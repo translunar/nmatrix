@@ -1387,7 +1387,7 @@ static VALUE nm_mget(int argc, VALUE* argv, VALUE self) {
 
 /*
  * call-seq:
- *     matrix[indexes] -> ...
+ *     matrix[indices] -> ...
  *
  * Access the contents of an NMatrix at given coordinates by reference.
  *
