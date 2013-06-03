@@ -301,6 +301,7 @@ class NMatrix
   # @param [Integer] dim the dimension being iterated over.
   #
   def each_along_dim(dim=0) 
+    return enum_for(self, :each_along_dim, dim) unless block_given?
     dims = shape
     shape.each_index { |i| dims[i] = 0...(shape[i]) unless i == dim }
     0.upto(shape[dim]-1) do |i|
@@ -328,6 +329,8 @@ class NMatrix
     if dim > shape.size then
       raise ArgumentError, "Requested dimension does not exist.  Requested: #{dim}, shape: #{shape}"
     end
+
+    return enum_for(:reduce_along_dim, dim, initial) unless block_given?
 
     new_shape = shape
     new_shape[dim] = 1
@@ -439,6 +442,7 @@ class NMatrix
   # @see Enumerable#map
   #
   def map(&bl)
+    return enum_for(:map) unless block_given?
     cp = self.dup
     cp.map! &bl
     cp
@@ -449,6 +453,7 @@ class NMatrix
   # @see #map
   #
   def map!
+    return enum_for(:map!) unless block_given?
     self.each_stored_with_indices do |e, *i|
       self[*i] = (yield e)
     end

@@ -399,6 +399,28 @@ describe NMatrix do
       @nm_2d.should eq expected2
     end
 
+    it "should return an enumerator for map without a block" do
+      @nm_1d.map.should be_a Enumerator
+    end
+
+    it "should return an enumerator for reduce without a block" do
+      @nm_1d.reduce_along_dim(0).should be_a Enumerator
+    end
+
+    it "should iterate correctly for map without a block" do
+      en = @nm_1d.map
+      en.each { |e| e**2 }.should eq @nm_1d.map { |e| e**2 }
+      en = @nm_2d.map
+      en.each { |e| e**2 }.should eq @nm_2d.map { |e| e**2 }
+    end
+
+    it "should iterate correctly for reduce without a block" do
+      en = @nm_1d.reduce_along_dim(0, 1.0)
+      en.each { |a, e| a+e }.to_f.should eq 12
+      en = @nm_2d.reduce_along_dim(1, 1.0)
+      en.each { |a, e| a+e }.should eq N[[2.0],[6.0]]
+    end
+
     context "_like constructors" do
 
       it "should create an nmatrix of ones with dimensions and type the same as its argument" do
