@@ -1791,7 +1791,8 @@ static VALUE nm_ija(VALUE self) {
  * The first argument should be the row index. The optional second argument may be :hash or :array, but defaults
  * to :hash. If :array is given, it will only return the Hash keys (the column indices).
  *
- * This function is meant to accomplish its purpose as efficiently as possible.
+ * This function is meant to accomplish its purpose as efficiently as possible. It does not check for appropriate
+ * range.
  */
 static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self) {
   VALUE i_, as;
@@ -1809,8 +1810,10 @@ static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self) {
   // get the position as a size_t
   // TODO: Come up with a faster way to get this than transforming to a Ruby object first.
   size_t pos = FIX2INT(rubyobj_from_cval_by_itype((char*)(s->ija) + ITYPE_SIZES[itype]*i, itype).rval);
-  size_t nextpos = FIX2INT(rubyobj_from_cval_by_itype((char*)(s->ija) + ITYPE_SIZES[itype]*i + 1, itype).rval);
-  size_t diff = (nextpos - pos > 0) ? nextpos - pos : 1;
+  size_t nextpos = FIX2INT(rubyobj_from_cval_by_itype((char*)(s->ija) + ITYPE_SIZES[itype]*(i+1), itype).rval);
+  size_t diff = nextpos - pos;
+
+  //std::cerr << "diff = " << diff << "\tpos = " << pos << "\tnextpos = " << nextpos << std::endl;
 
   VALUE ret; // HERE
   if (array) {
