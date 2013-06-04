@@ -128,10 +128,16 @@
 
 * No major enhancements
 
-* 1 minor enhancement
+* 2 minor enhancements
 
-  * Added yale_vector_insert_by_pos to NMatrix::YaleFunctions, to speed
-    up insertion of multiple items into a Yale matrix.
+  * Added yale_vector_insert to NMatrix::YaleFunctions, to speed up
+    insertion of multiple items into a Yale matrix
+
+  * Added yale_nd_row, yale_nd_row_as_hash, yale_nd_row_as_array,
+    yale_nd_row_as_set, yale_nd_row_as_sorted_set, yale_row,
+    yale_row_as_hash, yale_row_as_array, yale_row_as_set,
+    yale_row_as_sorted_set to NMatrix::YaleFunctions in order to
+    speed up getting multiple items from some row of a Yale matrix
 
 * 1 bug fix:
 

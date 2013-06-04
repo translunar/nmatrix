@@ -85,6 +85,7 @@ extern "C" {
   static VALUE nm_ja(VALUE self);
   static VALUE nm_ija(VALUE self);
 
+  static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self);
   static VALUE nm_vector_insert(int argc, VALUE* argv, VALUE self);
 
 
@@ -1290,6 +1291,8 @@ void nm_init_yale_functions() {
   rb_define_method(cNMatrix_YaleFunctions, "yale_ja", (METHOD)nm_ja, 0);
   rb_define_method(cNMatrix_YaleFunctions, "yale_d", (METHOD)nm_d, 0);
   rb_define_method(cNMatrix_YaleFunctions, "yale_lu", (METHOD)nm_lu, 0);
+
+  rb_define_method(cNMatrix_YaleFunctions, "yale_nd_row", (METHOD)nm_nd_row, -1);
   rb_define_method(cNMatrix_YaleFunctions, "yale_vector_insert", (METHOD)nm_vector_insert, -1);
 
   rb_define_const(cNMatrix_YaleFunctions, "YALE_GROWTH_CONSTANT", rb_float_new(nm::yale_storage::GROWTH_CONSTANT));
@@ -1779,6 +1782,56 @@ static VALUE nm_ija(VALUE self) {
   return ary;
 }
 
+
+/*
+ * call-seq:
+ *     yale_nd_row -> ...
+ *
+ * This function gets the non-diagonal contents of a Yale matrix row.
+ * The first argument should be the row index. The optional second argument may be :hash or :array, but defaults
+ * to :hash. If :array is given, it will only return the Hash keys (the column indices).
+ *
+ * This function is meant to accomplish its purpose as efficiently as possible.
+ */
+static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self) {
+  VALUE i_, as;
+  rb_scan_args(argc, argv, "11", &i_, &as);
+
+  bool array = false;
+  if (as != Qnil && rb_to_id(as) != nm_rb_hash) array = true;
+
+  size_t i = FIX2INT(i_);
+
+  YALE_STORAGE* s   = NM_STORAGE_YALE(self);
+  nm::dtype_t dtype = NM_DTYPE(self);
+  nm::itype_t itype = NM_ITYPE(self);
+
+  // get the position as a size_t
+  // TODO: Come up with a faster way to get this than transforming to a Ruby object first.
+  size_t pos = FIX2INT(rubyobj_from_cval_by_itype((char*)(s->ija) + ITYPE_SIZES[itype]*i, itype).rval);
+  size_t nextpos = FIX2INT(rubyobj_from_cval_by_itype((char*)(s->ija) + ITYPE_SIZES[itype]*i + 1, itype).rval);
+  size_t diff = (nextpos - pos > 0) ? nextpos - pos : 1;
+
+  VALUE ret; // HERE
+  if (array) {
+    ret = rb_ary_new3(diff);
+
+    for (size_t idx = pos; idx < nextpos; ++idx) {
+      rb_ary_store(ret, idx - pos, rubyobj_from_cval_by_itype((char*)(s->ija) + ITYPE_SIZES[s->itype]*idx, s->itype).rval);
+    }
+
+  } else {
+    ret = rb_hash_new();
+
+    for (size_t idx = pos; idx < nextpos; ++idx) {
+      rb_hash_aset(ret, rubyobj_from_cval_by_itype((char*)(s->ija) + ITYPE_SIZES[s->itype]*idx, s->itype).rval,
+                        rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype]*idx, s->dtype).rval);
+    }
+  }
+
+  return ret;
+}
+
 /*
  * call-seq:
  *     yale_vector_insert -> Fixnum
@@ -1826,6 +1879,7 @@ static VALUE nm_vector_insert(int argc, VALUE* argv, VALUE self) { //, VALUE i_,
   size_t i   = FIX2INT(i_);    // get the row
 
   // get the position as a size_t
+  // TODO: Come up with a faster way to get this than transforming to a Ruby object first.
   if (pos_ == Qnil) pos_ = rubyobj_from_cval_by_itype((char*)(s->ija) + ITYPE_SIZES[itype]*i, itype).rval;
   size_t pos = FIX2INT(pos_);
 

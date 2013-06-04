@@ -70,6 +70,28 @@ describe NMatrix do
       n.yale_d.should == [0.2, 0.1]
     end
 
+    it "gets non-diagonal rows as hashes" do
+      n = NMatrix.new(:yale, [4,6], :float64)
+      n.extend(NMatrix::YaleFunctions)
+      n[0,0] = 0.1
+      n[0,2] = 0.2
+      n[0,3] = 0.3
+      n[1,5] = 0.4
+      h = n.yale_nd_row(0, :hash)
+      h.should == {2 => 0.2, 3 => 0.3}
+    end
+
+    it "gets non-diagonal occupied column indices for a given row" do
+      n = NMatrix.new(:yale, [4,6], :float64)
+      n.extend(NMatrix::YaleFunctions)
+      n[0,0] = 0.1
+      n[0,2] = 0.2
+      n[0,3] = 0.3
+      n[1,5] = 0.4
+      a = n.yale_nd_row(0, :array)
+      a.should == [2,3]
+    end
+
     it "does not resize until necessary" do
       n = NMatrix.new(:yale, [2,3], :float64)
       n.extend(NMatrix::YaleFunctions)

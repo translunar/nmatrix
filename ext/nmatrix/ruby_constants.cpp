@@ -68,7 +68,9 @@ ID	nm_rb_real,
 		nm_rb_eql,
 		nm_rb_neql,
 		nm_rb_gte,
-		nm_rb_lte;
+		nm_rb_lte,
+
+		nm_rb_hash;
 
 VALUE cNMatrix,
       cNMatrix_IO,
@@ -122,4 +124,6 @@ void nm_init_ruby_constants(void) {
 	nm_rb_lower             = rb_intern("lower");
 	nm_rb_unit              = rb_intern("unit");
 	nm_rb_nonunit           = rb_intern("nonunit");
+
+	nm_rb_hash              = rb_intern("hash");
 }

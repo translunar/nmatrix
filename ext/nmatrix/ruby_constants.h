@@ -71,7 +71,9 @@ extern ID nm_rb_real,
 					nm_rb_eql,
 					nm_rb_neql,
 					nm_rb_gte,
-					nm_rb_lte;
+					nm_rb_lte,
+
+					nm_rb_hash;
 
 extern VALUE	cNMatrix,
               cNMatrix_IO,
