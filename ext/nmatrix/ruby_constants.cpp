@@ -55,6 +55,9 @@ ID	nm_rb_real,
 		nm_rb_list,
 		nm_rb_yale,
 
+		nm_rb_row,
+		nm_rb_column,
+
 		nm_rb_add,
 		nm_rb_sub,
 		nm_rb_mul,
@@ -126,4 +129,7 @@ void nm_init_ruby_constants(void) {
 	nm_rb_nonunit           = rb_intern("nonunit");
 
 	nm_rb_hash              = rb_intern("hash");
+
+	nm_rb_column            = rb_intern("column");
+	nm_rb_row               = rb_intern("row");
 }

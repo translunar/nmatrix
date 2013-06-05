@@ -57,6 +57,9 @@ extern ID nm_rb_real,
 					nm_rb_dense,
 					nm_rb_list,
 					nm_rb_yale,
+
+          nm_rb_row,
+          nm_rb_column,
 		
 					nm_rb_add,
 					nm_rb_sub,

@@ -1637,7 +1637,19 @@ static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLIC
       NMATRIX* mat = ALLOC(NMATRIX);
       mat->stype = NM_STYPE(self);
       mat->storage = (STORAGE*)((*slice_func)( NM_STORAGE(self), slice ));
-      result = Data_Wrap_Struct(cNMatrix, mark_table[mat->stype], delete_func, mat);
+
+      // Do we want an NVector instead of an NMatrix?
+      VALUE klass = cNVector, orient = Qnil;
+      // FIXME: Generalize for n dimensional slicing somehow
+      if (mat->storage->shape[0] == 1)       orient = ID2SYM(nm_rb_row);
+      else if (mat->storage->shape[1] == 1)  orient = ID2SYM(nm_rb_column);
+      else                                   klass  = cNMatrix;
+
+      result = Data_Wrap_Struct(klass, mark_table[mat->stype], delete_func, mat);
+
+      // If we're dealing with a vector, need to make sure the @orientation matches.
+      // FIXME: Eventually we probably need to make this an internal property of NVector.
+      if (klass == cNVector) rb_iv_set(result, "@orientation", orient);
     }
 
     free(slice);
@@ -1645,7 +1657,7 @@ static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLIC
   } else if (NM_DIM(self) < (size_t)(argc)) {
     rb_raise(rb_eArgError, "Coordinates given exceed number of matrix dimensions");
   } else {
-    rb_raise(rb_eNotImpError, "This type slicing not supported yet");
+    rb_raise(rb_eNotImpError, "This type of slicing not supported yet");
   }
 
   return result;

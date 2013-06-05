@@ -66,12 +66,12 @@ describe "Slice operation" do
           @m[2,1].should eql(7)
         end
 
-        it 'should return a 1x2 matrix with refs to self elements' do
+        it 'should return a 1x2 vector with refs to self elements' do
           n = @m.slice(0,1..2)
           n.shape.should eql([1,2])
 
-          n[0,0].should == @m[0,1]
-          n[0,0] = -9
+          n[0].should == @m[0,1]
+          n[0] = -9
           @m[0,1].should eql(1)
         end
 
@@ -79,8 +79,8 @@ describe "Slice operation" do
           n = @m.slice(0..1,1)
           n.shape.should eql([2,1])
 
-          n[0,0].should == @m[0,1]
-          n[0,0] = -9
+          n[0].should == @m[0,1]
+          n[0] = -9
           @m[0,1].should eql(1)
         end
 
@@ -118,9 +118,9 @@ describe "Slice operation" do
           it "should correctly preserve zeros" do
             @m = NMatrix.new(:yale, 3, :int64)
             column_slice = @m.column(2, :copy)
-            column_slice[0,0].should == 0
-            column_slice[1,0].should == 0
-            column_slice[2,0].should == 0
+            column_slice[0].should == 0
+            column_slice[1].should == 0
+            column_slice[2].should == 0
           end
         end
       else
@@ -139,21 +139,21 @@ describe "Slice operation" do
             @m[1,0].should eql(-9)
           end
 
-          it 'should return a 1x2 matrix with refs to self elements' do
+          it 'should return a 1x2 vector with refs to self elements' do
             n = @m[0,1..2]
             n.shape.should eql([1,2])
 
-            n[0,0].should == @m[0,1]
-            n[0,0] = -9
+            n[0].should == @m[0,1]
+            n[0] = -9
             @m[0,1].should eql(-9)
           end
 
-          it 'should return a 2x1 matrix with refs to self elements' do
+          it 'should return a 2x1 vector with refs to self elements' do
             n = @m[0..1,1]
             n.shape.should eql([2,1])
 
-            n[0,0].should == @m[0,1]
-            n[0,0] = -9
+            n[0].should == @m[0,1]
+            n[0] = -9
             @m[0,1].should eql(-9)
           end
 
@@ -161,7 +161,7 @@ describe "Slice operation" do
 
           it 'should slice again' do
             n = @m[1..2, 1..2]
-            nm_eql(n[1,0..1], NMatrix.new([1,2], [7,8])).should be_true
+            nm_eql(n[1,0..1], NVector.new(2, [7,8], :int32).transpose).should be_true
           end
 
           it 'should be correct slice for range 0..2 and 0...3' do
@@ -293,7 +293,16 @@ describe "Slice operation" do
   def nm_eql(n, m) #:nodoc:
     if n.shape != m.shape
       false
-    else
+    elsif n.is_a?(NVector)
+      return false unless m.is_a?(NVector) # don't compare NV to NM
+      long_shape = n.shape[0] == 1 ? n.shape[1] : n.shape[0]
+      long_shape.times do |j|
+        if n[j] != m[j]
+          puts "n[#{j}] != m[#{j}] (#{n[j]} != #{m[j]})"
+          return false
+        end
+      end
+    else # NMatrix
       n.shape[0].times do |i|
         n.shape[1].times do |j|
           if n[i,j] != m[i,j]
@@ -302,7 +311,7 @@ describe "Slice operation" do
           end
         end
       end
-      true
     end
+    true
   end
 end
