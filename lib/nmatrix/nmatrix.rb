@@ -54,7 +54,7 @@ class NMatrix
   # TODO: Make this actually pretty.
   def pretty_print(q = nil) #:nodoc:
     if dim != 2 || (dim == 2 && shape[1] > 10) # FIXME: Come up with a better way of restricting the display
-      inspect
+      puts self.inspect
     else
 
       arr = (0...shape[0]).map do |i|
