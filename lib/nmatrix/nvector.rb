@@ -51,6 +51,7 @@ class NVector < NMatrix
     orientation
   end
 
+
   #
   # call-seq:
   #     orientation -> Symbol
@@ -60,6 +61,14 @@ class NVector < NMatrix
   #
   def orientation
     @orientation ||= :column
+  end
+
+  # Override NMatrix#each_row and #each_column
+  def each_row(get_by=:reference, &block) #:nodoc:
+    @orientation == :column ? self.each(&block) : (yield self)
+  end
+  def each_column(get_by=:reference, &block) #:nodoc:
+    @orientation == :column ? (yield self) : self.each(&block)
   end
 
   #
@@ -163,9 +172,50 @@ class NVector < NMatrix
   #
   def dim; 1; end
 
-  # shorthand for the dominant shape component
+  #
+  # call-seq:
+  #     size -> Fixnum
+  #
+  # Shorthand for the dominant shape component
   def size
     shape[0] > 1 ? shape[0] : shape[1]
+  end
+
+  #
+  # call-seq:
+  #     max -> Numeric
+  #
+  # Return the maximum element.
+  def max
+    max_so_far = self[0]
+    self.each do |x|
+      max_so_far = x if x > max_so_far
+    end
+    max_so_far
+  end
+
+  #
+  # call-seq:
+  #     min -> Numeric
+  #
+  # Return the minimum element.
+  def min
+    min_so_far = self[0]
+    self.each do |x|
+      min_so_far = x if x < min_so_far
+    end
+    min_so_far
+  end
+
+  #
+  # call-seq:
+  #     to_a -> Array
+  #
+  # Converts the NVector to a regular Ruby Array.
+  def to_a
+    ary = Array.new(size)
+    self.each.with_index { |v,idx| ary[idx] = v }
+    ary
   end
 
   # TODO: Make this actually pretty.
@@ -190,11 +240,6 @@ class NVector < NMatrix
   end
 
 protected
-#  def inspect_helper #:nodoc:
-#    x = (super() << "orientation:#{self.orientation}") #.gsub(" @orientation=:#{self.orientation}", "")
-#    binding.pry
-#    x
-#  end
 
   #
   # call-seq:

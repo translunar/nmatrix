@@ -293,7 +293,10 @@ class NMatrix
     '[' + ary.collect { |a| a ? a : 'nil'}.join(',') + ']'
   end
 
-  ##
+  #
+  # call-seq:
+  #     each_along_dim -> ...
+  #
   # Successively yields submatrices at each coordinate along a specified
   # dimension.  Each submatrix will have the same number of dimensions as
   # the matrix being iterated, but with the specified dimension's size 
@@ -301,21 +304,24 @@ class NMatrix
   #
   # @param [Integer] dim the dimension being iterated over.
   #
-  def each_along_dim(dim=0) 
-    return enum_for(:each_along_dim, dim) unless block_given?
+  def each_along_dim(dimen=0)
+    return enum_for(:each_along_dim, dimen) unless block_given?
     dims = shape
-    shape.each_index { |i| dims[i] = 0...(shape[i]) unless i == dim }
-    0.upto(shape[dim]-1) do |i|
-      dims[dim] = i
+    shape.each_index { |i| dims[i] = 0...(shape[i]) unless i == dimen }
+    0.upto(shape[dimen]-1) do |i|
+      dims[dimen] = i
       yield self[*dims]
     end
   end
 
-  ##
+  #
+  # call-seq:
+  #     reduce_along_dim -> NMatrix
+  #
   # Reduces an NMatrix using a supplied block over a specified dimension.
   # The block should behave the same way as for Enumerable#reduce.
   #
-  # @param [Integer] dim the dimension being reduced
+  # @param [Integer] dimen the dimension being reduced
   # @param [Numeric] initial the initial value for the reduction 
   #  (i.e. the usual parameter to Enumerable#reduce).  Supply nil or do not
   #  supply this argument to have it follow the usual Enumerable#reduce 
@@ -325,30 +331,31 @@ class NMatrix
   #  is the result of the reduction at that position along the specified
   #  dimension.
   #
-  def reduce_along_dim(dim=0, initial=nil)
+  def reduce_along_dim(dimen=0, initial=nil)
 
-    if dim > shape.size then
-      raise ArgumentError, "Requested dimension does not exist.  Requested: #{dim}, shape: #{shape}"
+    if dimen > shape.size then
+      raise ArgumentError, "Requested dimension does not exist (requested: #{dimen}, shape: #{shape})"
     end
 
-    return enum_for(:reduce_along_dim, dim, initial) unless block_given?
+    return enum_for(:reduce_along_dim, dimen, initial) unless block_given?
 
     new_shape = shape
-    new_shape[dim] = 1
+    new_shape[dimen] = 1
+    vector_size = new_shape.select { |x| x != 1 }.first
 
     first_as_acc = false
 
-    if initial then
-      acc = NMatrix.new(new_shape, initial)
+    if initial
+      acc = self.class.new(new_shape, initial)
     else
-      each_along_dim(dim) do |sub_mat|
+      each_along_dim(dimen) do |sub_mat|
         acc = sub_mat
         break
       end
       first_as_acc = true
     end
 
-    each_along_dim(dim) do |sub_mat|
+    each_along_dim(dimen) do |sub_mat|
       if first_as_acc then
         first_as_acc = false
         next
@@ -362,84 +369,109 @@ class NMatrix
 
   alias_method :inject_along_dim, :reduce_along_dim
 
-  ##
+  #
+  # call-seq:
+  #     mean -> ...
+  #
   # Calculates the mean along the specified dimension.
   #
   # @see #reduce_along_dim
   #
-  def mean(dim=0)
-    reduce_along_dim(dim, 0.0) do |mean, sub_mat|
-      mean + sub_mat/shape[dim]
+  def mean(dimen=0)
+    reduce_along_dim(dimen, 0.0) do |mean, sub_mat|
+      mean + sub_mat/shape[dimen]
     end
   end
 
-  ##
+  #
+  # call-seq:
+  #     sum -> ...
+  #
   # Calculates the sum along the specified dimension.
   #
   # @see #reduce_along_dim
-  def sum(dim=0)
-    reduce_along_dim(dim, 0.0) do |sum, sub_mat|
+  def sum(dimen=0)
+    reduce_along_dim(dimen, 0.0) do |sum, sub_mat|
       sum + sub_mat
     end
   end
 
 
-  ##
+  #
+  # call-seq:
+  #     min -> ...
+  #
   # Calculates the minimum along the specified dimension.
   #
   # @see #reduce_along_dim
   #
-  def min(dim=0)
-    reduce_along_dim(dim, Float::MAX) do |min, sub_mat|
+  def min(dimen=0)
+    reduce_along_dim(dimen, Float::MAX) do |min, sub_mat|
       min * (min <= sub_mat) + ((min)*0.0 + (min > sub_mat)) * sub_mat
     end
   end
 
-  ##
+  #
+  # call-seq:
+  #     max -> ...
+  #
   # Calculates the maximum along the specified dimension.
   #
   # @see #reduce_along_dim
   #
-  def max(dim=0)
-    reduce_along_dim(dim, -1.0*Float::MAX) do |max, sub_mat|
+  def max(dimen=0)
+    reduce_along_dim(dimen, -1.0*Float::MAX) do |max, sub_mat|
       max * (max >= sub_mat) + ((max)*0.0 + (max < sub_mat)) * sub_mat
     end
   end
 
 
-  ##
+  #
+  # call-seq:
+  #     variance -> ...
+  #
   # Calculates the sample variance along the specified dimension.
   #
   # @see #reduce_along_dim
   #
-  def variance(dim=0)
-    m = mean(dim)
-    reduce_along_dim(dim, 0.0) do |var, sub_mat|
-      var + (m - sub_mat)*(m - sub_mat)/(shape[dim]-1)
+  def variance(dimen=0)
+    m = mean(dimen)
+    reduce_along_dim(dimen, 0.0) do |var, sub_mat|
+      var + (m - sub_mat)*(m - sub_mat)/(shape[dimen]-1)
     end
   end
 
-  ##
+  #
+  # call-seq:
+  #     std -> ...
+  #
   # Calculates the sample standard deviation along the specified dimension.
   #
   # @see #reduce_along_dim
   #
-  def std(dim=0)
-    variance(dim).map! { |e| Math.sqrt(e) }
+  def std(dimen=0)
+    variance(dimen).map! { |e| Math.sqrt(e) }
   end
 
-  ##
+  #
+  # call-seq:
+  #     each_along_dim -> ...
+  #
   # Converts an nmatrix with a single element (but any number of dimensions)
   #  to a float.
   #
   # Raises an IndexError if the matrix does not have just a single element.
   #
+  # FIXME: Does this actually happen? Matrices should not have just one element.
   def to_f
     raise IndexError, 'to_f only valid for matrices with a single element' unless shape.all? { |e| e == 1 }
     self[*Array.new(shape.size, 0)]
   end
 
-  ##
+  #
+  # call-seq:
+  #     map -> ...
+  #
   # @see Enumerable#map
   #
   def map(&bl)
@@ -449,7 +481,10 @@ class NMatrix
     cp
   end
 
-  ##
+  #
+  # call-seq:
+  #     map! -> ...
+  #
   # Maps in place.
   # @see #map
   #
@@ -457,6 +492,31 @@ class NMatrix
     return enum_for(:map!) unless block_given?
     self.each_stored_with_indices do |e, *i|
       self[*i] = (yield e)
+    end
+    self
+  end
+
+
+  #
+  # call-seq:
+  #     each_row -> ...
+  #
+  # Iterate through each row, referencing it as an NVector.
+  def each_row(get_by=:reference, &block)
+    (0...self.shape[0]).each do |i|
+      yield self.row(i, get_by)
+    end
+    self
+  end
+
+  #
+  # call-seq:
+  #     each_column -> ...
+  #
+  # Iterate through each column, referencing it as an NVector.
+  def each_row(get_by=:reference, &block)
+    (0...self.shape[0]).each do |i|
+      yield self.row(i, get_by)
     end
     self
   end
@@ -476,7 +536,10 @@ class NMatrix
       NMatrix::IO::Mat5Reader.new(File.open(file_path, 'rb')).to_ruby
     end
 
-    ##
+    #
+    # call-seq:
+    #     ones_like -> ...
+    #
     # Creates a new matrix of ones with the same dtype and shape as the
     # provided matrix.
     #
@@ -487,7 +550,10 @@ class NMatrix
       NMatrix.ones(nm.shape, nm.dtype)
     end
 
-    ##
+    #
+    # call-seq:
+    #     zeros_like -> ...
+    #
     # Creates a new matrix of zeros with the same stype, dtype, and shape
     # as the provided matrix.
     #
@@ -499,7 +565,7 @@ class NMatrix
     end
   end
 
-  protected
+protected
   def inspect_helper #:nodoc:
     ary = []
     ary << "shape:[#{shape.join(',')}]" << "dtype:#{dtype}" << "stype:#{stype}"
