@@ -320,12 +320,13 @@ class NMatrix
   #  (i.e. the usual parameter to Enumerable#reduce).  Supply nil or do not
   #  supply this argument to have it follow the usual Enumerable#reduce 
   #  behavior of using the first element as the initial value.
+  # @param [Symbol] dtype if non-nil/false, forces the accumulated result to have this dtype
   # @return [NMatrix] an NMatrix with the same number of dimensions as the
   #  input, but with the input dimension now having size 1.  Each element 
   #  is the result of the reduction at that position along the specified
   #  dimension.
   #
-  def reduce_along_dim(dim=0, initial=nil)
+  def reduce_along_dim(dim=0, initial=nil, dtype=nil)
 
     if dim > shape.size then
       raise ArgumentError, "Requested dimension does not exist.  Requested: #{dim}, shape: #{shape}"
@@ -339,10 +340,14 @@ class NMatrix
     first_as_acc = false
 
     if initial then
-      acc = NMatrix.new(new_shape, initial)
+      acc = NMatrix.new(new_shape, initial, dtype || self.dtype)
     else
       each_along_dim(dim) do |sub_mat|
-        acc = sub_mat
+        if sub_mat.is_a?(NMatrix) and dtype and dtype != self.dtype then
+          acc = sub_mat.cast(self.stype, dtype)
+        else
+          acc = sub_mat
+        end
         break
       end
       first_as_acc = true
@@ -362,13 +367,27 @@ class NMatrix
 
   alias_method :inject_along_dim, :reduce_along_dim
 
+
+  ##
+  # Checks if dtype is an integer type
+  #
+  def integer_dtype?
+    [:byte, :int8, :int16, :int32, :int64].include?(self.dtype)
+  end
+
   ##
   # Calculates the mean along the specified dimension.
+  #
+  # This will force integer types to float64 dtype.
   #
   # @see #reduce_along_dim
   #
   def mean(dim=0)
-    reduce_along_dim(dim, 0.0) do |mean, sub_mat|
+    reduce_dtype = nil
+    if integer_dtype? then
+      reduce_dtype = :float64
+    end
+    reduce_along_dim(dim, 0.0, reduce_dtype) do |mean, sub_mat|
       mean + sub_mat/shape[dim]
     end
   end
@@ -390,8 +409,12 @@ class NMatrix
   # @see #reduce_along_dim
   #
   def min(dim=0)
-    reduce_along_dim(dim, Float::MAX) do |min, sub_mat|
-      min * (min <= sub_mat) + ((min)*0.0 + (min > sub_mat)) * sub_mat
+    reduce_along_dim(dim) do |min, sub_mat|
+      if min.is_a? NMatrix then 
+        min * (min <= sub_mat) + ((min)*0.0 + (min > sub_mat)) * sub_mat
+      else
+        min <= sub_mat ? min : sub_mat
+      end
     end
   end
 
@@ -401,8 +424,12 @@ class NMatrix
   # @see #reduce_along_dim
   #
   def max(dim=0)
-    reduce_along_dim(dim, -1.0*Float::MAX) do |max, sub_mat|
-      max * (max >= sub_mat) + ((max)*0.0 + (max < sub_mat)) * sub_mat
+    reduce_along_dim(dim) do |max, sub_mat|
+      if max.is_a? NMatrix then
+        max * (max >= sub_mat) + ((max)*0.0 + (max < sub_mat)) * sub_mat
+      else
+        max >= sub_mat ? max : sub_mat
+      end
     end
   end
 
@@ -410,17 +437,25 @@ class NMatrix
   ##
   # Calculates the sample variance along the specified dimension.
   #
+  # This will force integer types to float64 dtype.
+  #
   # @see #reduce_along_dim
   #
   def variance(dim=0)
+    reduce_dtype = nil
+    if integer_dtype? then
+      reduce_dtype = :float64
+    end
     m = mean(dim)
-    reduce_along_dim(dim, 0.0) do |var, sub_mat|
+    reduce_along_dim(dim, 0.0, reduce_dtype) do |var, sub_mat|
       var + (m - sub_mat)*(m - sub_mat)/(shape[dim]-1)
     end
   end
 
   ##
   # Calculates the sample standard deviation along the specified dimension.
+  #
+  # This will force integer types to float64 dtype.
   #
   # @see #reduce_along_dim
   #
