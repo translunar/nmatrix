@@ -1793,6 +1793,8 @@ static VALUE nm_ija(VALUE self) {
  *
  * This function is meant to accomplish its purpose as efficiently as possible. It does not check for appropriate
  * range.
+ *
+ * FIXME: :array doesn't make sense. This should be :keys or :values to indicate which array we want.
  */
 static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self) {
   VALUE i_, as;
