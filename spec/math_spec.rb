@@ -129,7 +129,7 @@ describe "math" do
         #STDERR.puts "2"
         n = NMatrix.new([4,3], [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0], left_dtype)
 
-        m = NVector.new(3, [2.0, 1.0, 0.0], right_dtype)
+        m = NVector.new(3, [2.0, 1.0, 0.0], right_dtype).transpose
 
         m.shape[0].should == 3
         m.shape[1].should == 1

@@ -1639,17 +1639,11 @@ static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLIC
       mat->storage = (STORAGE*)((*slice_func)( NM_STORAGE(self), slice ));
 
       // Do we want an NVector instead of an NMatrix?
-      VALUE klass = cNVector, orient = Qnil;
+      VALUE klass = cNMatrix, orient = Qnil;
       // FIXME: Generalize for n dimensional slicing somehow
-      if (mat->storage->shape[0] == 1)       orient = ID2SYM(nm_rb_row);
-      else if (mat->storage->shape[1] == 1)  orient = ID2SYM(nm_rb_column);
-      else                                   klass  = cNMatrix;
+      if (mat->storage->shape[0] == 1 || mat->storage->shape[1] == 1) klass  = cNVector;
 
       result = Data_Wrap_Struct(klass, mark_table[mat->stype], delete_func, mat);
-
-      // If we're dealing with a vector, need to make sure the @orientation matches.
-      // FIXME: Eventually we probably need to make this an internal property of NVector.
-      if (klass == cNVector) rb_iv_set(result, "@orientation", orient);
     }
 
     free(slice);
@@ -1717,11 +1711,6 @@ static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
   }
 
 	VALUE result_val = Data_Wrap_Struct(CLASS_OF(left_val), mark[result->stype], nm_delete, result);
-
-	// If we're dealing with a vector, need to make sure the @orientation matches.
-	// FIXME: Eventually we probably need to make this an internal property of NVector.
-	if (CLASS_OF(left_val) == cNVector)
-	  rb_iv_set(result_val, "@orientation", rb_iv_get(left_val, "@orientation"));
 
 	return result_val;
 }

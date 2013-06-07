@@ -126,7 +126,15 @@
 
 === 0.0.5 / 2013-??-??
 
-* No major enhancements
+* 3 major enhancements
+
+  * NVector orientation is now controlled by its shape, not by the
+    @orientation property
+
+  * NVector default orientation is now a row vector rather than a
+    column, as this is more efficient for Yale storage
+
+  * NVector objects may now be created with dtypes other than dense
 
 * 6 minor enhancements
 

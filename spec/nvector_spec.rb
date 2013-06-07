@@ -30,8 +30,8 @@ require "./lib/nmatrix"
 describe NVector do
   it "initializes" do
     v = NVector.new(5, 0, :float64)
-    v.shape[0].should == 5
-    v.shape[1].should == 1
+    v.shape[0].should == 1
+    v.shape[1].should == 5
   end
 
   it "permits setting and getting contents" do
@@ -43,8 +43,8 @@ describe NVector do
   it "transpose() changes raw and column stored structure" do
     v = NVector.new 5, :float64
     v = v.transpose
-    v.shape[0].should == 1
-    v.shape[1].should == 5
+    v.shape[0].should == 5
+    v.shape[1].should == 1
     v[0] = 1.555
     v[0].should == 1.555
   end
@@ -52,28 +52,28 @@ describe NVector do
   it "transpose!() changes destructively its raw and column stored structure" do
     v = NVector.new 5, :float64
     v.transpose!
-    v.shape[0].should == 1
-    v.shape[1].should == 5
+    v.shape[0].should == 5
+    v.shape[1].should == 1
   end
 
-  it "multiply() multiples itself by another NVector" do
-    v1 = NVector.new 2, :float64
-    v2 = NVector.new 2, :float64
+  it "dot() multiples itself by another NVector" do
+    v1 = NVector.new(2, :float64)
+    v2 = NVector.new(2, :float64).transpose
     v1[0] = 1.5
     v1[1] = 2.3
     v2[0] = 1.3
     v2[1] = 2.5
-    v1.multiply(v2).should == 12.0
+    v1.dot(v2).should == 12.0
   end
 
-  it "multiply!() multiples destructively itself by another NVector" do
+  it "dot!() multiples itself destructively by another NVector" do
     v1 = NVector.new 2, :float64
-    v2 = NVector.new 2, :float64
+    v2 = NVector.new(2, :float64).transpose
     v1[0] = 1.5
     v1[1] = 2.3
     v2[0] = 1.3
     v2[1] = 2.5
-    v1.multiply!(v2)
+    v1.dot!(v2)
     v1.should == 12.0
   end
 
