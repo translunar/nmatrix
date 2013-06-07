@@ -136,7 +136,7 @@
 
   * NVector objects may now be created with dtypes other than dense
 
-* 6 minor enhancements
+* 7 minor enhancements
 
   * Added #yale_vector_insert to NMatrix::YaleFunctions, to speed up
     insertion of multiple items into a Yale matrix
@@ -152,7 +152,11 @@
 
   * Improved function documentation for NVector and NMatrix
 
-  * Added #min, #max, and #to_a functions to NVector
+  * Added #min, #max, #to_a, #shuffle, #shuffle! functions to NVector
+
+  * Aliased missing dimension of NVector#each_stored_with_indices to
+    #each_stored_with_index, which only yields a value and i or j
+    (not both i and j) depending on the vector orientation
 
   * Added #each_row, #each_column to NMatrix
 

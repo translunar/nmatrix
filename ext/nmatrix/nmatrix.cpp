@@ -671,7 +671,7 @@ static VALUE nm_upcast(VALUE self, VALUE t1, VALUE t2) {
 
 /*
  * call-seq:
- *     each -> 
+ *     each -> Enumerator
  *
  * Iterate over the matrix as you would an Enumerable (e.g., Array).
  *

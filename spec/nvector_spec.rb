@@ -25,7 +25,7 @@
 # Basic tests for NVector.
 #
 
-require "./lib/nmatrix"
+require File.dirname(__FILE__) + "/spec_helper.rb"
 
 describe NVector do
   it "initializes" do
@@ -95,5 +95,24 @@ describe NVector do
     out = $stdout.string
     $stdout = STDOUT
     out.should == "0  0  0  0  0\n"
+  end
+
+  [:dense, :list, :yale].each do |storage_type|
+    context "for #{storage_type}" do
+      before :each do
+        @m = create_vector(storage_type)
+      end
+
+      it "converts to an Array" do
+        a = @m.to_a
+        a.each.with_index { |v,idx| @m[idx].should equal(v) }
+      end
+
+      it "shuffles" do
+        n = @m.shuffle
+        n.to_a.hash.should_not == @m.to_a.hash
+        n.to_a.sort.hash.should equal(@m.to_a.sort.hash)
+      end
+    end
   end
 end
