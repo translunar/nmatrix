@@ -294,28 +294,44 @@ class NMatrix
   end
 
   ##
+  # call-seq:
+  #   each_along_dim() -> Enumerator
+  #   each_along_dim(dimen) -> Enumerator
+  #   each_along_dim() { |elem| block } -> NMatrix
+  #   each_along_dim(dimen) { |elem| block } -> NMatrix
+  #
   # Successively yields submatrices at each coordinate along a specified
   # dimension.  Each submatrix will have the same number of dimensions as
   # the matrix being iterated, but with the specified dimension's size 
   # equal to 1.
   #
-  # @param [Integer] dim the dimension being iterated over.
+  # @param [Integer] dimen the dimension being iterated over.
   #
-  def each_along_dim(dim=0) 
-    return enum_for(:each_along_dim, dim) unless block_given?
+  def each_along_dim(dimen=0) 
+    return enum_for(:each_along_dim, dimen) unless block_given?
     dims = shape
-    shape.each_index { |i| dims[i] = 0...(shape[i]) unless i == dim }
-    0.upto(shape[dim]-1) do |i|
-      dims[dim] = i
+    shape.each_index { |i| dims[i] = 0...(shape[i]) unless i == dimen }
+    0.upto(shape[dimen]-1) do |i|
+      dims[dimen] = i
       yield self[*dims]
     end
   end
 
   ##
+  # call-seq:
+  #   reduce_along_dim() -> Enumerator
+  #   reduce_along_dim(dimen) -> Enumerator
+  #   reduce_along_dim(dimen, initial) -> Enumerator
+  #   reduce_along_dim(dimen, initial, dtype) -> Enumerator
+  #   reduce_along_dim() { |elem| block } -> NMatrix
+  #   reduce_along_dim(dimen) { |elem| block } -> NMatrix
+  #   reduce_along_dim(dimen, initial) { |elem| block } -> NMatrix
+  #   reduce_along_dim(dimen, initial, dtype) { |elem| block } -> NMatrix
+  #
   # Reduces an NMatrix using a supplied block over a specified dimension.
   # The block should behave the same way as for Enumerable#reduce.
   #
-  # @param [Integer] dim the dimension being reduced
+  # @param [Integer] dimen the dimension being reduced
   # @param [Numeric] initial the initial value for the reduction 
   #  (i.e. the usual parameter to Enumerable#reduce).  Supply nil or do not
   #  supply this argument to have it follow the usual Enumerable#reduce 
@@ -326,23 +342,23 @@ class NMatrix
   #  is the result of the reduction at that position along the specified
   #  dimension.
   #
-  def reduce_along_dim(dim=0, initial=nil, dtype=nil)
+  def reduce_along_dim(dimen=0, initial=nil, dtype=nil)
 
-    if dim > shape.size then
-      raise ArgumentError, "Requested dimension does not exist.  Requested: #{dim}, shape: #{shape}"
+    if dimen > shape.size then
+      raise ArgumentError, "Requested dimension does not exist.  Requested: #{dimen}, shape: #{shape}"
     end
 
-    return enum_for(:reduce_along_dim, dim, initial) unless block_given?
+    return enum_for(:reduce_along_dim, dimen, initial) unless block_given?
 
     new_shape = shape
-    new_shape[dim] = 1
+    new_shape[dimen] = 1
 
     first_as_acc = false
 
     if initial then
       acc = NMatrix.new(new_shape, initial, dtype || self.dtype)
     else
-      each_along_dim(dim) do |sub_mat|
+      each_along_dim(dimen) do |sub_mat|
         if sub_mat.is_a?(NMatrix) and dtype and dtype != self.dtype then
           acc = sub_mat.cast(self.stype, dtype)
         else
@@ -353,7 +369,7 @@ class NMatrix
       first_as_acc = true
     end
 
-    each_along_dim(dim) do |sub_mat|
+    each_along_dim(dimen) do |sub_mat|
       if first_as_acc then
         first_as_acc = false
         next
@@ -369,6 +385,9 @@ class NMatrix
 
 
   ##
+  # call-seq: 
+  #   integer_dtype?() -> Boolean
+  #
   # Checks if dtype is an integer type
   #
   def integer_dtype?
@@ -376,40 +395,53 @@ class NMatrix
   end
 
   ##
+  # call-seq:
+  #   mean() -> NMatrix
+  #   mean(dimen) -> NMatrix
+  #
   # Calculates the mean along the specified dimension.
   #
   # This will force integer types to float64 dtype.
   #
   # @see #reduce_along_dim
   #
-  def mean(dim=0)
+  def mean(dimen=0)
     reduce_dtype = nil
     if integer_dtype? then
       reduce_dtype = :float64
     end
-    reduce_along_dim(dim, 0.0, reduce_dtype) do |mean, sub_mat|
-      mean + sub_mat/shape[dim]
+    reduce_along_dim(dimen, 0.0, reduce_dtype) do |mean, sub_mat|
+      mean + sub_mat/shape[dimen]
     end
   end
 
   ##
+  # call-seq:
+  #   sum() -> NMatrix
+  #   sum(dimen) -> NMatrix
+  #
   # Calculates the sum along the specified dimension.
   #
   # @see #reduce_along_dim
-  def sum(dim=0)
-    reduce_along_dim(dim, 0.0) do |sum, sub_mat|
+  def sum(dimen=0)
+    reduce_along_dim(dimen, 0.0) do |sum, sub_mat|
       sum + sub_mat
     end
   end
 
 
   ##
+  # call-seq:
+  #   min() -> NMatrix
+  #   min(dimen) -> NMatrix
+  # 
+  #
   # Calculates the minimum along the specified dimension.
   #
   # @see #reduce_along_dim
   #
-  def min(dim=0)
-    reduce_along_dim(dim) do |min, sub_mat|
+  def min(dimen=0)
+    reduce_along_dim(dimen) do |min, sub_mat|
       if min.is_a? NMatrix then 
         min * (min <= sub_mat) + ((min)*0.0 + (min > sub_mat)) * sub_mat
       else
@@ -419,12 +451,16 @@ class NMatrix
   end
 
   ##
+  # call-seq:
+  #   max() -> NMatrix
+  #   max(dimen) -> NMatrix
+  #
   # Calculates the maximum along the specified dimension.
   #
   # @see #reduce_along_dim
   #
-  def max(dim=0)
-    reduce_along_dim(dim) do |max, sub_mat|
+  def max(dimen=0)
+    reduce_along_dim(dimen) do |max, sub_mat|
       if max.is_a? NMatrix then
         max * (max >= sub_mat) + ((max)*0.0 + (max < sub_mat)) * sub_mat
       else
@@ -435,35 +471,47 @@ class NMatrix
 
 
   ##
+  # call-seq:
+  #   variance() -> NMatrix
+  #   variance(dimen) -> NMatrix
+  #
   # Calculates the sample variance along the specified dimension.
   #
   # This will force integer types to float64 dtype.
   #
   # @see #reduce_along_dim
   #
-  def variance(dim=0)
+  def variance(dimen=0)
     reduce_dtype = nil
     if integer_dtype? then
       reduce_dtype = :float64
     end
-    m = mean(dim)
-    reduce_along_dim(dim, 0.0, reduce_dtype) do |var, sub_mat|
-      var + (m - sub_mat)*(m - sub_mat)/(shape[dim]-1)
+    m = mean(dimen)
+    reduce_along_dim(dimen, 0.0, reduce_dtype) do |var, sub_mat|
+      var + (m - sub_mat)*(m - sub_mat)/(shape[dimen]-1)
     end
   end
 
   ##
+  # call-seq:
+  #   std() -> NMatrix
+  #   std(dimen) -> NMatrix
+  #
+  #
   # Calculates the sample standard deviation along the specified dimension.
   #
   # This will force integer types to float64 dtype.
   #
   # @see #reduce_along_dim
   #
-  def std(dim=0)
-    variance(dim).map! { |e| Math.sqrt(e) }
+  def std(dimen=0)
+    variance(dimen).map! { |e| Math.sqrt(e) }
   end
 
   ##
+  # call-seq:
+  #   to_f() -> Float
+  #
   # Converts an nmatrix with a single element (but any number of dimensions)
   #  to a float.
   #
@@ -475,6 +523,10 @@ class NMatrix
   end
 
   ##
+  # call-seq:
+  #   map() -> Enumerator
+  #   map() { |elem| block } -> NMatrix
+  #
   # @see Enumerable#map
   #
   def map(&bl)
@@ -485,6 +537,10 @@ class NMatrix
   end
 
   ##
+  # call-seq:
+  #   map!() -> Enumerator
+  #   map!() { |elem| block } -> NMatrix
+  #
   # Maps in place.
   # @see #map
   #
@@ -512,6 +568,9 @@ class NMatrix
     end
 
     ##
+    # call-seq:
+    #   ones_like(nm) -> NMatrix
+    #
     # Creates a new matrix of ones with the same dtype and shape as the
     # provided matrix.
     #
@@ -523,6 +582,9 @@ class NMatrix
     end
 
     ##
+    # call-seq:
+    #   zeros_like(nm) -> NMatrix
+    #
     # Creates a new matrix of zeros with the same stype, dtype, and shape
     # as the provided matrix.
     #
