@@ -144,8 +144,13 @@
   * Added #yale_nd_row, #yale_nd_row_as_hash, #yale_nd_row_as_array,
     #yale_nd_row_as_set, #yale_nd_row_as_sorted_set, #yale_row,
     #yale_row_as_hash, #yale_row_as_array, #yale_row_as_set,
-    #yale_row_as_sorted_set to NMatrix::YaleFunctions in order to
-    speed up getting multiple items from some row of a Yale matrix
+    #yale_row_as_sorted_set, #yale_nd_row_size to NMatrix::YaleFunctions
+    in order to speed up getting multiple items from some row of a Yale
+    matrix
+
+  * Improved #yale_ija, #yale_a, #yale_d by allowing an optional index
+    argument, which returns a single array value instead of copying and
+    returning the entire array
 
   * Slicing a single row or column now returns an NVector instead
     of an NMatrix (does not yet work for n-dimensional matrices)

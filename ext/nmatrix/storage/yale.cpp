@@ -78,12 +78,12 @@ extern "C" {
 
   /* Ruby-accessible functions */
   static VALUE nm_size(VALUE self);
-  static VALUE nm_a(VALUE self);
-  static VALUE nm_d(VALUE self);
+  static VALUE nm_a(int argc, VALUE* argv, VALUE self);
+  static VALUE nm_d(int argc, VALUE* argv, VALUE self);
   static VALUE nm_lu(VALUE self);
   static VALUE nm_ia(VALUE self);
   static VALUE nm_ja(VALUE self);
-  static VALUE nm_ija(VALUE self);
+  static VALUE nm_ija(int argc, VALUE* argv, VALUE self);
 
   static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self);
   static VALUE nm_vector_insert(int argc, VALUE* argv, VALUE self);
@@ -1284,12 +1284,12 @@ void nm_init_yale_functions() {
 	 */
   cNMatrix_YaleFunctions = rb_define_module_under(cNMatrix, "YaleFunctions");
 
-  rb_define_method(cNMatrix_YaleFunctions, "yale_ija", (METHOD)nm_ija, 0);
-  rb_define_method(cNMatrix_YaleFunctions, "yale_a", (METHOD)nm_a, 0);
+  rb_define_method(cNMatrix_YaleFunctions, "yale_ija", (METHOD)nm_ija, -1);
+  rb_define_method(cNMatrix_YaleFunctions, "yale_a", (METHOD)nm_a, -1);
   rb_define_method(cNMatrix_YaleFunctions, "yale_size", (METHOD)nm_size, 0);
   rb_define_method(cNMatrix_YaleFunctions, "yale_ia", (METHOD)nm_ia, 0);
   rb_define_method(cNMatrix_YaleFunctions, "yale_ja", (METHOD)nm_ja, 0);
-  rb_define_method(cNMatrix_YaleFunctions, "yale_d", (METHOD)nm_d, 0);
+  rb_define_method(cNMatrix_YaleFunctions, "yale_d", (METHOD)nm_d, -1);
   rb_define_method(cNMatrix_YaleFunctions, "yale_lu", (METHOD)nm_lu, 0);
 
   rb_define_method(cNMatrix_YaleFunctions, "yale_nd_row", (METHOD)nm_nd_row, -1);
@@ -1649,42 +1649,64 @@ static VALUE nm_size(VALUE self) {
 /*
  * call-seq:
  *     yale_a -> Array
+ *     yale_d(index) -> ...
  *
  * Get the A array of a Yale matrix (which stores the diagonal and the LU portions of the matrix).
  */
-static VALUE nm_a(VALUE self) {
+static VALUE nm_a(int argc, VALUE* argv, VALUE self) {
+  VALUE idx;
+  rb_scan_args(argc, argv, "01", &idx);
+
   YALE_STORAGE* s = NM_STORAGE_YALE(self);
-
   size_t size = nm_yale_storage_get_size(s);
-  VALUE* vals = ALLOCA_N(VALUE, size);
 
-  for (size_t i = 0; i < size; ++i) {
-    vals[i] = rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype]*i, s->dtype).rval;
+  if (idx == Qnil) {
+    VALUE* vals = ALLOCA_N(VALUE, size);
+
+    for (size_t i = 0; i < size; ++i) {
+      vals[i] = rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype]*i, s->dtype).rval;
+    }
+    VALUE ary = rb_ary_new4(size, vals);
+
+    for (size_t i = size; i < s->capacity; ++i)
+      rb_ary_push(ary, Qnil);
+
+    return ary;
+  } else {
+    size_t index = FIX2INT(idx);
+    if (index >= size) rb_raise(rb_eRangeError, "out of range");
+
+    return rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype] * index, s->dtype).rval;
   }
-  VALUE ary = rb_ary_new4(size, vals);
-
-  for (size_t i = size; i < s->capacity; ++i)
-    rb_ary_push(ary, Qnil);
-
-  return ary;
 }
 
 
 /*
  * call-seq:
  *     yale_d -> Array
+ *     yale_d(index) -> ...
  *
  * Get the diagonal ("D") portion of the A array of a Yale matrix.
  */
-static VALUE nm_d(VALUE self) {
+static VALUE nm_d(int argc, VALUE* argv, VALUE self) {
+  VALUE idx;
+  rb_scan_args(argc, argv, "01", &idx);
+
   YALE_STORAGE* s = NM_STORAGE_YALE(self);
 
-  VALUE* vals = ALLOCA_N(VALUE, s->shape[0]);
+  if (idx == Qnil) {
+    VALUE* vals = ALLOCA_N(VALUE, s->shape[0]);
 
-  for (size_t i = 0; i < s->shape[0]; ++i) {
-    vals[i] = rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype]*i, s->dtype).rval;
+    for (size_t i = 0; i < s->shape[0]; ++i) {
+      vals[i] = rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype]*i, s->dtype).rval;
+    }
+    return rb_ary_new4(s->shape[0], vals);
+  } else {
+    size_t index = FIX2INT(idx);
+    if (index >= s->shape[0]) rb_raise(rb_eRangeError, "out of range");
+
+    return rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype] * index, s->dtype).rval;
   }
-  return rb_ary_new4(s->shape[0], vals);
 }
 
 /*
@@ -1760,26 +1782,38 @@ static VALUE nm_ja(VALUE self) {
 /*
  * call-seq:
  *     yale_ija -> Array
+ *     yale_ija(index) -> ...
  *
- * Get the IJA array of a Yale matrix.
+ * Get the IJA array of a Yale matrix (or a component of the IJA array).
  */
-static VALUE nm_ija(VALUE self) {
-  YALE_STORAGE* s = NM_STORAGE_YALE(self);
+static VALUE nm_ija(int argc, VALUE* argv, VALUE self) {
+  VALUE idx;
+  rb_scan_args(argc, argv, "01", &idx);
 
+  YALE_STORAGE* s = NM_STORAGE_YALE(self);
   size_t size = nm_yale_storage_get_size(s);
 
-  VALUE* vals = ALLOCA_N(VALUE, size);
+  if (idx == Qnil) {
 
-  for (size_t i = 0; i < size; ++i) {
-    vals[i] = rubyobj_from_cval_by_itype((char*)(s->ija) + ITYPE_SIZES[s->itype]*i, s->itype).rval;
+    VALUE* vals = ALLOCA_N(VALUE, size);
+
+    for (size_t i = 0; i < size; ++i) {
+      vals[i] = rubyobj_from_cval_by_itype((char*)(s->ija) + ITYPE_SIZES[s->itype]*i, s->itype).rval;
+    }
+
+   VALUE ary = rb_ary_new4(size, vals);
+
+    for (size_t i = size; i < s->capacity; ++i)
+      rb_ary_push(ary, Qnil);
+
+    return ary;
+
+  } else {
+    size_t index = FIX2INT(idx);
+    if (index >= size) rb_raise(rb_eRangeError, "out of range");
+
+    return rubyobj_from_cval_by_itype((char*)(s->ija) + ITYPE_SIZES[s->itype] * index, s->itype).rval;
   }
-
- VALUE ary = rb_ary_new4(size, vals);
-
-  for (size_t i = size; i < s->capacity; ++i)
-    rb_ary_push(ary, Qnil);
-
-  return ary;
 }
 
 
