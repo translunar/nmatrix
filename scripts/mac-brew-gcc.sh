@@ -1,5 +1,5 @@
 #!/bin/bash
-VERSION="4.7.1"
+VERSION="4.7.2"
 PREFIX="/usr/gcc-${VERSION}"
 LANGUAGES="c,c++,fortran"
 MAKE="make -j 4"

@@ -74,7 +74,9 @@ describe NMatrix do
       (@n/m).should == r
     end
 
-    it "should perform element-wise modulo"
+    it "should perform element-wise modulo" do
+      pending "% operator not yet implemented for matrices"
+    end
 
     it "should handle element-wise equality (=~)" do
       (@n =~ @m).cast(:dense, :byte).should == NMatrix.new(:dense, 2, [0, 1, 1, 0], :byte)
@@ -131,6 +133,7 @@ describe NMatrix do
       end
 
       it "modulo" do
+        pending "% operator not yet implemented"
         r = @n % @m
         r.should == NMatrix.new(:dense, [2,2], [0, 1, 2, 3], :int64)
       end

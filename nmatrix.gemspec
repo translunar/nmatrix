@@ -22,12 +22,14 @@ such as for driving a car or flying a space shuttle, you
 may wish to choose other software (for now).
 
 NMatrix requires a C compiler, and has been tested only
-with GCC 4.6.1. We are happy to accept contributions
+with GCC 4.6+. We are happy to accept contributions
 which improve the portability of this project.
 
 Also required is ATLAS. Most Linux distributions and Mac
 versions include ATLAS, but you may wish to compile it
-yourself.
+yourself. Rumor has it that the Ubuntu/Debian apt package
+for ATLAS WILL NOT WORK with NMatrix. Please install it
+manually if you are using apt.
 
 More explicit instructions for NMatrix and SciRuby should
 be available on the SciRuby website, sciruby.com, or
@@ -47,7 +49,7 @@ EOF
 
   gem.required_ruby_version = '>= 1.9.2'
 
-  #gem.add_dependency 'csquare', '~>0.0.2'
+  gem.add_dependency 'rdoc', '>=4.0.1'
 
   gem.add_development_dependency 'rake', '~>0.9'
   gem.add_development_dependency 'bundler'

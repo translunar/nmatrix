@@ -2,9 +2,11 @@ History.txt
 Manifest.txt
 README.rdoc
 LICENSE.txt
+CONTRIBUTING.md
 Rakefile
 Gemfile
 Guardfile
+nmatrix.gemspec
 spec/io_spec.rb
 spec/math_spec.rb
 spec/nmatrix_spec.rb
@@ -28,6 +30,7 @@ lib/nmatrix/nmatrix.rb
 lib/nmatrix/nvector.rb
 lib/nmatrix/shortcuts.rb
 lib/nmatrix/version.rb
+lib/nmatrix/yale_functions.rb
 ext/nmatrix/data/complex.h
 ext/nmatrix/data/data.cpp
 ext/nmatrix/data/data.h

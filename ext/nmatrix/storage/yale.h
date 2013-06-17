@@ -9,8 +9,8 @@
 //
 // == Copyright Information
 //
-// SciRuby is Copyright (c) 2010 - 2012, Ruby Science Foundation
-// NMatrix is Copyright (c) 2012, Ruby Science Foundation
+// SciRuby is Copyright (c) 2010 - 2013, Ruby Science Foundation
+// NMatrix is Copyright (c) 2013, Ruby Science Foundation
 //
 // Please see LICENSE.txt for additional copyright notices.
 //
@@ -86,7 +86,7 @@ extern "C" {
   // Lifecycle //
   ///////////////
 
-  YALE_STORAGE* nm_yale_storage_create(nm::dtype_t dtype, size_t* shape, size_t dim, size_t init_capacity);
+  YALE_STORAGE* nm_yale_storage_create(nm::dtype_t dtype, size_t* shape, size_t dim, size_t init_capacity, nm::itype_t itype);
   YALE_STORAGE* nm_yale_storage_create_from_old_yale(nm::dtype_t dtype, size_t* shape, void* ia, void* ja, void* a, nm::dtype_t from_dtype);
   YALE_STORAGE*	nm_yale_storage_create_merged(const YALE_STORAGE* merge_template, const YALE_STORAGE* other);
   void          nm_yale_storage_delete(STORAGE* s);
@@ -101,6 +101,9 @@ extern "C" {
   void* nm_yale_storage_get(STORAGE* s, SLICE* slice);
   void*	nm_yale_storage_ref(STORAGE* s, SLICE* slice);
   char  nm_yale_storage_set(STORAGE* storage, SLICE* slice, void* v);
+
+  //char  nm_yale_storage_vector_insert(YALE_STORAGE* s, size_t pos, size_t* js, void* vals, size_t n, bool struct_only, nm::dtype_t dtype, nm::itype_t itype);
+  //void  nm_yale_storage_increment_ia_after(YALE_STORAGE* s, size_t ija_size, size_t i, size_t n);
 
   size_t  nm_yale_storage_get_size(const YALE_STORAGE* storage);
 
@@ -151,7 +154,7 @@ extern "C" {
    * because UINTX_MAX and UINTX_MAX-1 are both reserved for sparse matrix
    * multiplication.
    */
-  inline nm::itype_t nm_yale_storage_itype(const YALE_STORAGE* s) {
+  inline nm::itype_t nm_yale_storage_default_itype(const YALE_STORAGE* s) {
     return nm_yale_storage_itype_by_shape(s->shape);
   }
 

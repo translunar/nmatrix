@@ -25,8 +25,7 @@
 # Basic tests for NMatrix.
 #
 
-# Can we use require_relative here instead?
-require File.join(File.dirname(__FILE__), "spec_helper.rb")
+require File.dirname(__FILE__) + "/spec_helper.rb"
 
 describe NMatrix do
 
@@ -186,7 +185,7 @@ describe NMatrix do
         c = dtype == :object ? "Ruby object" : "non-Ruby object"
         context c do
           it "allows iteration of matrices" do
-            #pending("yale and list not implemented yet") unless storage_type == :dense
+            pending("yale and list not implemented yet") unless storage_type == :dense
             n = NMatrix.new(:dense, [3,3], [1,2,3,4,5,6,7,8,9], dtype)
             n.each do |x|
               puts x
@@ -194,11 +193,7 @@ describe NMatrix do
           end
 
           it "allows storage-based iteration of matrices" do
-            #pending("list not implemented yet") if storage_type == :list
             n = storage_type == :yale ? NMatrix.new(storage_type, [3,3], dtype) : NMatrix.new(storage_type, [3,3], 0, dtype)
-            if not n
-              n = NMatrix.new(storage_type, [3,3], dtype)
-            end
             n[0,0] = 1
             n[0,1] = 2
             n[2,2] = 3
@@ -208,13 +203,6 @@ describe NMatrix do
             is = []
             js = []
             n.each_stored_with_indices do |v,i,j|
-              if storage_type == :list
-                puts "EACH_STORED_WITH_INDICES"
-                puts "n"
-                puts n.pp
-                puts "v, i, j"
-                puts "V: #{v}, I: #{i}, J: #{j}"
-              end
               values << v
               is << i
               js << j
@@ -225,16 +213,13 @@ describe NMatrix do
               is.should     == [0,1,2,0,2]
               js.should     == [0,1,2,1,1]
             elsif storage_type == :list
-              puts "TESTING STORAGE_TYPE :list on #each_stored_with_indices"
               values.should == [1,2,4,3]
               is.should     == [0,0,2,2]
-              js.should     == [0,1,2,1]
+              js.should     == [0,1,1,2]
             elsif storage_type == :dense
               values.should == [1,2,0,0,0,0,0,4,3]
               is.should     == [0,0,0,1,1,1,2,2,2]
               js.should     == [0,1,2,0,1,2,0,1,2]
-            else 
-              values.should_not be_empty()
             end
           end
         end
@@ -305,4 +290,166 @@ describe NMatrix do
     rescue StopIteration
     end
   end
+
+  context "dense" do
+    it "should return the matrix being iterated over when each is called with a block" do
+      a = NMatrix.new(2, 1)
+      val = (a.each { })
+      val.should eq a
+    end
+    
+    it "should return the matrix being iterated over when each_stored_with_indices is called with a block" do
+      a = NMatrix.new(2,1)
+      val = (a.each_stored_with_indices { })
+      val.should eq a
+    end
+  end
+
+  [:list, :yale].each do |storage_type|
+    context storage_type do
+      it "should return the matrix being iterated over when each_stored_with_indices is called with a block" do
+        n = NMatrix.new(storage_type, [2,3], storage_type == :yale ? :float64 : 1.1)
+        val = (n.each_stored_with_indices { })
+        val.should eq n
+      end
+
+      it "should return an enumerator when each_stored_with_indices is called without a block" do
+        n = NMatrix.new(storage_type, [2,3], storage_type == :yale ? :float64 : 1.1)
+        val = n.each_stored_with_indices
+        val.should be_a Enumerator
+      end
+
+    end
+  end
+      
+  it "should iterate through element 256 without a segfault" do
+    t = NVector.random(256)
+    t.each { |x| x + 0 }
+  end
+
+  context "mapping and reduction related functions" do 
+
+    before :each do
+      @nm_1d = N[5.0,0.0,1.0,2.0,3.0]
+      @nm_2d = N[[0.0,1.0],[2.0,3.0]]
+    end
+
+    it "behaves like Enumerable#reduce with no argument to reduce" do
+      @nm_1d.reduce_along_dim(0) { |acc, el| acc + el }.to_f.should eq 11
+      @nm_2d.reduce_along_dim(1) { |acc, el| acc + el }.should eq N[[1, 5]]
+    end
+
+    it "should calculate the mean along the specified dimension" do
+      @nm_1d.mean.should eq N[2.2]
+      @nm_2d.mean.should eq N[[1.0,2.0]]
+    end
+
+    it "should calculate the minimum along the specified dimension" do 
+      @nm_1d.min.should eq N[0.0]
+      @nm_2d.min.should eq N[[0.0, 1.0]]
+      @nm_2d.min(1).should eq N[[0.0], [2.0]]
+    end
+
+    it "should calculate the maximum along the specified dimension" do
+      @nm_1d.max.should eq N[5.0]
+      @nm_2d.max.should eq N[[2.0, 3.0]]
+    end
+
+    it "should calculate the variance along the specified dimension" do
+      @nm_1d.variance.should eq N[3.7]
+      @nm_2d.variance(1).should eq N[[0.5], [0.5]]
+    end
+
+    it "should calculate the sum along the specified dimension" do
+      @nm_1d.sum.should eq N[11]
+      @nm_2d.sum.should eq N[[2], [4]]
+    end
+
+    it "should calculate the standard deviation along the specified dimension" do
+      @nm_1d.std.should eq N[Math.sqrt(3.7)]
+      @nm_2d.std(1).should eq N[[Math.sqrt(0.5)], [Math.sqrt(0.5)]]
+    end
+
+    it "should raise an ArgumentError when any invalid dimension is provided" do 
+      expect { @nm_1d.mean(3) }.to raise_exception(ArgumentError)
+    end
+
+    it "should convert to float if it contains only a single element" do 
+      N[4.0].to_f.should eq 4.0
+      N[[[[4.0]]]].to_f.should eq 4.0
+    end
+
+    it "should raise an index error if it contains more than a single element" do
+      expect { @nm_1d.to_f }.to raise_error(IndexError)
+    end
+
+    it "should map a block to all elements" do 
+      @nm_1d.map { |e| e ** 2 }.should eq N[25.0,0.0,1.0,4.0,9.0]
+      @nm_2d.map { |e| e ** 2 }.should eq N[[0.0,1.0],[4.0,9.0]]
+    end
+
+    it "should map! a block to all elements in place" do
+      fct = Proc.new { |e| e ** 2 }
+      expected1 = @nm_1d.map &fct
+      expected2 = @nm_2d.map &fct
+      @nm_1d.map! &fct
+      @nm_1d.should eq expected1
+      @nm_2d.map! &fct
+      @nm_2d.should eq expected2
+    end
+
+    it "should return an enumerator for map without a block" do
+      @nm_1d.map.should be_a Enumerator
+    end
+
+    it "should return an enumerator for reduce without a block" do
+      @nm_1d.reduce_along_dim(0).should be_a Enumerator
+    end
+
+    it "should return an enumerator for each_along_dim without a block" do
+      @nm_1d.each_along_dim(0).should be_a Enumerator
+    end
+
+    it "should iterate correctly for map without a block" do
+      en = @nm_1d.map
+      en.each { |e| e**2 }.should eq @nm_1d.map { |e| e**2 }
+      en = @nm_2d.map
+      en.each { |e| e**2 }.should eq @nm_2d.map { |e| e**2 }
+    end
+
+    it "should iterate correctly for reduce without a block" do
+      en = @nm_1d.reduce_along_dim(0, 1.0)
+      en.each { |a, e| a+e }.to_f.should eq 12
+      en = @nm_2d.reduce_along_dim(1, 1.0)
+      en.each { |a, e| a+e }.should eq N[[2.0],[6.0]]
+    end
+
+    it "should iterate correctly for each_along_dim without a block" do
+      res = NMatrix.zeros_like(@nm_1d[0...1])
+      en = @nm_1d.each_along_dim(0)
+      en.each { |e| res += e }
+      res.to_f.should eq 11
+
+      res = NMatrix.zeros_like (@nm_2d[0...2, 0])
+      en = @nm_2d.each_along_dim(1)
+      en.each { |e| res += e }
+      res.should eq N[[1.0], [5.0]]
+    end
+
+    context "_like constructors" do
+
+      it "should create an nmatrix of ones with dimensions and type the same as its argument" do
+        NMatrix.ones_like(@nm_1d).should eq N[1.0, 1.0, 1.0, 1.0, 1.0]
+        NMatrix.ones_like(@nm_2d).should eq N[[1.0, 1.0], [1.0, 1.0]]
+      end
+
+      it "should create an nmatrix of zeros with dimensions and type the same as its argument" do 
+        NMatrix.zeros_like(@nm_1d).should eq N[0.0, 0.0, 0.0, 0.0, 0.0]
+        NMatrix.zeros_like(@nm_2d).should eq N[[0.0, 0.0], [0.0, 0.0]]
+      end
+
+    end
+
+  end
+
 end

@@ -9,8 +9,8 @@
 #
 # == Copyright Information
 #
-# SciRuby is Copyright (c) 2010 - 2012, Ruby Science Foundation
-# NMatrix is Copyright (c) 2012, Ruby Science Foundation
+# SciRuby is Copyright (c) 2010 - 2013, Ruby Science Foundation
+# NMatrix is Copyright (c) 2013, Ruby Science Foundation
 #
 # Please see LICENSE.txt for additional copyright notices.
 #
@@ -28,98 +28,63 @@
 
 # This is a specific type of NMatrix in which only one dimension is not 1.
 # Although it is stored as a dim-2, n x 1, matrix, it acts as a dim-1 vector
-# of size n. If the @orientation flag is set to :row, it is stored as 1 x n
-# instead of n x 1.
+# of size n. If the @orientation flag is set to :column, it is stored as n x 1
+# instead of 1 x n.
 class NVector < NMatrix
   #
   # call-seq:
-  #     new(length) -> NVector
-  #     new(length, values) -> NVector
-  #     new(length, values, dtype) -> NVector
+  #     new(shape) -> NVector
+  #     new(stype, shape) -> NVector
+  #     new(shape, init) -> NVector
+  #     new(:dense, shape, init) -> NVector
+  #     new(:list, shape, init) -> NVector
+  #     new(shape, init, dtype) -> NVector
+  #     new(stype, shape, init, dtype) -> NVector
+  #     new(stype, shape, dtype) -> NVector
   #
-  # Creates a new NVector.
+  # Creates a new NVector. See also NMatrix#initialize for a more detailed explanation of
+  # the arguments.
   #
   # * *Arguments* :
-  #   - +length+ -> Size of the vector.
-  #   - +values+ -> (optional) Initial values of the vector. Default is 0.
-  #   - +dtype+ -> (optional) Default is a guess from the +values+.
+  #   - +stype+ -> (optional) Storage type of the vector (:list, :dense, :yale). Defaults to :dense.
+  #   - +shape+ -> Shape of the vector. Accepts [n,1], [1,n], or n, where n is a Fixnum.
+  #   - +init+ -> (optional) Yale: capacity; List: default value (0); Dense: initial value or values (uninitialized by default).
+  #   - +dtype+ -> (optional if +init+ provided) Data type stored in the vector. For :dense and :list, can be inferred from +init+.
   # * *Returns* :
   #   -
   #
-	def initialize(length, *args)
-		super(:dense, [length, 1], *args)
-    orientation
+  def initialize(*args)
+    stype = args[0].is_a?(Symbol) ? args.shift : :dense
+    shape = args[0].is_a?(Array) ? args.shift  : [1,args.shift]
+
+    if shape.size != 2 || !shape.include?(1) || shape == [1,1]
+      raise(ArgumentError, "shape must be a Fixnum or an Array of positive Fixnums where exactly one value is 1")
+    end
+
+    super(stype, shape, *args)
   end
+
 
   #
   # call-seq:
   #     orientation -> Symbol
   #
-	# Orientation defaults to column (e.g., [3,1] is a column of length 3). It
-	# may also be row, e.g., for [1,5].
+  # Orientation defaults to row (e.g., [1,3] is a row of length 3). It
+  # may also be column, e.g., for [5,1].
   #
-	def orientation
-		@orientation ||= :column
-	end
+  def orientation
+    shape[0] == 1 ? :row : :column
+  end
 
-  #
-  # call-seq:
-  #     transpose -> NVector
-  #
-  # Returns a transposed copy of the vector.
-  #
-  # * *Returns* :
-  #   - NVector containing the transposed vector.
-  #
-	def transpose
-		t = super()
-    t.flip!
-	end
+  # Override NMatrix#each_row and #each_column
+  def each_column(get_by=:reference, &block) #:nodoc:
+    shape[0] == 1 ? self.each(&block) : (yield self)
+  end
+  def each_row(get_by=:reference, &block) #:nodoc:
+    shape[0] == 1 ? (yield self) : self.each(&block)
+  end
 
-  #
-  # call-seq:
-  #     transpose! -> NVector
-  #
-  # Transpose the vector in-place.
-  #
-  # * *Returns* :
-  #   - NVector containing the transposed vector.
-  #
-	def transpose!
-		super()
-		self.flip!
-	end
 
-  #
-  # call-seq:
-  #     multiply(m) -> 
-  #
-  # ...
-  #
-  # * *Arguments* :
-  #   - ++ ->
-  # * *Returns* :
-  #   -
-  #
-	def multiply(m)
-		t = super(m)
-    t.flip!
-	end
-
-  #
-  # call-seq:
-  #     multiply!(m) ->
-  #
-  # ...
-  #
-  # * *Arguments* :
-  #   - ++ ->
-  # * *Returns* :
-  #   -
-  #
-	def multiply!(m)
-		super().flip!
-	end
 
   #
   # call-seq:
@@ -135,11 +100,8 @@ class NVector < NMatrix
   #   u[0] + u[1]       # => 30
   #   u[0 .. 1].shape   # => [2, 1]
   #
-	def [](i)
-		case @orientation
-		when :column;	super(i, 0)
-		when :row;	  super(0, i)
-		end
+  def [](i)
+    shape[0] == 1 ? super(0, i) : super(i, 0)
   end
 
   #
@@ -148,12 +110,9 @@ class NVector < NMatrix
   #
   # Stores +value+ at position +index+.
   #
-	def []=(i, val)
-		case @orientation
-		when :column;	super(i, 0, val)
-		when :row;	  super(0, i, val)
-		end
-	end
+  def []=(i, val)
+    shape[0] == 1 ? super(0, i, val) : super(i, 0, val)
+  end
 
   #
   # call-seq:
@@ -161,36 +120,126 @@ class NVector < NMatrix
   #
   # Returns the dimension of a vector, which is 1.
   #
-	def dim; 1; end
+  def dim; 1; end
 
-  # shorthand for the dominant shape component
+  #
+  # call-seq:
+  #     size -> Fixnum
+  #
+  # Shorthand for the dominant shape component
   def size
     shape[0] > 1 ? shape[0] : shape[1]
   end
 
-	# TODO: Make this actually pretty.
-	def pretty_print #:nodoc:
-		dim = @orientation == :row ? 1 : 0
-		
-		puts (0...shape[dim]).inject(Array.new) { |a, i| a << self[i] }.join('  ')
-	end
-
-protected
-	def inspect_helper #:nodoc:
-		super() << "orientation:#{self.orientation}"
-	end
-	
   #
   # call-seq:
-  #     flip_orientation! -> NVector
+  #     max -> Numeric
   #
-  # Flip the orientation of the vector.
+  # Return the maximum element.
+  def max
+    max_so_far = self[0]
+    self.each do |x|
+      max_so_far = x if x > max_so_far
+    end
+    max_so_far
+  end
+
   #
-  # * *Returns* :
-  #   - NVector with orientation changed.
+  # call-seq:
+  #     min -> Numeric
   #
-	def flip_orientation!
-		returning(self) { @orientation = @orientation == :row ? :column : :row }
-	end
-	alias :flip! :flip_orientation!
+  # Return the minimum element.
+  def min
+    min_so_far = self[0]
+    self.each do |x|
+      min_so_far = x if x < min_so_far
+    end
+    min_so_far
+  end
+
+  #
+  # call-seq:
+  #     to_a -> Array
+  #
+  # Converts the NVector to a regular Ruby Array.
+  def to_a
+    if self.stype == :dense
+      ary = Array.new(size)
+      self.each.with_index { |v,idx| ary[idx] = v }
+    else
+      begin
+        ary = Array.new(size, self[0] - self[0]) # Fill the Array with 0s of the appropriate class
+      rescue NoMethodError  # handle Ruby Object arrays that might have nils instead of 0s
+        ary = Array.new(size)
+      end
+      self.each_stored_with_index { |v,idx| ary[idx] = v }
+    end
+    ary
+  end
+
+  #
+  # call-seq:
+  #     each_stored_with_index -> Enumerator
+  #
+  # Allow iteration across an NVector's stored values. See also NMatrix#each_stored_with_indices
+  #
+  def each_stored_with_index(&block)
+    return enum_for(:each_stored_with_index) unless block_given?
+    self.each_stored_with_indices do |v, i, j|
+      shape[0] == 1 ? yield(v,j) : yield(v,i)
+    end
+    self
+  end
+
+  #
+  # call-seq:
+  #     shuffle! -> ...
+  #     shuffle!(random: rng) -> ...
+  #
+  # Re-arranges the contents of an NVector.
+  #
+  # TODO: Write more efficient version for Yale, list.
+  def shuffle!(*args)
+    ary = self.to_a
+    ary.shuffle!(*args)
+    ary.each.with_index { |v,idx| self[idx] = v }
+    self
+  end
+
+
+  #
+  # call-seq:
+  #     shuffle -> ...
+  #     shuffle(rng) -> ...
+  #
+  # Re-arranges the contents of an NVector.
+  #
+  # TODO: Write more efficient version for Yale, list.
+  def shuffle(*args)
+    t = self.clone
+    t.shuffle!(*args)
+  end
+
+
+  # TODO: Make this actually pretty.
+  def pretty_print(q = nil) #:nodoc:
+    dimen = shape[0] == 1 ? 1 : 0
+
+    arr = (0...shape[dimen]).inject(Array.new){ |a, i| a << self[i] }
+
+    if q.nil?
+      puts "[" + arr.join("\n") + "]"
+    else
+      q.group(1, "", "\n") do
+        q.seplist(arr, lambda { q.text "  " }, :each)  { |v| q.text v.to_s }
+      end
+    end
+  end
+
+  def inspect #:nodoc:
+    original_inspect = super()
+    original_inspect = original_inspect[0...original_inspect.size-1]
+    original_inspect += " orientation:#{self.orientation}>"
+  end
+
 end
