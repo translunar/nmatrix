@@ -8,8 +8,8 @@
 #
 # == Copyright Information
 #
-# SciRuby is Copyright (c) 2010 - 2012, Ruby Science Foundation
-# NMatrix is Copyright (c) 2012, Ruby Science Foundation
+# SciRuby is Copyright (c) 2010 - 2013, Ruby Science Foundation
+# NMatrix is Copyright (c) 2013, Ruby Science Foundation
 #
 # Please see LICENSE.txt for additional copyright notices.
 #
@@ -26,12 +26,12 @@
 #
 
 # For some reason nmatrix.so ends up in a different place during gem build.
-if File.exist? 'lib/nmatrix/nmatrix.so'
-	# Development
-	require 'nmatrix/nmatrix.so'
+if File.exist? "lib/nmatrix/nmatrix.so"
+  # Development
+  require "nmatrix/nmatrix.so"
 else
-	# Gem
-	require 'nmatrix.so'
+  # Gem
+  require "nmatrix.so"
 end
 
 require 'nmatrix/nmatrix.rb'

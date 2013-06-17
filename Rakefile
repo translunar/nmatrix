@@ -26,7 +26,7 @@ Rake::GemPackageTask.new(gemspec).define
 
 desc "install the gem locally"
 task :install => [:package] do
-  sh %{gem install pkg/nmatrix-#{NMatrix::VERSION}}
+  sh %{gem install pkg/nmatrix-#{NMatrix::VERSION}.gem}
 end
 
 require 'rspec/core/rake_task'
@@ -43,7 +43,8 @@ VALGRIND_OPTIONS = [
         "--num-callers=50",
         "--error-limit=no",
         "--partial-loads-ok=yes",
-        "--undef-value-errors=no",
+        "--undef-value-errors=no" #,
+        #"--dsymutil=yes"
 ]
 VALGRIND_MEMORYFILL_OPTIONS = [
         "--freelist-vol=100000000",
@@ -97,31 +98,25 @@ namespace :spec do
 
   RSPEC_CMD = [ 'ruby', '-S', 'rspec', '-Ilib:ext', SPECDIR ]
 
-  RSPEC_CMD2 = [ 'ruby', '-S', 'rspec', '-Ilib:ext', SPECDIR + "list_each_stored_spec.rb" ]
   #desc "Run the spec for generator.rb"
   #task :generator do |task|
   #  run 'rspec spec/generator_spec.rb'
   #end
 
   desc "Run specs under GDB."
-  namespace :gdb  do 
-
-    ran = false
-    desc "Run list_each_stored_with_indices specs under GDB."
-    task :lists => [ :compile ] do |task|
+  task :gdb => [ :compile ] do |task|
           cmd = [ 'gdb' ] + GDB_OPTIONS
+    cmd += [ '--args' ]
+    cmd += RSPEC_CMD
+    run( *cmd )
+  end
+
+  desc "Run specs under cgdb."
+  task :cgdb => [ :compile ] do |task|
+    cmd = [ 'cgdb' ] + GDB_OPTIONS
           cmd += [ '--args' ]
-          cmd += RSPEC_CMD2
+          cmd += RSPEC_CMD
           run( *cmd )
-          ran = true
-    end
-    if ran
-      Rake::Task["compile"].invoke
-      cmd = [ 'gdb' ] + GDB_OPTIONS
-      cmd += [ '--args' ]
-      cmd += RSPEC_CMD
-      run( *cmd )
-    end
   end
 
   desc "Run specs under Valgrind."

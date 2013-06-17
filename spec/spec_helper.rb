@@ -36,7 +36,7 @@ RATIONAL_MATRIX43A_ARRAY = MATRIX43A_ARRAY.collect { |x| x.to_r }
 RATIONAL_MATRIX32A_ARRAY = MATRIX32A_ARRAY.collect { |x| x.to_r }
 
 def create_matrix(stype) #:nodoc:
-  m = NMatrix.new(stype, [3,3], 0, :int32)
+  m = stype == :yale ? NMatrix.new(stype, 3, :int32) : NMatrix.new(stype, [3,3], 0, :int32)
 
   m[0,0] = 0
   m[0,1] = 1
@@ -47,6 +47,23 @@ def create_matrix(stype) #:nodoc:
   m[2,0] = 6
   m[2,1] = 7
   m[2,2] = 8
+
+  m
+end
+
+def create_vector(stype) #:nodoc:
+  m = stype == :yale ? NVector.new(stype, 10, :int32) : NVector.new(stype, 10, 0, :int32)
+
+  m[0] = 1
+  m[1] = 2
+  m[2] = 3
+  m[3] = 4
+  m[4] = 5
+  m[5] = 6
+  m[6] = 7
+  m[7] = 8
+  m[8] = 9
+  m[9] = 10
 
   m
 end

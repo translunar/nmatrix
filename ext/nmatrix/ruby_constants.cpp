@@ -55,15 +55,14 @@ ID	nm_rb_real,
 		nm_rb_list,
 		nm_rb_yale,
 
+		nm_rb_row,
+		nm_rb_column,
 		nm_rb_add,
 		nm_rb_sub,
 		nm_rb_mul,
 		nm_rb_div,
-
-// Added by Ryan
     nm_rb_both,
     nm_rb_none,
-// Continuing
 
 		nm_rb_negate,
 
@@ -73,7 +72,9 @@ ID	nm_rb_real,
 		nm_rb_eql,
 		nm_rb_neql,
 		nm_rb_gte,
-		nm_rb_lte;
+		nm_rb_lte,
+
+		nm_rb_hash;
 
 VALUE cNMatrix,
       cNMatrix_IO,
@@ -127,6 +128,10 @@ void nm_init_ruby_constants(void) {
 	nm_rb_lower             = rb_intern("lower");
 	nm_rb_unit              = rb_intern("unit");
 	nm_rb_nonunit           = rb_intern("nonunit");
+	nm_rb_hash              = rb_intern("hash");
+
+	nm_rb_column            = rb_intern("column");
+	nm_rb_row               = rb_intern("row");
 
   //Added by Ryan
   nm_rb_both              = rb_intern("both");

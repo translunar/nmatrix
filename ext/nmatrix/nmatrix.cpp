@@ -9,8 +9,8 @@
 //
 // == Copyright Information
 //
-// SciRuby is Copyright (c) 2010 - 2012, Ruby Science Foundation
-// NMatrix is Copyright (c) 2012, Ruby Science Foundation
+// SciRuby is Copyright (c) 2010 - 2013, Ruby Science Foundation
+// NMatrix is Copyright (c) 2013, Ruby Science Foundation
 //
 // Please see LICENSE.txt for additional copyright notices.
 //
@@ -59,20 +59,6 @@ extern "C" {
  * Macros
  */
 
-/*
- * If no block is given, return an enumerator. This copied straight out of ruby's include/ruby/intern.h.
- *
- * rb_enumeratorize is located in enumerator.c.
- *
- *    VALUE rb_enumeratorize(VALUE obj, VALUE meth, int argc, VALUE *argv) {
- *      return enumerator_init(enumerator_allocate(rb_cEnumerator), obj, meth, argc, argv);
- *    }
- */
-#define RETURN_ENUMERATOR(obj, argc, argv) do {				            \
-	if (!rb_block_given_p())					                              \
-	  return rb_enumeratorize((obj), ID2SYM(rb_frame_this_func()),  \
-				    (argc), (argv));			                                \
-  } while (0)
 
 /*
  * Global Variables
@@ -428,51 +414,6 @@ static double get_time(void);
 ///////////////////
 
 void Init_nmatrix() {
-	
-	#ifdef RDOC
-		rb_define_singleton_method(cNMatrix, "upcast", nm_upcast, 2);
-		rb_define_singleton_method(cNMatrix, "itype_by_shape", nm_itype_by_shape, 1);	
-		rb_define_method(cNMatrix, "initialize", nm_init, -1);
-		rb_define_method(cNMatrix, "initialize_copy", nm_init_copy, 1);
-		rb_define_method(cNMatrix, "transpose", nm_init_transposed, 0);
-		rb_define_method(cNMatrix, "dtype", nm_dtype, 0);
-		rb_define_method(cNMatrix, "itype", nm_itype, 0);
-		rb_define_method(cNMatrix, "stype", nm_stype, 0);
-		rb_define_method(cNMatrix, "cast",  nm_init_cast_copy, 2);
-		rb_define_method(cNMatrix, "[]", nm_mref, -1);
-		rb_define_method(cNMatrix, "slice", nm_mget, -1);
-		rb_define_method(cNMatrix, "[]=", nm_mset, -1);
-		rb_define_method(cNMatrix, "is_ref?", nm_is_ref, 0);
-		rb_define_method(cNMatrix, "dimensions", nm_dim, 0);
-		rb_define_method(cNMatrix, "to_hash", nm_to_hash, 0);
-		rb_define_alias(cNMatrix,  "to_h",    "to_hash");
-		rb_define_method(cNMatrix, "shape", nm_shape, 0);
-		rb_define_method(cNMatrix, "det_exact", nm_det_exact, 0);
-		//rb_define_method(cNMatrix, "transpose!", nm_transpose_self, 0);
-		rb_define_method(cNMatrix, "complex_conjugate!", nm_complex_conjugate_bang, 0);
-		rb_define_method(cNMatrix, "each", nm_each, 0);
-		rb_define_method(cNMatrix, "each_stored_with_indices", nm_each_stored_with_indices, 0);
-		rb_define_method(cNMatrix, "==",	  nm_eqeq,				1);
-		rb_define_method(cNMatrix, "+",			nm_ew_add,			1);
-		rb_define_method(cNMatrix, "-",			nm_ew_subtract,	1);
-	  rb_define_method(cNMatrix, "*",			nm_ew_multiply,	1);
-		rb_define_method(cNMatrix, "/",			nm_ew_divide,		1);
-	  //rb_define_method(cNMatrix, "%",			nm_ew_mod,			1);
-		rb_define_method(cNMatrix, "=~", nm_ew_eqeq, 1);
-		rb_define_method(cNMatrix, "!~", nm_ew_neq, 1);
-		rb_define_method(cNMatrix, "<=", nm_ew_leq, 1);
-		rb_define_method(cNMatrix, ">=", nm_ew_geq, 1);
-		rb_define_method(cNMatrix, "<", nm_ew_lt, 1);
-		rb_define_method(cNMatrix, ">", nm_ew_gt, 1);
-		rb_define_method(cNMatrix, "dot",		nm_multiply,		1);
-		rb_define_method(cNMatrix, "factorize_lu", nm_factorize_lu, 0);
-		rb_define_method(cNMatrix, "symmetric?", nm_symmetric, 0);
-		rb_define_method(cNMatrix, "hermitian?", nm_hermitian, 0);
-		rb_define_method(cNMatrix, "capacity", nm_capacity, 0);
-		rb_define_alias(cNMatrix, "dim", "dimensions");
-		rb_define_alias(cNMatrix, "equal?", "eql?");
-	#endif
-	
 	///////////////////////
 	// Class Definitions //
 	///////////////////////
@@ -529,8 +470,8 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "is_ref?", (METHOD)nm_is_ref, 0);
 	rb_define_method(cNMatrix, "dimensions", (METHOD)nm_dim, 0);
 
-	rb_define_method(cNMatrix, "to_hash", (METHOD)nm_to_hash, 0);
-	rb_define_alias(cNMatrix,  "to_h",    "to_hash");
+	rb_define_protected_method(cNMatrix, "to_hash_c", (METHOD)nm_to_hash, 0); // handles list and dense, which are n-dimensional
+	//rb_define_alias(cNMatrix,  "to_h",    "to_hash");
 
 	rb_define_method(cNMatrix, "shape", (METHOD)nm_shape, 0);
 	rb_define_method(cNMatrix, "det_exact", (METHOD)nm_det_exact, 0);
@@ -730,7 +671,7 @@ static VALUE nm_upcast(VALUE self, VALUE t1, VALUE t2) {
 
 /*
  * call-seq:
- *     each -> 
+ *     each -> Enumerator
  *
  * Iterate over the matrix as you would an Enumerable (e.g., Array).
  *
@@ -763,7 +704,7 @@ static VALUE nm_each_stored_with_indices(VALUE nmatrix) {
   case nm::LIST_STORE:
     return nm_list_each_stored_with_indices(nm);
   default:
-    rb_raise(rb_eNotImpError, "not yet implemented for list matrices");
+    rb_raise(nm_eDataTypeError, "Not a proper storage type");
   }
 }
 
@@ -901,34 +842,51 @@ NMATRIX* nm_create(nm::stype_t stype, STORAGE* storage) {
  *
  * Create a new NMatrix.
  *
- * There are several ways to do this. At a minimum, dimensions and either a dtype or initial values are needed, e.g.,
+ * There are several ways to do this. In every case, the constructor needs to know the dtype, the dimensions, the stype,
+ * and either an initial capacity (:yale) or some number of initial values (:list needs exactly one initial value, but
+ * :dense can accept an array). In many cases, the parameters can be guessed from other parameters.
  *
- *     NMatrix.new(3, :int64)       # square 3x3 dense matrix
- *     NMatrix.new([3,4], :float32) # 3x4 matrix
- *     NMatrix.new(3, 0)            # 3x3 dense matrix initialized to all zeros
- *     NMatrix.new([3,3], [1,2,3])  # [[1,2,3],[1,2,3],[1,2,3]]
+ * Here is the full form for a :dense 3x4 :float64 matrix initialized to alternate the values 0.0, 1.0, and 2.0:
  *
- * NMatrix will try to guess the dtype from the first value in the initial values array.
+ *     NMatrix.new(:dense, [3,4], [0.0, 1.0, 2.0], :float64)
  *
- * You can also provide the stype prior to the dimensions. However, non-dense matrices cannot take initial values, and
- * require a dtype (e.g., :int64):
+ * Since :dense is the default, we can actually leave that out. Additionally, the constructor will parse 0.0 and
+ * interpret that to be a :float64. So we can actually short-hand this as follows:
  *
- *     NMatrix.new(:yale, [4,3], :int64)
- *     NMatrix.new(:list, 5, :rational128)
+ *     NMatrix.new([3,4], [0.0,1,2])
  *
- * For Yale, you can also give an initial size for the non-diagonal component of the matrix:
+ * Note that :list and :yale matrices will not accept a default value array. For list storage, a single default value
+ * is permissible, which will be treated as the background for the sparse matrix and defaults to 0:
  *
- *     NMatrix.new(:yale, [4,3], 2, :int64)
+ *     NMatrix.new(:list, [3,4], 0)     # standard :int64 sparse matrix
+ *     NMatrix.new(:list, [2,3], 1.0)   # :float64 sparse matrix: [[1,1,1],[1,1,1]] (no storage used)
+ *     NMatrix.new(:list, [3,4], [0,1]) # undefined behavior, will probably fill matrix with 0. Avoid this.
  *
- * Finally, you can be extremely specific, and define a matrix very exactly:
+ * For Yale storage, the default value must always be 0. Thus, if you provide an initial value, it will be interpreted
+ * as the initial matrix capacity.
  *
- *     NMatrix.new(:dense, [2,2,2], [0,1,2,3,4,5,6,7], :int8)
+ *     NMatrix.new(:yale, [4,3], :rational128) # Use default initial capacity. Most common.
+ *     NMatrix.new(:yale, [3,4], 1000) # Error! Needs a dtype!
+ *     NMatrix.new(:yale, [3,4], 1000, :int64) # Silly! Why would a 3x4 sparse matrix need storage space of 1,000?
+ *     NMatrix.new(:yale, [3,4], 0.0, :float64) # Totally ignores non-sensical 3rd arg and creates 7 storage instead.
+ *     NMatrix.new(:yale, [3,4], 8, :rational128) # Initial capacity of 8 rationals.
  *
- * There is one additional constructor for advanced users, which takes seven arguments and is only for creating Yale matrices
- * with known IA, JA, and A arrays. This is used primarily internally for IO, e.g., reading Matlab matrices, which are
- * stored in old Yale format.
+ * That leaves only two other notes. First of all, if your matrix is square, you don't need to type [3,3] for 3x3.
+ * Instead, just do 3:
  *
- * Just be careful! There are no overflow warnings in NMatrix.
+ *     NMatrix.new(3, [0,1,2], :rational128)  # dense 3x3 rational matrix consisting of columns of 0s, 1s, and 2s
+ *
+ * Secondly, if you create a dense matrix without initial values, you may see unpredictable results! It'll fill the
+ * matrix with whatever is already in memory, not with zeros.
+ *
+ *     NMatrix.new(:dense, 4, :int64)
+ *        # => [8, 140486578196280, 0, 0]  [0, 0, 0, 0]  [0, 0, 0, 140486608794928]  [140486577962496, -4294967280, 1, 140734734392208]
+ *
+ * There is one additional constructor for advanced users, which takes seven arguments and is only for creating Yale
+ * matrices with known IA, JA, and A arrays. This is used primarily internally for IO, e.g., reading Matlab matrices,
+ * which are stored in old Yale (not our Yale) format. But be careful; there are no overflow warnings. All of these
+ * constructors are defined for power-users. Everyone else should probably resort to the shortcut functions defined in
+ * shortcuts.rb.
  */
 static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
 
@@ -1023,7 +981,7 @@ static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
   		break;
   		
   	case nm::YALE_STORE:
-  		nmatrix->storage = (STORAGE*)nm_yale_storage_create(dtype, shape, dim, init_cap);
+  		nmatrix->storage = (STORAGE*)nm_yale_storage_create(dtype, shape, dim, init_cap, nm::UINT8);
   		nm_yale_storage_init((YALE_STORAGE*)(nmatrix->storage));
   		break;
   }
@@ -1037,7 +995,7 @@ static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
  * 
  * Create a Ruby Hash from an NMatrix.
  *
- * Currently only works for list storage.
+ * This is an internal C function which handles list stype only.
  */
 static VALUE nm_to_hash(VALUE self) {
   if (NM_STYPE(self) != nm::LIST_STORE) {
@@ -1361,7 +1319,7 @@ static VALUE nm_read(int argc, VALUE* argv, VALUE self) {
     f.read(reinterpret_cast<char*>(&ndnz),     sizeof(uint32_t));
     f.read(reinterpret_cast<char*>(&length),   sizeof(uint32_t));
 
-    s = nm_yale_storage_create(dtype, shape, dim, length); // set length as init capacity
+    s = nm_yale_storage_create(dtype, shape, dim, length, itype); // set length as init capacity
 
     read_padded_yale_elements(f, reinterpret_cast<YALE_STORAGE*>(s), length, symm, dtype, itype);
   } else {
@@ -1446,7 +1404,7 @@ static VALUE nm_mget(int argc, VALUE* argv, VALUE self) {
 
 /*
  * call-seq:
- *     matrix[indexes] -> ...
+ *     matrix[indices] -> ...
  *
  * Access the contents of an NMatrix at given coordinates by reference.
  *
@@ -1679,7 +1637,13 @@ static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLIC
       NMATRIX* mat = ALLOC(NMATRIX);
       mat->stype = NM_STYPE(self);
       mat->storage = (STORAGE*)((*slice_func)( NM_STORAGE(self), slice ));
-      result = Data_Wrap_Struct(cNMatrix, mark_table[mat->stype], delete_func, mat);
+
+      // Do we want an NVector instead of an NMatrix?
+      VALUE klass = cNMatrix, orient = Qnil;
+      // FIXME: Generalize for n dimensional slicing somehow
+      if (mat->storage->shape[0] == 1 || mat->storage->shape[1] == 1) klass  = cNVector;
+
+      result = Data_Wrap_Struct(klass, mark_table[mat->stype], delete_func, mat);
     }
 
     free(slice);
@@ -1687,7 +1651,7 @@ static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLIC
   } else if (NM_DIM(self) < (size_t)(argc)) {
     rb_raise(rb_eArgError, "Coordinates given exceed number of matrix dimensions");
   } else {
-    rb_raise(rb_eNotImpError, "This type slicing not supported yet");
+    rb_raise(rb_eNotImpError, "This type of slicing not supported yet");
   }
 
   return result;
@@ -1704,7 +1668,6 @@ static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
 		nm_dense_storage_ew_op,
 		nm_list_storage_ew_op,
 		nm_yale_storage_ew_op
-//		NULL
 	};
 	
 	NMATRIX *result = ALLOC(NMATRIX), *left;
@@ -1747,7 +1710,9 @@ static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
     }
   }
 
-	return Data_Wrap_Struct(cNMatrix, mark[result->stype], nm_delete, result);
+	VALUE result_val = Data_Wrap_Struct(CLASS_OF(left_val), mark[result->stype], nm_delete, result);
+
+	return result_val;
 }
 
 /*

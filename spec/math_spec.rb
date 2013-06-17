@@ -50,13 +50,17 @@ describe "math" do
       it "should correctly invert a matrix" do
         a = NMatrix.new(:dense, 3, [1,0,4,1,1,6,-3,0,-10], dtype)
         b = NMatrix.new(:dense, 3, [-5,0,-2,-4,1,-1,1.5,0,0.5], dtype)
-        a.invert!
+        begin
+          a.invert!
+        rescue NotImplementedError => e
+          pending e.to_s
+        end
         a.should == b
       end
     end
   end
 
-   # TODO: Get it working with ROBJ too
+  # TODO: Get it working with ROBJ too
   [:byte,:int8,:int16,:int32,:int64,:float32,:float64,:rational64,:rational128].each do |left_dtype|
     [:byte,:int8,:int16,:int32,:int64,:float32,:float64,:rational64,:rational128].each do |right_dtype|
 
@@ -125,7 +129,7 @@ describe "math" do
         #STDERR.puts "2"
         n = NMatrix.new([4,3], [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0], left_dtype)
 
-        m = NVector.new(3, [2.0, 1.0, 0.0], right_dtype)
+        m = NVector.new(3, [2.0, 1.0, 0.0], right_dtype).transpose
 
         m.shape[0].should == 3
         m.shape[1].should == 1
@@ -148,5 +152,4 @@ describe "math" do
       end
     end
   end
-
 end

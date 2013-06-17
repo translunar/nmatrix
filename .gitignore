@@ -15,6 +15,9 @@ tmp/
 test.c
 spec/*.mtx
 *.so
+*.bundle
+*.bundle.dSYM
+*.log
 /tags
 *.gem
 
@@ -25,3 +28,5 @@ ext/nmatrix/**/*.o
 ext/nmatrix/Makefile
 ext/nmatrix/**/Makefile
 ext/nmatrix/nmatrix_config.h
+pkg/
+.autotest

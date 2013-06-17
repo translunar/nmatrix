@@ -70,6 +70,28 @@ describe NMatrix do
       n.yale_d.should == [0.2, 0.1]
     end
 
+    it "gets non-diagonal rows as hashes" do
+      n = NMatrix.new(:yale, [4,6], :float64)
+      n.extend(NMatrix::YaleFunctions)
+      n[0,0] = 0.1
+      n[0,2] = 0.2
+      n[0,3] = 0.3
+      n[1,5] = 0.4
+      h = n.yale_nd_row(0, :hash)
+      h.should == {2 => 0.2, 3 => 0.3}
+    end
+
+    it "gets non-diagonal occupied column indices for a given row" do
+      n = NMatrix.new(:yale, [4,6], :float64)
+      n.extend(NMatrix::YaleFunctions)
+      n[0,0] = 0.1
+      n[0,2] = 0.2
+      n[0,3] = 0.3
+      n[1,5] = 0.4
+      a = n.yale_nd_row(0, :array)
+      a.should == [2,3]
+    end
+
     it "does not resize until necessary" do
       n = NMatrix.new(:yale, [2,3], :float64)
       n.extend(NMatrix::YaleFunctions)
@@ -105,6 +127,23 @@ describe NMatrix do
       n.yale_ia.should == [3,4,6]
       n.yale_ja.should == [1,0,2,nil]
       n.yale_lu.should == [0.2, 0.3, 0.4, nil]
+    end
+
+    it "resizes without erasing values" do
+      require 'yaml'
+
+      associations = File.open('spec/nmatrix_yale_resize_test_associations.yaml') { |y| YAML::load(y) }
+
+      n = NMatrix.new(:yale, [618, 2801], associations.size, :byte)
+
+      associations.each_pair do |j,i|
+        n[i,j] = 1
+        n[i,j].should be(1), "Value at #{i},#{j} not inserted correctly!"
+      end
+
+      associations.each_pair do |j,i|
+        n[i,j].should be(1), "Value at #{i},#{j} erased during resize!"
+      end
     end
 
     it "sets values within rows" do
@@ -227,6 +266,14 @@ describe NMatrix do
       c.yale_ija.reject { |i| i.nil? }.should == [5,8,9,9,11,1,2,3,3,1,2]
       c.yale_a.reject { |i| i.nil? }.should == [1.0, -16.0, 0.0, 0.0, 0.0, 4.0, 8.0, -16.0, -16.0, 16.0, 8.0]
 
+    end
+
+    it "dots two vectors" do
+      pending "causes segmentation fault"
+      n = NVector.new(:yale, [8,1], :int64)
+      m = NVector.new(:yale, [1,8], :int64)
+      n.dot(m)
+      m.dot(n)
     end
 
     it "transposes" do

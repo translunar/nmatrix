@@ -9,8 +9,8 @@
 //
 // == Copyright Information
 //
-// SciRuby is Copyright (c) 2010 - 2012, Ruby Science Foundation
-// NMatrix is Copyright (c) 2012, Ruby Science Foundation
+// SciRuby is Copyright (c) 2010 - 2013, Ruby Science Foundation
+// NMatrix is Copyright (c) 2013, Ruby Science Foundation
 //
 // Please see LICENSE.txt for additional copyright notices.
 //
@@ -57,6 +57,9 @@ extern ID nm_rb_real,
 					nm_rb_dense,
 					nm_rb_list,
 					nm_rb_yale,
+
+          nm_rb_row,
+          nm_rb_column,
 		
 					nm_rb_add,
 					nm_rb_sub,
@@ -71,7 +74,9 @@ extern ID nm_rb_real,
 					nm_rb_eql,
 					nm_rb_neql,
 					nm_rb_gte,
-					nm_rb_lte;
+					nm_rb_lte,
+
+					nm_rb_hash;
 
 extern VALUE	cNMatrix,
               cNMatrix_IO,
