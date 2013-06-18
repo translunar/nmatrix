@@ -967,11 +967,11 @@ static char vector_insert_resize(YALE_STORAGE* s, size_t current_size, size_t po
 
   // Copy all values subsequent to the insertion site to the new IJA and new A, leaving room (size n) for insertion.
   if (struct_only) {
-    for (size_t i = pos; i < current_size - pos + n - 1; ++i) {
+    for (size_t i = pos; i < current_size; ++i) {
       new_ija[i+n] = old_ija[i];
     }
   } else {
-    for (size_t i = pos; i < current_size - pos + n - 1; ++i) {
+    for (size_t i = pos; i < current_size; ++i) {
       new_ija[i+n] = old_ija[i];
       new_a[i+n] = old_a[i];
     }
