@@ -49,3 +49,20 @@ def create_matrix(stype) #:nodoc:
 
   m
 end
+
+def create_vector(stype) #:nodoc:
+  m = stype == :yale ? NVector.new(stype, 10, :int32) : NVector.new(stype, 10, 0, :int32)
+
+  m[0] = 1
+  m[1] = 2
+  m[2] = 3
+  m[3] = 4
+  m[4] = 5
+  m[5] = 6
+  m[6] = 7
+  m[7] = 8
+  m[8] = 9
+  m[9] = 10
+
+  m
+end

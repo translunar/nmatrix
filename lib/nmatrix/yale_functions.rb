@@ -31,6 +31,14 @@
 
 module NMatrix::YaleFunctions
   # call-seq:
+  #     yale_nd_row_size(i) -> Fixnum
+  #
+  # Returns the size of a given non-diagonal row.
+  def yale_nd_row_size i
+    yale_ija(i+1) - yale_ija(i)
+  end
+
+  # call-seq:
   #     yale_nd_row_as_array -> Array
   #
   # Returns the non-diagonal column indices which are stored in a given row.

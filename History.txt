@@ -126,23 +126,49 @@
 
 === 0.0.5 / 2013-??-??
 
-* No major enhancements
+* 3 major enhancements
 
-* 3 minor enhancements
+  * NVector orientation is now controlled by its shape, not by the
+    @orientation property
 
-  * Added yale_vector_insert to NMatrix::YaleFunctions, to speed up
+  * NVector default orientation is now a row vector rather than a
+    column, as this is more efficient for Yale storage
+
+  * NVector objects may now be created with dtypes other than dense
+
+* 7 minor enhancements
+
+  * Added #yale_vector_insert to NMatrix::YaleFunctions, to speed up
     insertion of multiple items into a Yale matrix
 
-  * Added yale_nd_row, yale_nd_row_as_hash, yale_nd_row_as_array,
-    yale_nd_row_as_set, yale_nd_row_as_sorted_set, yale_row,
-    yale_row_as_hash, yale_row_as_array, yale_row_as_set,
-    yale_row_as_sorted_set to NMatrix::YaleFunctions in order to
-    speed up getting multiple items from some row of a Yale matrix
+  * Added #yale_nd_row, #yale_nd_row_as_hash, #yale_nd_row_as_array,
+    #yale_nd_row_as_set, #yale_nd_row_as_sorted_set, #yale_row,
+    #yale_row_as_hash, #yale_row_as_array, #yale_row_as_set,
+    #yale_row_as_sorted_set, #yale_nd_row_size to NMatrix::YaleFunctions
+    in order to speed up getting multiple items from some row of a Yale
+    matrix
+
+  * Improved #yale_ija, #yale_a, #yale_d by allowing an optional index
+    argument, which returns a single array value instead of copying and
+    returning the entire array
 
   * Slicing a single row or column now returns an NVector instead
     of an NMatrix (does not yet work for n-dimensional matrices)
 
-* 1 bug fix:
+  * Improved function documentation for NVector and NMatrix
+
+  * Added #min, #max, #to_a, #shuffle, #shuffle! functions to NVector
+
+  * Aliased missing dimension of NVector#each_stored_with_indices to
+    #each_stored_with_index, which only yields a value and i or j
+    (not both i and j) depending on the vector orientation
+
+  * Added #each_row, #each_column to NMatrix
+
+* 2 bug fixes:
 
   * Dense iterators now return self (an NMatrix) in order to be
     consistent with Ruby Array behavior (by @cjfuller)
+
+  * NMatrix#pretty_print now properly prints #inspect when matrix
+    is too large to be cleanly printed

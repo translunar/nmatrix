@@ -307,7 +307,7 @@ class NMatrix
   #
   # @param [Integer] dimen the dimension being iterated over.
   #
-  def each_along_dim(dimen=0) 
+  def each_along_dim(dimen=0)
     return enum_for(:each_along_dim, dimen) unless block_given?
     dims = shape
     shape.each_index { |i| dims[i] = 0...(shape[i]) unless i == dimen }
@@ -383,7 +383,6 @@ class NMatrix
 
   alias_method :inject_along_dim, :reduce_along_dim
 
-
   ##
   # call-seq: 
   #   integer_dtype?() -> Boolean
@@ -434,7 +433,6 @@ class NMatrix
   # call-seq:
   #   min() -> NMatrix
   #   min(dimen) -> NMatrix
-  # 
   #
   # Calculates the minimum along the specified dimension.
   #
@@ -517,6 +515,7 @@ class NMatrix
   #
   # Raises an IndexError if the matrix does not have just a single element.
   #
+  # FIXME: Does this actually happen? Matrices should not have just one element.
   def to_f
     raise IndexError, 'to_f only valid for matrices with a single element' unless shape.all? { |e| e == 1 }
     self[*Array.new(shape.size, 0)]
@@ -548,6 +547,31 @@ class NMatrix
     return enum_for(:map!) unless block_given?
     self.each_stored_with_indices do |e, *i|
       self[*i] = (yield e)
+    end
+    self
+  end
+
+
+  #
+  # call-seq:
+  #     each_row -> ...
+  #
+  # Iterate through each row, referencing it as an NVector.
+  def each_row(get_by=:reference, &block)
+    (0...self.shape[0]).each do |i|
+      yield self.row(i, get_by)
+    end
+    self
+  end
+
+  #
+  # call-seq:
+  #     each_column -> ...
+  #
+  # Iterate through each column, referencing it as an NVector.
+  def each_row(get_by=:reference, &block)
+    (0...self.shape[0]).each do |i|
+      yield self.row(i, get_by)
     end
     self
   end
@@ -596,7 +620,7 @@ class NMatrix
     end
   end
 
-  protected
+protected
   def inspect_helper #:nodoc:
     ary = []
     ary << "shape:[#{shape.join(',')}]" << "dtype:#{dtype}" << "stype:#{stype}"
