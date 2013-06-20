@@ -682,7 +682,7 @@ YALE_STORAGE* ew_op(const YALE_STORAGE* left, const YALE_STORAGE* right, dtype_t
 	
 	YALE_STORAGE* dest;
 	
-	new_shape			= reinterpret_cast<size_t*>(calloc(2, sizeof(size_t)));
+	new_shape			= reinterpret_cast<size_t*>(ALLOC_N(size_t, 2));
 	new_shape[0]	= left->shape[0];
 	new_shape[1]	= left->shape[1];
 	
