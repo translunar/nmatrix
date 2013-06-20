@@ -596,6 +596,8 @@ static void nm_delete(NMATRIX* mat) {
     nm_yale_storage_delete
   };
   ttable[mat->stype](mat->storage);
+
+  free(mat);
 }
 
 /*
@@ -608,6 +610,8 @@ static void nm_delete_ref(NMATRIX* mat) {
     nm_yale_storage_delete
   };
   ttable[mat->stype](mat->storage);
+
+  free(mat);
 }
 
 /*
