@@ -544,6 +544,28 @@ void Init_nmatrix() {
 // Ruby Methods //
 //////////////////
 
+
+/*
+ * Slice constructor.
+ */
+static SLICE* alloc_slice(size_t dim) {
+  SLICE* slice = ALLOC(SLICE);
+  slice->coords = ALLOC_N(size_t, dim);
+  slice->lengths = ALLOC_N(size_t, dim);
+  return slice;
+}
+
+
+/*
+ * Slice destructor.
+ */
+static void free_slice(SLICE* slice) {
+  free(slice->coords);
+  free(slice->lengths);
+  free(slice);
+}
+
+
 /*
  * Allocator.
  */
@@ -596,6 +618,8 @@ static void nm_delete(NMATRIX* mat) {
     nm_yale_storage_delete
   };
   ttable[mat->stype](mat->storage);
+
+  free(mat);
 }
 
 /*
@@ -608,6 +632,8 @@ static void nm_delete_ref(NMATRIX* mat) {
     nm_yale_storage_delete
   };
   ttable[mat->stype](mat->storage);
+
+  free(mat);
 }
 
 /*
@@ -671,7 +697,7 @@ static VALUE nm_upcast(VALUE self, VALUE t1, VALUE t2) {
 
 /*
  * call-seq:
- *     each -> 
+ *     each -> Enumerator
  *
  * Iterate over the matrix as you would an Enumerable (e.g., Array).
  *
@@ -1447,6 +1473,7 @@ static VALUE nm_mset(int argc, VALUE* argv, VALUE self) {
     switch(NM_STYPE(self)) {
     case nm::DENSE_STORE:
       nm_dense_storage_set(NM_STORAGE(self), slice, value);
+      free(value);
       break;
     case nm::LIST_STORE:
       // Remove if it's a zero, insert otherwise
@@ -1456,12 +1483,15 @@ static VALUE nm_mset(int argc, VALUE* argv, VALUE self) {
         free(value);
       } else {
         nm_list_storage_insert(NM_STORAGE(self), slice, value);
+        // no need to free value here since it was inserted directly into the list.
       }
       break;
     case nm::YALE_STORE:
       nm_yale_storage_set(NM_STORAGE(self), slice, value);
+      free(value);
       break;
     }
+    free_slice(slice);
 
     return argv[dim];
 
@@ -1639,20 +1669,14 @@ static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLIC
       mat->storage = (STORAGE*)((*slice_func)( NM_STORAGE(self), slice ));
 
       // Do we want an NVector instead of an NMatrix?
-      VALUE klass = cNVector, orient = Qnil;
+      VALUE klass = cNMatrix, orient = Qnil;
       // FIXME: Generalize for n dimensional slicing somehow
-      if (mat->storage->shape[0] == 1)       orient = ID2SYM(nm_rb_row);
-      else if (mat->storage->shape[1] == 1)  orient = ID2SYM(nm_rb_column);
-      else                                   klass  = cNMatrix;
+      if (mat->storage->shape[0] == 1 || mat->storage->shape[1] == 1) klass  = cNVector;
 
       result = Data_Wrap_Struct(klass, mark_table[mat->stype], delete_func, mat);
-
-      // If we're dealing with a vector, need to make sure the @orientation matches.
-      // FIXME: Eventually we probably need to make this an internal property of NVector.
-      if (klass == cNVector) rb_iv_set(result, "@orientation", orient);
     }
 
-    free(slice);
+    free_slice(slice);
 
   } else if (NM_DIM(self) < (size_t)(argc)) {
     rb_raise(rb_eArgError, "Coordinates given exceed number of matrix dimensions");
@@ -1717,11 +1741,6 @@ static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
   }
 
 	VALUE result_val = Data_Wrap_Struct(CLASS_OF(left_val), mark[result->stype], nm_delete, result);
-
-	// If we're dealing with a vector, need to make sure the @orientation matches.
-	// FIXME: Eventually we probably need to make this an internal property of NVector.
-	if (CLASS_OF(left_val) == cNVector)
-	  rb_iv_set(result_val, "@orientation", rb_iv_get(left_val, "@orientation"));
 
 	return result_val;
 }
@@ -1846,6 +1865,8 @@ nm::dtype_t nm_dtype_guess(VALUE v) {
   }
 }
 
+
+
 /*
  * Documentation goes here.
  */
@@ -1854,9 +1875,7 @@ static SLICE* get_slice(size_t dim, VALUE* c, VALUE self) {
   VALUE beg, end;
   int exl;
 
-  SLICE* slice = ALLOC(SLICE);
-  slice->coords = ALLOC_N(size_t,dim);
-  slice->lengths = ALLOC_N(size_t, dim);
+  SLICE* slice = alloc_slice(dim);
   slice->single = true;
 
   for (r = 0; r < dim; ++r) {

@@ -68,6 +68,11 @@
 #define NM_MIN(a,b) (((a)<(b))?(a):(b))
 #endif
 
+#ifndef NM_MAX_ITYPE
+#define NM_MAX_ITYPE(a,b) ((static_cast<int8_t>(a) > static_cast<int8_t>(b)) ? static_cast<nm::itype_t>(a) : static_cast<nm::itype_t>(b))
+#define NM_MIN_ITYPE(a,b) ((static_cast<int8_t>(a) < static_cast<int8_t>(b)) ? static_cast<nm::itype_t>(a) : static_cast<nm::itype_t>(b))
+#endif
+
 /*
  * Forward Declarations
  */
@@ -78,12 +83,12 @@ extern "C" {
 
   /* Ruby-accessible functions */
   static VALUE nm_size(VALUE self);
-  static VALUE nm_a(VALUE self);
-  static VALUE nm_d(VALUE self);
+  static VALUE nm_a(int argc, VALUE* argv, VALUE self);
+  static VALUE nm_d(int argc, VALUE* argv, VALUE self);
   static VALUE nm_lu(VALUE self);
   static VALUE nm_ia(VALUE self);
   static VALUE nm_ja(VALUE self);
-  static VALUE nm_ija(VALUE self);
+  static VALUE nm_ija(int argc, VALUE* argv, VALUE self);
 
   static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self);
   static VALUE nm_vector_insert(int argc, VALUE* argv, VALUE self);
@@ -128,6 +133,27 @@ YALE_STORAGE* ew_op(const YALE_STORAGE* left, const YALE_STORAGE* right, dtype_t
 /*
  * Functions
  */
+
+/*
+ * Copy a vector from one IType or DType to another.
+ */
+template <typename LType, typename RType>
+static inline void copy_recast_vector(const void* in_, void* out_, size_t length) {
+  const RType* in = reinterpret_cast<const RType*>(in_);
+  LType* out      = reinterpret_cast<LType*>(out_);
+  for (size_t i = 0; i < length; ++i) {
+    out[i] = in[i];
+  }
+  out;
+}
+
+
+static inline void copy_recast_itype_vector(const void* in, nm::itype_t in_itype, void* out, nm::itype_t out_itype, size_t length) {
+  NAMED_LR_ITYPE_TEMPLATE_TABLE(ttable, copy_recast_vector, void, const void* in_, void* out_, size_t length);
+
+  ttable[out_itype][in_itype](in, out, length);
+}
+
 
 /*
  * Create Yale storage from IA, JA, and A vectors given in Old Yale format (probably from a file, since NMatrix only uses
@@ -656,7 +682,7 @@ YALE_STORAGE* ew_op(const YALE_STORAGE* left, const YALE_STORAGE* right, dtype_t
 	
 	YALE_STORAGE* dest;
 	
-	new_shape			= reinterpret_cast<size_t*>(calloc(2, sizeof(size_t)));
+	new_shape			= reinterpret_cast<size_t*>(ALLOC_N(size_t, 2));
 	new_shape[0]	= left->shape[0];
 	new_shape[1]	= left->shape[1];
 	
@@ -941,11 +967,11 @@ static char vector_insert_resize(YALE_STORAGE* s, size_t current_size, size_t po
 
   // Copy all values subsequent to the insertion site to the new IJA and new A, leaving room (size n) for insertion.
   if (struct_only) {
-    for (size_t i = pos; i < current_size - pos + n - 1; ++i) {
+    for (size_t i = pos; i < current_size; ++i) {
       new_ija[i+n] = old_ija[i];
     }
   } else {
-    for (size_t i = pos; i < current_size - pos + n - 1; ++i) {
+    for (size_t i = pos; i < current_size; ++i) {
       new_ija[i+n] = old_ija[i];
       new_a[i+n] = old_a[i];
     }
@@ -1109,6 +1135,7 @@ static inline size_t get_size(const YALE_STORAGE* storage) {
   return static_cast<size_t>(reinterpret_cast<IType*>(storage->ija)[ storage->shape[0] ]);
 }
 
+
 /*
  * Allocate for a copy or copy-cast operation, and copy the IJA portion of the
  * matrix (the structure).
@@ -1136,7 +1163,7 @@ static YALE_STORAGE* copy_alloc_struct(const YALE_STORAGE* rhs, const dtype_t ne
 }
 
 template <typename DType, typename IType>
-static STORAGE* matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resulting_shape, bool vector) {
+static STORAGE* matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resulting_shape, bool vector, nm::itype_t result_itype) {
   YALE_STORAGE *left  = (YALE_STORAGE*)(casted_storage.left),
                *right = (YALE_STORAGE*)(casted_storage.right);
 
@@ -1144,23 +1171,48 @@ static STORAGE* matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resu
   // same for left and right.
   // int8_t dtype = left->dtype;
 
-  // Create result storage.
-  nm::itype_t result_itype = static_cast<uint8_t>(left->itype) < static_cast<uint8_t>(right->itype) ? right->itype : left->itype;
-  YALE_STORAGE* result = nm_yale_storage_create(left->dtype, resulting_shape, 2, left->capacity + right->capacity, result_itype);
-  init<DType,IType>(result);
+  // Massage the IType arrays into the correct form.
 
-  IType* ijl = reinterpret_cast<IType*>(left->ija);
-  IType* ijr = reinterpret_cast<IType*>(right->ija);
+  IType* ijl;
+  if (left->itype == result_itype) ijl = reinterpret_cast<IType*>(left->ija);
+  else {  // make a temporary copy of the IJA vector for L with the correct itype
+    std::cerr << "changing left itype from " << static_cast<uint8_t>(left->itype) << " to " << static_cast<int8_t>(result_itype) << std::endl;
+    size_t length = nm_yale_storage_get_size(left);
+    std::cerr << "length = " << length << std::endl;
+    ijl = ALLOCA_N(IType, length);
+    copy_recast_itype_vector(reinterpret_cast<void*>(left->ija), left->itype, reinterpret_cast<void*>(ijl), result_itype, length);
+  }
+
+  IType* ijr;
+  if (right->itype == result_itype) ijr = reinterpret_cast<IType*>(right->ija);
+  else {  // make a temporary copy of the IJA vector for R with the correct itype
+    std::cerr << "changing right itype from " << static_cast<uint8_t>(right->itype) << " to " << static_cast<int8_t>(result_itype) << std::endl;
+    size_t length = nm_yale_storage_get_size(right);
+    std::cerr << "length = " << length << std::endl;
+    ijr = ALLOCA_N(IType, length);
+    copy_recast_itype_vector(reinterpret_cast<void*>(right->ija), right->itype, reinterpret_cast<void*>(ijr), result_itype, length);
+  }
+
+  // First, count the ndnz of the result.
+  // TODO: This basically requires running symbmm twice to get the exact ndnz size. That's frustrating. Are there simple
+  // cases where we can avoid running it?
+  size_t result_ndnz = nm::math::symbmm<IType>(resulting_shape[0], left->shape[1], resulting_shape[1], ijl, ijl, true, ijr, ijr, true, NULL, true);
+
+  // Create result storage.
+  YALE_STORAGE* result = nm_yale_storage_create(left->dtype, resulting_shape, 2, result_ndnz, result_itype);
+  init<DType,IType>(result);
   IType* ija = reinterpret_cast<IType*>(result->ija);
 
   // Symbolic multiplication step (build the structure)
-  nm::math::symbmm<IType>(result->shape[0], result->shape[1], ijl, ijl, true, ijr, ijr, true, ija, true);
+  nm::math::symbmm<IType>(resulting_shape[0], left->shape[1], resulting_shape[1], ijl, ijl, true, ijr, ijr, true, ija, true);
 
   // Numeric multiplication step (fill in the elements)
-  nm::math::numbmm<DType,IType>(result->shape[0], result->shape[1],
+
+  nm::math::numbmm<DType,IType>(result->shape[0], left->shape[1], result->shape[1],
                                 ijl, ijl, reinterpret_cast<DType*>(left->a), true,
                                 ijr, ijr, reinterpret_cast<DType*>(right->a), true,
                                 ija, ija, reinterpret_cast<DType*>(result->a), true);
+
 
   // Sort the columns
   nm::math::smmp_sort_columns<DType,IType>(result->shape[0], ija, ija, reinterpret_cast<DType*>(result->a));
@@ -1284,12 +1336,12 @@ void nm_init_yale_functions() {
 	 */
   cNMatrix_YaleFunctions = rb_define_module_under(cNMatrix, "YaleFunctions");
 
-  rb_define_method(cNMatrix_YaleFunctions, "yale_ija", (METHOD)nm_ija, 0);
-  rb_define_method(cNMatrix_YaleFunctions, "yale_a", (METHOD)nm_a, 0);
+  rb_define_method(cNMatrix_YaleFunctions, "yale_ija", (METHOD)nm_ija, -1);
+  rb_define_method(cNMatrix_YaleFunctions, "yale_a", (METHOD)nm_a, -1);
   rb_define_method(cNMatrix_YaleFunctions, "yale_size", (METHOD)nm_size, 0);
   rb_define_method(cNMatrix_YaleFunctions, "yale_ia", (METHOD)nm_ia, 0);
   rb_define_method(cNMatrix_YaleFunctions, "yale_ja", (METHOD)nm_ja, 0);
-  rb_define_method(cNMatrix_YaleFunctions, "yale_d", (METHOD)nm_d, 0);
+  rb_define_method(cNMatrix_YaleFunctions, "yale_d", (METHOD)nm_d, -1);
   rb_define_method(cNMatrix_YaleFunctions, "yale_lu", (METHOD)nm_lu, 0);
 
   rb_define_method(cNMatrix_YaleFunctions, "yale_nd_row", (METHOD)nm_nd_row, -1);
@@ -1437,14 +1489,21 @@ STORAGE* nm_yale_storage_copy_transposed(const STORAGE* rhs_base) {
 /*
  * C accessor for multiplying two YALE_STORAGE matrices, which have already been casted to the same dtype.
  *
- * FIXME: What happens if the two matrices have different itypes?
+ * FIXME: There should be some mathematical way to determine the worst-case IType based on the input ITypes. Right now
+ * it just uses the default.
  */
 STORAGE* nm_yale_storage_matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resulting_shape, bool vector) {
-  LI_DTYPE_TEMPLATE_TABLE(nm::yale_storage::matrix_multiply, STORAGE*, const STORAGE_PAIR& casted_storage, size_t* resulting_shape, bool vector);
+  LI_DTYPE_TEMPLATE_TABLE(nm::yale_storage::matrix_multiply, STORAGE*, const STORAGE_PAIR& casted_storage, size_t* resulting_shape, bool vector, nm::itype_t resulting_itype);
 
-  YALE_STORAGE* storage_access = (YALE_STORAGE*)(casted_storage.left);
+  YALE_STORAGE* left = reinterpret_cast<YALE_STORAGE*>(casted_storage.left);
+  YALE_STORAGE* right = reinterpret_cast<YALE_STORAGE*>(casted_storage.right);
 
-  return ttable[storage_access->dtype][storage_access->itype](casted_storage, resulting_shape, vector);
+  // Determine the itype for the matrix that will be returned.
+  nm::itype_t itype = nm_yale_storage_itype_by_shape(resulting_shape),
+              max_itype = NM_MAX_ITYPE(left->itype, right->itype);
+  if (static_cast<int8_t>(itype) < static_cast<int8_t>(max_itype)) itype = max_itype;
+
+  return ttable[left->dtype][itype](casted_storage, resulting_shape, vector, itype);
 }
 
 /*
@@ -1579,6 +1638,7 @@ void nm_yale_storage_init(YALE_STORAGE* s) {
   ttable[s->dtype][s->itype](s);
 }
 
+
 /*
  * Ruby GC mark function for YALE_STORAGE. C accessible.
  */
@@ -1649,42 +1709,64 @@ static VALUE nm_size(VALUE self) {
 /*
  * call-seq:
  *     yale_a -> Array
+ *     yale_d(index) -> ...
  *
  * Get the A array of a Yale matrix (which stores the diagonal and the LU portions of the matrix).
  */
-static VALUE nm_a(VALUE self) {
+static VALUE nm_a(int argc, VALUE* argv, VALUE self) {
+  VALUE idx;
+  rb_scan_args(argc, argv, "01", &idx);
+
   YALE_STORAGE* s = NM_STORAGE_YALE(self);
-
   size_t size = nm_yale_storage_get_size(s);
-  VALUE* vals = ALLOCA_N(VALUE, size);
 
-  for (size_t i = 0; i < size; ++i) {
-    vals[i] = rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype]*i, s->dtype).rval;
+  if (idx == Qnil) {
+    VALUE* vals = ALLOCA_N(VALUE, size);
+
+    for (size_t i = 0; i < size; ++i) {
+      vals[i] = rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype]*i, s->dtype).rval;
+    }
+    VALUE ary = rb_ary_new4(size, vals);
+
+    for (size_t i = size; i < s->capacity; ++i)
+      rb_ary_push(ary, Qnil);
+
+    return ary;
+  } else {
+    size_t index = FIX2INT(idx);
+    if (index >= size) rb_raise(rb_eRangeError, "out of range");
+
+    return rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype] * index, s->dtype).rval;
   }
-  VALUE ary = rb_ary_new4(size, vals);
-
-  for (size_t i = size; i < s->capacity; ++i)
-    rb_ary_push(ary, Qnil);
-
-  return ary;
 }
 
 
 /*
  * call-seq:
  *     yale_d -> Array
+ *     yale_d(index) -> ...
  *
  * Get the diagonal ("D") portion of the A array of a Yale matrix.
  */
-static VALUE nm_d(VALUE self) {
+static VALUE nm_d(int argc, VALUE* argv, VALUE self) {
+  VALUE idx;
+  rb_scan_args(argc, argv, "01", &idx);
+
   YALE_STORAGE* s = NM_STORAGE_YALE(self);
 
-  VALUE* vals = ALLOCA_N(VALUE, s->shape[0]);
+  if (idx == Qnil) {
+    VALUE* vals = ALLOCA_N(VALUE, s->shape[0]);
 
-  for (size_t i = 0; i < s->shape[0]; ++i) {
-    vals[i] = rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype]*i, s->dtype).rval;
+    for (size_t i = 0; i < s->shape[0]; ++i) {
+      vals[i] = rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype]*i, s->dtype).rval;
+    }
+    return rb_ary_new4(s->shape[0], vals);
+  } else {
+    size_t index = FIX2INT(idx);
+    if (index >= s->shape[0]) rb_raise(rb_eRangeError, "out of range");
+
+    return rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype] * index, s->dtype).rval;
   }
-  return rb_ary_new4(s->shape[0], vals);
 }
 
 /*
@@ -1760,26 +1842,38 @@ static VALUE nm_ja(VALUE self) {
 /*
  * call-seq:
  *     yale_ija -> Array
+ *     yale_ija(index) -> ...
  *
- * Get the IJA array of a Yale matrix.
+ * Get the IJA array of a Yale matrix (or a component of the IJA array).
  */
-static VALUE nm_ija(VALUE self) {
-  YALE_STORAGE* s = NM_STORAGE_YALE(self);
+static VALUE nm_ija(int argc, VALUE* argv, VALUE self) {
+  VALUE idx;
+  rb_scan_args(argc, argv, "01", &idx);
 
+  YALE_STORAGE* s = NM_STORAGE_YALE(self);
   size_t size = nm_yale_storage_get_size(s);
 
-  VALUE* vals = ALLOCA_N(VALUE, size);
+  if (idx == Qnil) {
 
-  for (size_t i = 0; i < size; ++i) {
-    vals[i] = rubyobj_from_cval_by_itype((char*)(s->ija) + ITYPE_SIZES[s->itype]*i, s->itype).rval;
+    VALUE* vals = ALLOCA_N(VALUE, size);
+
+    for (size_t i = 0; i < size; ++i) {
+      vals[i] = rubyobj_from_cval_by_itype((char*)(s->ija) + ITYPE_SIZES[s->itype]*i, s->itype).rval;
+    }
+
+   VALUE ary = rb_ary_new4(size, vals);
+
+    for (size_t i = size; i < s->capacity; ++i)
+      rb_ary_push(ary, Qnil);
+
+    return ary;
+
+  } else {
+    size_t index = FIX2INT(idx);
+    if (index >= size) rb_raise(rb_eRangeError, "out of range");
+
+    return rubyobj_from_cval_by_itype((char*)(s->ija) + ITYPE_SIZES[s->itype] * index, s->itype).rval;
   }
-
- VALUE ary = rb_ary_new4(size, vals);
-
-  for (size_t i = size; i < s->capacity; ++i)
-    rb_ary_push(ary, Qnil);
-
-  return ary;
 }
 
 
@@ -1793,6 +1887,8 @@ static VALUE nm_ija(VALUE self) {
  *
  * This function is meant to accomplish its purpose as efficiently as possible. It does not check for appropriate
  * range.
+ *
+ * FIXME: :array doesn't make sense. This should be :keys or :values to indicate which array we want.
  */
 static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self) {
   VALUE i_, as;
