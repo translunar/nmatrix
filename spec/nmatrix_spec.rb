@@ -25,8 +25,7 @@
 # Basic tests for NMatrix.
 #
 
-# Can we use require_relative here instead?
-require File.join(File.dirname(__FILE__), "spec_helper.rb")
+require File.dirname(__FILE__) + "/spec_helper.rb"
 
 describe NMatrix do
 
@@ -142,7 +141,7 @@ describe NMatrix do
 
   [:dense, :list, :yale].each do |storage_type|
     context storage_type do
-      it "can be duplicated" do
+    it "can be duplicated" do
         n = NMatrix.new(storage_type, [2,3], storage_type == :yale ? :float64 : 1.1)
         n.stype.should equal(storage_type)
 
