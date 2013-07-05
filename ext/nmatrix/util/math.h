@@ -2138,7 +2138,84 @@ inline void rot(const int N, Complex128* X, const int incX, Complex128* Y, const
 
 template <typename DType, typename CSDType>
 inline void cblas_rot(const int N, void* X, const int incX, void* Y, const int incY, const void* c, const void* s) {
-  rot<DType,CSDType>(N, reinterpret_cast<DType*>(X), incX, reinterpret_cast<DType*>(Y), incY, *reinterpret_cast<const CSDType*>(c), *reinterpret_cast<const CSDType*>(s));
+  rot<DType,CSDType>(N, reinterpret_cast<DType*>(X), incX, reinterpret_cast<DType*>(Y), incY,
+                       *reinterpret_cast<const CSDType*>(c), *reinterpret_cast<const CSDType*>(s));
+}
+
+/*
+ * Level 1 BLAS routine which sums the absolute values of a vector's contents. If the vector consists of complex values,
+ * the routine sums the absolute values of the real and imaginary components as well.
+ *
+ * So, based on input types, these are the valid return types:
+ *    int -> int
+ *    float -> float or double
+ *    double -> double
+ *    complex64 -> float or double
+ *    complex128 -> double
+ *    rational -> rational
+ *
+ * Return value is stored in sum, which this function allocates. This makes it easier to use a function pointer array.
+ */
+template <typename ReturnDType, typename DType>
+inline ReturnDType asum(const int N, const DType* X, const int incX) {
+  ReturnDType sum = 0;
+  if ((N > 0) && (incX > 0)) {
+    for (int i = 0; i < N; ++i) {
+      sum += std::abs(X[i*incX]);
+    }
+  }
+  return sum;
+}
+
+
+#ifdef HAVE_CBLAS_H
+template <>
+inline float asum(const int N, const float* X, const int incX) {
+  return cblas_sasum(N, X, incX);
+}
+
+template <>
+inline double asum(const int N, const double* X, const int incX) {
+  return cblas_dasum(N, X, incX);
+}
+
+template <>
+inline float asum(const int N, const Complex64* X, const int incX) {
+  return cblas_scasum(N, X, incX);
+}
+
+template <>
+inline double asum(const int N, const Complex128* X, const int incX) {
+  return cblas_dzasum(N, X, incX);
+}
+#else
+template <>
+inline float asum(const int N, const Complex64* X, const int incX) {
+  float sum = 0;
+  if ((N > 0) && (incX > 0)) {
+    for (int i = 0; i < N; ++i) {
+      sum += abs(reinterpret_cast<float*>(X+(i*incX))[0]) + abs(reinterpret_cast<float*>(X+(i*incX))[1]);
+    }
+  }
+  return sum;
+}
+
+template <>
+inline double asum(const int N, const Complex128* X, const int incX) {
+  double sum = 0;
+  if ((N > 0) && (incX > 0)) {
+    for (int i = 0; i < N; ++i) {
+      sum += abs(reinterpret_cast<double*>(X+(i*incX))[0]) + abs(reinterpret_cast<double*>(X+(i*incX))[1]);
+    }
+  }
+  return sum;
+}
+#endif
+
+
+template <typename ReturnDType, typename DType>
+inline void cblas_asum(const int N, const void* X, const int incX, void* sum) {
+  *reinterpret_cast<ReturnDType*>( sum ) = asum<ReturnDType, DType>( N, reinterpret_cast<const DType*>(X), incX );
 }
 
 

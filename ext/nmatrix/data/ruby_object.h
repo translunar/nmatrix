@@ -440,6 +440,7 @@ namespace std {
     return obj.abs();
   }
 
+
   inline nm::RubyObject sqrt(const nm::RubyObject& obj) {
     VALUE cMath = rb_const_get(rb_cObject, rb_intern("Math"));
     return nm::RubyObject(rb_funcall(cMath, rb_intern("sqrt"), 1, obj.rval));

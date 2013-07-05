@@ -127,6 +127,7 @@ extern "C" {
   #include <clapack.h>
 #endif
 
+  static VALUE nm_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx);
   static VALUE nm_cblas_rot(VALUE self, VALUE n, VALUE x, VALUE incx, VALUE y, VALUE incy, VALUE c, VALUE s);
   static VALUE nm_cblas_rotg(VALUE self, VALUE ab);
 
@@ -307,6 +308,7 @@ void nm_math_init_blas() {
 
   cNMatrix_BLAS = rb_define_module_under(cNMatrix, "BLAS");
 
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_asum", (METHOD)nm_cblas_asum, 3);
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_rot",  (METHOD)nm_cblas_rot,  7);
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_rotg", (METHOD)nm_cblas_rotg, 1);
 
@@ -513,6 +515,57 @@ static VALUE nm_cblas_rot(VALUE self, VALUE n, VALUE x, VALUE incx, VALUE y, VAL
     return Qtrue;
   }
 }
+
+
+/*
+ * Call any of the cblas_xasum functions as directly as possible.
+ *
+ * xASUM is a BLAS level 1 routine which calculates the sum of absolute values of the entries
+ * of a vector x.
+ *
+ * Arguments:
+ *  * n     :: length of x, must be at least 0
+ *  * x     :: pointer to first entry of input vector
+ *  * incx  :: stride of x, must be POSITIVE (ATLAS says non-zero, but 3.8.4 code only allows positive)
+ *                                                         static VALUE nm_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx)Init
+ * You probably don't want to call this function. Instead, why don't you try asum, which is more flexible
+ * with its arguments?
+ *
+ * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
+ * handling, so you can easily crash Ruby!
+ */
+static VALUE nm_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx) {
+
+  static void (*ttable[nm::NUM_DTYPES])(const int N, const void* X, const int incX, void* sum) = {
+      nm::math::cblas_asum<uint8_t,uint8_t>,
+      nm::math::cblas_asum<int8_t,int8_t>,
+      nm::math::cblas_asum<int16_t,int16_t>,
+      nm::math::cblas_asum<int32_t,int32_t>,
+      nm::math::cblas_asum<float32_t,float32_t>,
+      nm::math::cblas_asum<float64_t,float64_t>,
+      nm::math::cblas_asum<float32_t,nm::Complex64>,
+      nm::math::cblas_asum<float64_t,nm::Complex128>,
+      nm::math::cblas_asum<nm::Rational32,nm::Rational32>,
+      nm::math::cblas_asum<nm::Rational64,nm::Rational64>,
+      nm::math::cblas_asum<nm::Rational128,nm::Rational128>,
+      nm::math::cblas_asum<nm::RubyObject,nm::RubyObject>
+  };
+
+  nm::dtype_t dtype  = NM_DTYPE(x);
+
+  // Determine the return dtype and allocate it
+  nm::dtype_t rdtype = dtype;
+  if      (dtype == nm::COMPLEX64)  rdtype = nm::FLOAT32;
+  else if (dtype == nm::COMPLEX128) rdtype = nm::FLOAT64;
+
+  void *Result = ALLOCA_N(char, DTYPE_SIZES[rdtype]);
+
+  ttable[dtype](FIX2INT(n), NM_STORAGE_DENSE(x)->elements, FIX2INT(incx), Result);
+
+  return rubyobj_from_cval(Result, rdtype);
+}
+
+
 
 
 /* Call any of the cblas_xgemm functions as directly as possible.
