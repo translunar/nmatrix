@@ -2143,6 +2143,118 @@ inline void cblas_rot(const int N, void* X, const int incX, void* Y, const int i
 }
 
 /*
+ * Level 1 BLAS routine which returns the 2-norm of an n-vector x.
+ #
+ * Based on input types, these are the valid return types:
+ *    int -> int
+ *    float -> float or double
+ *    double -> double
+ *    complex64 -> float or double
+ *    complex128 -> double
+ *    rational -> rational
+ */
+template <typename ReturnDType, typename DType>
+ReturnDType nrm2(const int N, const DType* X, const int incX) {
+  const DType ONE = 1, ZERO = 0;
+  typename LongDType<DType>::type scale = 0, ssq = 1, absxi, temp;
+
+
+  if ((N < 1) || (incX < 1))    return ZERO;
+  else if (N == 1)              return std::abs(X[0]);
+
+  for (int i = 0; i < N; ++i) {
+    absxi = std::abs(X[i*incX]);
+    if (scale < absxi) {
+      temp  = scale / absxi;
+      scale = absxi;
+      ssq   = ONE + ssq * (temp * temp);
+    } else {
+      temp = absxi / scale;
+      ssq += temp * temp;
+    }
+  }
+
+  return scale * std::sqrt( ssq );
+}
+
+
+#ifdef HAVE_CBLAS_H
+template <>
+inline float nrm2(const int N, const float* X, const int incX) {
+  return cblas_snrm2(N, X, incX);
+}
+
+template <>
+inline double nrm2(const int N, const double* X, const int incX) {
+  return cblas_dnrm2(N, X, incX);
+}
+
+template <>
+inline float nrm2(const int N, const Complex64* X, const int incX) {
+  return cblas_scnrm2(N, X, incX);
+}
+
+template <>
+inline double nrm2(const int N, const Complex128* X, const int incX) {
+  return cblas_dznrm2(N, X, incX);
+}
+#else
+template <typename FloatDType>
+static inline void nrm2_complex_helper(const FloatDType& xr, const FloatDType& xi, double& scale, double& ssq) {
+  double absx = std::abs(xr);
+  if (scale < absx) {
+    double temp  = scale / absx;
+    scale = absx;
+    ssq   = 1.0 + ssq * (temp * temp);
+  } else {
+    double temp = absx / scale;
+    ssq += temp * temp;
+  }
+
+  absx = std::abs(xi);
+  if (scale < absx) {
+    double temp  = scale / absx;
+    scale = absx;
+    ssq   = 1.0 + ssq * (temp * temp);
+  } else {
+    double temp = absx / scale;
+    ssq += temp * temp;
+  }
+}
+
+template <>
+float nrm2(const int N, const Complex64* X, const int incX) {
+  double scale = 0, ssq = 1, temp;
+
+  if ((N < 1) || (incX < 1))    return 0.0;
+
+  for (int i = 0; i < N; ++i) {
+    nrm2_complex_helper<float>(X[i*incX].r, X[i*incX].i, scale, temp);
+  }
+
+  return scale * std::sqrt( ssq );
+}
+
+template <>
+double nrm2(const int N, const Complex128* X, const int incX) {
+  double scale = 0, ssq = 1, temp;
+
+  if ((N < 1) || (incX < 1))    return 0.0;
+
+  for (int i = 0; i < N; ++i) {
+    nrm2_complex_helper<double>(X[i*incX].r, X[i*incX].i, scale, temp);
+  }
+
+  return scale * std::sqrt( ssq );
+}
+#endif
+
+template <typename ReturnDType, typename DType>
+inline void cblas_nrm2(const int N, const void* X, const int incX, void* result) {
+  *reinterpret_cast<ReturnDType*>( result ) = nrm2<ReturnDType, DType>( N, reinterpret_cast<const DType*>(X), incX );
+}
+
+/*
  * Level 1 BLAS routine which sums the absolute values of a vector's contents. If the vector consists of complex values,
  * the routine sums the absolute values of the real and imaginary components as well.
  *
@@ -2153,8 +2265,6 @@ inline void cblas_rot(const int N, void* X, const int incX, void* Y, const int i
  *    complex64 -> float or double
  *    complex128 -> double
  *    rational -> rational
- *
- * Return value is stored in sum, which this function allocates. This makes it easier to use a function pointer array.
  */
 template <typename ReturnDType, typename DType>
 inline ReturnDType asum(const int N, const DType* X, const int incX) {
@@ -2194,7 +2304,7 @@ inline float asum(const int N, const Complex64* X, const int incX) {
   float sum = 0;
   if ((N > 0) && (incX > 0)) {
     for (int i = 0; i < N; ++i) {
-      sum += abs(reinterpret_cast<float*>(X+(i*incX))[0]) + abs(reinterpret_cast<float*>(X+(i*incX))[1]);
+      sum += std::abs(X[i*incX].r) + std::abs(X[i*incX].i);
     }
   }
   return sum;
@@ -2205,7 +2315,7 @@ inline double asum(const int N, const Complex128* X, const int incX) {
   double sum = 0;
   if ((N > 0) && (incX > 0)) {
     for (int i = 0; i < N; ++i) {
-      sum += abs(reinterpret_cast<double*>(X+(i*incX))[0]) + abs(reinterpret_cast<double*>(X+(i*incX))[1]);
+      sum += std::abs(X[i*incX].r) + std::abs(X[i*incX].i);
     }
   }
   return sum;
