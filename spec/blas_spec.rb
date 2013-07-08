@@ -170,6 +170,17 @@ describe NMatrix::BLAS do
         NMatrix::BLAS.gemv(a, x)
       end
 
+      it "exposes asum" do
+        x = NVector.new(4, [1,2,3,4], :float64)
+        NMatrix::BLAS.asum(x).should == 10.0
+      end
+
+
+      it "exposes nrm2" do
+        x = NVector.new(4, [2,-4,3,5], :float64)
+        NMatrix::BLAS.nrm2(x, 1, 3).should be_within(1e-10).of(5.385164807134504)
+      end
+
     end
   end
 end
