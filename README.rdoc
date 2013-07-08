@@ -102,7 +102,7 @@ The following features exist in the current version of NMatrix (0.0.4):
 * Matlab .MAT v5 file input
 * C and C++ API
 * BLAS internal implementations (no library) and ATLAS (with library) access:
-  * Level 1: xROT, xROTG (BLAS dtypes only)
+  * Level 1: xROT, xROTG (BLAS dtypes only), xASUM, xNRM2
   * Level 2: xGEMV
   * Level 3: xGEMM, xTRSM
 * LAPACK ATLAS access:
