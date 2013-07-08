@@ -127,7 +127,7 @@ extern "C" {
   #include <clapack.h>
 #endif
 
-  static VALUE nm_cblas_rnrm2(VALUE self, VALUE n, VALUE x, VALUE incx);
+  static VALUE nm_cblas_nrm2(VALUE self, VALUE n, VALUE x, VALUE incx);
   static VALUE nm_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx);
   static VALUE nm_cblas_rot(VALUE self, VALUE n, VALUE x, VALUE incx, VALUE y, VALUE incy, VALUE c, VALUE s);
   static VALUE nm_cblas_rotg(VALUE self, VALUE ab);
@@ -309,6 +309,7 @@ void nm_math_init_blas() {
 
   cNMatrix_BLAS = rb_define_module_under(cNMatrix, "BLAS");
 
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_nrm2", (METHOD)nm_cblas_nrm2, 3);
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_asum", (METHOD)nm_cblas_asum, 3);
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_rot",  (METHOD)nm_cblas_rot,  7);
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_rotg", (METHOD)nm_cblas_rotg, 1);
@@ -527,7 +528,7 @@ static VALUE nm_cblas_rot(VALUE self, VALUE n, VALUE x, VALUE incx, VALUE y, VAL
  *  * n     :: length of x, must be at least 0
  *  * x     :: pointer to first entry of input vector
  *  * incx  :: stride of x, must be POSITIVE (ATLAS says non-zero, but 3.8.4 code only allows positive)
- *                                                         static VALUE nm_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx)Init
+ *
  * You probably don't want to call this function. Instead, why don't you try nrm2, which is more flexible
  * with its arguments?
  *
@@ -541,7 +542,7 @@ static VALUE nm_cblas_nrm2(VALUE self, VALUE n, VALUE x, VALUE incx) {
       nm::math::cblas_nrm2<int8_t,int8_t>,
       nm::math::cblas_nrm2<int16_t,int16_t>,
       nm::math::cblas_nrm2<int32_t,int32_t>, */
-      NULL, NULL, NULL, NULL, // no help for integers
+      NULL, NULL, NULL, NULL, NULL, // no help for integers
       nm::math::cblas_nrm2<float32_t,float32_t>,
       nm::math::cblas_nrm2<float64_t,float64_t>,
       nm::math::cblas_nrm2<float32_t,nm::Complex64>,
@@ -555,7 +556,7 @@ static VALUE nm_cblas_nrm2(VALUE self, VALUE n, VALUE x, VALUE incx) {
   nm::dtype_t dtype  = NM_DTYPE(x);
 
   if (!ttable[dtype]) {
-    rb_raise(nm_eDataTypeError, "this matrix operation undefined for integer vectors");
+    rb_raise(nm_eDataTypeError, "this vector operation undefined for integer vectors");
     return Qnil;
 
   } else {
@@ -568,7 +569,7 @@ static VALUE nm_cblas_nrm2(VALUE self, VALUE n, VALUE x, VALUE incx) {
 
     ttable[dtype](FIX2INT(n), NM_STORAGE_DENSE(x)->elements, FIX2INT(incx), Result);
 
-    return rubyobj_from_cval(Result, rdtype);
+    return rubyobj_from_cval(Result, rdtype).rval;
   }
 }
 
@@ -598,6 +599,7 @@ static VALUE nm_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx) {
       nm::math::cblas_asum<int8_t,int8_t>,
       nm::math::cblas_asum<int16_t,int16_t>,
       nm::math::cblas_asum<int32_t,int32_t>,
+      nm::math::cblas_asum<int64_t,int64_t>,
       nm::math::cblas_asum<float32_t,float32_t>,
       nm::math::cblas_asum<float64_t,float64_t>,
       nm::math::cblas_asum<float32_t,nm::Complex64>,
@@ -619,7 +621,7 @@ static VALUE nm_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx) {
 
   ttable[dtype](FIX2INT(n), NM_STORAGE_DENSE(x)->elements, FIX2INT(incx), Result);
 
-  return rubyobj_from_cval(Result, rdtype);
+  return rubyobj_from_cval(Result, rdtype).rval;
 }
 
 
