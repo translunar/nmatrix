@@ -202,7 +202,7 @@ module NMatrix::BLAS
     # * *Arguments* :
     #   - +x+ -> an NVector (will also allow an NMatrix, but will treat it as if it's a vector )
     #   - +incx+ -> the skip size (defaults to 1)
-    #   - +n+ -> the size of +x+ (defaults to +x.size+)
+    #   - +n+ -> the size of +x+ (defaults to +x.size / incx+)
     # * *Returns* :
     #   - The sum
     # * *Raises* :
@@ -210,9 +210,9 @@ module NMatrix::BLAS
     #   - +RangeError+ -> n out of range
     #
     def asum(x, incx = 1, n = nil)
-      n ||= x.size
+      n ||= x.size / incx
       raise(ArgumentError, "Expected dense NVector (or NMatrix on rare occasions) for arg 0") unless x.is_a?(NMatrix)
-      raise(RangeError, "n out of range") if n > x.size || n <= 0
+      raise(RangeError, "n out of range") if n*incx > x.size || n*incx <= 0 || n <= 0
       ::NMatrix::BLAS.cblas_asum(n, x, incx)
     end
 
@@ -225,7 +225,7 @@ module NMatrix::BLAS
     # * *Arguments* :
     #   - +x+ -> an NVector (will also allow an NMatrix, but will treat it as if it's a vector )
     #   - +incx+ -> the skip size (defaults to 1)
-    #   - +n+ -> the size of +x+ (defaults to +x.size+)
+    #   - +n+ -> the size of +x+ (defaults to +x.size / incx+)
     # * *Returns* :
     #   - The 2-norm
     # * *Raises* :
@@ -233,9 +233,9 @@ module NMatrix::BLAS
     #   - +RangeError+ -> n out of range
     #
     def nrm2(x, incx = 1, n = nil)
-      n ||= x.size
+      n ||= x.size / incx
       raise(ArgumentError, "Expected dense NVector (or NMatrix on rare occasions) for arg 0") unless x.is_a?(NMatrix)
-      raise(RangeError, "n out of range") if n > x.size || n <= 0
+      raise(RangeError, "n out of range") if n*incx > x.size || n*incx <= 0 || n <= 0
       ::NMatrix::BLAS.cblas_nrm2(n, x, incx)
     end
   end

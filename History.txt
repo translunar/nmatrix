@@ -167,7 +167,8 @@
 
   * Improved function documentation for NVector and NMatrix
 
-  * Added #min, #max, #to_a, #shuffle, #shuffle! functions to NVector
+  * Added #min, #max, #to_a, #shuffle, #shuffle!, #absolute_sum,
+    #norm2 functions to NVector
 
   * Aliased missing dimension of NVector#each_stored_with_indices to
     #each_stored_with_index, which only yields a value and i or j

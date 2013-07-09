@@ -159,6 +159,34 @@ class NVector < NMatrix
 
   #
   # call-seq:
+  #     absolute_sum -> Numeric
+  #
+  # == Arguments
+  #   - +incx+ -> the skip size (defaults to 1, no skip)
+  #   - +n+ -> the number of elements to include
+  #
+  # Return the sum of the contents of the vector. This is the BLAS asum routine.
+  def asum incx=1, n=nil
+    NMatrix::BLAS::asum(self, incx, self.size / incx)
+  end
+  alias :absolute_sum :asum
+
+  #
+  # call-seq:
+  #     norm2 -> Numeric
+  #
+  # == Arguments
+  #   - +incx+ -> the skip size (defaults to 1, no skip)
+  #   - +n+ -> the number of elements to include
+  #
+  # Return the 2-norm of the vector. This is the BLAS nrm2 routine.
+  def nrm2 incx=1, n=nil
+    NMatrix::BLAS::nrm2(self, incx, self.size / incx)
+  end
+  alias :norm2 :nrm2
+
+  #
+  # call-seq:
   #     to_a -> Array
   #
   # Converts the NVector to a regular Ruby Array.
