@@ -124,7 +124,7 @@
 
   * Fixed Spanish language compile issue (by @imcsk8 and @agarie)
 
-=== 0.0.5 / 2013-??-??
+=== 0.0.5 / 2013-07-09
 
 * 4 major enhancements
 
