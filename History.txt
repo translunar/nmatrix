@@ -189,3 +189,11 @@
 
   * NMatrix::read() now raises an exception when asked to read a file 
     that does not exist
+
+=== 0.0.6 / 2013-??-??
+
+* no major enhancements
+
+* no minor enhancements
+
+* no bug fixes

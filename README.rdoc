@@ -35,7 +35,7 @@ If you want to obtain the latest (development)code, you should do:
     cd nmatrix/
     rake compile
     rake repackage
-    gem install pkg/nmatrix-0.0.5.gem
+    gem install pkg/nmatrix-0.0.6.gem
 
 If you get errors about clapack.h or cblas.h, determine where your ATLAS headers are using:
 
@@ -87,7 +87,7 @@ Read the instructions in +CONTRIBUTING.md+ if you want to help NMatrix.
 
 == Features
 
-The following features exist in the current version of NMatrix (0.0.4):
+The following features exist in the current version of NMatrix (0.0.5):
 
 * Matrix and vector storage containers: dense, yale, list (more to come)
 * Data types: uint8, int8, int16, int32, int64, float32, float64, complex64, complex128, rational64, rational128
