@@ -35,7 +35,7 @@ If you want to obtain the latest (development)code, you should do:
     cd nmatrix/
     rake compile
     rake repackage
-    gem install pkg/nmatrix-0.0.5.gem
+    gem install pkg/nmatrix-0.0.6.gem
 
 If you get errors about clapack.h or cblas.h, determine where your ATLAS headers are using:
 
@@ -52,10 +52,10 @@ Finally, try compiling again.
 
 == Documentation
 
-Carlos Agarie (@agarie) is currently working to improve the documentation. The best way to get help is by
-posting {issues}[https://github.com/SciRuby/nmatrix/issues] or sending e-mails to
-our {mailing list}[https://groups.google.com/forum/?fromgroups#!forum/sciruby-dev]. You may also email @agarie, or look
-for `agarie` on #sciruby at chat.freenode.net if you want to ask questions or offer suggestions.
+Carlos Agarie (@agarie) is currently working to improve the documentation. The best way to get help is by posting
+{issues}[https://github.com/SciRuby/nmatrix/issues] or sending e-mails to our
+{mailing list}[https://groups.google.com/forum/?fromgroups#!forum/sciruby-dev]. You may also email @agarie, or look for
+`agarie` on #sciruby at chat.freenode.net if you want to ask questions or offer suggestions.
 
 You can find the complete API documentation {on our website}[http://sciruby.com/nmatrix/docs/].
 
@@ -87,9 +87,9 @@ Read the instructions in +CONTRIBUTING.md+ if you want to help NMatrix.
 
 == Features
 
-The following features exist in the current version of NMatrix (0.0.4):
+The following features exist in the current version of NMatrix (0.0.5):
 
-* Matrix storage containers: dense, yale, list (more to come)
+* Matrix and vector storage containers: dense, yale, list (more to come)
 * Data types: uint8, int8, int16, int32, int64, float32, float64, complex64, complex128, rational64, rational128
   (incomplete)
 * Conversion between storage and data types (except from-complex, and from-float-to-rational)
@@ -102,7 +102,7 @@ The following features exist in the current version of NMatrix (0.0.4):
 * Matlab .MAT v5 file input
 * C and C++ API
 * BLAS internal implementations (no library) and ATLAS (with library) access:
-  * Level 1: xROT, xROTG (BLAS dtypes only)
+  * Level 1: xROT, xROTG (BLAS dtypes only), xASUM, xNRM2
   * Level 2: xGEMV
   * Level 3: xGEMM, xTRSM
 * LAPACK ATLAS access:
@@ -116,6 +116,7 @@ The following features exist in the current version of NMatrix (0.0.4):
 * LU decomposition
 * Matrix inversions (requires LAPACK; BLAS dtypes only)
 * Determinant calculation for BLAS dtypes
+* Vector 2-norms
 * Ruby/GSL interoperability (requires [SciRuby's fork of rb-gsl](http://github.com/SciRuby/rb-gsl))
 
 === Planned Features (Short-to-Medium Term)
@@ -126,7 +127,7 @@ These are features planned for NMatrix 0.1.0, our first beta.
 * exponentials and square roots
 * matrix inversions (LAPACK-free)
 * matrix decomposition/factorization
-* calculation of norms
+* calculation of additional norms
 * tensor products
 * principal component analysis (PCA)
 * improved file I/O

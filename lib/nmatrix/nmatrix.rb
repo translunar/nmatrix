@@ -9,8 +9,8 @@
 #
 # == Copyright Information
 #
-# SciRuby is Copyright (c) 2010 - 2012, Ruby Science Foundation
-# NMatrix is Copyright (c) 2012, Ruby Science Foundation
+# SciRuby is Copyright (c) 2010 - 2013, Ruby Science Foundation
+# NMatrix is Copyright (c) 2013, Ruby Science Foundation
 #
 # Please see LICENSE.txt for additional copyright notices.
 #
@@ -32,9 +32,9 @@ require_relative './lapack.rb'
 require_relative './yale_functions.rb'
 
 class NMatrix
-	# Read and write extensions for NMatrix. These are only loaded when needed.
+  # Read and write extensions for NMatrix. These are only loaded when needed.
   #
-	module IO
+  module IO
     module Matlab
       class << self
         def load_mat file_path
@@ -51,9 +51,9 @@ class NMatrix
     autoload :Market, 'nmatrix/io/market'
   end
 
-	# TODO: Make this actually pretty.
-	def pretty_print(q = nil) #:nodoc:
-		if dim != 2 || (dim == 2 && shape[1] > 10) # FIXME: Come up with a better way of restricting the display
+  # TODO: Make this actually pretty.
+  def pretty_print(q = nil) #:nodoc:
+    if dim != 2 || (dim == 2 && shape[1] > 10) # FIXME: Come up with a better way of restricting the display
       puts self.inspect
     else
 
@@ -61,10 +61,10 @@ class NMatrix
         ary = []
         (0...shape[1]).each do |j|
           o = begin
-            self[i, j]
-          rescue ArgumentError
-            nil
-          end
+                self[i, j]
+              rescue ArgumentError
+                nil
+              end
           ary << (o.nil? ? 'nil' : o)
         end
         ary.inspect
@@ -79,8 +79,8 @@ class NMatrix
       end
 
     end
-	end
-	alias :pp :pretty_print
+  end
+  alias :pp :pretty_print
 
   #
   # call-seq:
@@ -92,7 +92,7 @@ class NMatrix
   def rows
     shape[0]
   end
-  
+
   #
   # call-seq:
   #     cols -> Integer
@@ -103,6 +103,7 @@ class NMatrix
   def cols
     shape[1]
   end
+
   #
   # call-seq:
   #     to_hash -> Hash
@@ -229,35 +230,35 @@ class NMatrix
   #     complex_conjugate -> NMatrix
   #     complex_conjugate(new_stype) -> NMatrix
   #
-	# Get the complex conjugate of this matrix. See also complex_conjugate! for
-	# an in-place operation (provided the dtype is already +:complex64+ or
-	# +:complex128+).
-	#
-	# Doesn't work on list matrices, but you can optionally pass in the stype you
-	# want to cast to if you're dealing with a list matrix.
+  # Get the complex conjugate of this matrix. See also complex_conjugate! for
+  # an in-place operation (provided the dtype is already +:complex64+ or
+  # +:complex128+).
+  #
+  # Doesn't work on list matrices, but you can optionally pass in the stype you
+  # want to cast to if you're dealing with a list matrix.
   #
   # * *Arguments* :
   #   - +new_stype+ -> stype for the new matrix.
   # * *Returns* :
   #   - If the original NMatrix isn't complex, the result is a +:complex128+ NMatrix. Otherwise, it's the original dtype.
   #
-	def complex_conjugate(new_stype = self.stype)
-		self.cast(new_stype, NMatrix::upcast(dtype, :complex64)).complex_conjugate!
-	end
+  def complex_conjugate(new_stype = self.stype)
+    self.cast(new_stype, NMatrix::upcast(dtype, :complex64)).complex_conjugate!
+  end
 
   #
   # call-seq:
   #     conjugate_transpose -> NMatrix
   #
-	# Calculate the conjugate transpose of a matrix. If your dtype is already
-	# complex, this should only require one copy (for the transpose).
+  # Calculate the conjugate transpose of a matrix. If your dtype is already
+  # complex, this should only require one copy (for the transpose).
   #
   # * *Returns* :
   #   - The conjugate transpose of the matrix as a copy.
   #
-	def conjugate_transpose
-		self.transpose.complex_conjugate!
-	end
+  def conjugate_transpose
+    self.transpose.complex_conjugate!
+  end
 
   #
   # call-seq:
@@ -269,38 +270,42 @@ class NMatrix
   # * *Returns* :
   #   - True if +self+ is a hermitian matrix, nil otherwise.
   #
-	def hermitian?
-		return false if self.dim != 2 or self.shape[0] != self.shape[1]
-		
-		if [:complex64, :complex128].include?(self.dtype)
-			# TODO: Write much faster Hermitian test in C
-			self.eql?(self.conjugate_transpose)
-		else
-			symmetric?
-		end
-	end
+  def hermitian?
+    return false if self.dim != 2 or self.shape[0] != self.shape[1]
 
-	def inspect #:nodoc:
-		original_inspect = super()
-		original_inspect = original_inspect[0...original_inspect.size-1]
+    if [:complex64, :complex128].include?(self.dtype)
+      # TODO: Write much faster Hermitian test in C
+      self.eql?(self.conjugate_transpose)
+    else
+      symmetric?
+    end
+  end
+
+  def inspect #:nodoc:
+    original_inspect = super()
+    original_inspect = original_inspect[0...original_inspect.size-1]
     original_inspect + " " + inspect_helper.join(" ") + ">"
-	end
+  end
 
-	def __yale_ary__to_s(sym) #:nodoc:
-		ary = self.send("__yale_#{sym.to_s}__".to_sym)
-		
-		'[' + ary.collect { |a| a ? a : 'nil'}.join(',') + ']'
-	end
-  #
+  def __yale_ary__to_s(sym) #:nodoc:
+    ary = self.send("__yale_#{sym.to_s}__".to_sym)
+
+    '[' + ary.collect { |a| a ? a : 'nil'}.join(',') + ']'
+  end
+
+  ##
   # call-seq:
-  #     each_along_dim -> ...
+  #   each_along_dim() -> Enumerator
+  #   each_along_dim(dimen) -> Enumerator
+  #   each_along_dim() { |elem| block } -> NMatrix
+  #   each_along_dim(dimen) { |elem| block } -> NMatrix
   #
   # Successively yields submatrices at each coordinate along a specified
   # dimension.  Each submatrix will have the same number of dimensions as
   # the matrix being iterated, but with the specified dimension's size 
   # equal to 1.
   #
-  # @param [Integer] dim the dimension being iterated over.
+  # @param [Integer] dimen the dimension being iterated over.
   #
   def each_along_dim(dimen=0)
     return enum_for(:each_along_dim, dimen) unless block_given?
@@ -312,9 +317,16 @@ class NMatrix
     end
   end
 
-  #
+  ##
   # call-seq:
-  #     reduce_along_dim -> NMatrix
+  #   reduce_along_dim() -> Enumerator
+  #   reduce_along_dim(dimen) -> Enumerator
+  #   reduce_along_dim(dimen, initial) -> Enumerator
+  #   reduce_along_dim(dimen, initial, dtype) -> Enumerator
+  #   reduce_along_dim() { |elem| block } -> NMatrix
+  #   reduce_along_dim(dimen) { |elem| block } -> NMatrix
+  #   reduce_along_dim(dimen, initial) { |elem| block } -> NMatrix
+  #   reduce_along_dim(dimen, initial, dtype) { |elem| block } -> NMatrix
   #
   # Reduces an NMatrix using a supplied block over a specified dimension.
   # The block should behave the same way as for Enumerable#reduce.
@@ -324,30 +336,34 @@ class NMatrix
   #  (i.e. the usual parameter to Enumerable#reduce).  Supply nil or do not
   #  supply this argument to have it follow the usual Enumerable#reduce 
   #  behavior of using the first element as the initial value.
+  # @param [Symbol] dtype if non-nil/false, forces the accumulated result to have this dtype
   # @return [NMatrix] an NMatrix with the same number of dimensions as the
   #  input, but with the input dimension now having size 1.  Each element 
   #  is the result of the reduction at that position along the specified
   #  dimension.
   #
-  def reduce_along_dim(dimen=0, initial=nil)
+  def reduce_along_dim(dimen=0, initial=nil, dtype=nil)
 
     if dimen > shape.size then
-      raise ArgumentError, "Requested dimension does not exist (requested: #{dimen}, shape: #{shape})"
+      raise ArgumentError, "Requested dimension does not exist.  Requested: #{dimen}, shape: #{shape}"
     end
 
     return enum_for(:reduce_along_dim, dimen, initial) unless block_given?
 
     new_shape = shape
     new_shape[dimen] = 1
-    vector_size = new_shape.select { |x| x != 1 }.first
 
     first_as_acc = false
 
-    if initial
-      acc = self.class.new(new_shape, initial)
+    if initial then
+      acc = NMatrix.new(new_shape, initial, dtype || self.dtype)
     else
       each_along_dim(dimen) do |sub_mat|
+        if sub_mat.is_a?(NMatrix) and dtype and dtype != self.dtype then
+          acc = sub_mat.cast(self.stype, dtype)
+        else
         acc = sub_mat
+        end
         break
       end
       first_as_acc = true
@@ -367,23 +383,41 @@ class NMatrix
 
   alias_method :inject_along_dim, :reduce_along_dim
 
+  ##
+  # call-seq: 
+  #   integer_dtype?() -> Boolean
   #
+  # Checks if dtype is an integer type
+  #
+  def integer_dtype?
+    [:byte, :int8, :int16, :int32, :int64].include?(self.dtype)
+  end
+
+  ##
   # call-seq:
-  #     mean -> ...
+  #   mean() -> NMatrix
+  #   mean(dimen) -> NMatrix
   #
   # Calculates the mean along the specified dimension.
+  #
+  # This will force integer types to float64 dtype.
   #
   # @see #reduce_along_dim
   #
   def mean(dimen=0)
-    reduce_along_dim(dimen, 0.0) do |mean, sub_mat|
+    reduce_dtype = nil
+    if integer_dtype? then
+      reduce_dtype = :float64
+    end
+    reduce_along_dim(dimen, 0.0, reduce_dtype) do |mean, sub_mat|
       mean + sub_mat/shape[dimen]
     end
   end
 
-  #
+  ##
   # call-seq:
-  #     sum -> ...
+  #   sum() -> NMatrix
+  #   sum(dimen) -> NMatrix
   #
   # Calculates the sum along the specified dimension.
   #
@@ -395,55 +429,76 @@ class NMatrix
   end
 
 
-  #
+  ##
   # call-seq:
-  #     min -> ...
+  #   min() -> NMatrix
+  #   min(dimen) -> NMatrix
   #
   # Calculates the minimum along the specified dimension.
   #
   # @see #reduce_along_dim
   #
   def min(dimen=0)
-    reduce_along_dim(dimen, Float::MAX) do |min, sub_mat|
+    reduce_along_dim(dimen) do |min, sub_mat|
+      if min.is_a? NMatrix then 
       min * (min <= sub_mat) + ((min)*0.0 + (min > sub_mat)) * sub_mat
+      else
+        min <= sub_mat ? min : sub_mat
+      end
     end
   end
 
-  #
+  ##
   # call-seq:
-  #     max -> ...
+  #   max() -> NMatrix
+  #   max(dimen) -> NMatrix
   #
   # Calculates the maximum along the specified dimension.
   #
   # @see #reduce_along_dim
   #
   def max(dimen=0)
-    reduce_along_dim(dimen, -1.0*Float::MAX) do |max, sub_mat|
+    reduce_along_dim(dimen) do |max, sub_mat|
+      if max.is_a? NMatrix then
       max * (max >= sub_mat) + ((max)*0.0 + (max < sub_mat)) * sub_mat
+      else
+        max >= sub_mat ? max : sub_mat
+      end
     end
   end
 
 
-  #
+  ##
   # call-seq:
-  #     variance -> ...
+  #   variance() -> NMatrix
+  #   variance(dimen) -> NMatrix
   #
   # Calculates the sample variance along the specified dimension.
+  #
+  # This will force integer types to float64 dtype.
   #
   # @see #reduce_along_dim
   #
   def variance(dimen=0)
+    reduce_dtype = nil
+    if integer_dtype? then
+      reduce_dtype = :float64
+    end
     m = mean(dimen)
-    reduce_along_dim(dimen, 0.0) do |var, sub_mat|
+    reduce_along_dim(dimen, 0.0, reduce_dtype) do |var, sub_mat|
       var + (m - sub_mat)*(m - sub_mat)/(shape[dimen]-1)
     end
   end
 
-  #
+  ##
   # call-seq:
-  #     std -> ...
+  #   std() -> NMatrix
+  #   std(dimen) -> NMatrix
+  #
   #
   # Calculates the sample standard deviation along the specified dimension.
+  #
+  # This will force integer types to float64 dtype.
   #
   # @see #reduce_along_dim
   #
@@ -451,9 +506,9 @@ class NMatrix
     variance(dimen).map! { |e| Math.sqrt(e) }
   end
 
-  #
+  ##
   # call-seq:
-  #     each_along_dim -> ...
+  #   to_f() -> Float
   #
   # Converts an nmatrix with a single element (but any number of dimensions)
   #  to a float.
@@ -466,9 +521,10 @@ class NMatrix
     self[*Array.new(shape.size, 0)]
   end
 
-  #
+  ##
   # call-seq:
-  #     map -> ...
+  #   map() -> Enumerator
+  #   map() { |elem| block } -> NMatrix
   #
   # @see Enumerable#map
   #
@@ -479,9 +535,10 @@ class NMatrix
     cp
   end
 
-  #
+  ##
   # call-seq:
-  #     map! -> ...
+  #   map!() -> Enumerator
+  #   map!() { |elem| block } -> NMatrix
   #
   # Maps in place.
   # @see #map
@@ -519,7 +576,8 @@ class NMatrix
     self
   end
 
-	class << self
+
+  class << self
     #
     # call-seq:
     #     load_file(path) -> Mat5Reader
@@ -529,13 +587,13 @@ class NMatrix
     # * *Returns* :
     #   - A Mat5Reader object.
     #
-		def load_file(file_path)
-			NMatrix::IO::Mat5Reader.new(File.open(file_path, 'rb')).to_ruby
+    def load_file(file_path)
+      NMatrix::IO::Mat5Reader.new(File.open(file_path, 'rb')).to_ruby
     end
 
-    #
+    ##
     # call-seq:
-    #     ones_like -> ...
+    #   ones_like(nm) -> NMatrix
     #
     # Creates a new matrix of ones with the same dtype and shape as the
     # provided matrix.
@@ -547,9 +605,9 @@ class NMatrix
       NMatrix.ones(nm.shape, nm.dtype)
     end
 
-    #
+    ##
     # call-seq:
-    #     zeros_like -> ...
+    #   zeros_like(nm) -> NMatrix
     #
     # Creates a new matrix of zeros with the same stype, dtype, and shape
     # as the provided matrix.
@@ -559,26 +617,26 @@ class NMatrix
     #
     def zeros_like(nm)
       NMatrix.zeros(nm.stype, nm.shape, nm.dtype)
-		end
-	end
+    end
+  end
 
 protected
-	def inspect_helper #:nodoc:
-		ary = []
-		ary << "shape:[#{shape.join(',')}]" << "dtype:#{dtype}" << "stype:#{stype}"
+  def inspect_helper #:nodoc:
+    ary = []
+    ary << "shape:[#{shape.join(',')}]" << "dtype:#{dtype}" << "stype:#{stype}"
 
-		if stype == :yale
-			ary <<	"capacity:#{capacity}"
+    if stype == :yale
+      ary <<	"capacity:#{capacity}"
 
       # These are enabled by the DEBUG_YALE compiler flag in extconf.rb.
       if respond_to?(:__yale_a__)
         ary << "ija:#{__yale_ary__to_s(:ija)}" << "ia:#{__yale_ary__to_s(:ia)}" <<
-				  			"ja:#{__yale_ary__to_s(:ja)}" << "a:#{__yale_ary__to_s(:a)}" << "d:#{__yale_ary__to_s(:d)}" <<
-					  		"lu:#{__yale_ary__to_s(:lu)}" << "yale_size:#{__yale_size__}"
+          "ja:#{__yale_ary__to_s(:ja)}" << "a:#{__yale_ary__to_s(:a)}" << "d:#{__yale_ary__to_s(:d)}" <<
+          "lu:#{__yale_ary__to_s(:lu)}" << "yale_size:#{__yale_size__}"
       end
 
-		end
+    end
 
-		ary
-	end
+    ary
+  end
 end

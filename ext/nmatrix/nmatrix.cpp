@@ -544,6 +544,28 @@ void Init_nmatrix() {
 // Ruby Methods //
 //////////////////
 
+
+/*
+ * Slice constructor.
+ */
+static SLICE* alloc_slice(size_t dim) {
+  SLICE* slice = ALLOC(SLICE);
+  slice->coords = ALLOC_N(size_t, dim);
+  slice->lengths = ALLOC_N(size_t, dim);
+  return slice;
+}
+
+
+/*
+ * Slice destructor.
+ */
+static void free_slice(SLICE* slice) {
+  free(slice->coords);
+  free(slice->lengths);
+  free(slice);
+}
+
+
 /*
  * Allocator.
  */
@@ -596,6 +618,8 @@ static void nm_delete(NMATRIX* mat) {
     nm_yale_storage_delete
   };
   ttable[mat->stype](mat->storage);
+
+  free(mat);
 }
 
 /*
@@ -608,6 +632,8 @@ static void nm_delete_ref(NMATRIX* mat) {
     nm_yale_storage_delete
   };
   ttable[mat->stype](mat->storage);
+
+  free(mat);
 }
 
 /*
@@ -1156,6 +1182,16 @@ void write_padded_dense_elements(std::ofstream& f, DENSE_STORAGE* storage, nm::s
 }
 
 
+/*
+ * Helper function to get exceptions in the module Errno (e.g., ENOENT). Example:
+ *
+ *     rb_raise(rb_get_errno_exc("ENOENT"), RSTRING_PTR(filename));
+ */
+static VALUE rb_get_errno_exc(const char* which) {
+  return rb_const_get(rb_const_get(rb_cObject, rb_intern("Errno")), rb_intern(which));
+}
+
+
 
 /*
  * Binary file writer for NMatrix standard format. file should be a path, which we aren't going to
@@ -1255,12 +1291,16 @@ static VALUE nm_write(int argc, VALUE* argv, VALUE self) {
 static VALUE nm_read(int argc, VALUE* argv, VALUE self) {
   using std::ifstream;
 
+  VALUE file, force_;
+
   // Read the arguments
-  if (argc < 1 || argc > 2) {
-    rb_raise(rb_eArgError, "expected one or two arguments");
+  rb_scan_args(argc, argv, "11", &file, &force_);
+  bool force   = (force_ != Qnil && force_ != Qfalse);
+
+
+  if (!RB_FILE_EXISTS(file)) { // FIXME: Errno::ENOENT
+    rb_raise(rb_get_errno_exc("ENOENT"), RSTRING_PTR(file));
   }
-  VALUE file   = argv[0];
-  bool force   = argc == 1 ? false : argv[1];
 
   // Open a file stream
   ifstream f(RSTRING_PTR(file), std::ios::in | std::ios::binary);
@@ -1333,7 +1373,7 @@ static VALUE nm_read(int argc, VALUE* argv, VALUE self) {
   case nm::DENSE_STORE:
     return Data_Wrap_Struct(klass, nm_dense_storage_mark, nm_delete, nm);
   case nm::YALE_STORE:
-    return Data_Wrap_Struct(cNMatrix, nm_yale_storage_mark, nm_delete, nm);
+    return Data_Wrap_Struct(klass, nm_yale_storage_mark, nm_delete, nm);
   default:
     return Qnil;
   }
@@ -1447,6 +1487,7 @@ static VALUE nm_mset(int argc, VALUE* argv, VALUE self) {
     switch(NM_STYPE(self)) {
     case nm::DENSE_STORE:
       nm_dense_storage_set(NM_STORAGE(self), slice, value);
+      free(value);
       break;
     case nm::LIST_STORE:
       // Remove if it's a zero, insert otherwise
@@ -1456,12 +1497,15 @@ static VALUE nm_mset(int argc, VALUE* argv, VALUE self) {
         free(value);
       } else {
         nm_list_storage_insert(NM_STORAGE(self), slice, value);
+        // no need to free value here since it was inserted directly into the list.
       }
       break;
     case nm::YALE_STORE:
       nm_yale_storage_set(NM_STORAGE(self), slice, value);
+      free(value);
       break;
     }
+    free_slice(slice);
 
     return argv[dim];
 
@@ -1646,7 +1690,7 @@ static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLIC
       result = Data_Wrap_Struct(klass, mark_table[mat->stype], delete_func, mat);
     }
 
-    free(slice);
+    free_slice(slice);
 
   } else if (NM_DIM(self) < (size_t)(argc)) {
     rb_raise(rb_eArgError, "Coordinates given exceed number of matrix dimensions");
@@ -1835,6 +1879,8 @@ nm::dtype_t nm_dtype_guess(VALUE v) {
   }
 }
 
+
+
 /*
  * Documentation goes here.
  */
@@ -1843,9 +1889,7 @@ static SLICE* get_slice(size_t dim, VALUE* c, VALUE self) {
   VALUE beg, end;
   int exl;
 
-  SLICE* slice = ALLOC(SLICE);
-  slice->coords = ALLOC_N(size_t,dim);
-  slice->lengths = ALLOC_N(size_t, dim);
+  SLICE* slice = alloc_slice(dim);
   slice->single = true;
 
   for (r = 0; r < dim; ++r) {

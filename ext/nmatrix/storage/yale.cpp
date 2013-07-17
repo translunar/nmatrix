@@ -682,7 +682,7 @@ YALE_STORAGE* ew_op(const YALE_STORAGE* left, const YALE_STORAGE* right, dtype_t
 	
 	YALE_STORAGE* dest;
 	
-	new_shape			= reinterpret_cast<size_t*>(calloc(2, sizeof(size_t)));
+	new_shape			= reinterpret_cast<size_t*>(ALLOC_N(size_t, 2));
 	new_shape[0]	= left->shape[0];
 	new_shape[1]	= left->shape[1];
 	
@@ -967,11 +967,11 @@ static char vector_insert_resize(YALE_STORAGE* s, size_t current_size, size_t po
 
   // Copy all values subsequent to the insertion site to the new IJA and new A, leaving room (size n) for insertion.
   if (struct_only) {
-    for (size_t i = pos; i < current_size - pos + n - 1; ++i) {
+    for (size_t i = pos; i < current_size; ++i) {
       new_ija[i+n] = old_ija[i];
     }
   } else {
-    for (size_t i = pos; i < current_size - pos + n - 1; ++i) {
+    for (size_t i = pos; i < current_size; ++i) {
       new_ija[i+n] = old_ija[i];
       new_a[i+n] = old_a[i];
     }
@@ -1171,10 +1171,6 @@ static STORAGE* matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resu
   // same for left and right.
   // int8_t dtype = left->dtype;
 
-  // Create result storage.
-  YALE_STORAGE* result = nm_yale_storage_create(left->dtype, resulting_shape, 2, left->capacity + right->capacity, result_itype);
-  init<DType,IType>(result);
-
   // Massage the IType arrays into the correct form.
 
   IType* ijl;
@@ -1197,16 +1193,26 @@ static STORAGE* matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resu
     copy_recast_itype_vector(reinterpret_cast<void*>(right->ija), right->itype, reinterpret_cast<void*>(ijr), result_itype, length);
   }
 
+  // First, count the ndnz of the result.
+  // TODO: This basically requires running symbmm twice to get the exact ndnz size. That's frustrating. Are there simple
+  // cases where we can avoid running it?
+  size_t result_ndnz = nm::math::symbmm<IType>(resulting_shape[0], left->shape[1], resulting_shape[1], ijl, ijl, true, ijr, ijr, true, NULL, true);
+
+  // Create result storage.
+  YALE_STORAGE* result = nm_yale_storage_create(left->dtype, resulting_shape, 2, result_ndnz, result_itype);
+  init<DType,IType>(result);
   IType* ija = reinterpret_cast<IType*>(result->ija);
 
   // Symbolic multiplication step (build the structure)
-  nm::math::symbmm<IType>(result->shape[0], result->shape[1], ijl, ijl, true, ijr, ijr, true, ija, true);
+  nm::math::symbmm<IType>(resulting_shape[0], left->shape[1], resulting_shape[1], ijl, ijl, true, ijr, ijr, true, ija, true);
 
   // Numeric multiplication step (fill in the elements)
-  nm::math::numbmm<DType,IType>(result->shape[0], result->shape[1],
+
+  nm::math::numbmm<DType,IType>(result->shape[0], left->shape[1], result->shape[1],
                                 ijl, ijl, reinterpret_cast<DType*>(left->a), true,
                                 ijr, ijr, reinterpret_cast<DType*>(right->a), true,
                                 ija, ija, reinterpret_cast<DType*>(result->a), true);
+
 
   // Sort the columns
   nm::math::smmp_sort_columns<DType,IType>(result->shape[0], ija, ija, reinterpret_cast<DType*>(result->a));

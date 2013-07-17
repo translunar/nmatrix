@@ -61,9 +61,9 @@ module NMatrix::BLAS
     #   - +ArgumentError+ -> The dtype of the matrices must be equal.
     #
     def gemm(a, b, c = nil, alpha = 1.0, beta = 0.0, transpose_a = false, transpose_b = false, m = nil, n = nil, k = nil, lda = nil, ldb = nil, ldc = nil)
-      raise ArgumentError, 'Expected dense NMatrices as first two arguments.' unless a.is_a?(NMatrix) and b.is_a?(NMatrix) and a.stype == :dense and b.stype == :dense
-      raise ArgumentError, 'Expected nil or dense NMatrix as third argument.' unless c.nil? or (c.is_a?(NMatrix) and c.stype == :dense)
-      raise ArgumentError, 'NMatrix dtype mismatch.'													unless a.dtype == b.dtype and (c ? a.dtype == c.dtype : true)
+      raise(ArgumentError, 'Expected dense NMatrices as first two arguments.') unless a.is_a?(NMatrix) and b.is_a?(NMatrix) and a.stype == :dense and b.stype == :dense
+      raise(ArgumentError, 'Expected nil or dense NMatrix as third argument.') unless c.nil? or (c.is_a?(NMatrix) and c.stype == :dense)
+      raise(ArgumentError, 'NMatrix dtype mismatch.')													 unless a.dtype == b.dtype and (c ? a.dtype == c.dtype : true)
 
       # First, set m, n, and k, which depend on whether we're taking the
       # transpose of a and b.
@@ -133,9 +133,9 @@ module NMatrix::BLAS
     #   - ++ ->
     #
     def gemv(a, x, y = nil, alpha = 1.0, beta = 0.0, transpose_a = false, m = nil, n = nil, lda = nil, incx = nil, incy = nil)
-      raise ArgumentError, 'Expected dense NMatrices as first two arguments.' unless a.is_a?(NMatrix) and x.is_a?(NMatrix) and a.stype == :dense and x.stype == :dense
-      raise ArgumentError, 'Expected nil or dense NMatrix as third argument.' unless y.nil? or (y.is_a?(NMatrix) and y.stype == :dense)
-      raise ArgumentError, 'NMatrix dtype mismatch.'													unless a.dtype == x.dtype and (y ? a.dtype == y.dtype : true)
+      raise(ArgumentError, 'Expected dense NMatrices as first two arguments.') unless a.is_a?(NMatrix) and x.is_a?(NMatrix) and a.stype == :dense and x.stype == :dense
+      raise(ArgumentError, 'Expected nil or dense NMatrix as third argument.') unless y.nil? or (y.is_a?(NMatrix) and y.stype == :dense)
+      raise(ArgumentError, 'NMatrix dtype mismatch.')													 unless a.dtype == x.dtype and (y ? a.dtype == y.dtype : true)
 
       m ||= transpose_a ? a.shape[1] : a.shape[0]
       n ||= transpose_a ? a.shape[0] : a.shape[1]
@@ -159,38 +159,125 @@ module NMatrix::BLAS
 
     #
     # call-seq:
-    #     rot(x, y, c, s)
+    #     rot(x, y, c, s) -> [NVector, NVector]
     #
     # Apply plane rotation.
     #
     # * *Arguments* :
-    #   - +x+ ->
-    #   - +y+ ->
-    #   - +s+ ->
-    #   - +c+ ->
-    #   - +incx+ ->
-    #   - +incy+ ->
-    #   - +n+ ->
+    #   - +x+ -> NVector
+    #   - +y+ -> NVector
+    #   - +c+ -> cosine of the angle of rotation
+    #   - +s+ -> sine of the angle of rotation
+    #   - +incx+ -> stride of NVector +x+
+    #   - +incy+ -> stride of NVector +y+
+    #   - +n+ -> number of elements to consider in x and y
+    #   - +in_place+ -> true if it's okay to modify the supplied +x+ and +y+ parameters directly; false if not. Default is false.
     # * *Returns* :
     #   - Array with the results, in the format [xx, yy]
     # * *Raises* :
-    #   - +ArgumentError+ -> Expected dense NMatrices as first two arguments.
-    #   - +ArgumentError+ -> Nmatrix dtype mismatch.
+    #   - +ArgumentError+ -> Expected dense NVectors as first two arguments.
+    #   - +ArgumentError+ -> NMatrix dtype mismatch.
     #   - +ArgumentError+ -> Need to supply n for non-standard incx, incy values.
     #
-    def rot(x, y, c, s, incx = 1, incy = 1, n = nil)
-      raise ArgumentError, 'Expected dense NMatrices as first two arguments.' unless x.is_a?(NMatrix) and y.is_a?(NMatrix) and x.stype == :dense and y.stype == :dense
-      raise ArgumentError, 'NMatrix dtype mismatch.'													unless x.dtype == y.dtype
-      raise ArgumentError, 'Need to supply n for non-standard incx, incy values' if n.nil? && incx != 1 && incx != -1 && incy != 1 && incy != -1
+    def rot(x, y, c, s, incx = 1, incy = 1, n = nil, in_place=false)
+      raise(ArgumentError, 'Expected dense NVectors as first two arguments.') unless x.is_a?(NMatrix) and y.is_a?(NMatrix) and x.stype == :dense and y.stype == :dense
+      raise(ArgumentError, 'NMatrix dtype mismatch.')													unless x.dtype == y.dtype
+      raise(ArgumentError, 'Need to supply n for non-standard incx, incy values') if n.nil? && incx != 1 && incx != -1 && incy != 1 && incy != -1
 
-      n ||= x.size > y.size ? y.size : x.size
+      n ||= [x.size/incx.abs, y.size/incy.abs].min
 
-      xx = x.clone
-      yy = y.clone
+      if in_place
+        ::NMatrix::BLAS.cblas_rot(n, x, incx, y, incy, c, s)
+        return [x,y]
+      else
+        xx = x.clone
+        yy = y.clone
 
-      ::NMatrix::BLAS.cblas_rot(n, xx, incx, yy, incy, c, s)
+        ::NMatrix::BLAS.cblas_rot(n, xx, incx, yy, incy, c, s)
 
-      return [xx,yy]
+        return [xx,yy]
+      end
+    end
+
+
+    #
+    # call-seq:
+    #     rot!(x, y, c, s) -> [NVector, NVector]
+    #
+    # Apply plane rotation directly to +x+ and +y+.
+    #
+    # See rot for arguments.
+    def rot!(x, y, c, s, incx = 1, incy = 1, n = nil)
+      rot(x,y,c,s,incx,incy,n,true)
+    end
+
+
+    #
+    # call-seq:
+    #     rotg(ab) -> [Numeric, Numeric]
+    #
+    # Apply givens plane rotation to the coordinates (a,b), returning the cosine and sine of the angle theta.
+    #
+    # Since the givens rotation includes a square root, integers and rationals are disallowed.
+    #
+    # * *Arguments* :
+    #   - +ab+ -> NVector with two elements
+    # * *Returns* :
+    #   - Array with the results, in the format [cos(theta), sin(theta)]
+    # * *Raises* :
+    #   - +ArgumentError+ -> Expected dense NVector of size 2
+    #
+    def rotg(ab)
+      raise(ArgumentError, "Expected dense NVector of size 2") unless ab.is_a?(NVector) && ab.size == 2
+
+      ::NMatrix::BLAS.cblas_rotg(ab)
+    end
+
+
+    #
+    # call-seq:
+    #     asum(x, incx, n) -> Numeric
+    #
+    # Calculate the sum of absolute values of the entries of a vector +x+ of size +n+
+    #
+    # * *Arguments* :
+    #   - +x+ -> an NVector (will also allow an NMatrix, but will treat it as if it's a vector )
+    #   - +incx+ -> the skip size (defaults to 1)
+    #   - +n+ -> the size of +x+ (defaults to +x.size / incx+)
+    # * *Returns* :
+    #   - The sum
+    # * *Raises* :
+    #   - +ArgumentError+ -> Expected dense NVector (or NMatrix on rare occasions) for arg 0
+    #   - +RangeError+ -> n out of range
+    #
+    def asum(x, incx = 1, n = nil)
+      n ||= x.size / incx
+      raise(ArgumentError, "Expected dense NVector (or NMatrix on rare occasions) for arg 0") unless x.is_a?(NMatrix)
+      raise(RangeError, "n out of range") if n*incx > x.size || n*incx <= 0 || n <= 0
+      ::NMatrix::BLAS.cblas_asum(n, x, incx)
+    end
+
+    #
+    # call-seq:
+    #     nrm2(x, incx, n)
+    #
+    # Calculate the 2-norm of a vector +x+ of size +n+
+    #
+    # * *Arguments* :
+    #   - +x+ -> an NVector (will also allow an NMatrix, but will treat it as if it's a vector )
+    #   - +incx+ -> the skip size (defaults to 1)
+    #   - +n+ -> the size of +x+ (defaults to +x.size / incx+)
+    # * *Returns* :
+    #   - The 2-norm
+    # * *Raises* :
+    #   - +ArgumentError+ -> Expected dense NVector (or NMatrix on rare occasions) for arg 0
+    #   - +RangeError+ -> n out of range
+    #
+    def nrm2(x, incx = 1, n = nil)
+      n ||= x.size / incx
+      raise(ArgumentError, "Expected dense NVector (or NMatrix on rare occasions) for arg 0") unless x.is_a?(NMatrix)
+      raise(RangeError, "n out of range") if n*incx > x.size || n*incx <= 0 || n <= 0
+      ::NMatrix::BLAS.cblas_nrm2(n, x, incx)
     end
   end
 end

@@ -34,6 +34,7 @@
 
 #include <type_traits>
 #include <iostream>
+#include <cmath>
 
 /*
  * Project Includes
@@ -363,9 +364,26 @@ inline std::ostream& operator<<(std::ostream& out, const Complex<Type>& rhs) {
 
 namespace std {
   template <typename FloatType, typename = typename std::enable_if<std::is_floating_point<FloatType>::value>::type>
-  nm::Complex<FloatType> abs(const nm::Complex<FloatType>& value) {
+  nm::Complex<FloatType> piecewise_abs(const nm::Complex<FloatType>& value) {
     return nm::Complex<FloatType>(value.r < 0 ? -value.r : value.r,
                                   value.i < 0 ? -value.i : value.i);
+  }
+
+  template <typename FloatType, typename = typename std::enable_if<std::is_floating_point<FloatType>::value>::type>
+  nm::Complex<FloatType> real_abs(const nm::Complex<FloatType>& value) {
+    return nm::Complex<FloatType>(value.r < 0 ? -value.r : value.r,
+                                  value.i);
+  }
+
+  template <typename FloatType, typename = typename std::enable_if<std::is_floating_point<FloatType>::value>::type>
+  nm::Complex<FloatType> imag_abs(const nm::Complex<FloatType>& value) {
+    return nm::Complex<FloatType>(value.r,
+                                  value.i < 0 ? -value.i : value.i);
+  }
+
+  template <typename FloatType, typename = typename std::enable_if<std::is_floating_point<FloatType>::value>::type>
+  double abs(const nm::Complex<FloatType>& value) {
+    return std::sqrt(double(value.r)*double(value.r) + double(value.i)*double(value.i));
   }
 }
 
