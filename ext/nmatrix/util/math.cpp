@@ -805,7 +805,8 @@ static VALUE nm_clapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE a) {
   static int (*ttable[nm::NUM_DTYPES])(const char* jobu, const char* jobvt, const int m, const int n, void* a, const int lda, void* s, const int ldu, const int ldvt, const int lwork) = {
     NULL, NULL, NULL, NULL, NULL,
     NULL, //nm::math::clapack_gesvd<float, float>, 
-    nm::math::clapack_gesvd<double, double>, 
+    //nm::math::clapack_gesvd<double, double>, 
+    NULL, // dgesvd_,
     // clapack_sgesvd, clapack_dgesvd,
     NULL, //nm::math::clapack_gesvd<nm::Complex64, float>, 
     NULL, // nm::math::clapack_gesvd<nm::Complex128, double>, 
