@@ -67,23 +67,6 @@ describe NMatrix::BLAS do
 
   [:float32, :float64].each do |dtype|
     context dtype do
-      it "exposes unfriendly cblas_rot" do
-        x = NVector.new(5, [1,2,3,4,5], dtype)
-        y = NVector.new(5, [-5,-4,-3,-2,-1], dtype)
-        NMatrix::BLAS::cblas_rot(5, x, 1, y, -1, 0.5, Math.sqrt(3)/2)
-
-        x[0].should be_within(1e-4).of(-0.3660254037844386)
-        x[1].should be_within(1e-4).of(-0.7320508075688772)
-        x[2].should be_within(1e-4).of(-1.098076211353316)
-        x[3].should be_within(1e-4).of(-1.4641016151377544)
-        x[4].should be_within(1e-4).of(-1.8301270189221928)
-
-        y[0].should be_within(1e-4).of(-6.830127018922193)
-        y[1].should be_within(1e-4).of(-5.464101615137754)
-        y[2].should be_within(1e-4).of(-4.098076211353316)
-        y[3].should be_within(1e-4).of(-2.732050807568877)
-        y[4].should be_within(1e-4).of(-1.3660254037844386)
-      end
 
       it "exposes cblas rot" do
         x = NVector.new(5, [1,2,3,4,5], dtype)
@@ -103,10 +86,9 @@ describe NMatrix::BLAS do
         y[4].should be_within(1e-4).of(-1.3660254037844386)
       end
 
-      # FIXME: Need to write new Rational algorithm, which doesn't choke quite so often on irrational square roots (which often eventually cancel).
       it "exposes cblas rotg" do
         ab = NVector.new(2, [6,-8], dtype)
-        c,s = NMatrix::BLAS::cblas_rotg(ab)
+        c,s = NMatrix::BLAS::rotg(ab)
         ab[0].should be_within(1e-6).of(-10)
         ab[1].should be_within(1e-6).of(-5.quo(3))
         c.should be_within(1e-6).of(-3.quo(5))

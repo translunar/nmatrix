@@ -159,43 +159,84 @@ module NMatrix::BLAS
 
     #
     # call-seq:
-    #     rot(x, y, c, s)
+    #     rot(x, y, c, s) -> [NVector, NVector]
     #
     # Apply plane rotation.
     #
     # * *Arguments* :
-    #   - +x+ ->
-    #   - +y+ ->
-    #   - +s+ ->
-    #   - +c+ ->
-    #   - +incx+ ->
-    #   - +incy+ ->
-    #   - +n+ ->
+    #   - +x+ -> NVector
+    #   - +y+ -> NVector
+    #   - +c+ -> cosine of the angle of rotation
+    #   - +s+ -> sine of the angle of rotation
+    #   - +incx+ -> stride of NVector +x+
+    #   - +incy+ -> stride of NVector +y+
+    #   - +n+ -> number of elements to consider in x and y
+    #   - +in_place+ -> true if it's okay to modify the supplied +x+ and +y+ parameters directly; false if not. Default is false.
     # * *Returns* :
     #   - Array with the results, in the format [xx, yy]
     # * *Raises* :
-    #   - +ArgumentError+ -> Expected dense NMatrices as first two arguments.
-    #   - +ArgumentError+ -> Nmatrix dtype mismatch.
+    #   - +ArgumentError+ -> Expected dense NVectors as first two arguments.
+    #   - +ArgumentError+ -> NMatrix dtype mismatch.
     #   - +ArgumentError+ -> Need to supply n for non-standard incx, incy values.
     #
-    def rot(x, y, c, s, incx = 1, incy = 1, n = nil)
-      raise(ArgumentError, 'Expected dense NMatrices as first two arguments.') unless x.is_a?(NMatrix) and y.is_a?(NMatrix) and x.stype == :dense and y.stype == :dense
+    def rot(x, y, c, s, incx = 1, incy = 1, n = nil, in_place=false)
+      raise(ArgumentError, 'Expected dense NVectors as first two arguments.') unless x.is_a?(NMatrix) and y.is_a?(NMatrix) and x.stype == :dense and y.stype == :dense
       raise(ArgumentError, 'NMatrix dtype mismatch.')													unless x.dtype == y.dtype
       raise(ArgumentError, 'Need to supply n for non-standard incx, incy values') if n.nil? && incx != 1 && incx != -1 && incy != 1 && incy != -1
 
-      n ||= x.size > y.size ? y.size : x.size
+      n ||= [x.size/incx.abs, y.size/incy.abs].min
 
-      xx = x.clone
-      yy = y.clone
+      if in_place
+        ::NMatrix::BLAS.cblas_rot(n, x, incx, y, incy, c, s)
+        return [x,y]
+      else
+        xx = x.clone
+        yy = y.clone
 
-      ::NMatrix::BLAS.cblas_rot(n, xx, incx, yy, incy, c, s)
+        ::NMatrix::BLAS.cblas_rot(n, xx, incx, yy, incy, c, s)
 
-      return [xx,yy]
+        return [xx,yy]
+      end
     end
+
 
     #
     # call-seq:
-    #     asum(x, incx, n)
+    #     rot!(x, y, c, s) -> [NVector, NVector]
+    #
+    # Apply plane rotation directly to +x+ and +y+.
+    #
+    # See rot for arguments.
+    def rot!(x, y, c, s, incx = 1, incy = 1, n = nil)
+      rot(x,y,c,s,incx,incy,n,true)
+    end
+
+
+    #
+    # call-seq:
+    #     rotg(ab) -> [Numeric, Numeric]
+    #
+    # Apply givens plane rotation to the coordinates (a,b), returning the cosine and sine of the angle theta.
+    #
+    # Since the givens rotation includes a square root, integers and rationals are disallowed.
+    #
+    # * *Arguments* :
+    #   - +ab+ -> NVector with two elements
+    # * *Returns* :
+    #   - Array with the results, in the format [cos(theta), sin(theta)]
+    # * *Raises* :
+    #   - +ArgumentError+ -> Expected dense NVector of size 2
+    #
+    def rotg(ab)
+      raise(ArgumentError, "Expected dense NVector of size 2") unless ab.is_a?(NVector) && ab.size == 2
+
+      ::NMatrix::BLAS.cblas_rotg(ab)
+    end
+
+
+    #
+    # call-seq:
+    #     asum(x, incx, n) -> Numeric
     #
     # Calculate the sum of absolute values of the entries of a vector +x+ of size +n+
     #

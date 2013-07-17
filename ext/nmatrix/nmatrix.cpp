@@ -1373,7 +1373,7 @@ static VALUE nm_read(int argc, VALUE* argv, VALUE self) {
   case nm::DENSE_STORE:
     return Data_Wrap_Struct(klass, nm_dense_storage_mark, nm_delete, nm);
   case nm::YALE_STORE:
-    return Data_Wrap_Struct(cNMatrix, nm_yale_storage_mark, nm_delete, nm);
+    return Data_Wrap_Struct(klass, nm_yale_storage_mark, nm_delete, nm);
   default:
     return Qnil;
   }

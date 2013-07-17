@@ -416,16 +416,14 @@ static VALUE nm_cblas_rotg(VALUE self, VALUE ab) {
       nm::math::cblas_rotg<double>,
       nm::math::cblas_rotg<nm::Complex64>,
       nm::math::cblas_rotg<nm::Complex128>,
-      nm::math::cblas_rotg<nm::Rational32>,
-      nm::math::cblas_rotg<nm::Rational64>,
-      nm::math::cblas_rotg<nm::Rational128>,
+      NULL, NULL, NULL, // no rationals
       nm::math::cblas_rotg<nm::RubyObject>
   };
 
   nm::dtype_t dtype = NM_DTYPE(ab);
 
   if (!ttable[dtype]) {
-    rb_raise(nm_eDataTypeError, "this matrix operation undefined for integer matrices");
+    rb_raise(nm_eDataTypeError, "this operation undefined for integer and rational vectors");
     return Qnil;
 
   } else {
@@ -488,7 +486,7 @@ static VALUE nm_cblas_rot(VALUE self, VALUE n, VALUE x, VALUE incx, VALUE y, VAL
 
 
   if (!ttable[dtype]) {
-    rb_raise(nm_eDataTypeError, "this matrix operation undefined for integer matrices");
+    rb_raise(nm_eDataTypeError, "this operation undefined for integer vectors");
     return Qfalse;
   } else {
     void *pC, *pS;
@@ -547,16 +545,17 @@ static VALUE nm_cblas_nrm2(VALUE self, VALUE n, VALUE x, VALUE incx) {
       nm::math::cblas_nrm2<float64_t,float64_t>,
       nm::math::cblas_nrm2<float32_t,nm::Complex64>,
       nm::math::cblas_nrm2<float64_t,nm::Complex128>,
-      nm::math::cblas_nrm2<nm::Rational32,nm::Rational32>,
-      nm::math::cblas_nrm2<nm::Rational64,nm::Rational64>,
-      nm::math::cblas_nrm2<nm::Rational128,nm::Rational128>,
+      //nm::math::cblas_nrm2<nm::Rational32,nm::Rational32>,
+      //nm::math::cblas_nrm2<nm::Rational64,nm::Rational64>,
+      //nm::math::cblas_nrm2<nm::Rational128,nm::Rational128>,
+      NULL, NULL, NULL,
       nm::math::cblas_nrm2<nm::RubyObject,nm::RubyObject>
   };
 
   nm::dtype_t dtype  = NM_DTYPE(x);
 
   if (!ttable[dtype]) {
-    rb_raise(nm_eDataTypeError, "this vector operation undefined for integer vectors");
+    rb_raise(nm_eDataTypeError, "this operation undefined for integer and rational vectors");
     return Qnil;
 
   } else {
@@ -1154,7 +1153,7 @@ static VALUE nm_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE l
 
   if (!ttable[NM_DTYPE(a)]) {
     rb_raise(rb_eNotImpError, "this operation not yet implemented for non-BLAS dtypes");
-    // FIXME: Once BLAS dtypes are implemented, replace error above with the error below.
+    // FIXME: Once non-BLAS dtypes are implemented, replace error above with the error below.
     //rb_raise(nm_eDataTypeError, "this matrix operation undefined for integer matrices");
   } else {
     // Call either our version of getri or the LAPACK version.
