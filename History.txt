@@ -207,6 +207,21 @@
 
   * Added more user-friendly cblas_xrotg implementation: BLAS::rotg
 
+  * Renamed NMatrix::YaleFunctions::yale_vector_insert to
+    yale_vector_set, which is more consistent with behavior
+
+  * Changed behavior and names of NMatrix::YaleFunctions methods
+    which get column indices and cell contents by row, so that they
+    now expect the :keys option (like Hash#keys) instead of :array,
+    which doesn't make sense; name changes are as follows:
+      yale_row_as_sorted_set -> yale_ja_d_keys_sorted_set_at
+      yale_row_as_set -> yale_ja_d_keys_set_at
+      yale_row_as_array -> yale_ja_d_keys_at
+      yale_nd_row_as_sorted_set -> yale_ja_sorted_set_at
+      yale_nd_row_as_set -> yale_ja_set_at
+      yale_nd_row_as_array -> yale_ja_at
+    Aliases are included but will be removed without notice.
+
 * 2 bug fixes:
 
   * Corrected BLAS::rot bounds checking on optional n argument

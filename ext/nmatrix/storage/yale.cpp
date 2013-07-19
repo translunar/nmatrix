@@ -91,7 +91,7 @@ extern "C" {
   static VALUE nm_ija(int argc, VALUE* argv, VALUE self);
 
   static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self);
-  static VALUE nm_vector_insert(int argc, VALUE* argv, VALUE self);
+  static VALUE nm_vector_set(int argc, VALUE* argv, VALUE self);
 
 
 } // end extern "C" block
@@ -1345,7 +1345,8 @@ void nm_init_yale_functions() {
   rb_define_method(cNMatrix_YaleFunctions, "yale_lu", (METHOD)nm_lu, 0);
 
   rb_define_method(cNMatrix_YaleFunctions, "yale_nd_row", (METHOD)nm_nd_row, -1);
-  rb_define_method(cNMatrix_YaleFunctions, "yale_vector_insert", (METHOD)nm_vector_insert, -1);
+  rb_define_method(cNMatrix_YaleFunctions, "yale_vector_set", (METHOD)nm_vector_set, -1);
+  rb_define_alias(cNMatrix_YaleFunctions,  "yale_vector_insert",    "yale_vector_set"); // deprecated
 
   rb_define_const(cNMatrix_YaleFunctions, "YALE_GROWTH_CONSTANT", rb_float_new(nm::yale_storage::GROWTH_CONSTANT));
 }
@@ -1882,20 +1883,18 @@ static VALUE nm_ija(int argc, VALUE* argv, VALUE self) {
  *     yale_nd_row -> ...
  *
  * This function gets the non-diagonal contents of a Yale matrix row.
- * The first argument should be the row index. The optional second argument may be :hash or :array, but defaults
- * to :hash. If :array is given, it will only return the Hash keys (the column indices).
+ * The first argument should be the row index. The optional second argument may be :hash or :keys, but defaults
+ * to :hash. If :keys is given, it will only return the Hash keys (the column indices).
  *
  * This function is meant to accomplish its purpose as efficiently as possible. It does not check for appropriate
  * range.
- *
- * FIXME: :array doesn't make sense. This should be :keys or :values to indicate which array we want.
  */
 static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self) {
   VALUE i_, as;
   rb_scan_args(argc, argv, "11", &i_, &as);
 
-  bool array = false;
-  if (as != Qnil && rb_to_id(as) != nm_rb_hash) array = true;
+  bool keys = false;
+  if (as != Qnil && rb_to_id(as) != nm_rb_hash) keys = true;
 
   size_t i = FIX2INT(i_);
 
@@ -1912,7 +1911,7 @@ static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self) {
   //std::cerr << "diff = " << diff << "\tpos = " << pos << "\tnextpos = " << nextpos << std::endl;
 
   VALUE ret; // HERE
-  if (array) {
+  if (keys) {
     ret = rb_ary_new3(diff);
 
     for (size_t idx = pos; idx < nextpos; ++idx) {
@@ -1960,7 +1959,7 @@ static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self) {
  * This example determines that i=3 is at position 15 automatically. The value returned, next, is the position where the
  * next value(s) should be inserted.
  */
-static VALUE nm_vector_insert(int argc, VALUE* argv, VALUE self) { //, VALUE i_, VALUE jv, VALUE vv, VALUE pos_) {
+static VALUE nm_vector_set(int argc, VALUE* argv, VALUE self) { //, VALUE i_, VALUE jv, VALUE vv, VALUE pos_) {
 
   // i, jv, vv are mandatory; pos is optional; thus "31"
   VALUE i_, jv, vv, pos_;
