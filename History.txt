@@ -193,7 +193,10 @@
 
 === 0.0.6 / 2013-??-??
 
-* no major enhancements
+* 1 major enhancement:
+
+  * Added element-wise power function (**) for dense matrices (by
+    @agarie)
 
 * 3 minor enhancements:
 
