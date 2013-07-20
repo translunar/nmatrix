@@ -549,7 +549,7 @@ class NVector < NMatrix
     #   => nil
     #
     def linspace(a, b, n = 100)
-      # Formula:  seq(n) * step + a
+      # Formula: seq(n) * step + a
 
       # step = ((b - a) / (n - 1))
       step = (b - a) * (1.0 / (n - 1))
@@ -575,10 +575,10 @@ class NVector < NMatrix
     #   - +b+ -> The last value in the sequence.
     #   - +n+ -> The number of elements. Default is 100.
     # * *Returns* :
-    #   - n-by-1 NMatrix with +n+ +:float64+ values.
+    #   - NVector with +n+ +:float64+ values.
     #
     # Example:
-    #   x = NVector.logspace(0, Math::PI, 1000)
+    #   x = NVector.logspace(0, Math::PI, 10)
     #   x.pretty_print
     #     [1.0
     #     2.2339109164570266
@@ -593,7 +593,7 @@ class NVector < NMatrix
     #  => nil
     #
     def logspace(a, b, n = 100)
-      # Formula:  10^a, 10^(a + step), ..., 10^b
+      # Formula: 10^a, 10^(a + step), ..., 10^b, where step = ((b-a) / (n-1)).
 
       result = NVector.linspace(a, b, n)
       result.each_stored_with_index { |element, i| result[i] = 10 ** element }
