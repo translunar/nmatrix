@@ -152,7 +152,7 @@ class NMatrix
           #::NMatrix::LAPACK.clapack_gesvd(:row,
         end
         # test this
-        s = NMatrix::LAPACK.clapack_gesvd(jobu, jobvt, matrix)
+        s = clapack_gesvd(jobu, jobvt, matrix)
 
         # what should this return?
         case type

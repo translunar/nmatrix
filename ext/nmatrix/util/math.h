@@ -1,3 +1,4 @@
+extern "C" void dgesvd_(char *, char *, int *, int *, double *, int *, double *, double *, int *, double *, int *, double *, int *, int *);
 /////////////////////////////////////////////////////////////////////
 // = NMatrix
 //
@@ -776,38 +777,7 @@ inline void laswp(const int N, DType* A, const int lda, const int K1, const int 
 /*     .. Executable Statements .. */
 
 
-// DOUBLE!!
-inline int dgesvd(char* jobu, char* jobvt, 
-    const int M, const int N, 
-    double* a, int lda, 
-    double* s, 
-    double* u, const int ldu,
-    double* vt, const int ldvt,
-    double* work, const int lwork, 
-    int info) {
 
-typedef char *address;
-typedef long int ftnlen;
-typedef long int logical;
-
-/* Const values */
-static int c__6 = 6;
-static int c__0 = 0;
-static int c__2 = 2;
-static int c__1 = 1;
-static int c_n1 = -1;
-static double c_b421 = 0.;
-static double c_b443 = 1.;
-
-address a__1[2];
-int a_dim1, a_offset, u_dim1, u_offset, vt_dim1, vt_offset, i__1[2], i__2, i__3, i__4;
-char ch__1[2];
-
-int s_cat(char *, char **, int *, int *, ftnlen);
-double sqrt(double);
-
-return 0;
-}
 
 /* 
  * Call any of the cblas_xgesvd functions as directly as possible. 
@@ -828,27 +798,29 @@ return 0;
  * Note that the routine returns V**T, not V.
  */ 
 // The types which are like doubles
-template <typename DType, typename CSDType>
-inline int clapack_gesvd(const char* jobu, const char* jobvt,
-  //DType* a);
-  int m, int n, 
-  void* a, int lda, 
-  void* s, 
-  int ldu,  
-  int ldvt,
-  int lwork)
+//template <typename DType, typename CType>
+inline void clapack_gesvd(char *jobu, char *jobvt, int *m, int *n, 
+  double *a, int *lda,   double *s, double *u,
+  int *ldu,  
+  double *vt, int *ldvt,
+  double *work,  int *lwork, int *info)
 {
+  /*
   DType* u = ALLOCA_N(DType, ldu);
   DType* vt = ALLOCA_N(DType, ldvt);
   DType* work = ALLOCA_N(DType, lwork);
-  if (typeid(DType) != typeid(CSDType)) {
-    CSDType* rwork = ALLOCA_N(CSDType, 5*std::min(m,n));
-  } else {
-    CSDType* rwork = NULL;
-  }
+  CType* rwork;
   DType* input = reinterpret_cast<DType*>(a);
   DType* output = reinterpret_cast<DType*>(s);
   int info = 0;
+  if (typeid(DType) != typeid(CType)) {
+    CType* rwork = ALLOCA_N(CType, 5*std::min(m,n));
+// Call the z/c option
+  } else {
+    CType* rwork = NULL;
+    // Call the s/d option
+  }
+
 
   // Rework the fxn to return the proper type, and to format s properly
 #ifdef HAVE_CLAPACK_H
@@ -857,7 +829,49 @@ inline int clapack_gesvd(const char* jobu, const char* jobvt,
   rb_raise(rb_eNotImpError, "only LAPACK version implemented thus far");
 #endif
   return info;
+  */
 }
+
+// DOUBLE!!
+// MAKE THIS MATCH DGESVD
+/*
+inline int dgesvd(char* jobu, char* jobvt, 
+    const int M, const int N, 
+    double* a, //int lda, 
+    double* s, 
+    double* u, //const int ldu,
+    double* vt, //const int ldvt,
+    double* work, //const int lwork, 
+    int info) {
+*/
+
+inline int dgesvd(char *jobu, char *jobvt, 
+    int m, int n,
+    void* a, int lda,
+    void* s,
+    int ldu, 
+    int ldvt, 
+    int lwork) 
+{
+  double* input = reinterpret_cast<double*>(a);
+  double* output = reinterpret_cast<double*>(s);
+  double* u = ALLOCA_N(double, ldu);
+  double* vt = ALLOCA_N(double, ldvt);
+  double* work = ALLOCA_N(double, lwork);
+  int info = 0;
+  dgesvd_(jobu, jobvt, &m, &n, 
+      input, &lda, output, u, 
+      &ldu, vt, &ldvt, work, &lwork, 
+      &info);
+  if (info == 0)
+    free(work);
+  free(vt);
+  free(u);
+return info;
+
+}
+
+
 /*
 template <typename DType>
 inline void gesdd(const enum CBLAS_ORDER Order )//, ... 

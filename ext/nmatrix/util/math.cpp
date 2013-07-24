@@ -913,24 +913,14 @@ static VALUE nm_clapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE a) {
   // Hence, u, vt, work, rwork are only had within the fxn.  
   // This means I can never return the right or left sides, until this is restructured
 
-  static int (*ttable[nm::NUM_DTYPES])(const char* jobu, const char* jobvt, const int m, const int n, void* a, const int lda, void* s, const int ldu, const int ldvt, const int lwork) = {
-    NULL, NULL, NULL, NULL, NULL,
-    NULL, //nm::math::clapack_gesvd<float, float>, 
-    //nm::math::clapack_gesvd<double, double>, 
-    NULL, // dgesvd_,
-    // clapack_sgesvd, clapack_dgesvd,
-    NULL, //nm::math::clapack_gesvd<nm::Complex64, float>, 
-    NULL, // nm::math::clapack_gesvd<nm::Complex128, double>, 
-    NULL, NULL, NULL, 
-    NULL //nm::math::clapack_gesvd<nm::RubyObject, nm::RubyObject>
-  };
-
   size_t m = NM_STORAGE_DENSE(a)->shape[0];
   size_t n = NM_STORAGE_DENSE(a)->shape[1];
+  int intm = int(m);
+  int intn = int(n);
   size_t lda = std::max(1, int(m));
   size_t ldu = std::max(1, int(m));
   size_t ldvt = std::max(1, std::min(int(m), int(n)));
-  size_t lwork = 2*std::min(int(m), int(n)) + std::max(int(m), int(n));
+  size_t lwork = std::max(std::max(1,3*std::min(intm, intn) + std::max(intm, intn)),5*std::min(intm,intn));
 
   // Initialize
   nm::dtype_t dtype = NM_DTYPE(a);
@@ -938,22 +928,18 @@ static VALUE nm_clapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE a) {
   // Build the intermediate data arrays, the u, vt, work... 
   size_t s_size = std::min(m, n);
   void* s = ALLOCA_N(VALUE, s_size);
-  
-  if (!ttable[NM_DTYPE(a)]) {
-    rb_raise(nm_eDataTypeError, "This matrix operation is not defined for your datatype");
-    return Qfalse;
-  } else {
-    int resp = ttable[NM_DTYPE(a)](StringValueCStr(jobu),StringValueCStr(jobvt),
-        m, n, 
-        NM_STORAGE_DENSE(a)->elements, lda,
-        s, 
-        ldu, ldvt, lwork);
-  }
+  void* input = reinterpret_cast<void*>(NM_STORAGE_DENSE(a)->elements);
+
+  int resp = nm::math::dgesvd(RSTRING_PTR(jobu),RSTRING_PTR(jobvt),
+    m, n, 
+    input, lda,
+    s, 
+    ldu, ldvt, lwork);
 
 
   // S will return from the child function as Ruby converted values, or as an NMatrix, either way... no processing required
-  return *reinterpret_cast<VALUE*>(s);
-  // This is where I should handle S, returning it as a Ruby array, perhaps?  I'd rather not have to deal with the casting
+  //return *reinterpret_cast<VALUE*>(s);
+  // This is where I should handle S, returning it as a Ruby array of Matrix objects, perhaps?  I'd rather not have to deal with the casting
   return Qnil;
 }
 /*

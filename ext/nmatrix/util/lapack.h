@@ -1226,6 +1226,8 @@ inline int lsame(char const *ca, char const *cb, int ca_len, int cb_len)
 }
 
 
+
+
 } // end namespace lapack
 
 /*
