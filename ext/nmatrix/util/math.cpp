@@ -928,7 +928,7 @@ static VALUE nm_clapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE a) {
   // Build the intermediate data arrays, the u, vt, work... 
   size_t s_size = std::min(m, n);
   void* s = ALLOCA_N(VALUE, s_size);
-  void* input = reinterpret_cast<void*>(NM_STORAGE_DENSE(a)->elements);
+  void* input = NM_STORAGE_DENSE(a)->elements;
 
   int resp = nm::math::dgesvd(RSTRING_PTR(jobu),RSTRING_PTR(jobvt),
     m, n, 
