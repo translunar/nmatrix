@@ -170,6 +170,8 @@ extern "C" {
 
   void nm_init_yale_functions(void);
 
+  VALUE nm_vector_set(int argc, VALUE* argv, VALUE self);
+
 
 } // end of extern "C" block
 

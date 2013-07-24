@@ -248,6 +248,39 @@ class NVector < NMatrix
     t.shuffle!(*args)
   end
 
+  #
+  # call-seq:
+  #     sorted_indices -> Array
+  #
+  # Returns an array of the indices ordered by value sorted.
+  #
+  def sorted_indices
+    ary = self.to_a
+    ary.each_index.to_a.sort_by { |i| ary[i] }  # from: http://stackoverflow.com/a/17841159/170300
+  end
+
+  #
+  # call-seq:
+  #     binned_sorted_indices -> Array
+  #
+  # Returns an array of arrays of indices ordered by value sorted. Functions basically like +sorted_indices+, but
+  # groups indices together for those values that are the same.
+  #
+  def binned_sorted_indices
+    ary = self.to_a
+    ary2 = []
+    last_bin = ary.each_index.to_a.sort_by { |i| [ary[i]] }.inject([]) do |result, element|
+      if result.empty? || ary[result[-1]] == ary[element]
+        result << element
+      else
+        ary2 << result
+        [element]
+      end
+    end
+    ary2 << last_bin unless last_bin.empty?
+    ary2
+  end
+
 
   # TODO: Make this actually pretty.
   def pretty_print(q = nil) #:nodoc:

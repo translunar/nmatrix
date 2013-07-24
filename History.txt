@@ -207,8 +207,8 @@
 
   * Added more user-friendly cblas_xrotg implementation: BLAS::rotg
 
-  * Renamed NMatrix::YaleFunctions::yale_vector_insert to
-    yale_vector_set, which is more consistent with behavior
+  * Moved NMatrix::YaleFunctions::yale_vector_insert to
+    NMatrix#vector_set, which is more consistent with behavior
 
   * Changed behavior and names of NMatrix::YaleFunctions methods
     which get column indices and cell contents by row, so that they
@@ -221,6 +221,9 @@
       yale_nd_row_as_set -> yale_ja_set_at
       yale_nd_row_as_array -> yale_ja_at
     Aliases are included but will be removed without notice.
+
+  * Added NVector#sorted_indices and #binned_sorted_indices for use
+    when running k-nearest neighbor searches on a distance matrix
 
 * 2 bug fixes:
 

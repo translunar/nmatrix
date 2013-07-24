@@ -91,7 +91,6 @@ extern "C" {
   static VALUE nm_ija(int argc, VALUE* argv, VALUE self);
 
   static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self);
-  static VALUE nm_vector_set(int argc, VALUE* argv, VALUE self);
 
 
 } // end extern "C" block
@@ -1345,8 +1344,6 @@ void nm_init_yale_functions() {
   rb_define_method(cNMatrix_YaleFunctions, "yale_lu", (METHOD)nm_lu, 0);
 
   rb_define_method(cNMatrix_YaleFunctions, "yale_nd_row", (METHOD)nm_nd_row, -1);
-  rb_define_method(cNMatrix_YaleFunctions, "yale_vector_set", (METHOD)nm_vector_set, -1);
-  rb_define_alias(cNMatrix_YaleFunctions,  "yale_vector_insert",    "yale_vector_set"); // deprecated
 
   rb_define_const(cNMatrix_YaleFunctions, "YALE_GROWTH_CONSTANT", rb_float_new(nm::yale_storage::GROWTH_CONSTANT));
 }
@@ -1932,7 +1929,7 @@ static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self) {
 
 /*
  * call-seq:
- *     yale_vector_insert -> Fixnum
+ *     yale_vector_set(i, column_index_array, cell_contents_array, pos) -> Fixnum
  *
  * Insert at position pos an array of non-diagonal elements with column indices given. Note that the column indices and values
  * must be storage-contiguous -- that is, you can't insert them around existing elements in some row, only amid some
@@ -1948,18 +1945,18 @@ static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self) {
  * lead to undefined behavior.
  *
  * Example:
- *    m.yale_vector_insert(3, [0,3,4], [1,1,1], 15)
+ *    m.yale_vector_set(3, [0,3,4], [1,1,1], 15)
  *
  * The example above inserts the values 1, 1, and 1 in columns 0, 3, and 4, assumed to be located at position 15 (which
  * corresponds to row 3).
  *
  * Example:
- *    next = m.yale_vector_insert(3, [0,3,4], [1,1,1])
+ *    next = m.yale_vector_set(3, [0,3,4], [1,1,1])
  *
  * This example determines that i=3 is at position 15 automatically. The value returned, next, is the position where the
  * next value(s) should be inserted.
  */
-static VALUE nm_vector_set(int argc, VALUE* argv, VALUE self) { //, VALUE i_, VALUE jv, VALUE vv, VALUE pos_) {
+VALUE nm_vector_set(int argc, VALUE* argv, VALUE self) { //, VALUE i_, VALUE jv, VALUE vv, VALUE pos_) {
 
   // i, jv, vv are mandatory; pos is optional; thus "31"
   VALUE i_, jv, vv, pos_;

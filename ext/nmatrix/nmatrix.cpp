@@ -50,6 +50,7 @@ extern "C" {
 #include "util/math.h"
 #include "util/io.h"
 #include "storage/storage.h"
+#include "storage/yale.h"
 
 #include "nmatrix.h"
 
@@ -498,6 +499,11 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "<", (METHOD)nm_ew_lt, 1);
 	rb_define_method(cNMatrix, ">", (METHOD)nm_ew_gt, 1);
 
+	/////////////////////////////
+	// Helper Instance Methods //
+	/////////////////////////////
+	rb_define_protected_method(cNMatrix, "vector_set", (METHOD)nm_vector_set, -1);
+
 	/////////////////////////
 	// Matrix Math Methods //
 	/////////////////////////
@@ -717,7 +723,10 @@ static VALUE nm_each(VALUE nmatrix) {
 }
 
 /*
- * Iterate over the sparse entries of any matrix. For dense and yale, this iterates over non-zero
+ * call-seq:
+ *     each_stored_with_indices -> Enumerator
+ *
+ * Iterate over the stored entries of any matrix. For dense and yale, this iterates over non-zero
  * entries; for list, this iterates over non-default entries. Yields dim+1 values for each entry:
  * i, j, ..., and the entry itself.
  */
@@ -735,7 +744,6 @@ static VALUE nm_each_stored_with_indices(VALUE nmatrix) {
     rb_raise(nm_eDataTypeError, "Not a proper storage type");
   }
 }
-
 
 
 /*
