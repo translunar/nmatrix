@@ -911,36 +911,36 @@ static VALUE nm_clapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE a) {
 
   // Expose the u and vt within the templated fxns
   // Hence, u, vt, work, rwork are only had within the fxn.  
-  // This means I can never return the right or left sides, until this is restructured
-
+  nm::dtype_t dtype = NM_DTYPE(a);
   size_t m = NM_STORAGE_DENSE(a)->shape[0];
   size_t n = NM_STORAGE_DENSE(a)->shape[1];
   int intm = int(m);
   int intn = int(n);
   size_t lda = std::max(1, int(m));
   size_t ldu = std::max(1, int(m));
-  size_t ldvt = std::max(1, std::min(int(m), int(n)));
+  size_t ldvt = std::max(1, int(n));
   size_t lwork = std::max(std::max(1,3*std::min(intm, intn) + std::max(intm, intn)),5*std::min(intm,intn));
 
   // Initialize
-  nm::dtype_t dtype = NM_DTYPE(a);
   // GET THE SIZE_OF dtype
   // Build the intermediate data arrays, the u, vt, work... 
   size_t s_size = std::min(m, n);
-  void* s = ALLOCA_N(VALUE, s_size);
+  void* s = ALLOCA_N(double, s_size);
   void* input = NM_STORAGE_DENSE(a)->elements;
 
-  int resp = nm::math::dgesvd(RSTRING_PTR(jobu),RSTRING_PTR(jobvt),
+  VALUE resp = nm::math::dgesvd(RSTRING_PTR(jobu),RSTRING_PTR(jobvt),
     m, n, 
     input, lda,
     s, 
-    ldu, ldvt, lwork);
-
+    ldu, ldvt, lwork, dtype);
+  size_t dim = 1;
+  size_t length = s_size;
+  return resp;
 
   // S will return from the child function as Ruby converted values, or as an NMatrix, either way... no processing required
   //return *reinterpret_cast<VALUE*>(s);
   // This is where I should handle S, returning it as a Ruby array of Matrix objects, perhaps?  I'd rather not have to deal with the casting
-  return Qnil;
+
 }
 /*
 template <typename DType>

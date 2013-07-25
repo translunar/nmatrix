@@ -122,24 +122,26 @@ class NMatrix
 
       #
       # call-seq:
-      #     svd(x, y, c, s)
+      #     svd(matrix, type)
       # 
       #
       # * *Arguments* :
       #   - +matrix+ -> matrix for which to compute the singular values
-      #   - +type+ -> :both, :left, :right, :none signifying which, if any, of the computed matrices are desired, 
+      #   - +type+ -> :both, :left, :right, :none , or :arrays signifying which, if any, of the computed matrices are desired.
       # * *Returns* :
       #   - Array with the result values in an array
       # * *Raises* :
       #   - +ArgumentError+ -> Expected dense NMatrix as first argument.
       #
-      def svd(matrix, type = :none)
+      def svd(matrix, type = :both)
         raise ArgumentError, 'Expected dense NMatrix as first argument.' unless matrix.is_a?(NMatrix) and matrix.stype == :dense
         #define jobu, jobvt
         jobu, jobvt = 'N', 'N'
         case type
         when :both
          jobu, jobvt = 'A', 'A'
+        when :arrays
+          jobu, jobvt = 'S', 'S'
         when :left
           jobu = 'A'
         when :right
@@ -152,7 +154,7 @@ class NMatrix
           #::NMatrix::LAPACK.clapack_gesvd(:row,
         end
         # test this
-        s = clapack_gesvd(jobu, jobvt, matrix)
+        s, u, v = clapack_gesvd(jobu, jobvt, matrix)
 
         # what should this return?
         case type

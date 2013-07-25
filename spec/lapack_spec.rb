@@ -1,3 +1,4 @@
+        require 'pry'
 # = NMatrix
 #
 # A linear algebra library for scientific computation in Ruby.
@@ -119,12 +120,20 @@ describe NMatrix::LAPACK do
         # http://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/mkl_lapack_examples/sgesvd_ex.c.htm
         a = NMatrix.new([5,6], %w|8.79 9.93 9.83 5.45 3.16 6.11 6.91 5.04 -0.27 7.98 -9.15 -7.93 4.86 4.85 3.01 9.57 1.64 8.83 0.74 5.80 -3.49 4.02 9.80 10.00 4.27 9.84 0.15 -8.99 -6.02 -5.31|.map(&:to_f), dtype)
         truth = NMatrix.new([1,5], [27.47, 22.64, 8.56, 5.99, 2.01], dtype)
+        err = case dtype
+              when :float32, :complex64
+                1e-6
+              when :float64, :complex128
+                1e-15
+              else
+                1e-64 # FIXME: should be 0, but be_within(0) does not work.
+              end
 
-        answer = NMatrix::LAPACK.svd(a)
-        puts answer
-        answer.should == truth
+        answer = NMatrix::LAPACK.svd(a, :arrays)
+        answer.row(0).to_a.zip(truth.row(0).to_a).each do |answer_val, truth_val|
+          answer_val.should be_within(err).of(truth_val)
+        end
       end
-
     end
   end
 end

@@ -833,42 +833,45 @@ inline void clapack_gesvd(char *jobu, char *jobvt, int *m, int *n,
 }
 
 // DOUBLE!!
-// MAKE THIS MATCH DGESVD
-/*
-inline int dgesvd(char* jobu, char* jobvt, 
-    const int M, const int N, 
-    double* a, //int lda, 
-    double* s, 
-    double* u, //const int ldu,
-    double* vt, //const int ldvt,
-    double* work, //const int lwork, 
-    int info) {
-*/
-
-inline int dgesvd(char *jobu, char *jobvt, 
+inline VALUE dgesvd(char *jobu, char *jobvt, 
     int m, int n,
     void* a, int lda,
     void* s,
     int ldu, 
     int ldvt, 
-    int lwork) 
+    int lwork, nm::dtype_t dtype) 
 {
-  double* input = reinterpret_cast<double*>(a);
-  double* output = reinterpret_cast<double*>(s);
-  double* u = ALLOCA_N(double, ldu);
-  double* vt = ALLOCA_N(double, ldvt);
-  double* work = ALLOCA_N(double, lwork);
-  int info = 0;
-  dgesvd_(jobu, jobvt, &m, &n, 
-      input, &lda, output, u, 
-      &ldu, vt, &ldvt, work, &lwork, 
-      &info);
-  if (info == 0)
-    free(work);
-  free(vt);
-  free(u);
-return info;
+  if (dtype == 6) {
+    double* input = reinterpret_cast<double*>(a);
+    double* output = reinterpret_cast<double*>(s);
+    double* u = ALLOCA_N(double, ldu);
+    double* vt = ALLOCA_N(double, ldvt);
+    double* work = ALLOCA_N(double, lwork);
+    int info = 0;
+    dgesvd_(jobu, jobvt, &m, &n, 
+        input, &lda, output, u, 
+        &ldu, vt, &ldvt, work, &lwork, 
+        &info);
+    size_t length = std::min(m,n);
+    size_t s_size[2] = {1,length};
+    size_t u_size[2] = {m, m};
+    size_t vt_size[2] = {n, n};
+    size_t dim = 2;
+    /*
+    VALUE return_array = rb_ary_new2(3);
 
+    rb_ary_push(return_array, rb_nmatrix_dense_create(dtype, s_size, dim, s, length ));
+    rb_ary_push(return_array, rb_nmatrix_dense_create(dtype, u_size, m, u, m));
+    rb_ary_push(return_array, rb_nmatrix_dense_create(dtype, vt_size, n, vt, n));
+    return return_array;
+*/
+    return INT2FIX(info);//rb_nmatrix_dense_create(dtype, s_size, dim, s, length );
+
+  } else {
+
+    rb_raise(rb_eNotImpError, "only LAPACK versions implemented thus far");
+    return Qnil;
+  }
 }
 
 
