@@ -256,7 +256,7 @@ class NVector < NMatrix
   #
   def sorted_indices
     ary = self.to_a
-    ary.each_index.to_a.sort_by { |i| ary[i] }  # from: http://stackoverflow.com/a/17841159/170300
+    ary.each_index.sort_by { |i| ary[i] }  # from: http://stackoverflow.com/a/17841159/170300
   end
 
   #
@@ -269,7 +269,7 @@ class NVector < NMatrix
   def binned_sorted_indices
     ary = self.to_a
     ary2 = []
-    last_bin = ary.each_index.to_a.sort_by { |i| [ary[i]] }.inject([]) do |result, element|
+    last_bin = ary.each_index.sort_by { |i| [ary[i]] }.inject([]) do |result, element|
       if result.empty? || ary[result[-1]] == ary[element]
         result << element
       else

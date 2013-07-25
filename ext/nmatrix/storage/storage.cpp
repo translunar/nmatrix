@@ -602,13 +602,11 @@ namespace yale_storage { // FIXME: Move to yale.cpp
 
 extern "C" {
 
-
   /*
    * The following functions represent stype casts -- conversions from one
    * stype to another. Each of these is the C accessor for a templated C++
    * function.
    */
-
 
 
   STORAGE* nm_yale_storage_from_dense(const STORAGE* right, nm::dtype_t l_dtype) {

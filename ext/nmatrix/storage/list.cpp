@@ -182,52 +182,139 @@ NODE* list_storage_get_single_node(LIST_STORAGE* s, SLICE* slice)
   return n;
 }
 
+
 /*
- * Each stored iterator, brings along the indices
+ * Recursive helper function for each_with_indices, based on nm_list_storage_count_elements_r.
+ * Handles empty/non-existent sublists.
  */
-VALUE nm_list_each_stored_with_indices(VALUE nmatrix) {
+static void each_empty_with_indices_r(LIST_STORAGE* s, size_t recursions, VALUE& stack) {
+  size_t dim   = s->dim;
+  long   max   = s->shape[dim-recursions-1];
+  VALUE empty  = s->dtype == nm::RUBYOBJ ? *reinterpret_cast<VALUE*>(s->default_val) : rubyobj_from_cval(s->default_val, s->dtype).rval;
+
+  if (recursions) {
+    for (long index = 0; index < max; ++index) {
+      // Don't do an unshift/shift here -- we'll let that be handled in the lowest-level iteration (recursions == 0)
+      rb_ary_push(stack, LONG2NUM(index));
+      each_empty_with_indices_r(s, recursions-1, stack);
+      rb_ary_pop(stack);
+    }
+  } else {
+    rb_ary_unshift(stack, empty);
+    for (long index = 0; index < max; ++index) {
+      rb_ary_push(stack, LONG2NUM(index));
+      rb_yield_splat(stack);
+      rb_ary_pop(stack);
+    }
+    rb_ary_shift(stack);
+  }
+}
+
+/*
+ * Recursive helper function for each_with_indices, based on nm_list_storage_count_elements_r.
+ */
+static void each_with_indices_r(LIST_STORAGE* s, const LIST* l, size_t recursions, VALUE& stack) {
+  NODE*  curr  = l->first;
+  size_t dim   = s->dim;
+  long   max   = s->shape[dim-recursions-1];
+
+  if (recursions) {
+    for (long index = 0; index < max; ++index) {
+      rb_ary_push(stack, LONG2NUM(index));
+      if (!curr || index < curr->key) {
+        each_empty_with_indices_r(s, recursions-1, stack);
+      } else {
+        each_with_indices_r(s, reinterpret_cast<const LIST*>(curr->val), recursions-1, stack);
+        curr = curr->next;
+      }
+      rb_ary_pop(stack);
+    }
+  } else {
+    for (long index = 0; index < max; ++index) {
+
+      rb_ary_push(stack, LONG2NUM(index));
+
+      if (!curr || index < curr->key) {
+        if (s->dtype == nm::RUBYOBJ)
+          rb_ary_unshift(stack, *reinterpret_cast<VALUE*>(s->default_val));
+        else
+          rb_ary_unshift(stack, rubyobj_from_cval(s->default_val, s->dtype).rval);
+
+      } else { // index == curr->key
+        if (s->dtype == nm::RUBYOBJ)
+          rb_ary_unshift(stack, *reinterpret_cast<VALUE*>(curr->val));
+        else
+          rb_ary_unshift(stack, rubyobj_from_cval(curr->val, s->dtype).rval);
+
+        curr = curr->next;
+      }
+      rb_yield_splat(stack);
+
+      rb_ary_shift(stack);
+      rb_ary_pop(stack);
+    }
+  }
+
+}
+
+
+/*
+ * Recursive helper function for each_stored_with_indices, based on nm_list_storage_count_elements_r.
+ */
+static void each_stored_with_indices_r(LIST_STORAGE* s, const LIST* l, size_t recursions, VALUE& stack) {
+  NODE* curr = l->first;
+
+  if (recursions) {
+    while (curr) {
+      rb_ary_push(stack, LONG2NUM(static_cast<long>(curr->key)));
+      each_stored_with_indices_r(s, reinterpret_cast<const LIST*>(curr->val), recursions-1, stack);
+      rb_ary_pop(stack);
+      curr = curr->next;
+    }
+  } else {
+    while (curr) {
+      rb_ary_push(stack, LONG2NUM(static_cast<long>(curr->key))); // add index to end
+
+      // add value to beginning
+      if (s->dtype == nm::RUBYOBJ) {
+        rb_ary_unshift(stack, *reinterpret_cast<VALUE*>(curr->val));
+      } else {
+        rb_ary_unshift(stack, rubyobj_from_cval(curr->val, s->dtype).rval);
+      }
+      // yield to the whole stack (value, i, j, k, ...)
+      rb_yield_splat(stack);
+
+      // remove the value
+      rb_ary_shift(stack);
+
+      // remove the index from the end
+      rb_ary_pop(stack);
+
+      curr = curr->next;
+    }
+  }
+}
+
+
+
+/*
+ * Each/each-stored iterator, brings along the indices.
+ */
+VALUE nm_list_each_with_indices(VALUE nmatrix, bool stored) {
 
   // If we don't have a block, return an enumerator.
   RETURN_SIZED_ENUMERATOR(nmatrix, 0, 0, 0);
 
   LIST_STORAGE* s = NM_STORAGE_LIST(nmatrix);
-  // Create indices and initialize to zero
-  size_t* coords = ALLOCA_N(size_t, s->dim);
-  memset(coords, 0, sizeof(size_t) * s->dim);
 
   // Set up the LIST and NODE
   LIST* l = s->rows;
-  NODE* curr = l->first;
 
-  // Levels...
-  while (curr) { // LOOPS through the rows
-    NODE* subnode = reinterpret_cast<LIST*>(curr->val)->first;
-    size_t row = curr->key;
-    // Iterate along each row, yielding the val, row, col for each non-default entry
-    while (subnode) {
-      VALUE ary = rb_ary_new();
-      size_t col = subnode->key;
+  VALUE stack = rb_ary_new();
 
-      // Conditional type handling
-      if (NM_DTYPE(nmatrix) == nm::RUBYOBJ) {
-        rb_ary_push(ary, *reinterpret_cast<VALUE*>(subnode->val));
-      } else {
-        rb_ary_push(ary, rubyobj_from_cval((char*)(subnode->val ) , NM_DTYPE(nmatrix)).rval);
-      }
+  if (stored) each_stored_with_indices_r(s, l, s->dim - 1, stack);
+  else        each_with_indices_r(s, l, s->dim - 1, stack);
 
-      // Push the coordinate values into the ary
-      rb_ary_push(ary, INT2FIX(row));
-      rb_ary_push(ary, INT2FIX(col));
-
-      // Yield the ary
-      rb_yield(ary);
-
-      // Update the col position
-      subnode = subnode->next;
-    }
-    // Update the row node
-    curr = curr->next;
-  }
   return nmatrix;
 }
 

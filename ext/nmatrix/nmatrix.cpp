@@ -344,7 +344,7 @@ static VALUE nm_stype(VALUE self);
 static VALUE nm_dim(VALUE self);
 static VALUE nm_shape(VALUE self);
 static VALUE nm_capacity(VALUE self);
-static VALUE nm_each(VALUE nmatrix);
+static VALUE nm_each_with_indices(VALUE nmatrix);
 static VALUE nm_each_stored_with_indices(VALUE nmatrix);
 
 static SLICE* get_slice(size_t dim, VALUE* c, VALUE self);
@@ -480,7 +480,8 @@ void Init_nmatrix() {
 	//rb_define_method(cNMatrix, "transpose!", (METHOD)nm_transpose_self, 0);
 	rb_define_method(cNMatrix, "complex_conjugate!", (METHOD)nm_complex_conjugate_bang, 0);
 
-	rb_define_method(cNMatrix, "each", (METHOD)nm_each, 0);
+	rb_define_protected_method(cNMatrix, "__dense_each__", (METHOD)nm_dense_each, 0);
+	rb_define_method(cNMatrix, "each_with_indices", (METHOD)nm_each_with_indices, 0);
 	rb_define_method(cNMatrix, "each_stored_with_indices", (METHOD)nm_each_stored_with_indices, 0);
 
 	rb_define_method(cNMatrix, "==",	  (METHOD)nm_eqeq,				1);
@@ -705,20 +706,22 @@ static VALUE nm_upcast(VALUE self, VALUE t1, VALUE t2) {
 
 /*
  * call-seq:
- *     each -> Enumerator
+ *     each_with_indices -> Enumerator
  *
- * Iterate over the matrix as you would an Enumerable (e.g., Array).
- *
- * Currently only works for dense.
+ * Iterate over all entries of any matrix in standard storage order (as with #each), and include the indices.
  */
-static VALUE nm_each(VALUE nmatrix) {
-  volatile VALUE nm = nmatrix; // not sure why we do this, but it gets done in ruby's array.c.
+static VALUE nm_each_with_indices(VALUE nmatrix) {
+  volatile VALUE nm = nmatrix;
 
   switch(NM_STYPE(nm)) {
+  case nm::YALE_STORE:
+    return nm_yale_each_with_indices(nm);
   case nm::DENSE_STORE:
-    return nm_dense_each(nm);
+    return nm_dense_each_with_indices(nm);
+  case nm::LIST_STORE:
+    return nm_list_each_with_indices(nm, false);
   default:
-    rb_raise(rb_eNotImpError, "only dense matrix's each method works right now");
+    rb_raise(nm_eDataTypeError, "Not a proper storage type");
   }
 }
 
@@ -739,7 +742,7 @@ static VALUE nm_each_stored_with_indices(VALUE nmatrix) {
   case nm::DENSE_STORE:
     return nm_dense_each_with_indices(nm);
   case nm::LIST_STORE:
-    return nm_list_each_stored_with_indices(nm);
+    return nm_list_each_with_indices(nm, true);
   default:
     rb_raise(nm_eDataTypeError, "Not a proper storage type");
   }

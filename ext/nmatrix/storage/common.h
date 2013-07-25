@@ -71,6 +71,7 @@ struct SLICE {
  */
 
   size_t nm_storage_count_max_elements(const STORAGE* storage);
+  VALUE nm_enumerator_length(VALUE nmatrix);
 
 } // end of extern "C" block
 

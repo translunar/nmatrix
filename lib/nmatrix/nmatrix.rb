@@ -293,6 +293,7 @@ class NMatrix
     '[' + ary.collect { |a| a ? a : 'nil'}.join(',') + ']'
   end
 
+
   ##
   # call-seq:
   #   each_along_dim() -> Enumerator
@@ -316,6 +317,7 @@ class NMatrix
       yield self[*dims]
     end
   end
+
 
   ##
   # call-seq:
@@ -508,7 +510,7 @@ class NMatrix
 
   ##
   # call-seq:
-  #   to_f() -> Float
+  #   to_f -> Float
   #
   # Converts an nmatrix with a single element (but any number of dimensions)
   #  to a float.
@@ -523,8 +525,24 @@ class NMatrix
 
   ##
   # call-seq:
-  #   map() -> Enumerator
-  #   map() { |elem| block } -> NMatrix
+  #   each -> Enumerator
+  #
+  # Enumerate through the matrix. @see Enumerable#each
+  #
+  # For dense, this actually calls a specialized each iterator (in C). For yale and list, it relies upon
+  # #each_with_indices (which is about as fast as reasonably possible for C code).
+  def each &block
+    if self.stype == :dense
+      self.__dense_each__(&block)
+    else
+      self.each_with_indices(&block)
+    end
+  end
+
+  ##
+  # call-seq:
+  #   map -> Enumerator
+  #   map { |elem| block } -> NMatrix
   #
   # @see Enumerable#map
   #
@@ -537,8 +555,8 @@ class NMatrix
 
   ##
   # call-seq:
-  #   map!() -> Enumerator
-  #   map!() { |elem| block } -> NMatrix
+  #   map! -> Enumerator
+  #   map! { |elem| block } -> NMatrix
   #
   # Maps in place.
   # @see #map

@@ -193,12 +193,15 @@
 
 === 0.0.6 / 2013-??-??
 
-* 1 major enhancement:
+* 2 major enhancements:
+
+  * Refactored iteration, so that each storage type now has each of:
+    #each, #each_with_indices, #each_stored_with_indices
 
   * Added element-wise power function (**) for dense matrices (by
     @agarie)
 
-* 3 minor enhancements:
+* 7 minor enhancements:
 
   * Improved documentation for exposed BLAS and LAPACK functions
 
@@ -224,6 +227,9 @@
 
   * Added NVector#sorted_indices and #binned_sorted_indices for use
     when running k-nearest neighbor searches on a distance matrix
+
+  * Added NVector::logspace shortcut function (analogous to
+    NVector::linspace)
 
 * 2 bug fixes:
 

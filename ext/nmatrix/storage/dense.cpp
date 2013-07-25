@@ -210,20 +210,13 @@ void nm_dense_storage_mark(void* storage_base) {
 ///////////////
 
 
-// Helper function used only for the RETURN_SIZED_ENUMERATOR macro. Returns the length of
-// the matrix's storage.
-static VALUE nm_dense_enumerator_length(VALUE nmatrix) {
-  long len = nm_storage_count_max_elements(NM_STORAGE_DENSE(nmatrix));
-  return LONG2NUM(len);
-}
-
 
 VALUE nm_dense_each_with_indices(VALUE nmatrix) {
   volatile VALUE nm = nmatrix;
 
   DENSE_STORAGE* s = NM_STORAGE_DENSE(nm);
 
-  RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_dense_enumerator_length); // fourth argument only used by Ruby2+
+  RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_enumerator_length); // fourth argument only used by Ruby2+
 
   // Create indices and initialize them to zero
   size_t* coords = ALLOCA_N(size_t, s->dim);
@@ -269,7 +262,7 @@ VALUE nm_dense_each(VALUE nmatrix) {
   volatile VALUE nm = nmatrix; // Not sure this actually does anything.
   DENSE_STORAGE* s = NM_STORAGE_DENSE(nm);
 
-  RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_storage_count_max_elements(s));
+  RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_enumerator_length);
 
   size_t* temp_coords = ALLOCA_N(size_t, s->dim);
   size_t sliced_index;
