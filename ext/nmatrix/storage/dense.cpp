@@ -273,10 +273,11 @@ VALUE nm_dense_each(VALUE nmatrix) {
   if (NM_DTYPE(nm) == nm::RUBYOBJ) {
 
     // matrix of Ruby objects -- yield those objects directly
-    for (size_t i = 0; i < nm_storage_count_max_elements(s); ++i)
+    for (size_t i = 0; i < nm_storage_count_max_elements(s); ++i) {
       nm_dense_storage_coords(sliced_dummy, i, temp_coords);
       sliced_index = nm_dense_storage_pos(s, temp_coords);
       rb_yield( reinterpret_cast<VALUE*>(s->elements)[sliced_index] );
+    }
 
   } else {
 
