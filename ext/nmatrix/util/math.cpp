@@ -927,14 +927,20 @@ static VALUE nm_clapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE a) {
   size_t s_size = std::min(m, n);
   void* s = ALLOCA_N(double, s_size);
   void* input = NM_STORAGE_DENSE(a)->elements;
-
-  VALUE resp = nm::math::dgesvd(RSTRING_PTR(jobu),RSTRING_PTR(jobvt),
-    m, n, 
-    input, lda,
-    s, 
-    ldu, ldvt, lwork, dtype);
-  size_t dim = 1;
-  size_t length = s_size;
+  /*VALUE resp;
+  try { */
+    VALUE resp = nm::math::dgesvd(RSTRING_PTR(jobu),RSTRING_PTR(jobvt),
+        m, n, 
+        input, lda,
+        s, 
+        ldu, ldvt, lwork, dtype);
+    /*
+  } catch (int e) {
+    char tmp[20];
+    sprintf(tmp, "Error#: %i, cerr: %i", FIX2INT(resp), e);
+    rb_raise(rb_eArgError, tmp );
+    return 0;
+  }*/
   return resp;
 
   // S will return from the child function as Ruby converted values, or as an NMatrix, either way... no processing required

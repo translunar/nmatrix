@@ -865,10 +865,9 @@ inline VALUE dgesvd(char *jobu, char *jobvt,
     rb_ary_push(return_array, rb_nmatrix_dense_create(dtype, vt_size, n, vt, n));
     return return_array;
 */
-    return INT2FIX(info);//rb_nmatrix_dense_create(dtype, s_size, dim, s, length );
+    return rb_nmatrix_dense_create(dtype, s_size, dim, s, length );
 
   } else {
-
     rb_raise(rb_eNotImpError, "only LAPACK versions implemented thus far");
     return Qnil;
   }

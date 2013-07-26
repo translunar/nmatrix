@@ -117,9 +117,32 @@ describe NMatrix::LAPACK do
         end
       end
       it "exposes gesvd and gesdd via #svd" do 
-        # http://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/mkl_lapack_examples/sgesvd_ex.c.htm
-        a = NMatrix.new([5,6], %w|8.79 9.93 9.83 5.45 3.16 6.11 6.91 5.04 -0.27 7.98 -9.15 -7.93 4.86 4.85 3.01 9.57 1.64 8.83 0.74 5.80 -3.49 4.02 9.80 10.00 4.27 9.84 0.15 -8.99 -6.02 -5.31|.map(&:to_f), dtype)
-        truth = NMatrix.new([1,5], [27.47, 22.64, 8.56, 5.99, 2.01], dtype)
+        # http://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/mkl_lapack_examples/dgesvd_ex.c.htm
+        a = NMatrix.new([5,6], 
+          %w|8.79 9.93 9.83 5.45 3.16
+            6.11 6.91 5.04 -0.27 7.98 
+            -9.15 -7.93 4.86 4.85 3.01 
+            9.57 1.64 8.83 0.74 5.80 
+            -3.49 4.02 9.80 10.00 4.27 
+            9.84 0.15 -8.99 -6.02 -5.31|.map(&:to_f), 
+          dtype)
+        s_true = NMatrix.new([1,5], [27.47, 22.64, 8.56, 5.99, 2.01], dtype)
+        s_true = NMatrix.new([1,5], [27.46873241822185, 22.643185009774704, 8.558388228482581, 5.985723201512133, 2.014899658715756], dtype)
+        left_true = NMatrix.new([5,6], 
+          %w|-0.59 0.26   0.36   0.31   0.23
+            -0.40   0.24  -0.22  -0.75  -0.36
+            -0.03  -0.60  -0.45   0.23  -0.31
+            -0.43   0.24  -0.69   0.33   0.16
+            -0.47  -0.35   0.39   0.16  -0.52
+             0.29   0.58  -0.02   0.38  -0.65|.map(&:to_f), 
+           dtype)
+        right_true = NMatrix.new([5,5], 
+          %w|-0.25  -0.40  -0.69  -0.37  -0.41
+             0.81   0.36  -0.25  -0.37  -0.10
+            -0.26   0.70  -0.22   0.39  -0.49
+             0.40  -0.45   0.25   0.43  -0.62
+            -0.22   0.14   0.59  -0.63  -0.44|.map(&:to_f),
+          dtype)
         err = case dtype
               when :float32, :complex64
                 1e-6
@@ -128,9 +151,19 @@ describe NMatrix::LAPACK do
               else
                 1e-64 # FIXME: should be 0, but be_within(0) does not work.
               end
-
-        answer = NMatrix::LAPACK.svd(a, :arrays)
-        answer.row(0).to_a.zip(truth.row(0).to_a).each do |answer_val, truth_val|
+        response = NMatrix::LAPACK.svd(a, :none)
+        if response.is_a? Array
+          sing_vals, left_vals, right_vals = response
+          left_vals.row(0).to_a.zip(left_true.row(0).to_a).each do |a_val, t_val|
+            a_val.should be_within(err).of(t_val)
+          end
+          right_vals.row(0).to_a.zip(right_true.row(0).to_a).each do |a_val, t_val|
+            a_val.should be_within(err).of(t_val)
+          end
+        elsif response.is_a? NMatrix
+          sing_vals = response
+        end
+        sing_vals.row(0).to_a.zip(s_true.row(0).to_a).each do |answer_val, truth_val|
           answer_val.should be_within(err).of(truth_val)
         end
       end
