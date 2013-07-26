@@ -143,9 +143,9 @@ class NMatrix
         when :arrays
           jobu, jobvt = 'S', 'S'
         when :left
-          jobu = 'A'
+          jobu = 'S'
         when :right
-          jobvt = 'A'
+          jobvt = 'S'
         end
         
         if false # gesdd is for large matrices, but I'm not sure what size that should be... 
