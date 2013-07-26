@@ -50,6 +50,7 @@ extern "C" {
 #include "util/math.h"
 #include "util/io.h"
 #include "storage/storage.h"
+#include "storage/list.h"
 #include "storage/yale.h"
 
 #include "nmatrix.h"
@@ -333,10 +334,8 @@ static VALUE nm_init_transposed(VALUE self);
 static VALUE nm_init_cast_copy(VALUE self, VALUE new_stype_symbol, VALUE new_dtype_symbol);
 static VALUE nm_read(int argc, VALUE* argv, VALUE self);
 static VALUE nm_write(int argc, VALUE* argv, VALUE self);
-static VALUE nm_to_hash(VALUE self);
 static VALUE nm_init_yale_from_old_yale(VALUE shape, VALUE dtype, VALUE ia, VALUE ja, VALUE a, VALUE from_dtype, VALUE nm);
 static VALUE nm_alloc(VALUE klass);
-static void  nm_delete(NMATRIX* mat);
 static void  nm_delete_ref(NMATRIX* mat);
 static VALUE nm_dtype(VALUE self);
 static VALUE nm_itype(VALUE self);
@@ -465,6 +464,7 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "itype", (METHOD)nm_itype, 0);
 	rb_define_method(cNMatrix, "stype", (METHOD)nm_stype, 0);
 	rb_define_method(cNMatrix, "cast",  (METHOD)nm_init_cast_copy, 2);
+	rb_define_protected_method(cNMatrix, "__list_default_value__", (METHOD)nm_list_default_value, 0);
 
 	rb_define_method(cNMatrix, "[]", (METHOD)nm_mref, -1);
 	rb_define_method(cNMatrix, "slice", (METHOD)nm_mget, -1);
@@ -472,8 +472,7 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "is_ref?", (METHOD)nm_is_ref, 0);
 	rb_define_method(cNMatrix, "dimensions", (METHOD)nm_dim, 0);
 
-	rb_define_protected_method(cNMatrix, "to_hash_c", (METHOD)nm_to_hash, 0); // handles list and dense, which are n-dimensional
-	//rb_define_alias(cNMatrix,  "to_h",    "to_hash");
+	rb_define_protected_method(cNMatrix, "__list_to_hash__", (METHOD)nm_to_hash, 0); // handles list and dense, which are n-dimensional
 
 	rb_define_method(cNMatrix, "shape", (METHOD)nm_shape, 0);
 	rb_define_method(cNMatrix, "det_exact", (METHOD)nm_det_exact, 0);
@@ -483,6 +482,7 @@ void Init_nmatrix() {
 	rb_define_protected_method(cNMatrix, "__dense_each__", (METHOD)nm_dense_each, 0);
 	rb_define_method(cNMatrix, "each_with_indices", (METHOD)nm_each_with_indices, 0);
 	rb_define_method(cNMatrix, "each_stored_with_indices", (METHOD)nm_each_stored_with_indices, 0);
+	rb_define_protected_method(cNMatrix, "__list_map_merged_stored__", (METHOD)nm_list_map_merged_stored, -1);
 
 	rb_define_method(cNMatrix, "==",	  (METHOD)nm_eqeq,				1);
 
@@ -503,7 +503,7 @@ void Init_nmatrix() {
 	/////////////////////////////
 	// Helper Instance Methods //
 	/////////////////////////////
-	rb_define_protected_method(cNMatrix, "vector_set", (METHOD)nm_vector_set, -1);
+	rb_define_protected_method(cNMatrix, "__yale_vector_set__", (METHOD)nm_vector_set, -1);
 
 	/////////////////////////
 	// Matrix Math Methods //
@@ -620,7 +620,7 @@ static VALUE nm_capacity(VALUE self) {
 /*
  * Destructor.
  */
-static void nm_delete(NMATRIX* mat) {
+void nm_delete(NMATRIX* mat) {
   static void (*ttable[nm::NUM_STYPES])(STORAGE*) = {
     nm_dense_storage_delete,
     nm_list_storage_delete,
@@ -1029,21 +1029,6 @@ static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
   return nm;
 }
 
-/*
- * call-seq:
- *     to_hash -> Hash
- *
- * Create a Ruby Hash from an NMatrix.
- *
- * This is an internal C function which handles list stype only.
- */
-static VALUE nm_to_hash(VALUE self) {
-  if (NM_STYPE(self) != nm::LIST_STORE) {
-    rb_raise(rb_eNotImpError, "please cast to :list first");
-  }
-
-  return nm_list_storage_to_hash(NM_STORAGE_LIST(self), NM_DTYPE(self));
-}
 
 /*
  * Copy constructor for changing dtypes and stypes.
@@ -1728,19 +1713,26 @@ static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
 		nm_yale_storage_ew_op
 	};
 
-	NMATRIX *result = ALLOC(NMATRIX), *left;
+	NMATRIX* left;
+	NMATRIX* result;
 
 	CheckNMatrixType(left_val);
 	UnwrapNMatrix(left_val, left);
 
   if (TYPE(right_val) != T_DATA || (RDATA(right_val)->dfree != (RUBY_DATA_FUNC)nm_delete && RDATA(right_val)->dfree != (RUBY_DATA_FUNC)nm_delete_ref)) {
     // This is a matrix-scalar element-wise operation.
-
-    if (left->stype != nm::YALE_STORE) {
+    std::string sym = "__yale_scalar_" + nm::EWOP_NAMES[op] + "__";
+    switch(left->stype) {
+    case nm::DENSE_STORE:
+    case nm::LIST_STORE:
+      result = ALLOC(NMATRIX);
       result->storage = ew_op[left->stype](op, reinterpret_cast<STORAGE*>(left->storage), NULL, right_val);
       result->stype   = left->stype;
-    } else {
-      rb_raise(rb_eNotImpError, "Scalar element-wise operations not implemented for Yale storage yet");
+      break;
+    case nm::YALE_STORE:
+      return rb_funcall(left_val, rb_intern(sym.c_str()), 1, right_val);
+    default:
+      rb_raise(rb_eNotImpError, "unknown storage type requested scalar element-wise operation");
     }
 
   } else {
@@ -1759,18 +1751,27 @@ static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
     UnwrapNMatrix(right_val, right);
 
     if (left->stype == right->stype) {
+      std::string sym = "__list_elementwise_" + nm::EWOP_NAMES[op] + "__";
 
-      result->storage	= ew_op[left->stype](op, reinterpret_cast<STORAGE*>(left->storage), reinterpret_cast<STORAGE*>(right->storage), Qnil);
-      result->stype		= left->stype;
+      switch(left->stype) {
+      case nm::DENSE_STORE:
+      case nm::YALE_STORE:
+        result = ALLOC(NMATRIX);
+        result->storage	= ew_op[left->stype](op, reinterpret_cast<STORAGE*>(left->storage), reinterpret_cast<STORAGE*>(right->storage), Qnil);
+        result->stype		= left->stype;
+        break;
+      case nm::LIST_STORE:
+        return rb_funcall(left_val, rb_intern(sym.c_str()), 1, right_val);
+      default:
+        rb_raise(rb_eNotImpError, "unknown storage type requested element-wise operation");
+      }
 
     } else {
       rb_raise(rb_eArgError, "Element-wise operations are not currently supported between matrices with differing stypes.");
     }
   }
 
-	VALUE result_val = Data_Wrap_Struct(CLASS_OF(left_val), mark[result->stype], nm_delete, result);
-
-	return result_val;
+	return Data_Wrap_Struct(CLASS_OF(left_val), mark[result->stype], nm_delete, result);
 }
 
 /*

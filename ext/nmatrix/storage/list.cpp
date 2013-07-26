@@ -296,6 +296,98 @@ static void each_stored_with_indices_r(LIST_STORAGE* s, const LIST* l, size_t re
 }
 
 
+/*
+ * Recursive helper for map_merged_stored_r which handles the case where one list is empty and the other is not.
+ */
+static void map_empty_stored_r(LIST_STORAGE* result, const LIST_STORAGE* s, LIST* x, const LIST* l, size_t recursions, bool rev, const VALUE& init) {
+  NODE *curr  = l->first,
+       *xcurr = NULL;
+
+  if (recursions) {
+    while (curr) {
+      LIST* val = nm::list::create();
+      map_empty_stored_r(result, s, val, reinterpret_cast<const LIST*>(curr->val), recursions-1, rev, init);
+
+      if (!val->first) nm::list::del(val, 0);
+      else nm::list::insert_helper(x, xcurr, curr->key, val);
+
+      curr = curr->next;
+    }
+  } else {
+    while (curr) {
+      VALUE val;
+      if (rev) val = rb_yield_values(2, init, rubyobj_from_cval(curr->val, s->dtype).rval);
+      else     val = rb_yield_values(2, rubyobj_from_cval(curr->val, s->dtype).rval, init);
+
+      if (rb_funcall(val, rb_intern("!="), 1, init) == Qtrue)
+        xcurr = nm::list::insert_helper(x, xcurr, curr->key, val);
+
+      curr = curr->next;
+    }
+  }
+
+}
+
+
+/*
+ * Recursive helper function for nm_list_map_merged_stored
+ */
+static void map_merged_stored_r(LIST_STORAGE* result, const LIST_STORAGE* left, const LIST_STORAGE* right, LIST* x, const LIST* l, const LIST* r, size_t recursions, const VALUE& init) {
+  NODE *lcurr = l->first,
+       *rcurr = r->first,
+       *xcurr = x->first;
+
+  if (recursions) {
+    while (lcurr || rcurr) {
+      size_t key;
+      LIST*  val = nm::list::create();
+
+      if (!rcurr || lcurr->key < rcurr->key) {
+        map_empty_stored_r(result, left, val, reinterpret_cast<const LIST*>(lcurr->val), recursions-1, false, init);
+        key   = lcurr->key;
+        lcurr = lcurr->next;
+      } else if (!lcurr || rcurr->key < lcurr->key) {
+        map_empty_stored_r(result, right, val, reinterpret_cast<const LIST*>(rcurr->val), recursions-1, true, init);
+        key   = rcurr->key;
+        rcurr = rcurr->next;
+      } else { // == and both present
+        map_merged_stored_r(result, left, right, val, reinterpret_cast<const LIST*>(lcurr->val), reinterpret_cast<const LIST*>(rcurr->val), recursions-1, init);
+        key   = lcurr->key;
+        lcurr = lcurr->next;
+        rcurr = rcurr->next;
+      }
+
+      if (!val->first) nm::list::del(val, 0); // empty list -- don't insert
+      else xcurr = nm::list::insert_helper(x, xcurr, key, val);
+
+    }
+  } else {
+    while (lcurr || rcurr) {
+      size_t key;
+      VALUE  val;
+
+      if (!rcurr || lcurr->key < rcurr->key) {
+        val   = rb_yield_values(2, rubyobj_from_cval(lcurr->val, left->dtype).rval, rubyobj_from_cval(right->default_val, right->dtype).rval);
+        key   = lcurr->key;
+        lcurr = lcurr->next;
+      } else if (!lcurr || rcurr->key < lcurr->key) {
+        val   = rb_yield_values(2, rubyobj_from_cval(left->default_val, left->dtype).rval, rubyobj_from_cval(rcurr->val, right->dtype).rval);
+        key   = rcurr->key;
+        rcurr = rcurr->next;
+      } else { // == and both present
+        val   = rb_yield_values(2, rubyobj_from_cval(lcurr->val, left->dtype).rval, rubyobj_from_cval(rcurr->val, right->dtype).rval);
+        key   = lcurr->key;
+        lcurr = lcurr->next;
+        rcurr = rcurr->next;
+      }
+      if (rb_funcall(val, rb_intern("!="), 1, init) == Qtrue)
+        xcurr = nm::list::insert_helper(x, xcurr, key, val);
+
+    }
+  }
+}
+
+
 
 /*
  * Each/each-stored iterator, brings along the indices.
@@ -307,16 +399,45 @@ VALUE nm_list_each_with_indices(VALUE nmatrix, bool stored) {
 
   LIST_STORAGE* s = NM_STORAGE_LIST(nmatrix);
 
-  // Set up the LIST and NODE
-  LIST* l = s->rows;
-
   VALUE stack = rb_ary_new();
 
-  if (stored) each_stored_with_indices_r(s, l, s->dim - 1, stack);
-  else        each_with_indices_r(s, l, s->dim - 1, stack);
+  if (stored) each_stored_with_indices_r(s, s->rows, s->dim - 1, stack);
+  else        each_with_indices_r(s, s->rows, s->dim - 1, stack);
 
   return nmatrix;
 }
+
+
+/*
+ * map merged stored iterator. Always returns a matrix containing RubyObjects which probably needs to be casted.
+ */
+VALUE nm_list_map_merged_stored(int argc, VALUE* argv, VALUE left) {
+  VALUE right, init;
+  rb_scan_args(argc, argv, "11", &right, &init);
+
+  // If we don't have a block, return an enumerator.
+  RETURN_SIZED_ENUMERATOR(left, 0, 0, 0);
+
+  LIST_STORAGE *s = NM_STORAGE_LIST(left),
+               *t = NM_STORAGE_LIST(right);
+
+  // Figure out a default value if one wasn't provided by the user.
+  if (init == Qnil) init = rb_yield_values(2, rubyobj_from_cval(s->default_val, s->dtype).rval, rubyobj_from_cval(t->default_val, t->dtype).rval);
+
+	// Allocate a new shape array for the resulting matrix.
+	size_t* shape = ALLOC_N(size_t, s->dim);
+	memcpy(shape, s->shape, sizeof(size_t) * s->dim);
+  void* init_val = ALLOC(VALUE);
+  memcpy(init_val, &init, sizeof(VALUE));
+
+  NMATRIX* result = nm_create(nm::LIST_STORE, nm_list_storage_create(nm::RUBYOBJ, shape, s->dim, init_val));
+  LIST_STORAGE* r = reinterpret_cast<LIST_STORAGE*>(result->storage);
+
+  map_merged_stored_r(r, s, t, r->rows, s->rows, t->rows, s->dim - 1, init);
+
+  return Data_Wrap_Struct(CLASS_OF(left), nm_list_storage_mark, nm_delete, result);
+}
+
 
 
 static LIST* slice_copy(const LIST_STORAGE *src, LIST *src_rows, size_t *coords, size_t *lengths, size_t n) {
@@ -1243,3 +1364,26 @@ static void ew_op_prime(LIST* dest, LDType d_default, const LIST* left, LDType l
 
 }} // end of namespace nm::list_storage
 
+extern "C" {
+  /*
+   * call-seq:
+   *     __list_to_hash__ -> Hash
+   *
+   * Create a Ruby Hash from a list NMatrix.
+   *
+   * This is an internal C function which handles list stype only.
+   */
+  VALUE nm_to_hash(VALUE self) {
+    return nm_list_storage_to_hash(NM_STORAGE_LIST(self), NM_DTYPE(self));
+  }
+
+    /*
+     * call-seq:
+     *     __list_default_value__ -> ...
+     *
+     * Get the default_val property from a list matrix.
+     */
+    VALUE nm_list_default_value(VALUE self) {
+      return rubyobj_from_cval(NM_DEFAULT_VAL(self), NM_DTYPE(self)).rval;
+    }
+} // end of extern "C" block

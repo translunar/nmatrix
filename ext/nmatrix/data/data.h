@@ -31,6 +31,7 @@
 /*
  * Standard Includes
  */
+#include <string>
 
 /*
  * Project Includes
@@ -68,6 +69,10 @@ namespace nm {
     EW_LEQ,
     EW_GEQ
   };
+
+  // element-wise and scalar operators
+  extern const char* const  EWOP_OPS[nm::NUM_EWOPS];
+  extern const std::string  EWOP_NAMES[nm::NUM_EWOPS];
 
 } // end of namespace nm
 
@@ -788,6 +793,7 @@ extern const char* const  ITYPE_NAMES[nm::NUM_ITYPES];
 extern const size_t 			ITYPE_SIZES[nm::NUM_ITYPES];
 
 extern const nm::dtype_t Upcast[nm::NUM_DTYPES][nm::NUM_DTYPES];
+
 
 /*
  * Functions

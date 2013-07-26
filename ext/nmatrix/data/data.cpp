@@ -42,6 +42,37 @@
  * Global Variables
  */
 
+namespace nm {
+  const char* const EWOP_OPS[nm::NUM_EWOPS] = {
+    "+",
+    "-",
+    "*",
+    "/",
+    "**",
+    "%",
+    "==",
+    "!=",
+    "<",
+    ">",
+    "<=",
+    ">="
+  };
+
+  const std::string EWOP_NAMES[nm::NUM_EWOPS] = {
+    "add",
+    "sub",
+    "mul",
+    "div",
+    "pow",
+    "mod",
+    "eqeq",
+    "neq",
+    "lt",
+    "gt",
+    "leq",
+    "geq"
+  };
+} // end of namespace nm
 extern "C" {
 
 const char* const DTYPE_NAMES[nm::NUM_DTYPES] = {
@@ -66,6 +97,7 @@ const char* const ITYPE_NAMES[nm::NUM_ITYPES] = {
 	"uint32",
 	"uint64"
 };
+
 
 const size_t DTYPE_SIZES[nm::NUM_DTYPES] = {
 	sizeof(uint8_t),

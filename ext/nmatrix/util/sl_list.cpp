@@ -58,13 +58,7 @@ namespace nm { namespace list {
  * Creates an empty linked list.
  */
 LIST* create(void) {
-  LIST* list;
-  
-  //if (!(list = malloc(sizeof(LIST)))) return NULL;
-  list = ALLOC( LIST );
-
-  //fprintf(stderr, "    create_list LIST: %p\n", list);
-
+  LIST* list = ALLOC( LIST );
   list->first = NULL;
   return list;
 }

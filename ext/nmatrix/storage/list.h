@@ -125,6 +125,10 @@ extern "C" {
   STORAGE*      nm_list_storage_cast_copy(const STORAGE* rhs, nm::dtype_t new_dtype);
   VALUE         nm_list_storage_to_hash(const LIST_STORAGE* s, const nm::dtype_t dtype);
 
+  // Exposed functions
+  VALUE nm_to_hash(VALUE self);
+  VALUE nm_list_map_merged_stored(int argc, VALUE* argv, VALUE left);
+  VALUE nm_list_default_value(VALUE self);
 } // end of extern "C" block
 
 #endif // LIST_H

@@ -122,8 +122,10 @@ class NMatrix
         end
       end
       h
-    else # dense and list should use a C internal functions.
-      to_hash_c
+    else # dense and list should use a C internal function.
+      # FIXME: Write a C internal to_h function.
+      m = stype == :dense ? self.cast(:list, self.dtype) : self
+      m.__list_to_hash__
     end
   end
   alias :to_h :to_hash
@@ -638,7 +640,28 @@ class NMatrix
     end
   end
 
+
+  def method_missing name, *args, &block #:nodoc:
+    if name.to_s =~ /^__list_elementwise_.*__$/
+      raise NotImplementedError, "requested list matrix element-wise operation"
+    elsif name.to_s =~ /^__yale_scalar_.*__$/
+      raise NotImplementedError, "requested yale scalar element-wise operation"
+    else
+      super(name, *args, &block)
+    end
+  end
+
 protected
+  #%i{add sub mul div pow mod eqeq neq lt gt leq geq}.each do |ewop|
+  #  define_method("__list_elementwise_#{ewop}__") do |rhs|
+  #    self.__list_map_merged_stored__(rhs) { |l,r| l+r }.cast(stype, NMatrix.upcast(dtype, rhs.dtype))
+  #  end
+  #end
+  def __list_elementwise_add__ rhs
+    x = self.__list_map_merged_stored__(rhs){ |l,r| l+r }
+    x.cast(self.stype, NMatrix.upcast(self.dtype, rhs.dtype))
+  end
+
   def inspect_helper #:nodoc:
     ary = []
     ary << "shape:[#{shape.join(',')}]" << "dtype:#{dtype}" << "stype:#{stype}"
@@ -657,4 +680,6 @@ protected
 
     ary
   end
+
+
 end

@@ -312,6 +312,7 @@ NM_DEF_STRUCT_POST(NMATRIX);  // };
 #define NM_SHAPE(val,i)         (NM_STORAGE(val)->shape[(i)])
 #define NM_SHAPE0(val)          (NM_STORAGE(val)->shape[0])
 #define NM_SHAPE1(val)          (NM_STORAGE(val)->shape[1])
+#define NM_DEFAULT_VAL(val)     (NM_STORAGE_LIST(val)->default_val)
 
 #define NM_DENSE_COUNT(val)     (storage_count_max_elements(NM_STORAGE_DENSE(val)))
 #define NM_SIZEOF_DTYPE(val)    (DTYPE_SIZES[NM_DTYPE(val)])
@@ -355,6 +356,10 @@ extern "C" {
 	VALUE rb_nvector_dense_create(NM_DECL_ENUM(dtype_t, dtype), void* elements, size_t length);
 
 	NM_DECL_ENUM(dtype_t, nm_dtype_guess(VALUE));   // (This is a function)
+
+  // Non-API functions needed by other cpp files.
+	NMATRIX* nm_create(nm::stype_t stype, STORAGE* storage);
+	void     nm_delete(NMATRIX* mat);
 
 #ifdef __cplusplus
 }
