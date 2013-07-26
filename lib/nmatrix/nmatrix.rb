@@ -659,7 +659,7 @@ protected
   #end
   def __list_elementwise_add__ rhs
     x = self.__list_map_merged_stored__(rhs){ |l,r| l+r }
-    x.cast(self.stype, NMatrix.upcast(self.dtype, rhs.dtype))
+    #x.cast(self.stype, NMatrix.upcast(self.dtype, rhs.dtype))
   end
 
   def inspect_helper #:nodoc:
