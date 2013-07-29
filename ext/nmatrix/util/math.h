@@ -799,79 +799,21 @@ inline void laswp(const int N, DType* A, const int lda, const int K1, const int 
  */ 
 // The types which are like doubles
 //template <typename DType, typename CType>
-inline void clapack_gesvd(char *jobu, char *jobvt, int *m, int *n, 
-  double *a, int *lda,   double *s, double *u,
-  int *ldu,  
+inline void clapack_dgesvd(char *jobu, char *jobvt, 
+  int *m, int *n, 
+  double *a, int *lda,   
+  double *s, 
+  double *u, int *ldu,  
   double *vt, int *ldvt,
-  double *work,  int *lwork, int *info)
+  double *work,  int *lwork, 
+  int *info)
 {
-  /*
-  DType* u = ALLOCA_N(DType, ldu);
-  DType* vt = ALLOCA_N(DType, ldvt);
-  DType* work = ALLOCA_N(DType, lwork);
-  CType* rwork;
-  DType* input = reinterpret_cast<DType*>(a);
-  DType* output = reinterpret_cast<DType*>(s);
-  int info = 0;
-  if (typeid(DType) != typeid(CType)) {
-    CType* rwork = ALLOCA_N(CType, 5*std::min(m,n));
-// Call the z/c option
-  } else {
-    CType* rwork = NULL;
-    // Call the s/d option
-  }
-
-
-  // Rework the fxn to return the proper type, and to format s properly
-#ifdef HAVE_CLAPACK_H
-  rb_raise(rb_eNotImpError, "not yet implemented for non-BLAS dtypes");
-#else
-  rb_raise(rb_eNotImpError, "only LAPACK version implemented thus far");
-#endif
-  return info;
-  */
+  dgesvd_(jobu, jobvt, m, n, 
+        a, lda, s, u, 
+        ldu, vt, ldvt, work, lwork, 
+        info);
 }
 
-// DOUBLE!!
-inline VALUE dgesvd(char *jobu, char *jobvt, 
-    int m, int n,
-    void* a, int lda,
-    void* s,
-    int ldu, 
-    int ldvt, 
-    int lwork, nm::dtype_t dtype) 
-{
-  if (dtype == 6) {
-    double* input = reinterpret_cast<double*>(a);
-    double* output = reinterpret_cast<double*>(s);
-    double* u = ALLOCA_N(double, ldu);
-    double* vt = ALLOCA_N(double, ldvt);
-    double* work = ALLOCA_N(double, lwork);
-    int info = 0;
-    dgesvd_(jobu, jobvt, &m, &n, 
-        input, &lda, output, u, 
-        &ldu, vt, &ldvt, work, &lwork, 
-        &info);
-    size_t length = std::min(m,n);
-    size_t s_size[2] = {1,length};
-    size_t u_size[2] = {m, m};
-    size_t vt_size[2] = {n, n};
-    size_t dim = 2;
-
-    // Prep the return product
-    VALUE return_array = rb_ary_new2(3);
-
-    rb_ary_push(return_array, rb_nmatrix_dense_create(dtype, s_size, dim, s, length ));
-    rb_ary_push(return_array, rb_nmatrix_dense_create(dtype, u_size, m, u, m));
-    rb_ary_push(return_array, rb_nmatrix_dense_create(dtype, vt_size, n, vt, n));
-    return return_array;
-  //  return rb_nmatrix_dense_create(dtype, s_size, dim, s, length );
-
-  } else {
-    rb_raise(rb_eNotImpError, "only LAPACK versions implemented thus far");
-    return Qnil;
-  }
-}
 
 
 /*

@@ -154,7 +154,7 @@ extern "C" {
   static VALUE nm_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1, VALUE k2, VALUE ipiv, VALUE incx);
   static VALUE nm_clapack_scal(VALUE self, VALUE n, VALUE scale, VALUE vector, VALUE incx);
   static VALUE nm_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
-  static VALUE nm_clapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE a);
+  static VALUE nm_clapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE a, VALUE s, VALUE u, VALUE vt);
   // static VALUE nm_clapack_gesdd(VALUE self, VALUE order, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE work, VALUE lwork, VALUE iwork); // TODO
 } // end of extern "C" block
 
@@ -191,18 +191,6 @@ void det_exact(const int M, const void* A_elements, const int lda, void* result_
   }
 }
 
-/* 
- * Function BLAS integration test
- * 
- */
-template <typename DType>
-bool svd(const CBLAS_TRANSPOSE trans, const int M, const int N, DType* A, ...) {
-  rb_raise(rb_eNotImpError, "only implemented for ATLAS types (float32, float64, complex64, complex128)");
-}
-// STEP #2
-
-  
-  // Fxns go here
   // Two options for each datatype, the simple driver, xGESVD, and the divide-and-conquer driver, xGESDD, http://www.netlib.org/lapack/lug/node32.html
   // xGESDD is much quicker for "large" matrices, but uses more workspace.  I'm not sure what the cut-off is yet. However, http://projects.scipy.org/scipy/ticket/957 suggests that xGESDD is more stable for "extremely ill conditioned matrices"
 /*
@@ -343,7 +331,7 @@ void nm_math_init_blas() {
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_laswp", (METHOD)nm_clapack_laswp, 7);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_scal",  (METHOD)nm_clapack_scal,  4);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_lauum", (METHOD)nm_clapack_lauum, 5);
-  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_gesvd", (METHOD)nm_clapack_gesvd, 3); // TODO
+  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_gesvd", (METHOD)nm_clapack_gesvd, 6); // TODO
  // rb_define_singleton_method(cNMatrix_LAPACK, "clapack_gesdd", (METHOD)nm_clapack_gesdd, 9); // TODO
 
   cNMatrix_BLAS = rb_define_module_under(cNMatrix, "BLAS");
@@ -897,6 +885,40 @@ static VALUE nm_cblas_herk(VALUE self,
   return Qtrue;
 }
 
+inline VALUE gesvd(char *jobu, char *jobvt, 
+    int m, int n,
+    void* a, int lda,
+    void* s,
+    void* u, int ldu, 
+    void* vt, int ldvt, 
+    int lwork, nm::dtype_t dtype) 
+{
+  if (dtype == 6) {
+    double* A = reinterpret_cast<double*>(a);
+    double* S = reinterpret_cast<double*>(s);
+    double* U = reinterpret_cast<double*>(u);
+    double* VT = reinterpret_cast<double*>(vt);
+    double* work = ALLOCA_N(double, lwork);
+    int info = 0;
+    nm::math::clapack_dgesvd(jobu, jobvt, &m, &n, 
+        A, &lda, S, U, 
+        &ldu, VT, &ldvt, work, &lwork, 
+        &info);
+
+    /*
+    // Prep the return product
+    VALUE return_array = rb_ary_new2(3);
+
+    rb_ary_push(return_array, rb_nmatrix_dense_create(dtype, s_size, dim, s, length ));
+    rb_ary_push(return_array, rb_nmatrix_dense_create(dtype, u_size, m, u, m));
+    rb_ary_push(return_array, rb_nmatrix_dense_create(dtype, vt_size, n, vt, n));
+    return return_array; */
+    return INT2FIX(info);
+  } else {
+    rb_raise(rb_eNotImpError, "only LAPACK versions implemented thus far");
+    return Qnil;
+  }
+}
 /*
  * Function signature conversion for calling CBLAS' gesvd functions as directly as possible.
  * 
@@ -906,11 +928,9 @@ static VALUE nm_cblas_herk(VALUE self,
  *
  * For documentation: http://www.netlib.org/lapack/double/dgesvd.f
  */
-static VALUE nm_clapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE a) { 
+static VALUE nm_clapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE a, VALUE s, VALUE u, VALUE vt) { 
   //Raise errors if all dtypes aren't matching...? Here or in the Ruby code
 
-  // Expose the u and vt within the templated fxns
-  // Hence, u, vt, work, rwork are only had within the fxn.  
   nm::dtype_t dtype = NM_DTYPE(a);
   size_t m = NM_STORAGE_DENSE(a)->shape[0];
   size_t n = NM_STORAGE_DENSE(a)->shape[1];
@@ -921,19 +941,17 @@ static VALUE nm_clapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE a) {
   size_t ldvt = std::max(1, int(n));
   size_t lwork = std::max(std::max(1,3*std::min(intm, intn) + std::max(intm, intn)),5*std::min(intm,intn));
 
-  // Initialize
-  // GET THE SIZE_OF dtype
-  // Build the intermediate data arrays, the u, vt, work... 
-  size_t s_size = std::min(m, n);
-  void* s = ALLOCA_N(double, s_size);
-  void* input = NM_STORAGE_DENSE(a)->elements;
   /*VALUE resp;
   try { */
-    VALUE resp = nm::math::dgesvd(RSTRING_PTR(jobu),RSTRING_PTR(jobvt),
+    VALUE resp = gesvd(RSTRING_PTR(jobu),RSTRING_PTR(jobvt),
         m, n, 
-        input, lda,
-        s, 
-        ldu, ldvt, lwork, dtype);
+        NM_STORAGE_DENSE(a)->elements, lda,
+        NM_STORAGE_DENSE(s)->elements, 
+        NM_STORAGE_DENSE(u)->elements, ldu,
+        NM_STORAGE_DENSE(vt)->elements, ldvt,
+        lwork, dtype);
+        
+    // make this last function templated and feed the elements directly
     /*
   } catch (int e) {
     char tmp[20];
@@ -948,6 +966,10 @@ static VALUE nm_clapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE a) {
   // This is where I should handle S, returning it as a Ruby array of Matrix objects, perhaps?  I'd rather not have to deal with the casting
 
 }
+
+
+
+
 /*
 template <typename DType>
 static inline bool gesvd(char* jobu, char* jobvt,  // 'A', 'S', 'O', 'N', will probably default to 'A' which returns in array form

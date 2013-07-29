@@ -153,8 +153,15 @@ class NMatrix
         else
           #::NMatrix::LAPACK.clapack_gesvd(:row,
         end
+
+        # Build up the u and vt matrices
+        m, n = matrix.shape
+        dtype = matrix.dtype
+        s_matrix = NMatrix.new([1,matrix.shape.min], dtype)
+        u_matrix = NMatrix.new([m,m], dtype)
+        v_matrix = NMatrix.new([n,n], dtype)
         # test this
-        s, u, v = clapack_gesvd(jobu, jobvt, matrix)
+        s = clapack_gesvd(jobu, jobvt, matrix, s_matrix, u_matrix, v_matrix)
 
         # what should this return?
         case type
@@ -167,6 +174,7 @@ class NMatrix
         when :none 
           s
         end
+        [s_matrix, u_matrix, v_matrix]
       end # #svd
     end
   end
