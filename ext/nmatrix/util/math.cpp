@@ -900,7 +900,7 @@ inline VALUE gesvd(char *jobu, char *jobvt,
     double* VT = reinterpret_cast<double*>(vt);
     double* work = ALLOCA_N(double, lwork);
     int info = 0;
-    nm::math::clapack_dgesvd(jobu, jobvt, &m, &n, 
+    nm::math::clapack_gesvd(jobu, jobvt, &m, &n, 
         A, &lda, S, U, 
         &ldu, VT, &ldvt, work, &lwork, 
         &info);
@@ -914,6 +914,7 @@ inline VALUE gesvd(char *jobu, char *jobvt,
     rb_ary_push(return_array, rb_nmatrix_dense_create(dtype, vt_size, n, vt, n));
     return return_array; */
     return INT2FIX(info);
+  } else if (dtype == 5) {
   } else {
     rb_raise(rb_eNotImpError, "only LAPACK versions implemented thus far");
     return Qnil;

@@ -798,14 +798,14 @@ inline void laswp(const int N, DType* A, const int lda, const int K1, const int 
  * Note that the routine returns V**T, not V.
  */ 
 // The types which are like doubles
-//template <typename DType, typename CType>
-inline void clapack_dgesvd(char *jobu, char *jobvt, 
+template <typename DType>
+inline void clapack_gesvd(char *jobu, char *jobvt, 
   int *m, int *n, 
-  double *a, int *lda,   
-  double *s, 
-  double *u, int *ldu,  
-  double *vt, int *ldvt,
-  double *work,  int *lwork, 
+  DType *a, int *lda,   
+  DType *s, 
+  DType *u, int *ldu,  
+  DType *vt, int *ldvt,
+  DType *work,  int *lwork, 
   int *info)
 {
   dgesvd_(jobu, jobvt, m, n, 
