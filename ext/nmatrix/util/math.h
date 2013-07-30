@@ -860,7 +860,7 @@ inline void lapack_zgesvd(char *jobu, char *jobvt,
  * I'm greatly tempted, and would rather see a wrapped version, which I'm not sure where I should place.
  * For now, I'll keep it here.
  */
-template <typename DType>
+template <typename DType, typename CType>
 static void lapack_gesvd_nothrow(char *jobu, char *jobvt, 
   int *m, int *n, 
   void *a, int *lda,   
@@ -869,6 +869,12 @@ static void lapack_gesvd_nothrow(char *jobu, char *jobvt,
   void *vt, int *ldvt,
   void *work,  int *lwork, void* rwork,
   int *info) {
+  DType* A = reinterpret_cast<DType*>(a);
+  DType* S = reinterpret_cast<DType*>(s);
+  DType* U = reinterpret_cast<DType*>(u);
+  DType* VT = reinterpret_cast<DType*>(vt);
+  DType* WORK = reinterpret_cast<DType*>(work);
+  CType* RWORK = reinterpret_cast<CType*>(rwork);
 }
 
 

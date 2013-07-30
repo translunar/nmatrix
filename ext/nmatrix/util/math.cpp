@@ -321,7 +321,6 @@ extern "C" {
 ///////////////////
 
 void nm_math_init_blas() {
-  rb_define_singleton_method(cNMatrix, "gesvd", (METHOD)nm_gesvd, 6); // TODO
 	cNMatrix_LAPACK = rb_define_module_under(cNMatrix, "LAPACK");
 
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getrf", (METHOD)nm_clapack_getrf, 5);
@@ -333,6 +332,7 @@ void nm_math_init_blas() {
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_laswp", (METHOD)nm_clapack_laswp, 7);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_scal",  (METHOD)nm_clapack_scal,  4);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_lauum", (METHOD)nm_clapack_lauum, 5);
+  rb_define_singleton_method(cNMatrix_LAPACK, "gesvd", (METHOD)nm_gesvd, 6); // TODO
   rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesvd", (METHOD)nm_lapack_gesvd, 13); // TODO
  // rb_define_singleton_method(cNMatrix_LAPACK, "clapack_gesdd", (METHOD)nm_clapack_gesdd, 9); // TODO
 
@@ -897,7 +897,7 @@ inline VALUE gesvd(char *jobu, char *jobvt,
     void* vt, int ldvt, 
     int lwork, nm::dtype_t dtype) 
 {
-  if (dtype == 6) {
+  if (dtype == nm::FLOAT64) {
     double* A = reinterpret_cast<double*>(a);
     double* S = reinterpret_cast<double*>(s);
     double* U = reinterpret_cast<double*>(u);
@@ -909,7 +909,7 @@ inline VALUE gesvd(char *jobu, char *jobvt,
         &ldu, VT, &ldvt, work, &lwork, 
         &info);
 
-    return Qnil;
+    return Qtrue;
     /*
     // Prep the return product
     VALUE return_array = rb_ary_new2(3);
@@ -918,6 +918,47 @@ inline VALUE gesvd(char *jobu, char *jobvt,
     rb_ary_push(return_array, rb_nmatrix_dense_create(dtype, u_size, m, u, m));
     rb_ary_push(return_array, rb_nmatrix_dense_create(dtype, vt_size, n, vt, n));
     return return_array; */
+  } else if (dtype == nm::FLOAT32) {
+    float* A = reinterpret_cast<float*>(a);
+    float* S = reinterpret_cast<float*>(s);
+    float* U = reinterpret_cast<float*>(u);
+    float* VT = reinterpret_cast<float*>(vt);
+    float* work = ALLOCA_N(float, lwork);
+    int info = 0;
+    nm::math::lapack_sgesvd(jobu, jobvt, &m, &n, 
+        A, &lda, S, U, 
+        &ldu, VT, &ldvt, work, &lwork, 
+        &info);
+
+    return Qtrue;
+
+  } else if (dtype == nm::COMPLEX64) {
+    nm::Complex64* A = reinterpret_cast<nm::Complex64*>(a);
+    nm::Complex64* S = reinterpret_cast<nm::Complex64*>(s);
+    nm::Complex64* U = reinterpret_cast<nm::Complex64*>(u);
+    nm::Complex64* VT = reinterpret_cast<nm::Complex64*>(vt);
+    int rwork_size = 5*std::min(m,n);
+    nm::Complex64* work = ALLOCA_N(nm::Complex64, lwork);
+    float* rwork = ALLOCA_N(float, rwork_size);
+    int info = 0;
+    nm::math::lapack_cgesvd(jobu, jobvt, &m, &n, 
+        A, &lda, S, U, 
+        &ldu, VT, &ldvt, work, &lwork, rwork,
+        &info);
+  } else if (dtype == nm::COMPLEX128) {
+    nm::Complex128* A = reinterpret_cast<nm::Complex128*>(a);
+    nm::Complex128* S = reinterpret_cast<nm::Complex128*>(s);
+    nm::Complex128* U = reinterpret_cast<nm::Complex128*>(u);
+    nm::Complex128* VT = reinterpret_cast<nm::Complex128*>(vt);
+    int rwork_size = 5*std::min(m,n);
+    nm::Complex128* work = ALLOCA_N(nm::Complex128, lwork);
+    double* rwork = ALLOCA_N(double, rwork_size);
+    int info = 0;
+    nm::math::lapack_zgesvd(jobu, jobvt, &m, &n, 
+        A, &lda, S, U, 
+        &ldu, VT, &ldvt, work, &lwork, rwork,
+        &info);
+
   } else {
     rb_raise(rb_eNotImpError, "only LAPACK versions implemented thus far");
     return Qnil;
@@ -978,9 +1019,37 @@ template <typename DType>
 static inline lapack_gesvd_nothrow() {
 }
  */
-  static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE work, VALUE lwork, VALUE rwork, VALUE info) {
-    return Qnil;
+static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE work, VALUE lwork, VALUE rwork, VALUE info) {
+  static void (*ttable[nm::NUM_DTYPES])(char*, char*, int*, int*, void*, int*, void*, void*, int*, void*, int*, void*, int*, void*, int*) = {
+    NULL, NULL, NULL, NULL, NULL, // no integer ops
+    nm::math::lapack_gesvd_nothrow<float,float>,
+    nm::math::lapack_gesvd_nothrow<double,double>,
+    nm::math::lapack_gesvd_nothrow<nm::Complex64,float>,
+    nm::math::lapack_gesvd_nothrow<nm::Complex128,double>,
+    NULL, NULL, NULL, NULL};
+  nm::dtype_t dtype = NM_DTYPE(a);
+
+  //void* RWORK, A, S, U, VT, WORK;
+  if (!ttable[dtype]) {
+    rb_raise(nm_eDataTypeError, "This operation is only available for BLAS datatypes");
+    return Qfalse;
+  } else {
+    if (dtype == nm::COMPLEX64 || dtype == nm::COMPLEX128) {
+      // Prep RWORK?
+    } else if (dtype == nm::FLOAT32 || dtype == nm::FLOAT64) {
+      // Nullify RWORK?
+    }
+
+    /*ttable[dtype](RSTRING_PTR(jobu),RSTRING_PTR(jobvt),
+      m, n, 
+      NM_STORAGE_DENSE(a)->elements, lda,
+      NM_STORAGE_DENSE(s)->elements, 
+      NM_STORAGE_DENSE(u)->elements, ldu,
+      NM_STORAGE_DENSE(vt)->elements, ldvt,
+      lwork, rwork, info);*/
+    return Qtrue;
   }
+}
 
 /*
 template <typename DType>
