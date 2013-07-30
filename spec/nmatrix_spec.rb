@@ -39,11 +39,23 @@ describe NMatrix do
     m.det.should == 6
   end
 
+  it "allows casting to Ruby objects" do
+    m = NMatrix.new(:dense, [3,3], [0,0,1,0,2,0,3,4,5], :int64)
+    n = m.cast(:dense, :object)
+    n.should == m
+  end
+
+  it "allows casting from Ruby objects" do
+    m = NMatrix.new(:dense, [3,3], [0,0,1,0,2,0,3,4,5], :object)
+    n = m.cast(:dense, :int64)
+    m.should == n
+  end
+
   it "allows stype casting of a dim 2 matrix between dense, sparse, and list (different dtypes)" do
     m = NMatrix.new(:dense, [3,3], [0,0,1,0,2,0,3,4,5], :int64).
       cast(:yale, :int32).
       cast(:dense, :float64).
-      cast(:list, :int32).
+      cast(:list, :object).
       cast(:dense, :int16).
       cast(:list, :int32).
       cast(:yale, :int64) #.

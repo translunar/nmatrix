@@ -614,6 +614,11 @@ extern "C" {
 
     nm::itype_t itype = nm_yale_storage_default_itype((const YALE_STORAGE*)right);
 
+    if (!ttable[l_dtype][right->dtype][itype]) {
+      rb_raise(nm_eDataTypeError, "casting between these dtypes is undefined");
+      return NULL;
+    }
+
     return (STORAGE*)ttable[l_dtype][right->dtype][itype]((const DENSE_STORAGE*)right, l_dtype);
   }
 
@@ -622,11 +627,21 @@ extern "C" {
 
     nm::itype_t itype = nm_yale_storage_default_itype((const YALE_STORAGE*)right);
 
+    if (!ttable[l_dtype][right->dtype][itype]) {
+      rb_raise(nm_eDataTypeError, "casting between these dtypes is undefined");
+      return NULL;
+    }
+
     return (STORAGE*)ttable[l_dtype][right->dtype][itype]((const LIST_STORAGE*)right, l_dtype);
   }
 
   STORAGE* nm_dense_storage_from_list(const STORAGE* right, nm::dtype_t l_dtype) {
     NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::dense_storage::create_from_list_storage, DENSE_STORAGE*, const LIST_STORAGE* rhs, nm::dtype_t l_dtype);
+
+    if (!ttable[l_dtype][right->dtype]) {
+      rb_raise(nm_eDataTypeError, "casting between these dtypes is undefined");
+      return NULL;
+    }
 
     return (STORAGE*)ttable[l_dtype][right->dtype]((const LIST_STORAGE*)right, l_dtype);
   }
@@ -635,11 +650,22 @@ extern "C" {
     NAMED_LRI_DTYPE_TEMPLATE_TABLE(ttable, nm::dense_storage::create_from_yale_storage, DENSE_STORAGE*, const YALE_STORAGE* rhs, nm::dtype_t l_dtype);
 
     const YALE_STORAGE* casted_right = reinterpret_cast<const YALE_STORAGE*>(right);
+
+    if (!ttable[l_dtype][right->dtype][casted_right->itype]) {
+      rb_raise(nm_eDataTypeError, "casting between these dtypes is undefined");
+      return NULL;
+    }
+
     return reinterpret_cast<STORAGE*>(ttable[l_dtype][right->dtype][casted_right->itype](casted_right, l_dtype));
   }
 
   STORAGE* nm_list_storage_from_dense(const STORAGE* right, nm::dtype_t l_dtype) {
     NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::list_storage::create_from_dense_storage, LIST_STORAGE*, const DENSE_STORAGE*, nm::dtype_t);
+
+    if (!ttable[l_dtype][right->dtype]) {
+      rb_raise(nm_eDataTypeError, "casting between these dtypes is undefined");
+      return NULL;
+    }
 
     return (STORAGE*)ttable[l_dtype][right->dtype]((DENSE_STORAGE*)right, l_dtype);
   }
@@ -648,6 +674,11 @@ extern "C" {
     NAMED_LRI_DTYPE_TEMPLATE_TABLE(ttable, nm::list_storage::create_from_yale_storage, LIST_STORAGE*, const YALE_STORAGE* rhs, nm::dtype_t l_dtype);
 
     const YALE_STORAGE* casted_right = reinterpret_cast<const YALE_STORAGE*>(right);
+
+    if (!ttable[l_dtype][right->dtype][casted_right->itype]) {
+      rb_raise(nm_eDataTypeError, "casting between these dtypes is undefined");
+      return NULL;
+    }
 
     return (STORAGE*)ttable[l_dtype][right->dtype][casted_right->itype](casted_right, l_dtype);
   }

@@ -652,15 +652,26 @@ class NMatrix
   end
 
 protected
-  #%i{add sub mul div pow mod eqeq neq lt gt leq geq}.each do |ewop|
-  #  define_method("__list_elementwise_#{ewop}__") do |rhs|
-  #    self.__list_map_merged_stored__(rhs) { |l,r| l+r }.cast(stype, NMatrix.upcast(dtype, rhs.dtype))
-  #  end
-  #end
-  def __list_elementwise_add__ rhs
-    x = self.__list_map_merged_stored__(rhs){ |l,r| l+r }
-    #x.cast(self.stype, NMatrix.upcast(self.dtype, rhs.dtype))
+  # Define the element-wise operations for lists. Note that the __list_map_merged_stored__ iterator returns a Ruby Object
+  # matrix, which we then cast back to the appropriate type. If you don't want that, you can redefine these functions in
+  # your own code.
+  {add: :+, sub: :-, mul: :*, div: :/, pow: :**, mod: :%}.each_pair do |ewop, op|
+    define_method("__list_elementwise_#{ewop}__") do |rhs|
+      self.__list_map_merged_stored__(rhs) { |l,r| l.send(op,r) }.cast(stype, NMatrix.upcast(dtype, rhs.dtype))
+    end
   end
+
+  # Equality operators do not involve a cast. We want to get back matrices of TrueClass and FalseClass.
+  {eqeq: :==, neq: :!=, lt: :<, gt: :>, leq: :<=, geq: :>=}.each_pair do |ewop, op|
+    define_method("__list_elementwise_#{ewop}__") do |rhs|
+      self.__list_map_merged_stored__(rhs) { |l,r| l.send(op,r) }
+    end
+  end
+
+  # This is how you write an individual element-wise operation function:
+  #def __list_elementwise_add__ rhs
+  #  self.__list_map_merged_stored__(rhs){ |l,r| l+r }.cast(self.stype, NMatrix.upcast(self.dtype, rhs.dtype))
+  #end
 
   def inspect_helper #:nodoc:
     ary = []

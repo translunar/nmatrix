@@ -41,7 +41,7 @@ SPECDIR = BASEDIR + 'spec'
 
 VALGRIND_OPTIONS = [
         "--tool=memcheck",
-        "--leak-check=yes",
+        #"--leak-check=yes",
         "--num-callers=15",
         #"--error-limit=no",
         "--partial-loads-ok=yes",

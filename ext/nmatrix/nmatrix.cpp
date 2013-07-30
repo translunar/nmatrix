@@ -331,7 +331,7 @@ extern "C" {
 static VALUE nm_init(int argc, VALUE* argv, VALUE nm);
 static VALUE nm_init_copy(VALUE copy, VALUE original);
 static VALUE nm_init_transposed(VALUE self);
-static VALUE nm_init_cast_copy(VALUE self, VALUE new_stype_symbol, VALUE new_dtype_symbol);
+static VALUE nm_cast(VALUE self, VALUE new_stype_symbol, VALUE new_dtype_symbol);
 static VALUE nm_read(int argc, VALUE* argv, VALUE self);
 static VALUE nm_write(int argc, VALUE* argv, VALUE self);
 static VALUE nm_init_yale_from_old_yale(VALUE shape, VALUE dtype, VALUE ia, VALUE ja, VALUE a, VALUE from_dtype, VALUE nm);
@@ -375,6 +375,7 @@ DECL_ELEMENTWISE_RUBY_ACCESSOR(subtract)
 DECL_ELEMENTWISE_RUBY_ACCESSOR(multiply)
 DECL_ELEMENTWISE_RUBY_ACCESSOR(divide)
 DECL_ELEMENTWISE_RUBY_ACCESSOR(power)
+DECL_ELEMENTWISE_RUBY_ACCESSOR(mod)
 DECL_ELEMENTWISE_RUBY_ACCESSOR(eqeq)
 DECL_ELEMENTWISE_RUBY_ACCESSOR(neq)
 DECL_ELEMENTWISE_RUBY_ACCESSOR(lt)
@@ -463,7 +464,7 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "dtype", (METHOD)nm_dtype, 0);
 	rb_define_method(cNMatrix, "itype", (METHOD)nm_itype, 0);
 	rb_define_method(cNMatrix, "stype", (METHOD)nm_stype, 0);
-	rb_define_method(cNMatrix, "cast",  (METHOD)nm_init_cast_copy, 2);
+	rb_define_method(cNMatrix, "cast",  (METHOD)nm_cast, 2);
 	rb_define_protected_method(cNMatrix, "__list_default_value__", (METHOD)nm_list_default_value, 0);
 
 	rb_define_method(cNMatrix, "[]", (METHOD)nm_mref, -1);
@@ -491,7 +492,7 @@ void Init_nmatrix() {
   rb_define_method(cNMatrix, "*",			(METHOD)nm_ew_multiply,	1);
 	rb_define_method(cNMatrix, "/",			(METHOD)nm_ew_divide,		1);
   rb_define_method(cNMatrix, "**",    (METHOD)nm_ew_power,    1);
-  // rb_define_method(cNMatrix, "%",     (METHOD)nm_ew_mod,      1);
+  rb_define_method(cNMatrix, "%",     (METHOD)nm_ew_mod,      1);
 
 	rb_define_method(cNMatrix, "=~", (METHOD)nm_ew_eqeq, 1);
 	rb_define_method(cNMatrix, "!~", (METHOD)nm_ew_neq, 1);
@@ -791,7 +792,7 @@ DEF_ELEMENTWISE_RUBY_ACCESSOR(SUB, subtract)
 DEF_ELEMENTWISE_RUBY_ACCESSOR(MUL, multiply)
 DEF_ELEMENTWISE_RUBY_ACCESSOR(DIV, divide)
 DEF_ELEMENTWISE_RUBY_ACCESSOR(POW, power)
-//DEF_ELEMENTWISE_RUBY_ACCESSOR(MOD, mod)
+DEF_ELEMENTWISE_RUBY_ACCESSOR(MOD, mod)
 DEF_ELEMENTWISE_RUBY_ACCESSOR(EQEQ, eqeq)
 DEF_ELEMENTWISE_RUBY_ACCESSOR(NEQ, neq)
 DEF_ELEMENTWISE_RUBY_ACCESSOR(LEQ, leq)
@@ -1033,7 +1034,7 @@ static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
 /*
  * Copy constructor for changing dtypes and stypes.
  */
-static VALUE nm_init_cast_copy(VALUE self, VALUE new_stype_symbol, VALUE new_dtype_symbol) {
+static VALUE nm_cast(VALUE self, VALUE new_stype_symbol, VALUE new_dtype_symbol) {
   nm::dtype_t new_dtype = nm_dtype_from_rbsymbol(new_dtype_symbol);
   nm::stype_t new_stype = nm_stype_from_rbsymbol(new_stype_symbol);
 
@@ -1046,7 +1047,7 @@ static VALUE nm_init_cast_copy(VALUE self, VALUE new_stype_symbol, VALUE new_dty
   UnwrapNMatrix( self, rhs );
 
   // Copy the storage
-  STYPE_CAST_COPY_TABLE(cast_copy);
+  CAST_TABLE(cast_copy);
   lhs->storage = cast_copy[lhs->stype][rhs->stype](rhs->storage, new_dtype);
 
   STYPE_MARK_TABLE(mark);
@@ -1089,7 +1090,7 @@ static VALUE nm_init_copy(VALUE copy, VALUE original) {
   lhs->stype = rhs->stype;
 
   // Copy the storage
-  STYPE_CAST_COPY_TABLE(ttable);
+  CAST_TABLE(ttable);
   lhs->storage = ttable[lhs->stype][rhs->stype](rhs->storage, rhs->storage->dtype);
 
   return copy;
@@ -2064,7 +2065,7 @@ STORAGE* matrix_storage_cast_alloc(NMATRIX* matrix, nm::dtype_t new_dtype) {
   if (matrix->storage->dtype == new_dtype && !is_ref(matrix))
     return matrix->storage;
 
-  STYPE_CAST_COPY_TABLE(cast_copy_storage);
+  CAST_TABLE(cast_copy_storage);
   return cast_copy_storage[matrix->stype][matrix->stype](matrix->storage, new_dtype);
 }
 

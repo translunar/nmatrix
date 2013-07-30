@@ -43,6 +43,18 @@ describe NMatrix do
       n.should == m
     end
 
+    it "should compare true-false matrices with different default values with ==" do
+      n = NMatrix.new(:list, 2, false, :object)
+      n[0,1] = true
+      n[1,0] = true
+
+      m = NMatrix.new(:list, 2, true, :object)
+      m[0,0] = false
+      m[1,1] = false
+
+      n.should == m
+    end
+
     it "should handle missing default value" do
       NMatrix.new(:list, 3, :int8)[0,0].should    == 0
       NMatrix.new(:list, 4, :float64)[0,0].should == 0.0

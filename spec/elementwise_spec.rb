@@ -51,12 +51,15 @@ describe NMatrix do
     end
 
     it "should perform element-wise addition" do
-      r = NMatrix.new(:dense, 2, [52, 0, 0, -8], :int64).cast(:list, :int64)
-      (@n+@m).should == r
+      r = NMatrix.new(:list, 2, 0, :int64)
+      r[0,0] = 52
+      r[1,1] = -8
+      q = @n + @m
+      q.should == r
     end
 
     it "should perform element-wise subtraction" do
-      r = NMatrix.new(:dense, 2, [52, 0, 0, -88], :int64).cast(:list, :int64)
+      r = NMatrix.new(:dense, 2, [52, 0, 0, 88], :int64).cast(:list, :int64)
       (@n-@m).should == r
     end
 
@@ -75,31 +78,54 @@ describe NMatrix do
     end
 
     it "should perform element-wise modulo" do
-      pending "% operator not yet implemented for matrices"
+      m = NMatrix.new(:list, 2, 1, :int64)
+      m[0,0] = 50
+      m[1,1] = 40
+      (@n % m)
     end
 
     it "should handle element-wise equality (=~)" do
-      (@n =~ @m).cast(:dense, :byte).should == NMatrix.new(:dense, 2, [0, 1, 1, 0], :byte)
+      r1 = NMatrix.new(:list, 2, false, :object)
+      r1[0,1] = true
+      r1[1,0] = true
+
+      # Also check that it works with a true-sparse matrix.
+      r2 = NMatrix.new(:list, 2, true, :object)
+      r2[0,0] = false
+      r2[1,1] = false
+
+      (@n =~ @m).should == r1
+      (@n =~ @m).should == r2
     end
 
     it "should handle element-wise inequality (!~)" do
-      (@n !~ @m).cast(:dense, :byte).should == NMatrix.new(:dense, 2, [1, 0, 0, 1], :byte)
+      r = NMatrix.new(:list, 2, true, :object)
+      r[0,1] = false
+      r[1,0] = false
+
+      (@n !~ @m).should == r
     end
 
     it "should handle element-wise less-than (<)" do
-      (@n < @m).should == NMatrix.new(:list, 2, 0, :byte)
+      (@n < @m).should == NMatrix.new(:list, 2, false, :object)
     end
 
     it "should handle element-wise greater-than (>)" do
-      (@n > @m).should == NMatrix.new(:dense, 2, [1, 0, 0, 1], :byte).cast(:list, :byte)
+      r = NMatrix.new(:list, 2, true, :object)
+      r[0,1] = false
+      r[1,0] = false
+      (@n > @m).should == r
     end
 
     it "should handle element-wise greater-than-or-equals (>=)" do
-      (@n >= @m).cast(:dense, :byte).should == NMatrix.new(:dense, 2, [1, 1, 1, 1], :byte)
+      (@n >= @m).should == NMatrix.new(:list, 2, true, :object)
     end
 
     it "should handle element-wise less-than-or-equals (<=)" do
-      (@n <= @m).cast(:dense, :byte).should == NMatrix.new(:dense, 2, [0, 1, 1, 0], :byte)
+      r = NMatrix.new(:list, 2, false, :object)
+      r[0,1] = true
+      r[1,0] = true
+      (@n <= @m).should == r
     end
   end
 

@@ -150,7 +150,7 @@ DENSE_STORAGE* nm_dense_storage_create(nm::dtype_t dtype, size_t* shape, size_t 
       }
 
       // Get rid of the init_val.
-      free(elements);
+      xfree(elements);
     }
   }
 
@@ -381,7 +381,12 @@ void nm_dense_storage_set(STORAGE* storage, SLICE* slice, void* val) {
  *				have the same dtype.
  */
 bool nm_dense_storage_eqeq(const STORAGE* left, const STORAGE* right) {
-	LR_DTYPE_TEMPLATE_TABLE(nm::dense_storage::eqeq, bool, const DENSE_STORAGE*, const DENSE_STORAGE*);
+	LR_DTYPE_TEMPLATE_TABLE(nm::dense_storage::eqeq, bool, const DENSE_STORAGE*, const DENSE_STORAGE*)
+
+  if (!ttable[left->dtype][right->dtype]) {
+    rb_raise(nm_eDataTypeError, "comparison between these dtypes is undefined");
+    return false;
+  }
 
 	return ttable[left->dtype][right->dtype]((const DENSE_STORAGE*)left, (const DENSE_STORAGE*)right);
 }
@@ -423,10 +428,21 @@ bool nm_dense_storage_is_symmetric(const DENSE_STORAGE* mat, int lda) {
 STORAGE* nm_dense_storage_ew_op(nm::ewop_t op, const STORAGE* left, const STORAGE* right, VALUE scalar) {
 	OP_LR_DTYPE_TEMPLATE_TABLE(nm::dense_storage::ew_op, DENSE_STORAGE*, const DENSE_STORAGE* left, const DENSE_STORAGE* right, const void*);
 
-	if (right)
+	if (right) {
+	  if (!ttable[op][left->dtype][right->dtype]) {
+      rb_raise(nm_eDataTypeError, "element-wise operations between these dtypes are undefined");
+      return NULL;
+    }
+
 	  return ttable[op][left->dtype][right->dtype](reinterpret_cast<const DENSE_STORAGE*>(left), reinterpret_cast<const DENSE_STORAGE*>(right), NULL);
-	else {
+	} else {
 	  nm::dtype_t r_dtype = nm_dtype_guess(scalar);
+
+    if (!ttable[op][left->dtype][r_dtype]) {
+      rb_raise(nm_eDataTypeError, "scalar operations between these dtypes are undefined");
+      return NULL;
+    }
+
 	  void* r_scalar  = ALLOCA_N(char, DTYPE_SIZES[r_dtype]);
 	  rubyval_to_cval(scalar, r_dtype, r_scalar);
 
@@ -525,6 +541,11 @@ static void slice_copy(DENSE_STORAGE *dest, const DENSE_STORAGE *src, size_t* le
 STORAGE* nm_dense_storage_cast_copy(const STORAGE* rhs, nm::dtype_t new_dtype) {
 	NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::dense_storage::cast_copy, DENSE_STORAGE*, const DENSE_STORAGE* rhs, nm::dtype_t new_dtype);
 
+  if (!ttable[new_dtype][rhs->dtype]) {
+    rb_raise(nm_eDataTypeError, "cast between these dtypes is undefined");
+    return NULL;
+  }
+
 	return (STORAGE*)ttable[new_dtype][rhs->dtype]((DENSE_STORAGE*)rhs, new_dtype);
 }
 
@@ -587,6 +608,10 @@ STORAGE* nm_dense_storage_copy_transposed(const STORAGE* rhs_base) {
     nm_math_transpose_generic(rhs->shape[0], rhs->shape[1], rhs->elements, rhs->shape[1], lhs->elements, lhs->shape[1], DTYPE_SIZES[rhs->dtype]);
   } else {
     NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::dense_storage::ref_slice_copy_transposed, void, const DENSE_STORAGE* rhs, DENSE_STORAGE* lhs);
+
+    if (!ttable[lhs->dtype][rhs->dtype])
+      rb_raise(nm_eDataTypeError, "transposition between these dtypes is undefined");
+
     ttable[lhs->dtype][rhs->dtype](rhs, lhs);
   }
 
@@ -634,8 +659,7 @@ DENSE_STORAGE* cast_copy(const DENSE_STORAGE* rhs, dtype_t new_dtype) {
 
 	// Ensure that allocation worked before copying.
   if (lhs && count) {
-    if (rhs->src != rhs) {
-      /* Make a copy of a ref to a matrix. */
+    if (rhs->src != rhs) { // Make a copy of a ref to a matrix.
 
       DENSE_STORAGE* tmp = nm_dense_storage_copy(rhs);
 
@@ -644,9 +668,8 @@ DENSE_STORAGE* cast_copy(const DENSE_STORAGE* rhs, dtype_t new_dtype) {
         lhs_els[count] = tmp_els[count];
       }
       nm_dense_storage_delete(tmp);
-    } else {
-      /* Make a regular copy. */
 
+    } else {              // Make a regular copy.
     	while (count-- > 0)     		lhs_els[count] = rhs_els[count];
     }
   }

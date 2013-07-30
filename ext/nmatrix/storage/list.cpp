@@ -98,9 +98,7 @@ extern "C" {
  * new storage. You don't need to free them, and you shouldn't re-use them.
  */
 LIST_STORAGE* nm_list_storage_create(dtype_t dtype, size_t* shape, size_t dim, void* init_val) {
-  LIST_STORAGE* s;
-
-  s = ALLOC( LIST_STORAGE );
+  LIST_STORAGE* s = ALLOC( LIST_STORAGE );
 
   s->dim   = dim;
   s->shape = shape;
@@ -299,14 +297,14 @@ static void each_stored_with_indices_r(LIST_STORAGE* s, const LIST* l, size_t re
 /*
  * Recursive helper for map_merged_stored_r which handles the case where one list is empty and the other is not.
  */
-static void map_empty_stored_r(LIST_STORAGE* result, const LIST_STORAGE* s, LIST* x, const LIST* l, size_t recursions, bool rev, const VALUE& init) {
+static void map_empty_stored_r(LIST_STORAGE* result, const LIST_STORAGE* s, LIST* x, const LIST* l, size_t recursions, bool rev, const VALUE& t_init, const VALUE& init) {
   NODE *curr  = l->first,
        *xcurr = NULL;
 
   if (recursions) {
     while (curr) {
       LIST* val = nm::list::create();
-      map_empty_stored_r(result, s, val, reinterpret_cast<const LIST*>(curr->val), recursions-1, rev, init);
+      map_empty_stored_r(result, s, val, reinterpret_cast<const LIST*>(curr->val), recursions-1, rev, t_init, init);
 
       if (!val->first) nm::list::del(val, 0);
       else nm::list::insert_helper(x, xcurr, curr->key, val);
@@ -315,9 +313,9 @@ static void map_empty_stored_r(LIST_STORAGE* result, const LIST_STORAGE* s, LIST
     }
   } else {
     while (curr) {
-      VALUE val;
-      if (rev) val = rb_yield_values(2, init, rubyobj_from_cval(curr->val, s->dtype).rval);
-      else     val = rb_yield_values(2, rubyobj_from_cval(curr->val, s->dtype).rval, init);
+      VALUE val, s_val = rubyobj_from_cval(curr->val, s->dtype).rval;
+      if (rev) val = rb_yield_values(2, t_init, s_val);
+      else     val = rb_yield_values(2, s_val, t_init);
 
       if (rb_funcall(val, rb_intern("!="), 1, init) == Qtrue)
         xcurr = nm::list::insert_helper(x, xcurr, curr->key, val);
@@ -332,7 +330,7 @@ static void map_empty_stored_r(LIST_STORAGE* result, const LIST_STORAGE* s, LIST
 /*
  * Recursive helper function for nm_list_map_merged_stored
  */
-static void map_merged_stored_r(LIST_STORAGE* result, const LIST_STORAGE* left, const LIST_STORAGE* right, LIST* x, const LIST* l, const LIST* r, size_t recursions, const VALUE& init) {
+static void map_merged_stored_r(LIST_STORAGE* result, const LIST_STORAGE* left, const LIST_STORAGE* right, LIST* x, const LIST* l, const LIST* r, size_t recursions, const VALUE& l_init, const VALUE& r_init, const VALUE& init) {
   NODE *lcurr = l->first,
        *rcurr = r->first,
        *xcurr = x->first;
@@ -343,15 +341,15 @@ static void map_merged_stored_r(LIST_STORAGE* result, const LIST_STORAGE* left, 
       LIST*  val = nm::list::create();
 
       if (!rcurr || lcurr->key < rcurr->key) {
-        map_empty_stored_r(result, left, val, reinterpret_cast<const LIST*>(lcurr->val), recursions-1, false, init);
+        map_empty_stored_r(result, left, val, reinterpret_cast<const LIST*>(lcurr->val), recursions-1, false, r_init, init);
         key   = lcurr->key;
         lcurr = lcurr->next;
       } else if (!lcurr || rcurr->key < lcurr->key) {
-        map_empty_stored_r(result, right, val, reinterpret_cast<const LIST*>(rcurr->val), recursions-1, true, init);
+        map_empty_stored_r(result, right, val, reinterpret_cast<const LIST*>(rcurr->val), recursions-1, true, l_init, init);
         key   = rcurr->key;
         rcurr = rcurr->next;
       } else { // == and both present
-        map_merged_stored_r(result, left, right, val, reinterpret_cast<const LIST*>(lcurr->val), reinterpret_cast<const LIST*>(rcurr->val), recursions-1, init);
+        map_merged_stored_r(result, left, right, val, reinterpret_cast<const LIST*>(lcurr->val), reinterpret_cast<const LIST*>(rcurr->val), recursions-1, l_init, r_init, init);
         key   = lcurr->key;
         lcurr = lcurr->next;
         rcurr = rcurr->next;
@@ -367,11 +365,11 @@ static void map_merged_stored_r(LIST_STORAGE* result, const LIST_STORAGE* left, 
       VALUE  val;
 
       if (!rcurr || lcurr->key < rcurr->key) {
-        val   = rb_yield_values(2, rubyobj_from_cval(lcurr->val, left->dtype).rval, rubyobj_from_cval(right->default_val, right->dtype).rval);
+        val   = rb_yield_values(2, rubyobj_from_cval(lcurr->val, left->dtype).rval, r_init);
         key   = lcurr->key;
         lcurr = lcurr->next;
       } else if (!lcurr || rcurr->key < lcurr->key) {
-        val   = rb_yield_values(2, rubyobj_from_cval(left->default_val, left->dtype).rval, rubyobj_from_cval(rcurr->val, right->dtype).rval);
+        val   = rb_yield_values(2, l_init, rubyobj_from_cval(rcurr->val, right->dtype).rval);
         key   = rcurr->key;
         rcurr = rcurr->next;
       } else { // == and both present
@@ -415,14 +413,19 @@ VALUE nm_list_map_merged_stored(int argc, VALUE* argv, VALUE left) {
   VALUE right, init;
   rb_scan_args(argc, argv, "11", &right, &init);
 
-  // If we don't have a block, return an enumerator.
-  RETURN_SIZED_ENUMERATOR(left, 0, 0, 0);
-
   LIST_STORAGE *s = NM_STORAGE_LIST(left),
                *t = NM_STORAGE_LIST(right);
 
+  //if (!rb_block_given_p()) {
+  //  rb_raise(rb_eNotImpError, "RETURN_SIZED_ENUMERATOR probably won't work for a map_merged since no merged object is created");
+  //}
+  // If we don't have a block, return an enumerator.
+  RETURN_SIZED_ENUMERATOR(left, 0, 0, 0); // FIXME: Test this. Probably won't work. Enable above code instead.
+
   // Figure out a default value if one wasn't provided by the user.
-  if (init == Qnil) init = rb_yield_values(2, rubyobj_from_cval(s->default_val, s->dtype).rval, rubyobj_from_cval(t->default_val, t->dtype).rval);
+  VALUE s_init = rubyobj_from_cval(s->default_val, s->dtype).rval,
+        t_init = rubyobj_from_cval(t->default_val, t->dtype).rval;
+  if (init == Qnil) init = rb_yield_values(2, s_init, t_init);
 
 	// Allocate a new shape array for the resulting matrix.
 	size_t* shape = ALLOC_N(size_t, s->dim);
@@ -433,7 +436,8 @@ VALUE nm_list_map_merged_stored(int argc, VALUE* argv, VALUE left) {
   NMATRIX* result = nm_create(nm::LIST_STORE, nm_list_storage_create(nm::RUBYOBJ, shape, s->dim, init_val));
   LIST_STORAGE* r = reinterpret_cast<LIST_STORAGE*>(result->storage);
 
-  map_merged_stored_r(r, s, t, r->rows, s->rows, t->rows, s->dim - 1, init);
+
+  map_merged_stored_r(r, s, t, r->rows, s->rows, t->rows, s->dim - 1, s_init, t_init, init);
 
   return Data_Wrap_Struct(CLASS_OF(left), nm_list_storage_mark, nm_delete, result);
 }
@@ -825,6 +829,7 @@ static LIST_STORAGE* cast_copy(const LIST_STORAGE* rhs, dtype_t new_dtype) {
 
   return lhs;
 }
+
 
 
 /*

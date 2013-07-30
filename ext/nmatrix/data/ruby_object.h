@@ -96,6 +96,14 @@ class RubyObject {
 	inline RubyObject(int64_t other)  : rval(INT2FIX(other)) {}
 //	inline RubyObject(uint64_t other) : rval(INT2FIX(other)) {}
 
+  /*
+   * Operators for converting RubyObjects to other C types.
+   */
+  inline operator int64_t() const { return NUM2LONG(this->rval); }
+  inline operator int32_t() const { return NUM2INT(this->rval);  }
+  inline operator int16_t() const { return NUM2INT(this->rval);  }
+  inline operator int8_t()  const { return NUM2INT(this->rval);  }
+
 	/*
 	 * Float constructor.
 	 *

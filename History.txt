@@ -193,13 +193,18 @@
 
 === 0.0.6 / 2013-??-??
 
-* 2 major enhancements:
+* 3 major enhancements:
 
   * Refactored iteration, so that each storage type now has each of:
     #each, #each_with_indices, #each_stored_with_indices
 
   * Added element-wise power function (**) for dense matrices (by
     @agarie)
+
+  * Dramatically improved list matrix element-wise functions so C++
+    templates are no longer necessary; element-wise operations may
+    now be written in protected Ruby methods that look like
+    NMatrix#__list_elementwise_op__
 
 * 7 minor enhancements:
 
@@ -211,7 +216,14 @@
   * Added more user-friendly cblas_xrotg implementation: BLAS::rotg
 
   * Moved NMatrix::YaleFunctions::yale_vector_insert to
-    NMatrix#vector_set, which is more consistent with behavior
+    NMatrix#__yale_vector_set__, which is more consistent with
+    behavior
+
+  * Changed notations for protected stype-specific functions, which
+    now look like __stype_method_name__, e.g., __yale_vector_set__
+
+  * Added NMatrix#__list_default_value__ protected function to get
+    the initial (sparse) value for list matrices
 
   * Changed behavior and names of NMatrix::YaleFunctions methods
     which get column indices and cell contents by row, so that they
@@ -231,9 +243,17 @@
   * Added NVector::logspace shortcut function (analogous to
     NVector::linspace)
 
-* 2 bug fixes:
+  * Cleaned up code by removing monkey patches that we stopped using
+    circa v0.0.2 (Array#min, Array#max, String#constantize,
+    String#camelize, String#underscore)
+
+  * Re-enabled list storage element-wise mod (%) method
+
+* 3 bug fixes:
 
   * Corrected BLAS::rot bounds checking on optional n argument
 
   * Removed BLAS::rotg and BLAS::nrm2 code for rational numbers, as
     both involve a square root
+
+  * Repaired list matrix element-wise functions
