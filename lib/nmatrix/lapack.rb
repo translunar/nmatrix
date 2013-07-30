@@ -161,19 +161,9 @@ class NMatrix
         u_matrix = NMatrix.new([m,m], dtype)
         v_matrix = NMatrix.new([n,n], dtype)
         # test this
-        s = clapack_gesvd(jobu, jobvt, matrix, s_matrix, u_matrix, v_matrix)
+        s = gesvd(jobu, jobvt, matrix, s_matrix, u_matrix, v_matrix)
 
         # what should this return?
-        case type
-        when :both
-          [s, a, u]
-        when :left
-          [s, a]
-        when :right
-          [s, u]
-        when :none 
-          s
-        end
         [s_matrix, u_matrix, v_matrix]
       end # #svd
     end

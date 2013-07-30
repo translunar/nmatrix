@@ -154,7 +154,8 @@ extern "C" {
   static VALUE nm_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1, VALUE k2, VALUE ipiv, VALUE incx);
   static VALUE nm_clapack_scal(VALUE self, VALUE n, VALUE scale, VALUE vector, VALUE incx);
   static VALUE nm_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
-  static VALUE nm_clapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE a, VALUE s, VALUE u, VALUE vt);
+  static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE work, VALUE lwork, VALUE rwork, VALUE info);
+  static VALUE nm_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE a, VALUE s, VALUE u, VALUE vt);
   // static VALUE nm_clapack_gesdd(VALUE self, VALUE order, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE work, VALUE lwork, VALUE iwork); // TODO
 } // end of extern "C" block
 
@@ -320,6 +321,7 @@ extern "C" {
 ///////////////////
 
 void nm_math_init_blas() {
+  rb_define_singleton_method(cNMatrix, "gesvd", (METHOD)nm_gesvd, 6); // TODO
 	cNMatrix_LAPACK = rb_define_module_under(cNMatrix, "LAPACK");
 
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getrf", (METHOD)nm_clapack_getrf, 5);
@@ -331,7 +333,7 @@ void nm_math_init_blas() {
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_laswp", (METHOD)nm_clapack_laswp, 7);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_scal",  (METHOD)nm_clapack_scal,  4);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_lauum", (METHOD)nm_clapack_lauum, 5);
-  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_gesvd", (METHOD)nm_clapack_gesvd, 6); // TODO
+  rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesvd", (METHOD)nm_lapack_gesvd, 13); // TODO
  // rb_define_singleton_method(cNMatrix_LAPACK, "clapack_gesdd", (METHOD)nm_clapack_gesdd, 9); // TODO
 
   cNMatrix_BLAS = rb_define_module_under(cNMatrix, "BLAS");
@@ -885,6 +887,8 @@ static VALUE nm_cblas_herk(VALUE self,
   return Qtrue;
 }
 
+static 
+
 inline VALUE gesvd(char *jobu, char *jobvt, 
     int m, int n,
     void* a, int lda,
@@ -900,11 +904,12 @@ inline VALUE gesvd(char *jobu, char *jobvt,
     double* VT = reinterpret_cast<double*>(vt);
     double* work = ALLOCA_N(double, lwork);
     int info = 0;
-    nm::math::clapack_dgesvd(jobu, jobvt, &m, &n, 
+    nm::math::lapack_dgesvd(jobu, jobvt, &m, &n, 
         A, &lda, S, U, 
         &ldu, VT, &ldvt, work, &lwork, 
         &info);
 
+    return Qnil;
     /*
     // Prep the return product
     VALUE return_array = rb_ary_new2(3);
@@ -913,7 +918,6 @@ inline VALUE gesvd(char *jobu, char *jobvt,
     rb_ary_push(return_array, rb_nmatrix_dense_create(dtype, u_size, m, u, m));
     rb_ary_push(return_array, rb_nmatrix_dense_create(dtype, vt_size, n, vt, n));
     return return_array; */
-    return INT2FIX(info);
   } else {
     rb_raise(rb_eNotImpError, "only LAPACK versions implemented thus far");
     return Qnil;
@@ -924,11 +928,10 @@ inline VALUE gesvd(char *jobu, char *jobvt,
  * 
  * I'm greatly tempted, and would rather see a wrapped version, which I'm not sure where I should place.
  * For now, I'll keep it here.
- * You needn't provide the output vectors.  For now, I'll just be returning the S vector to the function
  *
  * For documentation: http://www.netlib.org/lapack/double/dgesvd.f
  */
-static VALUE nm_clapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE a, VALUE s, VALUE u, VALUE vt) { 
+static VALUE nm_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE a, VALUE s, VALUE u, VALUE vt) { 
   //Raise errors if all dtypes aren't matching...? Here or in the Ruby code
 
   nm::dtype_t dtype = NM_DTYPE(a);
@@ -943,7 +946,7 @@ static VALUE nm_clapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE a, VALU
 
   /*VALUE resp;
   try { */
-    VALUE resp = gesvd(RSTRING_PTR(jobu),RSTRING_PTR(jobvt),
+    gesvd(RSTRING_PTR(jobu),RSTRING_PTR(jobvt),
         m, n, 
         NM_STORAGE_DENSE(a)->elements, lda,
         NM_STORAGE_DENSE(s)->elements, 
@@ -959,16 +962,25 @@ static VALUE nm_clapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE a, VALU
     rb_raise(rb_eArgError, tmp );
     return 0;
   }*/
-  return resp;
+  return Qnil;
 
   // S will return from the child function as Ruby converted values, or as an NMatrix, either way... no processing required
   //return *reinterpret_cast<VALUE*>(s);
   // This is where I should handle S, returning it as a Ruby array of Matrix objects, perhaps?  I'd rather not have to deal with the casting
 
 }
-
-
-
+/*
+ * Function signature conversion for calling CBLAS' gesvd functions as directly as possible.
+ * 
+ * I'm greatly tempted, and would rather see a wrapped version, which I'm not sure where I should place.
+ * For now, I'll keep it here.
+template <typename DType>
+static inline lapack_gesvd_nothrow() {
+}
+ */
+  static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE work, VALUE lwork, VALUE rwork, VALUE info) {
+    return Qnil;
+  }
 
 /*
 template <typename DType>
