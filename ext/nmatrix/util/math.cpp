@@ -956,7 +956,6 @@ static VALUE gesvd(char *jobu, char *jobvt,
         A, &lda, S, U, 
         &ldu, VT, &ldvt, work, &lwork, rwork,
         &info);
-
   } else {
     rb_raise(rb_eNotImpError, "only LAPACK versions implemented thus far");
     return Qnil;
@@ -967,12 +966,38 @@ static VALUE gesvd(char *jobu, char *jobvt,
  * 
  * I'm greatly tempted, and would rather see a wrapped version, which I'm not sure where I should place.
  * For now, I'll keep it here.
+ * You needn't provide the output vectors.  For now, I'll just be returning the S vector to the function
  *
  * For documentation: http://www.netlib.org/lapack/double/dgesvd.f
  */
 static VALUE nm_gesvd(VALUE self, VALUE job_type, VALUE a, VALUE s, VALUE u, VALUE vt) { 
   //Raise errors if all dtypes aren't matching...? Here or in the Ruby code
 
+  // Conditional evaluations of the job_type, setting jobu, jobvt
+  char jobu = 'N';
+  char jobvt = 'N';
+  if (rb_to_id(job_type) == rb_intern("both")) {
+    jobu = 'S';
+    jobvt = 'S';
+  } else if ( rb_to_id(job_type) == rb_intern("all_values")) {
+    jobu = 'A';
+    jobvt = 'A';
+  } else if ( rb_to_id(job_type) == rb_intern("left")) {
+    jobu = 'S';
+  } else if ( rb_to_id(job_type) == rb_intern("right")) {
+    jobvt = 'S';
+  } else if ( rb_to_id(job_type) == rb_intern("left_matrix")) {
+    jobu = 'A';
+  } else if ( rb_to_id(job_type) == rb_intern("right_matrix")) {
+    jobvt = 'A';
+  } else if ( rb_to_id(job_type) == rb_intern("overwrite_left")) {
+    jobu = 'O';
+  } else if ( rb_to_id(job_type) == rb_intern("overwrite_right")) {
+    jobvt = 'O';
+  } else if ( rb_to_id(job_type) == rb_intern("none")) {
+  } else {
+    rb_raise(rb_eArgError, "Improper job_type value given");
+  }
   nm::dtype_t dtype = NM_DTYPE(a);
   size_t m = NM_STORAGE_DENSE(a)->shape[0];
   size_t n = NM_STORAGE_DENSE(a)->shape[1];
@@ -1027,13 +1052,13 @@ static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE
     NULL, NULL, NULL, NULL};
   nm::dtype_t dtype = NM_DTYPE(a);
 
-  //void* RWORK, A, S, U, VT, WORK;
+
   if (!ttable[dtype]) {
     rb_raise(nm_eDataTypeError, "This operation is only available for BLAS datatypes");
     return Qfalse;
   } else {
     if (dtype == nm::COMPLEX64 || dtype == nm::COMPLEX128) {
-      // Prep RWORK?
+
     } else if (dtype == nm::FLOAT32 || dtype == nm::FLOAT64) {
       // Nullify RWORK?
     }

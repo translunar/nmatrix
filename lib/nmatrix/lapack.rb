@@ -126,8 +126,8 @@ class NMatrix
       # 
       #
       # * *Arguments* :
-      #   - +matrix+ -> matrix for which to compute the singular values
-      #   - +type+ -> :both, :left, :right, :none , or :arrays signifying which, if any, of the computed matrices are desired.
+      #   - +matrix+ -> matrix for which to compute the singular values ##TODO make this a self
+      #   - +type+ -> :all_values, :both, :left, :right, :left_matrix, :right_matrix, :overwrite_right, :overwrite_left, :none , or signifying what combination of singular values and matrices are desired in your output.
       # * *Returns* :
       #   - Array with the result values in an array
       # * *Raises* :
