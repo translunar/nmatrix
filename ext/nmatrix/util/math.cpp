@@ -155,7 +155,7 @@ extern "C" {
   static VALUE nm_clapack_scal(VALUE self, VALUE n, VALUE scale, VALUE vector, VALUE incx);
   static VALUE nm_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
   static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE work, VALUE lwork, VALUE rwork, VALUE info);
-  static VALUE nm_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE a, VALUE s, VALUE u, VALUE vt);
+  static VALUE nm_gesvd(VALUE self, VALUE job_type, VALUE a, VALUE s, VALUE u, VALUE vt);
   // static VALUE nm_clapack_gesdd(VALUE self, VALUE order, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE work, VALUE lwork, VALUE iwork); // TODO
 } // end of extern "C" block
 
@@ -332,7 +332,7 @@ void nm_math_init_blas() {
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_laswp", (METHOD)nm_clapack_laswp, 7);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_scal",  (METHOD)nm_clapack_scal,  4);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_lauum", (METHOD)nm_clapack_lauum, 5);
-  rb_define_singleton_method(cNMatrix_LAPACK, "gesvd", (METHOD)nm_gesvd, 6); // TODO
+  rb_define_singleton_method(cNMatrix_LAPACK, "gesvd", (METHOD)nm_gesvd, 5); // TODO
   rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesvd", (METHOD)nm_lapack_gesvd, 13); // TODO
  // rb_define_singleton_method(cNMatrix_LAPACK, "clapack_gesdd", (METHOD)nm_clapack_gesdd, 9); // TODO
 
@@ -970,7 +970,7 @@ static VALUE gesvd(char *jobu, char *jobvt,
  *
  * For documentation: http://www.netlib.org/lapack/double/dgesvd.f
  */
-static VALUE nm_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE a, VALUE s, VALUE u, VALUE vt) { 
+static VALUE nm_gesvd(VALUE self, VALUE job_type, VALUE a, VALUE s, VALUE u, VALUE vt) { 
   //Raise errors if all dtypes aren't matching...? Here or in the Ruby code
 
   nm::dtype_t dtype = NM_DTYPE(a);
