@@ -887,9 +887,7 @@ static VALUE nm_cblas_herk(VALUE self,
   return Qtrue;
 }
 
-static 
-
-inline VALUE gesvd(char *jobu, char *jobvt, 
+static VALUE gesvd(char *jobu, char *jobvt, 
     int m, int n,
     void* a, int lda,
     void* s,
