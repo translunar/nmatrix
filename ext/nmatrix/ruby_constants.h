@@ -87,6 +87,7 @@ extern VALUE	cNMatrix,
 							cNMatrix_LAPACK,
 			
 							nm_eDataTypeError,
+              nm_eConvergenceError,
 							nm_eStorageTypeError;
 
 /*

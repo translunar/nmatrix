@@ -148,12 +148,6 @@ class NMatrix
           jobvt = 'S'
         end
         
-        if false # gesdd is for large matrices, but I'm not sure what size that should be... 
-          #        ::NMatrix::LAPACK.clapack_gesdd(:row, 
-        else
-          #::NMatrix::LAPACK.clapack_gesvd(:row,
-        end
-
         # Build up the u and vt matrices
         m, n = matrix.shape
         dtype = matrix.dtype
@@ -161,7 +155,7 @@ class NMatrix
         u_matrix = NMatrix.new([m,m], dtype)
         v_matrix = NMatrix.new([n,n], dtype)
         # test this
-        s = gesvd(jobu, jobvt, matrix, s_matrix, u_matrix, v_matrix)
+        s = gesvd(type, matrix, s_matrix, u_matrix, v_matrix)
 
         # what should this return?
         [s_matrix, u_matrix, v_matrix]

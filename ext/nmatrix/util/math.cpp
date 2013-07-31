@@ -154,7 +154,9 @@ extern "C" {
   static VALUE nm_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1, VALUE k2, VALUE ipiv, VALUE incx);
   static VALUE nm_clapack_scal(VALUE self, VALUE n, VALUE scale, VALUE vector, VALUE incx);
   static VALUE nm_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
-  static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE work, VALUE lwork, VALUE rwork, VALUE info);
+  //static VALUE nm_lapack_gesvd(VALUE argc, VALUE* argv, VALUE self);
+  //static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE work, VALUE lwork, VALUE rwork, VALUE info);
+  static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE work, VALUE lwork, VALUE info); // NO RWORK
   static VALUE nm_gesvd(VALUE self, VALUE job_type, VALUE a, VALUE s, VALUE u, VALUE vt);
   // static VALUE nm_clapack_gesdd(VALUE self, VALUE order, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE work, VALUE lwork, VALUE iwork); // TODO
 } // end of extern "C" block
@@ -333,7 +335,9 @@ void nm_math_init_blas() {
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_scal",  (METHOD)nm_clapack_scal,  4);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_lauum", (METHOD)nm_clapack_lauum, 5);
   rb_define_singleton_method(cNMatrix_LAPACK, "gesvd", (METHOD)nm_gesvd, 5); // TODO
-  rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesvd", (METHOD)nm_lapack_gesvd, 13); // TODO
+  //rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesvd", (METHOD)nm_lapack_gesvd, 3); // RB_SCAN_ARGS
+  //rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesvd", (METHOD)nm_lapack_gesvd, 14);
+  rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesvd", (METHOD)nm_lapack_gesvd, 13); // NO RWORK
  // rb_define_singleton_method(cNMatrix_LAPACK, "clapack_gesdd", (METHOD)nm_clapack_gesdd, 9); // TODO
 
   cNMatrix_BLAS = rb_define_module_under(cNMatrix, "BLAS");
@@ -882,8 +886,6 @@ static VALUE nm_cblas_herk(VALUE self,
     cblas_zherk(blas_order_sym(order), blas_uplo_sym(uplo), blas_transpose_sym(trans), FIX2INT(n), FIX2INT(k), NUM2DBL(alpha), NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), NUM2DBL(beta), NM_STORAGE_DENSE(c)->elements, FIX2INT(ldc));
   } else
     rb_raise(rb_eNotImpError, "this matrix operation undefined for non-complex dtypes");
-
-
   return Qtrue;
 }
 
@@ -895,6 +897,7 @@ static VALUE gesvd(char *jobu, char *jobvt,
     void* vt, int ldvt, 
     int lwork, nm::dtype_t dtype) 
 {
+  int info = 0;
   if (dtype == nm::FLOAT64) {
     double* A = reinterpret_cast<double*>(a);
     double* S = reinterpret_cast<double*>(s);
@@ -906,16 +909,6 @@ static VALUE gesvd(char *jobu, char *jobvt,
         A, &lda, S, U, 
         &ldu, VT, &ldvt, work, &lwork, 
         &info);
-
-    return Qtrue;
-    /*
-    // Prep the return product
-    VALUE return_array = rb_ary_new2(3);
-
-    rb_ary_push(return_array, rb_nmatrix_dense_create(dtype, s_size, dim, s, length ));
-    rb_ary_push(return_array, rb_nmatrix_dense_create(dtype, u_size, m, u, m));
-    rb_ary_push(return_array, rb_nmatrix_dense_create(dtype, vt_size, n, vt, n));
-    return return_array; */
   } else if (dtype == nm::FLOAT32) {
     float* A = reinterpret_cast<float*>(a);
     float* S = reinterpret_cast<float*>(s);
@@ -927,9 +920,6 @@ static VALUE gesvd(char *jobu, char *jobvt,
         A, &lda, S, U, 
         &ldu, VT, &ldvt, work, &lwork, 
         &info);
-
-    return Qtrue;
-
   } else if (dtype == nm::COMPLEX64) {
     nm::Complex64* A = reinterpret_cast<nm::Complex64*>(a);
     nm::Complex64* S = reinterpret_cast<nm::Complex64*>(s);
@@ -938,7 +928,6 @@ static VALUE gesvd(char *jobu, char *jobvt,
     int rwork_size = 5*std::min(m,n);
     nm::Complex64* work = ALLOCA_N(nm::Complex64, lwork);
     float* rwork = ALLOCA_N(float, rwork_size);
-    int info = 0;
     nm::math::lapack_cgesvd(jobu, jobvt, &m, &n, 
         A, &lda, S, U, 
         &ldu, VT, &ldvt, work, &lwork, rwork,
@@ -959,6 +948,15 @@ static VALUE gesvd(char *jobu, char *jobvt,
   } else {
     rb_raise(rb_eNotImpError, "only LAPACK versions implemented thus far");
     return Qnil;
+  }
+  if (info == 0) {
+    return Qtrue;
+  } else if (info > 0 ) {
+    rb_raise(nm_eConvergenceError, "BDSQR failed to converge in %i positions.  See the workspace for more details.", info); 
+    return Qfalse;
+  } else {
+    rb_raise(nm_eDataTypeError, "Illegal value in source, at position %i", info);
+    return Qfalse;
   }
 }
 /*
@@ -1010,7 +1008,8 @@ static VALUE nm_gesvd(VALUE self, VALUE job_type, VALUE a, VALUE s, VALUE u, VAL
 
   /*VALUE resp;
   try { */
-    gesvd(RSTRING_PTR(jobu),RSTRING_PTR(jobvt),
+    VALUE resp = gesvd(
+        &jobu,&jobvt,
         m, n, 
         NM_STORAGE_DENSE(a)->elements, lda,
         NM_STORAGE_DENSE(s)->elements, 
@@ -1026,12 +1025,7 @@ static VALUE nm_gesvd(VALUE self, VALUE job_type, VALUE a, VALUE s, VALUE u, VAL
     rb_raise(rb_eArgError, tmp );
     return 0;
   }*/
-  return Qnil;
-
-  // S will return from the child function as Ruby converted values, or as an NMatrix, either way... no processing required
-  //return *reinterpret_cast<VALUE*>(s);
-  // This is where I should handle S, returning it as a Ruby array of Matrix objects, perhaps?  I'd rather not have to deal with the casting
-
+  return resp;
 }
 /*
  * Function signature conversion for calling CBLAS' gesvd functions as directly as possible.
@@ -1042,13 +1036,18 @@ template <typename DType>
 static inline lapack_gesvd_nothrow() {
 }
  */
-static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE work, VALUE lwork, VALUE rwork, VALUE info) {
-  static void (*ttable[nm::NUM_DTYPES])(char*, char*, int*, int*, void*, int*, void*, void*, int*, void*, int*, void*, int*, void*, int*) = {
+/*static VALUE nm_lapack_gesvd(VALUE argc, VALUE* argv, VALUE self) {
+ // VALUE jobu, jobvt, m, n, a, lda, s, u, ldu, vt, ldvt, work, lwork, info, rwork;
+  //rb_scan_args(argc, argv, "12*1", &jobu, &jobvt, &m, &n, &a, &lda, &s, &u, &ldu, &vt, &ldvt, &work, &lwork, &info, &rwork); */
+    //static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE work, VALUE lwork, VALUE info, VALUE rwork) { // NO RWORK
+    static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE work, VALUE lwork, VALUE info) {
+  // static void (*ttable[nm::NUM_DTYPES])(char*, char*, int*, int*, void*, int*, void*, void*, int*, void*, int*, void*, int*, void*, int*) = { 
+  static int (*ttable[nm::NUM_DTYPES])(char*, char*, int, int, void*, int, void*, void*, int, void*, int, void*, int, int) = { // no rwork
     NULL, NULL, NULL, NULL, NULL, // no integer ops
     nm::math::lapack_gesvd_nothrow<float,float>,
     nm::math::lapack_gesvd_nothrow<double,double>,
-    nm::math::lapack_gesvd_nothrow<nm::Complex64,float>,
-    nm::math::lapack_gesvd_nothrow<nm::Complex128,double>,
+    NULL, NULL, //nm::math::lapack_gesvd_nothrow<nm::Complex64,float>,
+    //nm::math::lapack_gesvd_nothrow<nm::Complex128,double>,
     NULL, NULL, NULL, NULL};
   nm::dtype_t dtype = NM_DTYPE(a);
 
@@ -1063,13 +1062,13 @@ static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE
       // Nullify RWORK?
     }
 
-    /*ttable[dtype](RSTRING_PTR(jobu),RSTRING_PTR(jobvt),
-      m, n, 
-      NM_STORAGE_DENSE(a)->elements, lda,
+    int info_response = ttable[dtype](RSTRING_PTR(jobu),RSTRING_PTR(jobvt),
+      FIX2INT(m), FIX2INT(n), 
+      NM_STORAGE_DENSE(a)->elements, FIX2INT(lda),
       NM_STORAGE_DENSE(s)->elements, 
-      NM_STORAGE_DENSE(u)->elements, ldu,
-      NM_STORAGE_DENSE(vt)->elements, ldvt,
-      lwork, rwork, info);*/
+      NM_STORAGE_DENSE(u)->elements, FIX2INT(ldu),
+      NM_STORAGE_DENSE(vt)->elements, FIX2INT(ldvt),
+      NM_STORAGE_DENSE(lwork)->elements, FIX2INT(lwork), info);
     return Qtrue;
   }
 }

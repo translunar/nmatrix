@@ -165,7 +165,7 @@ describe NMatrix::LAPACK do
               end
         err = err *5e1
         begin
-          sings, lefts, rights = NMatrix::LAPACK.svd(a, :arrays)
+          sings, lefts, rights = NMatrix::LAPACK.svd(a, :both)
         rescue NotImplementedError => e
           pending e.to_s
           end

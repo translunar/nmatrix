@@ -99,10 +99,6 @@ extern "C" {
   /*
    * C accessors.
    */
-  void dgesvd_(char *, char *, int *, int *, double *, int *, double *, double *, int *, double *, int *, double *, int *, int *);
-  void sgesvd_(char *, char *, int *, int *, float *, int *, float *, float *, int *, float *, int *, float *, int *, int *);
-  void cgesvd_(char *, char *, int *, int *, nm::Complex64 *, int *, nm::Complex64 *, nm::Complex64 *, int *, nm::Complex64 *, int *, nm::Complex64 *, int *, int *);
-  void zgesvd_(char *, char *, int *, int *, nm::Complex128 *, int *, nm::Complex128 *, nm::Complex128 *, int *, nm::Complex128 *, int *, nm::Complex128 *, int *, int *);
   void nm_math_det_exact(const int M, const void* elements, const int lda, nm::dtype_t dtype, void* result);
   void nm_math_transpose_generic(const size_t M, const size_t N, const void* A, const int lda, void* B, const int ldb, size_t element_size);
   void nm_math_init_blas(void);
@@ -806,7 +802,7 @@ inline void laswp(const int N, DType* A, const int lda, const int K1, const int 
  */ 
 // The types which are like doubles
 //template <typename DType, typename CType>
-inline void lapack_sgesvd(char *jobu, char *jobvt, 
+inline void lapack_gesvd(char *jobu, char *jobvt, 
   int *m, int *n, 
   float *a, int *lda,   
   float *s, 
@@ -819,7 +815,7 @@ inline void lapack_sgesvd(char *jobu, char *jobvt,
         vt, ldvt, work, lwork, 
         info);
 }
-inline void lapack_dgesvd(char *jobu, char *jobvt, 
+inline void lapack_gesvd(char *jobu, char *jobvt, 
   int *m, int *n, 
   double *a, int *lda,   
   double *s, 
@@ -832,7 +828,7 @@ inline void lapack_dgesvd(char *jobu, char *jobvt,
         vt, ldvt, work, lwork, 
         info);
 }
-inline void lapack_cgesvd(char *jobu, char *jobvt, 
+inline void lapack_gesvd(char *jobu, char *jobvt, 
   int *m, int *n, 
   nm::Complex64 *a, int *lda,   
   nm::Complex64 *s, 
@@ -845,7 +841,7 @@ inline void lapack_cgesvd(char *jobu, char *jobvt,
       vt, ldvt, work, lwork,
       rwork, info);
 }
-inline void lapack_zgesvd(char *jobu, char *jobvt, 
+inline void lapack_gesvd(char *jobu, char *jobvt, 
   int *m, int *n, 
   nm::Complex128 *a, int *lda,   
   nm::Complex128 *s, 
@@ -864,52 +860,25 @@ inline void lapack_zgesvd(char *jobu, char *jobvt,
  * For now, I'll keep it here.
  */
 template <typename DType, typename CType>
-static void lapack_gesvd_nothrow(char *jobu, char *jobvt, 
-  int *m, int *n, 
-  void *a, int *lda,   
+static int lapack_gesvd_nothrow(char *jobu, char *jobvt, 
+  int m, int n, 
+  void *a, int lda,   
   void *s, 
-  void *u, int *ldu,  
-  void *vt, int *ldvt,
-  void *work,  int *lwork, void* rwork,
-  int *info) {
+  void *u, int ldu,  
+  void *vt, int ldvt,
+  void *work,  int lwork,// void* rwork,
+  int info) {
   DType* A = reinterpret_cast<DType*>(a);
   DType* S = reinterpret_cast<DType*>(s);
   DType* U = reinterpret_cast<DType*>(u);
   DType* VT = reinterpret_cast<DType*>(vt);
   DType* WORK = reinterpret_cast<DType*>(work);
-  CType* RWORK = reinterpret_cast<CType*>(rwork);
+  //CType* RWORK = reinterpret_cast<CType*>(rwork);
+  
+  return info;
 }
 
-inline void clapack_sgesvd(char *jobu, char *jobvt, 
-  int *m, int *n, 
-  float *a, int *lda,   
-  float *s, 
-  float *u, int *ldu,  
-  float *vt, int *ldvt,
-  float *work,  int *lwork, 
-  int *info)
-{
-  sgesvd_(jobu, jobvt, m, n,
-      a, lda, s, u, 
-      ldu, vt, ldvt, work, lwork,
-      info);
-}
 
-inline void clapack_cgesvd(char *jobu, char *jobvt, 
-    int *m, int *n, 
-    nm::Complex64 *a, int *lda,
-    nm::Complex64 *s, 
-    nm::Complex64 *u, int *ldu,  
-    nm::Complex64 *vt, int *ldvt,
-    nm::Complex64 *work,  int *lwork, 
-    float *rwork, int *info)
-{
-  cgesvd_(jobu, jobvt, m, n,
-      a, lda, s, u, 
-      ldu, vt, ldvt, work, lwork, 
-      info);
-}
-    
 
 /*
 template <typename DType>
