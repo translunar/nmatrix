@@ -690,7 +690,7 @@ bool eqeq(const DENSE_STORAGE* left, const DENSE_STORAGE* right) {
 	LDType* left_elements	  = (LDType*)left->elements;
   RDType* right_elements	= (RDType*)right->elements;
 
-  // Copy elements in temp matrix if you have refernce to the right.
+  // Copy elements in temp matrix if you have reference to the right.
   if (left->src != left) {
     tmp1 = nm_dense_storage_copy(left);
     left_elements = (LDType*)tmp1->elements;

@@ -85,23 +85,17 @@ describe NMatrix do
     end
 
     it "should handle element-wise equality (=~)" do
-      r1 = NMatrix.new(:list, 2, false, :object)
-      r1[0,1] = true
-      r1[1,0] = true
+      r = NMatrix.new(:list, 2, false, :object)
+      r[0,1] = true
+      r[1,0] = true
 
-      # Also check that it works with a true-sparse matrix.
-      r2 = NMatrix.new(:list, 2, true, :object)
-      r2[0,0] = false
-      r2[1,1] = false
-
-      (@n =~ @m).should == r1
-      (@n =~ @m).should == r2
+      (@n =~ @m).should == r
     end
 
     it "should handle element-wise inequality (!~)" do
-      r = NMatrix.new(:list, 2, true, :object)
-      r[0,1] = false
-      r[1,0] = false
+      r = NMatrix.new(:list, 2, false, :object)
+      r[0,0] = true
+      r[1,1] = true
 
       (@n !~ @m).should == r
     end
@@ -111,9 +105,9 @@ describe NMatrix do
     end
 
     it "should handle element-wise greater-than (>)" do
-      r = NMatrix.new(:list, 2, true, :object)
-      r[0,1] = false
-      r[1,0] = false
+      r = NMatrix.new(:list, 2, false, :object)
+      r[0,0] = true
+      r[1,1] = true
       (@n > @m).should == r
     end
 

@@ -66,7 +66,10 @@ template <typename LDType, typename RDType>
 static LIST_STORAGE* cast_copy(const LIST_STORAGE* rhs, dtype_t new_dtype);
 
 template <typename LDType, typename RDType>
-static bool eqeq(const LIST_STORAGE* left, const LIST_STORAGE* right);
+static bool eqeq_r(const LIST_STORAGE* left, const LIST_STORAGE* right, const LIST* l, const LIST* r, size_t recursions, const void* l_init_, const void* r_init_);
+
+template <typename SDType, typename TDType>
+static bool eqeq_empty_r(const LIST_STORAGE* s, const LIST* l, int recursions, const void* t_init);
 
 template <ewop_t op, typename LDType, typename RDType>
 static void* ew_op(LIST* dest, const LIST* left, const void* l_default, const LIST* right, const void* r_default, const size_t* shape, size_t dim);
@@ -340,11 +343,11 @@ static void map_merged_stored_r(LIST_STORAGE* result, const LIST_STORAGE* left, 
       size_t key;
       LIST*  val = nm::list::create();
 
-      if (!rcurr || lcurr->key < rcurr->key) {
+      if (!rcurr || (lcurr && lcurr->key < rcurr->key)) {
         map_empty_stored_r(result, left, val, reinterpret_cast<const LIST*>(lcurr->val), recursions-1, false, r_init, init);
         key   = lcurr->key;
         lcurr = lcurr->next;
-      } else if (!lcurr || rcurr->key < lcurr->key) {
+      } else if (!lcurr || (rcurr && rcurr->key < lcurr->key)) {
         map_empty_stored_r(result, right, val, reinterpret_cast<const LIST*>(rcurr->val), recursions-1, true, l_init, init);
         key   = rcurr->key;
         rcurr = rcurr->next;
@@ -364,11 +367,11 @@ static void map_merged_stored_r(LIST_STORAGE* result, const LIST_STORAGE* left, 
       size_t key;
       VALUE  val;
 
-      if (!rcurr || lcurr->key < rcurr->key) {
+      if (!rcurr || (lcurr && lcurr->key < rcurr->key)) {
         val   = rb_yield_values(2, rubyobj_from_cval(lcurr->val, left->dtype).rval, r_init);
         key   = lcurr->key;
         lcurr = lcurr->next;
-      } else if (!lcurr || rcurr->key < lcurr->key) {
+      } else if (!lcurr || (rcurr && rcurr->key < lcurr->key)) {
         val   = rb_yield_values(2, l_init, rubyobj_from_cval(rcurr->val, right->dtype).rval);
         key   = rcurr->key;
         rcurr = rcurr->next;
@@ -589,9 +592,12 @@ void* nm_list_storage_remove(STORAGE* storage, SLICE* slice) {
  * Comparison of contents for list storage.
  */
 bool nm_list_storage_eqeq(const STORAGE* left, const STORAGE* right) {
-	NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::list_storage::eqeq, bool, const LIST_STORAGE* left, const LIST_STORAGE* right);
+	NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::list_storage::eqeq_r, bool, const LIST_STORAGE* left, const LIST_STORAGE* right, const LIST* l, const LIST* r, size_t recursions, const void* l_init_, const void* r_init_)
 
-	return ttable[left->dtype][right->dtype]((const LIST_STORAGE*)left, (const LIST_STORAGE*)right);
+  const LIST_STORAGE* casted_left  = reinterpret_cast<const LIST_STORAGE*>(left);
+  const LIST_STORAGE* casted_right = reinterpret_cast<const LIST_STORAGE*>(right);
+
+	return ttable[left->dtype][right->dtype](casted_left, casted_right, casted_left->rows, casted_right->rows, casted_left->dim - 1, casted_left->default_val, casted_right->default_val);
 }
 
 //////////
@@ -599,7 +605,7 @@ bool nm_list_storage_eqeq(const STORAGE* left, const STORAGE* right) {
 //////////
 
 /*
- * Element-wise operations for list storage.
+ * Element-wise operations for list storage (originally). Now only used for scalars, and that will soon move to Ruby code.
  *
  * If a scalar is given, a temporary matrix is created with that scalar as a default value.
  */
@@ -831,77 +837,75 @@ static LIST_STORAGE* cast_copy(const LIST_STORAGE* rhs, dtype_t new_dtype) {
 }
 
 
+/*
+ * Recursive helper function for eqeq. Note that we use SDType and TDType instead of L and R because this function
+ * is a re-labeling. That is, it can be called in order L,R or order R,L; and we don't want to get confused. So we
+ * use S and T to denote first and second passed in.
+ */
+template <typename SDType, typename TDType>
+static bool eqeq_empty_r(const LIST_STORAGE* s, const LIST* l, int recursions, const void* t_init) {
+  NODE* curr  = l->first;
+
+  if (recursions) {
+    while (curr) {
+      if (!eqeq_empty_r<SDType,TDType>(s, reinterpret_cast<const LIST*>(curr->val), recursions-1, t_init)) return false;
+      curr = curr->next;
+    }
+  } else {
+    while (curr) {
+      if (*reinterpret_cast<SDType*>(curr->val) != *reinterpret_cast<const TDType*>(t_init)) return false;
+      curr = curr->next;
+    }
+  }
+  return true;
+}
+
 
 /*
- * Do these two dense matrices of the same dtype have exactly the same
- * contents?
+ * Do these two dense matrices of the same dtype have exactly the same contents (accounting for default_vals)?
+ *
+ * This function is recursive.
  */
 template <typename LDType, typename RDType>
-bool eqeq(const LIST_STORAGE* left, const LIST_STORAGE* right) {
+static bool eqeq_r(const LIST_STORAGE* left, const LIST_STORAGE* right, const LIST* l, const LIST* r, size_t recursions, const void* l_init_, const void* r_init_) {
+  const LDType* l_init = reinterpret_cast<const LDType*>(l_init_);
+  const RDType* r_init = reinterpret_cast<const RDType*>(r_init_);
+
   bool result;
 
-  // in certain cases, we need to keep track of the number of elements checked.
-  size_t num_checked  = 0,
-	max_elements = nm_storage_count_max_elements(left);
-  LIST_STORAGE *tmp1 = NULL, *tmp2 = NULL;
+  bool same_init = *l_init == *r_init;
 
-  if (!left->rows->first) {
-    // Easy: both lists empty -- just compare default values
-    if (!right->rows->first) {
-    	return *reinterpret_cast<LDType*>(left->default_val) == *reinterpret_cast<RDType*>(right->default_val);
-    	
-    } else if (!list::eqeq_value<RDType,LDType>(right->rows, reinterpret_cast<LDType*>(left->default_val), left->dim-1, num_checked)) {
-    	// Left empty, right not empty. Do all values in right == left->default_val?
-    	return false;
-    	
-    } else if (num_checked < max_elements) {
-    	// If the matrix isn't full, we also need to compare default values.
-    	return *reinterpret_cast<LDType*>(left->default_val) == *reinterpret_cast<RDType*>(right->default_val);
+  NODE *lcurr = l->first,
+       *rcurr = r->first;
+
+  if (recursions) {
+    while (lcurr || rcurr) {
+
+      if (!rcurr || (lcurr && lcurr->key < rcurr->key)) {
+        if (!eqeq_empty_r<LDType,RDType>(left, reinterpret_cast<const LIST*>(lcurr->val), recursions-1, r_init_)) return false;
+        lcurr   = lcurr->next;
+      } else if (!lcurr || (rcurr && rcurr->key < lcurr->key)) {
+        if (!eqeq_empty_r<RDType,LDType>(right, reinterpret_cast<const LIST*>(rcurr->val), recursions-1, l_init_)) return false;
+        rcurr   = rcurr->next;
+      } else { // keys are == and both present
+        if (!eqeq_r<LDType,RDType>(left, right, reinterpret_cast<const LIST*>(lcurr->val), reinterpret_cast<const LIST*>(rcurr->val), recursions-1, l_init_, r_init_)) return false;
+        lcurr   = lcurr->next;
+        rcurr   = rcurr->next;
+      }
     }
-
-  } else if (!right->rows->first) {
-    // fprintf(stderr, "!right->rows true\n");
-    // Right empty, left not empty. Do all values in left == right->default_val?
-    if (!list::eqeq_value<LDType,RDType>(left->rows, reinterpret_cast<RDType*>(right->default_val), left->dim-1, num_checked)) {
-    	return false;
-    	
-    } else if (num_checked < max_elements) {
-   		// If the matrix isn't full, we also need to compare default values.
-    	return *reinterpret_cast<LDType*>(left->default_val) == *reinterpret_cast<RDType*>(right->default_val);
-    }
-
   } else {
-    // fprintf(stderr, "both matrices have entries\n");
-    // Hardest case. Compare lists node by node. Let's make it simpler by requiring that both have the same default value
-    
-    // left is reference
-    if (left->src != left && right->src == right) {
-      tmp1 = nm_list_storage_copy(left);
-      result = list::eqeq<LDType,RDType>(tmp1->rows, right->rows, reinterpret_cast<LDType*>(left->default_val), reinterpret_cast<RDType*>(right->default_val), left->dim-1, num_checked);
-      nm_list_storage_delete(tmp1);
-    } 
-    // right is reference
-    if (left->src == left && right->src != right) {
-      tmp2 = nm_list_storage_copy(right);
-      result = list::eqeq<LDType,RDType>(left->rows, tmp2->rows, reinterpret_cast<LDType*>(left->default_val), reinterpret_cast<RDType*>(right->default_val), left->dim-1, num_checked);
-      nm_list_storage_delete(tmp2);
-    } 
-    // both are references
-    if (left->src != left && right->src != right) {
-      tmp1 = nm_list_storage_copy(left);
-      tmp2 = nm_list_storage_copy(right);
-      result = list::eqeq<LDType,RDType>(tmp1->rows, tmp2->rows, reinterpret_cast<LDType*>(left->default_val), reinterpret_cast<RDType*>(right->default_val), left->dim-1, num_checked);
-      nm_list_storage_delete(tmp1);
-      nm_list_storage_delete(tmp2);
-    }
-    // both are normal matricies
-    if (left->src == left && right->src == right) 
-      result = list::eqeq<LDType,RDType>(left->rows, right->rows, reinterpret_cast<LDType*>(left->default_val), reinterpret_cast<RDType*>(right->default_val), left->dim-1, num_checked);
-
-    if (!result){
-      return result;
-    } else if (num_checked < max_elements) {
-      return *reinterpret_cast<LDType*>(left->default_val) == *reinterpret_cast<RDType*>(right->default_val);
+    while (lcurr || rcurr) {
+      if (!rcurr || (lcurr && lcurr->key < rcurr->key)) {
+        if (*reinterpret_cast<LDType*>(lcurr->val) != *r_init) return false;
+        lcurr         = lcurr->next;
+      } else if (!lcurr || (rcurr && rcurr->key < lcurr->key)) {
+        if (*reinterpret_cast<RDType*>(rcurr->val) != *l_init) return false;
+        rcurr         = rcurr->next;
+      } else { // keys == and both left and right nodes present
+        if (*reinterpret_cast<LDType*>(lcurr->val) != *reinterpret_cast<RDType*>(rcurr->val)) return false;
+        lcurr         = lcurr->next;
+        rcurr         = rcurr->next;
+      }
     }
   }
 
