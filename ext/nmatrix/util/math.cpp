@@ -886,9 +886,8 @@ static VALUE nm_cblas_herk(VALUE self,
 
   return Qtrue;
 }
-static 
 
-inline VALUE gesvd(char *jobu, char *jobvt, 
+static VALUE gesvd(char *jobu, char *jobvt, 
     int m, int n,
     void* a, int lda,
     void* s,
@@ -957,6 +956,7 @@ inline VALUE gesvd(char *jobu, char *jobvt,
         A, &lda, S, U, 
         &ldu, VT, &ldvt, work, &lwork, rwork,
         &info);
+
   } else {
     rb_raise(rb_eNotImpError, "only LAPACK versions implemented thus far");
     return Qnil;
@@ -967,7 +967,6 @@ inline VALUE gesvd(char *jobu, char *jobvt,
  * 
  * I'm greatly tempted, and would rather see a wrapped version, which I'm not sure where I should place.
  * For now, I'll keep it here.
-
  *
  * For documentation: http://www.netlib.org/lapack/double/dgesvd.f
  */
@@ -1028,13 +1027,13 @@ static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE
     NULL, NULL, NULL, NULL};
   nm::dtype_t dtype = NM_DTYPE(a);
 
-
+  //void* RWORK, A, S, U, VT, WORK;
   if (!ttable[dtype]) {
     rb_raise(nm_eDataTypeError, "This operation is only available for BLAS datatypes");
     return Qfalse;
   } else {
     if (dtype == nm::COMPLEX64 || dtype == nm::COMPLEX128) {
-
+      // Prep RWORK?
     } else if (dtype == nm::FLOAT32 || dtype == nm::FLOAT64) {
       // Nullify RWORK?
     }
