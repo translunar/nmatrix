@@ -153,7 +153,11 @@ describe NMatrix::LAPACK do
               else
                 1e-64 # FIXME: should be 0, but be_within(0) does not work.
               end
-        response = NMatrix::LAPACK.svd(a, :arrays)
+        begin
+          response = NMatrix::LAPACK.svd(a, :arrays)
+        rescue NotImplementedError => e
+          pending e.to_s
+        end
         if response.is_a? Array
           sing_vals, left_vals, right_vals = response
           left_vals.row(0).to_a.zip(left_true.row(0).to_a).each do |a_val, t_val|
