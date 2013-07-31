@@ -164,10 +164,14 @@ $objs = %w{nmatrix ruby_constants data/data util/io util/math util/sl_list stora
 CONFIG['CXX'] = 'g++'
 
 def find_newer_gplusplus #:nodoc:
-  [8,7,6,5,4,3].each do |minor|
-    result = `which g++-4.#{minor}`
+  print "checking for apparent GNU g++ binary with C++0x/C++11 support... "
+  [9,8,7,6,5,4,3].each do |minor|
+    ver = "4.#{minor}"
+    gpp = "g++-#{ver}"
+    result = `which #{gpp}`
     next if result.empty?
-    CONFIG['CXX'] = "g++-4.#{minor}"
+    CONFIG['CXX'] = gpp
+    puts ver
     return CONFIG['CXX']
   end
   false
@@ -195,6 +199,8 @@ else
   else
     $CPP_STANDARD = 'c++11'
   end
+  puts "using C++ standard... #{$CPP_STANDARD}"
+  puts "g++ reports version... " + `#{CONFIG['CXX']} --version|head -n 1|cut -f 3 -d " "`
 end
 
 # For release, these next two should both be changed to -O3.
