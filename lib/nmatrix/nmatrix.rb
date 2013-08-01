@@ -661,6 +661,12 @@ protected
     end
   end
 
+  {add: :+, sub: :-, mul: :*, div: :/, pow: :**, mod: :%}.each_pair do |ewop, op|
+    define_method("__list_scalar_#{ewop}__") do |rhs|
+      self.__list_map_merged_stored__(rhs) { |l,r| l.send(op,r) } #.cast(stype, NMatrix.upcast(dtype, rhs.dtype))
+    end
+  end
+
   # Equality operators do not involve a cast. We want to get back matrices of TrueClass and FalseClass.
   {eqeq: :==, neq: :!=, lt: :<, gt: :>, leq: :<=, geq: :>=}.each_pair do |ewop, op|
     define_method("__list_elementwise_#{ewop}__") do |rhs|

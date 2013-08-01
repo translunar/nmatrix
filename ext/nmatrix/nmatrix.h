@@ -136,10 +136,10 @@
 
   #define NM_DEF_STORAGE_ELEMENTS    \
     NM_DECL_ENUM(dtype_t, dtype);    \
-    size_t  dim;                     \
-    size_t* shape;                   \
-    size_t* offset;                  \
-	  int			count;                   \
+    size_t      dim;                 \
+    size_t*     shape;               \
+    size_t*     offset;              \
+	  int			    count;               \
 	  STORAGE*		src;
 
   #define NM_DEF_STORAGE_CHILD_STRUCT_PRE(name)    struct name : STORAGE {
@@ -360,6 +360,7 @@ extern "C" {
   // Non-API functions needed by other cpp files.
 	NMATRIX* nm_create(nm::stype_t stype, STORAGE* storage);
 	void     nm_delete(NMATRIX* mat);
+	void     nm_delete_ref(NMATRIX* mat);
 
 #ifdef __cplusplus
 }

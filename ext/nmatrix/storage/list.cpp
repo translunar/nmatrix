@@ -66,19 +66,10 @@ template <typename LDType, typename RDType>
 static LIST_STORAGE* cast_copy(const LIST_STORAGE* rhs, dtype_t new_dtype);
 
 template <typename LDType, typename RDType>
-static bool eqeq_r(const LIST_STORAGE* left, const LIST_STORAGE* right, const LIST* l, const LIST* r, size_t recursions, const void* l_init_, const void* r_init_);
+static bool eqeq_r(const LIST_STORAGE* left, const size_t* l_offsets, const LIST_STORAGE* right, const size_t* r_offsets, const LIST* l, const LIST* r, size_t recursions, const void* l_init_, const void* r_init_);
 
 template <typename SDType, typename TDType>
-static bool eqeq_empty_r(const LIST_STORAGE* s, const LIST* l, int recursions, const void* t_init);
-
-template <ewop_t op, typename LDType, typename RDType>
-static void* ew_op(LIST* dest, const LIST* left, const void* l_default, const LIST* right, const void* r_default, const size_t* shape, size_t dim);
-
-template <ewop_t op, typename LDType, typename RDType>
-static void ew_op_prime(LIST* dest, LDType d_default, const LIST* left, LDType l_default, const LIST* right, RDType r_default, const size_t* shape, size_t last_level, size_t level);
-
-template <ewop_t op, typename LDType, typename RDType>
-static void ew_comp_prime(LIST* dest, uint8_t d_default, const LIST* left, LDType l_default, const LIST* right, RDType r_default, const size_t* shape, size_t last_level, size_t level);
+static bool eqeq_empty_r(const LIST_STORAGE* s, const size_t* offsets, const LIST* l, int recursions, const void* t_init);
 
 } // end of namespace list_storage
 
@@ -300,17 +291,21 @@ static void each_stored_with_indices_r(LIST_STORAGE* s, const LIST* l, size_t re
 /*
  * Recursive helper for map_merged_stored_r which handles the case where one list is empty and the other is not.
  */
-static void map_empty_stored_r(LIST_STORAGE* result, const LIST_STORAGE* s, LIST* x, const LIST* l, size_t recursions, bool rev, const VALUE& t_init, const VALUE& init) {
+static void map_empty_stored_r(LIST_STORAGE* result, const LIST_STORAGE* s, const size_t* offsets, LIST* x, const LIST* l, size_t recursions, bool rev, const VALUE& t_init, const VALUE& init) {
   NODE *curr  = l->first,
        *xcurr = NULL;
+
+  // For reference matrices, make sure we start in the correct place.
+  size_t offset = offsets[s->dim - recursions - 1];
+  while (curr && curr->key < offset) {  curr = curr->next;  }
 
   if (recursions) {
     while (curr) {
       LIST* val = nm::list::create();
-      map_empty_stored_r(result, s, val, reinterpret_cast<const LIST*>(curr->val), recursions-1, rev, t_init, init);
+      map_empty_stored_r(result, s, offsets, val, reinterpret_cast<const LIST*>(curr->val), recursions-1, rev, t_init, init);
 
       if (!val->first) nm::list::del(val, 0);
-      else nm::list::insert_helper(x, xcurr, curr->key, val);
+      else nm::list::insert_helper(x, xcurr, curr->key - offset, val);
 
       curr = curr->next;
     }
@@ -321,7 +316,7 @@ static void map_empty_stored_r(LIST_STORAGE* result, const LIST_STORAGE* s, LIST
       else     val = rb_yield_values(2, s_val, t_init);
 
       if (rb_funcall(val, rb_intern("!="), 1, init) == Qtrue)
-        xcurr = nm::list::insert_helper(x, xcurr, curr->key, val);
+        xcurr = nm::list::insert_helper(x, xcurr, curr->key - offset, val);
 
       curr = curr->next;
     }
@@ -333,27 +328,34 @@ static void map_empty_stored_r(LIST_STORAGE* result, const LIST_STORAGE* s, LIST
 /*
  * Recursive helper function for nm_list_map_merged_stored
  */
-static void map_merged_stored_r(LIST_STORAGE* result, const LIST_STORAGE* left, const LIST_STORAGE* right, LIST* x, const LIST* l, const LIST* r, size_t recursions, const VALUE& l_init, const VALUE& r_init, const VALUE& init) {
+static void map_merged_stored_r(LIST_STORAGE* result, const LIST_STORAGE* left, const size_t* l_offsets, const LIST_STORAGE* right, const size_t* r_offsets, LIST* x, const LIST* l, const LIST* r, size_t recursions, const VALUE& l_init, const VALUE& r_init, const VALUE& init) {
   NODE *lcurr = l->first,
        *rcurr = r->first,
        *xcurr = x->first;
+
+  size_t l_offset = l_offsets[left->dim - recursions - 1];
+  size_t r_offset = r_offsets[right->dim - recursions - 1];
+
+  // For reference matrices, make sure we start in the correct place.
+  while (lcurr && lcurr->key < l_offset) {  lcurr = lcurr->next;  }
+  while (rcurr && rcurr->key < r_offset) {  rcurr = rcurr->next;  }
 
   if (recursions) {
     while (lcurr || rcurr) {
       size_t key;
       LIST*  val = nm::list::create();
 
-      if (!rcurr || (lcurr && lcurr->key < rcurr->key)) {
-        map_empty_stored_r(result, left, val, reinterpret_cast<const LIST*>(lcurr->val), recursions-1, false, r_init, init);
-        key   = lcurr->key;
+      if (!rcurr || (lcurr && (lcurr->key - l_offset < rcurr->key - r_offset))) {
+        map_empty_stored_r(result, left, l_offsets, val, reinterpret_cast<const LIST*>(lcurr->val), recursions-1, false, r_init, init);
+        key   = lcurr->key - l_offset;
         lcurr = lcurr->next;
-      } else if (!lcurr || (rcurr && rcurr->key < lcurr->key)) {
-        map_empty_stored_r(result, right, val, reinterpret_cast<const LIST*>(rcurr->val), recursions-1, true, l_init, init);
-        key   = rcurr->key;
+      } else if (!lcurr || (rcurr && (rcurr->key - r_offset < lcurr->key - l_offset))) {
+        map_empty_stored_r(result, right, r_offsets, val, reinterpret_cast<const LIST*>(rcurr->val), recursions-1, true, l_init, init);
+        key   = rcurr->key - r_offset;
         rcurr = rcurr->next;
       } else { // == and both present
-        map_merged_stored_r(result, left, right, val, reinterpret_cast<const LIST*>(lcurr->val), reinterpret_cast<const LIST*>(rcurr->val), recursions-1, l_init, r_init, init);
-        key   = lcurr->key;
+        map_merged_stored_r(result, left, l_offsets, right, r_offsets, val, reinterpret_cast<const LIST*>(lcurr->val), reinterpret_cast<const LIST*>(rcurr->val), recursions-1, l_init, r_init, init);
+        key   = lcurr->key - l_offset;
         lcurr = lcurr->next;
         rcurr = rcurr->next;
       }
@@ -367,17 +369,17 @@ static void map_merged_stored_r(LIST_STORAGE* result, const LIST_STORAGE* left, 
       size_t key;
       VALUE  val;
 
-      if (!rcurr || (lcurr && lcurr->key < rcurr->key)) {
+      if (!rcurr || (lcurr && (lcurr->key - l_offset < rcurr->key - r_offset))) {
         val   = rb_yield_values(2, rubyobj_from_cval(lcurr->val, left->dtype).rval, r_init);
-        key   = lcurr->key;
+        key   = lcurr->key - l_offset;
         lcurr = lcurr->next;
-      } else if (!lcurr || (rcurr && rcurr->key < lcurr->key)) {
+      } else if (!lcurr || (rcurr && (rcurr->key - r_offset < lcurr->key - l_offset))) {
         val   = rb_yield_values(2, l_init, rubyobj_from_cval(rcurr->val, right->dtype).rval);
-        key   = rcurr->key;
+        key   = rcurr->key - r_offset;
         rcurr = rcurr->next;
       } else { // == and both present
         val   = rb_yield_values(2, rubyobj_from_cval(lcurr->val, left->dtype).rval, rubyobj_from_cval(rcurr->val, right->dtype).rval);
-        key   = lcurr->key;
+        key   = lcurr->key - l_offset;
         lcurr = lcurr->next;
         rcurr = rcurr->next;
       }
@@ -413,11 +415,36 @@ VALUE nm_list_each_with_indices(VALUE nmatrix, bool stored) {
  * map merged stored iterator. Always returns a matrix containing RubyObjects which probably needs to be casted.
  */
 VALUE nm_list_map_merged_stored(int argc, VALUE* argv, VALUE left) {
+
   VALUE right, init;
+  bool scalar = false;
+
   rb_scan_args(argc, argv, "11", &right, &init);
 
-  LIST_STORAGE *s = NM_STORAGE_LIST(left),
-               *t = NM_STORAGE_LIST(right);
+  LIST_STORAGE *s   = NM_STORAGE_LIST(left),
+               *t;
+  size_t *s_offsets = s->offset,
+         *t_offsets;
+
+  // For each matrix, if it's a reference, we want to deal directly with the original (now that we have the offsets)
+  if (s->src != s) s = reinterpret_cast<LIST_STORAGE*>(s->src);
+
+  // right might be a scalar, in which case this is a scalar operation.
+  if (TYPE(right) != T_DATA || (RDATA(right)->dfree != (RUBY_DATA_FUNC)nm_delete && RDATA(right)->dfree != (RUBY_DATA_FUNC)nm_delete_ref)) {
+    nm::dtype_t r_dtype = nm_dtype_guess(right);
+
+    size_t* shape       = ALLOC_N(size_t, s->dim);
+    memcpy(shape, s->shape, s->dim);
+    void *scalar_init   = rubyobj_to_cval(right, r_dtype); // make a copy of right
+
+    t                   = reinterpret_cast<LIST_STORAGE*>(nm_list_storage_create(r_dtype, shape, s->dim, scalar_init));
+    t_offsets           = t->offset;
+    scalar              = true;
+  } else {
+    t                   = NM_STORAGE_LIST(right); // element-wise, not scalar.
+    t_offsets           = t->offset;
+    if (t->src != t) t  = reinterpret_cast<LIST_STORAGE*>(t->src);
+  }
 
   //if (!rb_block_given_p()) {
   //  rb_raise(rb_eNotImpError, "RETURN_SIZED_ENUMERATOR probably won't work for a map_merged since no merged object is created");
@@ -439,8 +466,10 @@ VALUE nm_list_map_merged_stored(int argc, VALUE* argv, VALUE left) {
   NMATRIX* result = nm_create(nm::LIST_STORE, nm_list_storage_create(nm::RUBYOBJ, shape, s->dim, init_val));
   LIST_STORAGE* r = reinterpret_cast<LIST_STORAGE*>(result->storage);
 
+  map_merged_stored_r(r, s, s_offsets, t, t_offsets, r->rows, s->rows, t->rows, s->dim - 1, s_init, t_init, init);
 
-  map_merged_stored_r(r, s, t, r->rows, s->rows, t->rows, s->dim - 1, s_init, t_init, init);
+  // If we are working with a scalar operation
+  if (scalar) nm_list_storage_delete(t);
 
   return Data_Wrap_Struct(CLASS_OF(left), nm_list_storage_mark, nm_delete, result);
 }
@@ -592,89 +621,24 @@ void* nm_list_storage_remove(STORAGE* storage, SLICE* slice) {
  * Comparison of contents for list storage.
  */
 bool nm_list_storage_eqeq(const STORAGE* left, const STORAGE* right) {
-	NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::list_storage::eqeq_r, bool, const LIST_STORAGE* left, const LIST_STORAGE* right, const LIST* l, const LIST* r, size_t recursions, const void* l_init_, const void* r_init_)
+	NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::list_storage::eqeq_r, bool, const LIST_STORAGE* left, const size_t* l_offsets, const LIST_STORAGE* right, const size_t* r_offsets, const LIST* l, const LIST* r, size_t recursions, const void* l_init_, const void* r_init_)
 
   const LIST_STORAGE* casted_left  = reinterpret_cast<const LIST_STORAGE*>(left);
-  const LIST_STORAGE* casted_right = reinterpret_cast<const LIST_STORAGE*>(right);
+  const size_t* l_offsets          = casted_left->offset;
+  if (casted_left->src != casted_left)
+    casted_left                    = reinterpret_cast<const LIST_STORAGE*>(casted_left->src);
 
-	return ttable[left->dtype][right->dtype](casted_left, casted_right, casted_left->rows, casted_right->rows, casted_left->dim - 1, casted_left->default_val, casted_right->default_val);
+  const LIST_STORAGE* casted_right = reinterpret_cast<const LIST_STORAGE*>(right);
+  const size_t* r_offsets          = casted_right->offset;
+  if (casted_right->src != casted_right)
+    casted_right                   = reinterpret_cast<const LIST_STORAGE*>(casted_right->src);
+
+	return ttable[left->dtype][right->dtype](casted_left, l_offsets, casted_right, r_offsets, casted_left->rows, casted_right->rows, casted_left->dim - 1, casted_left->default_val, casted_right->default_val);
 }
 
 //////////
 // Math //
 //////////
-
-/*
- * Element-wise operations for list storage (originally). Now only used for scalars, and that will soon move to Ruby code.
- *
- * If a scalar is given, a temporary matrix is created with that scalar as a default value.
- */
-STORAGE* nm_list_storage_ew_op(nm::ewop_t op, const STORAGE* left, const STORAGE* right, VALUE scalar) {
-  // rb_raise(rb_eNotImpError, "elementwise operations for list storage currently broken");
-
-  bool cleanup = false;
-  LIST_STORAGE *r, *new_l;
-  const LIST_STORAGE* l = reinterpret_cast<const LIST_STORAGE*>(left);
-
-  if (!right) { // need to build a right-hand matrix temporarily, with default value of 'scalar'
-
-    dtype_t scalar_dtype  = nm_dtype_guess(scalar);
-    void* scalar_init     = rubyobj_to_cval(scalar, scalar_dtype);
-
-    size_t* shape         = ALLOC_N(size_t, l->dim);
-    memcpy(shape, left->shape, sizeof(size_t) * l->dim);
-
-    r = nm_list_storage_create(scalar_dtype, shape, l->dim, scalar_init);
-
-    cleanup = true;
-
-  } else {
-
-    r = reinterpret_cast<LIST_STORAGE*>(const_cast<STORAGE*>(right));
-
-  }
-
-  // We may need to upcast our arguments to the same type.
-  dtype_t new_dtype = Upcast[left->dtype][r->dtype];
-
-	// Make sure we allocate a byte-storing matrix for comparison operations; otherwise, use the argument dtype (new_dtype)
-	dtype_t result_dtype = static_cast<uint8_t>(op) < NUM_NONCOMP_EWOPS ? new_dtype : BYTE;
-
-	OP_LR_DTYPE_TEMPLATE_TABLE(nm::list_storage::ew_op, void*, LIST* dest, const LIST* left, const void* l_default, const LIST* right, const void* r_default, const size_t* shape, size_t dim);
-	
-	// Allocate a new shape array for the resulting matrix.
-	size_t* new_shape = ALLOC_N(size_t, l->dim);
-	memcpy(new_shape, left->shape, sizeof(size_t) * l->dim);
-	
-	// Create the result matrix.
-	LIST_STORAGE* result = nm_list_storage_create(result_dtype, new_shape, left->dim, NULL);
-	
-	/*
-	 * Call the templated elementwise multiplication function and set the default
-	 * value for the resulting matrix.
-	 */
-	if (new_dtype != left->dtype) {
-		// Upcast the left-hand side if necessary.
-		new_l = reinterpret_cast<LIST_STORAGE*>(nm_list_storage_cast_copy(l, new_dtype));
-		
-		result->default_val =
-			ttable[op][new_l->dtype][r->dtype](result->rows, new_l->rows, new_l->default_val, r->rows, r->default_val, result->shape, result->dim);
-		
-		// Delete the temporary left-hand side matrix.
-		nm_list_storage_delete(reinterpret_cast<STORAGE*>(new_l));
-
-	} else {
-		result->default_val =
-			ttable[op][left->dtype][r->dtype](result->rows, l->rows, l->default_val, r->rows, r->default_val, result->shape, result->dim);
-	}
-
-  // If we created a temporary scalar matrix (for matrix-scalar operations), we now need to delete it.
-	if (cleanup) {
-	  nm_list_storage_delete(reinterpret_cast<STORAGE*>(r));
-	}
-	
-	return result;
-}
 
 
 /*
@@ -822,7 +786,7 @@ static LIST_STORAGE* cast_copy(const LIST_STORAGE* rhs, dtype_t new_dtype) {
   *default_val = *reinterpret_cast<RDType*>(rhs->default_val);
 
   LIST_STORAGE* lhs = nm_list_storage_create(new_dtype, shape, rhs->dim, default_val);
-  lhs->rows         = list::create();
+  //lhs->rows         = list::create();
 
   // TODO: Needs optimization. When matrix is reference it is copped twice.
   if (rhs->src == rhs) 
@@ -843,12 +807,15 @@ static LIST_STORAGE* cast_copy(const LIST_STORAGE* rhs, dtype_t new_dtype) {
  * use S and T to denote first and second passed in.
  */
 template <typename SDType, typename TDType>
-static bool eqeq_empty_r(const LIST_STORAGE* s, const LIST* l, int recursions, const void* t_init) {
+static bool eqeq_empty_r(const LIST_STORAGE* s, const size_t* offsets, const LIST* l, int recursions, const void* t_init) {
   NODE* curr  = l->first;
+
+  // For reference matrices, make sure we start in the correct place.
+  while (curr && curr->key < offsets[s->dim - recursions - 1]) {  curr = curr->next;  }
 
   if (recursions) {
     while (curr) {
-      if (!eqeq_empty_r<SDType,TDType>(s, reinterpret_cast<const LIST*>(curr->val), recursions-1, t_init)) return false;
+      if (!eqeq_empty_r<SDType,TDType>(s, offsets, reinterpret_cast<const LIST*>(curr->val), recursions-1, t_init)) return false;
       curr = curr->next;
     }
   } else {
@@ -862,12 +829,12 @@ static bool eqeq_empty_r(const LIST_STORAGE* s, const LIST* l, int recursions, c
 
 
 /*
- * Do these two dense matrices of the same dtype have exactly the same contents (accounting for default_vals)?
+ * Do these two list matrices of the same dtype have exactly the same contents (accounting for default_vals)?
  *
  * This function is recursive.
  */
 template <typename LDType, typename RDType>
-static bool eqeq_r(const LIST_STORAGE* left, const LIST_STORAGE* right, const LIST* l, const LIST* r, size_t recursions, const void* l_init_, const void* r_init_) {
+static bool eqeq_r(const LIST_STORAGE* left, const size_t* l_offsets, const LIST_STORAGE* right, const size_t* r_offsets, const LIST* l, const LIST* r, size_t recursions, const void* l_init_, const void* r_init_) {
   const LDType* l_init = reinterpret_cast<const LDType*>(l_init_);
   const RDType* r_init = reinterpret_cast<const RDType*>(r_init_);
 
@@ -878,27 +845,34 @@ static bool eqeq_r(const LIST_STORAGE* left, const LIST_STORAGE* right, const LI
   NODE *lcurr = l->first,
        *rcurr = r->first;
 
+  size_t l_offset = l_offsets[left->dim - recursions - 1];
+  size_t r_offset = r_offsets[right->dim - recursions - 1];
+
+  // For reference matrices, make sure we start in the correct place.
+  while (lcurr && lcurr->key < l_offset) {  lcurr = lcurr->next;  }
+  while (rcurr && rcurr->key < r_offset) {  rcurr = rcurr->next;  }
+
   if (recursions) {
     while (lcurr || rcurr) {
 
-      if (!rcurr || (lcurr && lcurr->key < rcurr->key)) {
-        if (!eqeq_empty_r<LDType,RDType>(left, reinterpret_cast<const LIST*>(lcurr->val), recursions-1, r_init_)) return false;
+      if (!rcurr || (lcurr && (lcurr->key - l_offset < rcurr->key - r_offset))) {
+        if (!eqeq_empty_r<LDType,RDType>(left, l_offsets, reinterpret_cast<const LIST*>(lcurr->val), recursions-1, r_init_)) return false;
         lcurr   = lcurr->next;
-      } else if (!lcurr || (rcurr && rcurr->key < lcurr->key)) {
-        if (!eqeq_empty_r<RDType,LDType>(right, reinterpret_cast<const LIST*>(rcurr->val), recursions-1, l_init_)) return false;
+      } else if (!lcurr || (rcurr && (rcurr->key - r_offset < lcurr->key - l_offset))) {
+        if (!eqeq_empty_r<RDType,LDType>(right, r_offsets, reinterpret_cast<const LIST*>(rcurr->val), recursions-1, l_init_)) return false;
         rcurr   = rcurr->next;
       } else { // keys are == and both present
-        if (!eqeq_r<LDType,RDType>(left, right, reinterpret_cast<const LIST*>(lcurr->val), reinterpret_cast<const LIST*>(rcurr->val), recursions-1, l_init_, r_init_)) return false;
+        if (!eqeq_r<LDType,RDType>(left, l_offsets, right, r_offsets, reinterpret_cast<const LIST*>(lcurr->val), reinterpret_cast<const LIST*>(rcurr->val), recursions-1, l_init_, r_init_)) return false;
         lcurr   = lcurr->next;
         rcurr   = rcurr->next;
       }
     }
   } else {
     while (lcurr || rcurr) {
-      if (!rcurr || (lcurr && lcurr->key < rcurr->key)) {
+      if (!rcurr || (lcurr && (lcurr->key - l_offset < rcurr->key - r_offset))) {
         if (*reinterpret_cast<LDType*>(lcurr->val) != *r_init) return false;
         lcurr         = lcurr->next;
-      } else if (!lcurr || (rcurr && rcurr->key < lcurr->key)) {
+      } else if (!lcurr || (rcurr && (rcurr->key - r_offset < lcurr->key - l_offset))) {
         if (*reinterpret_cast<RDType*>(rcurr->val) != *l_init) return false;
         rcurr         = rcurr->next;
       } else { // keys == and both left and right nodes present
@@ -912,464 +886,6 @@ static bool eqeq_r(const LIST_STORAGE* left, const LIST_STORAGE* right, const LI
   return true;
 }
 
-/*
- * List storage element-wise operations (including comparisons).
- */
-template <ewop_t op, typename LDType, typename RDType>
-static void* ew_op(LIST* dest, const LIST* left, const void* l_default, const LIST* right, const void* r_default, const size_t* shape, size_t dim) {
-
-	if (static_cast<uint8_t>(op) < NUM_NONCOMP_EWOPS) {
-
-    /*
-     * Allocate space for, and calculate, the default value for the destination
-     * matrix.
-     */
-    LDType* d_default_mem = ALLOC(LDType);
-    *d_default_mem = ew_op_switch<op, LDType, RDType>(*reinterpret_cast<const LDType*>(l_default), *reinterpret_cast<const RDType*>(r_default));
-
-    // Now that setup is done call the actual elementwise operation function.
-    ew_op_prime<op, LDType, RDType>(dest, *reinterpret_cast<const LDType*>(d_default_mem),
-                                    left, *reinterpret_cast<const LDType*>(l_default),
-                                    right, *reinterpret_cast<const RDType*>(r_default),
-                                    shape, dim - 1, 0);
-
-    // Return a pointer to the destination matrix's default value.
-    return d_default_mem;
-
-	} else { // Handle comparison operations in a similar manner.
-    /*
-     * Allocate a byte for default, and set default value to 0.
-     */
-    uint8_t* d_default_mem = ALLOC(uint8_t);
-    *d_default_mem = 0;
-    switch (op) {
-      case EW_EQEQ:
-        *d_default_mem = *reinterpret_cast<const LDType*>(l_default) == *reinterpret_cast<const RDType*>(r_default);
-        break;
-
-      case EW_NEQ:
-        *d_default_mem = *reinterpret_cast<const LDType*>(l_default) != *reinterpret_cast<const RDType*>(r_default);
-        break;
-
-      case EW_LT:
-        *d_default_mem = *reinterpret_cast<const LDType*>(l_default) < *reinterpret_cast<const RDType*>(r_default);
-        break;
-
-      case EW_GT:
-        *d_default_mem = *reinterpret_cast<const LDType*>(l_default) > *reinterpret_cast<const RDType*>(r_default);
-        break;
-
-      case EW_LEQ:
-        *d_default_mem = *reinterpret_cast<const LDType*>(l_default) <= *reinterpret_cast<const RDType*>(r_default);
-        break;
-
-      case EW_GEQ:
-        *d_default_mem = *reinterpret_cast<const LDType*>(l_default) >= *reinterpret_cast<const RDType*>(r_default);
-        break;
-
-      default:
-        rb_raise(rb_eStandardError, "this should not happen");
-    }
-
-    // Now that setup is done call the actual elementwise comparison function.
-    ew_comp_prime<op, LDType, RDType>(dest, *reinterpret_cast<const uint8_t*>(d_default_mem),
-                                      left, *reinterpret_cast<const LDType*>(l_default),
-                                      right, *reinterpret_cast<const RDType*>(r_default),
-                                      shape, dim - 1, 0);
-
-    // Return a pointer to the destination matrix's default value.
-    return d_default_mem;
-	}
-}
-
-
-/*
- * List storage element-wise comparisons, recursive helper.
- */
-template <ewop_t op, typename LDType, typename RDType>
-static void ew_comp_prime(LIST* dest, uint8_t d_default, const LIST* left, LDType l_default, const LIST* right, RDType r_default, const size_t* shape, size_t last_level, size_t level) {
-
-	static LIST EMPTY_LIST = {NULL};
-
-	size_t index;
-
-	uint8_t tmp_result;
-
-	LIST* new_level = NULL;
-
-	NODE* l_node		= left->first,
-			* r_node		= right->first,
-			* dest_node	= NULL;
-
-	for (index = 0; index < shape[level]; ++index) {
-		if (l_node == NULL and r_node == NULL) {
-			/*
-			 * Both source lists are now empty.  Because the default value of the
-			 * destination is already set appropriately we can now return.
-			 */
-
-			return;
-
-		} else {
-			// At least one list still has entries.
-
-			if (l_node == NULL and r_node->key == index) {
-				/*
-				 * One source list is empty, but the index has caught up to the key of
-				 * the other list.
-				 */
-
-				if (level == last_level) {
-					switch (op) {
-						case EW_EQEQ:
-							tmp_result = (uint8_t)(l_default == *reinterpret_cast<RDType*>(r_node->val));
-							break;
-
-						case EW_NEQ:
-							tmp_result = (uint8_t)(l_default != *reinterpret_cast<RDType*>(r_node->val));
-							break;
-
-						case EW_LT:
-							tmp_result = (uint8_t)(l_default < *reinterpret_cast<RDType*>(r_node->val));
-							break;
-
-						case EW_GT:
-							tmp_result = (uint8_t)(l_default > *reinterpret_cast<RDType*>(r_node->val));
-							break;
-
-						case EW_LEQ:
-							tmp_result = (uint8_t)(l_default <= *reinterpret_cast<RDType*>(r_node->val));
-							break;
-
-						case EW_GEQ:
-							tmp_result = (uint8_t)(l_default >= *reinterpret_cast<RDType*>(r_node->val));
-							break;
-
-            default:
-              rb_raise(rb_eStandardError, "This should not happen.");
-					}
-
-					if (tmp_result != d_default) {
-						dest_node = nm::list::insert_helper(dest, dest_node, index, tmp_result);
-					}
-
-				} else {
-					new_level = nm::list::create();
-					dest_node = nm::list::insert_helper(dest, dest_node, index, new_level);
-
-					ew_comp_prime<op, LDType, RDType>(new_level, d_default, &EMPTY_LIST, l_default,
-                                            reinterpret_cast<LIST*>(r_node->val), r_default,
-                                            shape, last_level, level + 1);
-				}
-
-				r_node = r_node->next;
-
-			} else if (r_node == NULL and l_node->key == index) {
-				/*
-				 * One source list is empty, but the index has caught up to the key of
-				 * the other list.
-				 */
-
-				if (level == last_level) {
-					switch (op) {
-						case EW_EQEQ:
-							tmp_result = (uint8_t)(*reinterpret_cast<LDType*>(l_node->val) == r_default);
-							break;
-
-						case EW_NEQ:
-							tmp_result = (uint8_t)(*reinterpret_cast<LDType*>(l_node->val) != r_default);
-							break;
-
-						case EW_LT:
-							tmp_result = (uint8_t)(*reinterpret_cast<LDType*>(l_node->val) < r_default);
-							break;
-
-						case EW_GT:
-							tmp_result = (uint8_t)(*reinterpret_cast<LDType*>(l_node->val) > r_default);
-							break;
-
-						case EW_LEQ:
-							tmp_result = (uint8_t)(*reinterpret_cast<LDType*>(l_node->val) <= r_default);
-							break;
-
-						case EW_GEQ:
-							tmp_result = (uint8_t)(*reinterpret_cast<LDType*>(l_node->val) >= r_default);
-							break;
-
-            default:
-              rb_raise(rb_eStandardError, "this should not happen");
-					}
-
-					if (tmp_result != d_default) {
-						dest_node = nm::list::insert_helper(dest, dest_node, index, tmp_result);
-					}
-
-				} else {
-					new_level = nm::list::create();
-					dest_node = nm::list::insert_helper(dest, dest_node, index, new_level);
-
-					ew_comp_prime<op, LDType, RDType>(new_level, d_default,
-                                            reinterpret_cast<LIST*>(l_node->val), l_default,
-                                            &EMPTY_LIST, r_default,
-                                            shape, last_level, level + 1);
-				}
-
-				l_node = l_node->next;
-
-			} else if (l_node != NULL and r_node != NULL and index == std::min(l_node->key, r_node->key)) {
-				/*
-				 * Neither list is empty and our index has caught up to one of the
-				 * source lists.
-				 */
-
-				if (l_node->key == r_node->key) {
-
-					if (level == last_level) {
-						switch (op) {
-							case EW_EQEQ:
-								tmp_result = (uint8_t)(*reinterpret_cast<LDType*>(l_node->val) == *reinterpret_cast<RDType*>(r_node->val));
-								break;
-
-							case EW_NEQ:
-								tmp_result = (uint8_t)(*reinterpret_cast<LDType*>(l_node->val) != *reinterpret_cast<RDType*>(r_node->val));
-								break;
-
-							case EW_LT:
-								tmp_result = (uint8_t)(*reinterpret_cast<LDType*>(l_node->val) < *reinterpret_cast<RDType*>(r_node->val));
-								break;
-
-							case EW_GT:
-								tmp_result = (uint8_t)(*reinterpret_cast<LDType*>(l_node->val) > *reinterpret_cast<RDType*>(r_node->val));
-								break;
-
-							case EW_LEQ:
-								tmp_result = (uint8_t)(*reinterpret_cast<LDType*>(l_node->val) <= *reinterpret_cast<RDType*>(r_node->val));
-								break;
-
-							case EW_GEQ:
-								tmp_result = (uint8_t)(*reinterpret_cast<LDType*>(l_node->val) >= *reinterpret_cast<RDType*>(r_node->val));
-								break;
-
-              default:
-                rb_raise(rb_eStandardError, "this should not happen");
-						}
-
-						if (tmp_result != d_default) {
-							dest_node = nm::list::insert_helper(dest, dest_node, index, tmp_result);
-						}
-
-					} else {
-						new_level = nm::list::create();
-						dest_node = nm::list::insert_helper(dest, dest_node, index, new_level);
-
-						ew_comp_prime<op, LDType, RDType>(new_level, d_default,
-							reinterpret_cast<LIST*>(l_node->val), l_default,
-							reinterpret_cast<LIST*>(r_node->val), r_default,
-							shape, last_level, level + 1);
-					}
-
-					l_node = l_node->next;
-					r_node = r_node->next;
-
-				} else if (l_node->key < r_node->key) {
-					// Advance the left node knowing that the default value is OK.
-
-					l_node = l_node->next;
-
-				} else /* if (l_node->key > r_node->key) */ {
-					// Advance the right node knowing that the default value is OK.
-
-					r_node = r_node->next;
-				}
-
-			} else {
-				/*
-				 * Our index needs to catch up but the default value is OK.  This
-				 * conditional is here only for documentation and should be optimized
-				 * out.
-				 */
-			}
-		}
-	}
-}
-
-
-
-/*
- * List storage element-wise operations, recursive helper.
- */
-template <ewop_t op, typename LDType, typename RDType>
-static void ew_op_prime(LIST* dest, LDType d_default, const LIST* left, LDType l_default, const LIST* right, RDType r_default, const size_t* shape, size_t last_level, size_t level) {
-	
-	static LIST EMPTY_LIST = {NULL};
-	
-	size_t index;
-	
-	LDType tmp_result;
-	
-	LIST* new_level = NULL;
-	
-	NODE* l_node		= left->first,
-			* r_node		= right->first,
-			* dest_node	= NULL;
-	
-	for (index = 0; index < shape[level]; ++index) {
-		if (l_node == NULL and r_node == NULL) {
-			/*
-			 * Both source lists are now empty.  Because the default value of the
-			 * destination is already set appropriately we can now return.
-			 */
-			
-			return;
-			
-		} else {
-			// At least one list still has entries.
-			
-			if (op == EW_MUL) {
-				// Special cases for multiplication.
-				
-				if (l_node == NULL and (l_default == 0 and d_default == 0)) {
-					/* 
-					 * The left hand list has run out of elements.  We don't need to add new
-					 * values to the destination if l_default and d_default are both 0.
-					 */
-				
-					return;
-			
-				} else if (r_node == NULL and (r_default == 0 and d_default == 0)) {
-					/*
-					 * The right hand list has run out of elements.  We don't need to add new
-					 * values to the destination if r_default and d_default are both 0.
-					 */
-				
-					return;
-				}
-				
-			} else if (op == EW_DIV) {
-				// Special cases for division.
-				
-				if (l_node == NULL and (l_default == 0 and d_default == 0)) {
-					/* 
-					 * The left hand list has run out of elements.  We don't need to add new
-					 * values to the destination if l_default and d_default are both 0.
-					 */
-				
-					return;
-			
-				} else if (r_node == NULL and (r_default == 0 and d_default == 0)) {
-					/*
-					 * The right hand list has run out of elements.  If the r_default
-					 * value is 0 any further division will result in a SIGFPE.
-					 */
-				
-					rb_raise(rb_eZeroDivError, "Cannot divide type by 0, would throw SIGFPE.");
-				}
-				
-				// TODO: Add optimizations for addition and subtraction.
-				
-			}
-			
-			// We need to continue processing the lists.
-			
-			if (l_node == NULL and r_node->key == index) {
-				/*
-				 * One source list is empty, but the index has caught up to the key of
-				 * the other list.
-				 */
-				
-				if (level == last_level) {
-				  tmp_result = ew_op_switch<op, LDType, RDType>(l_default, *reinterpret_cast<RDType*>(r_node->val));
-				  std::cerr << "1. tmp_result = " << tmp_result << std::endl;
-					
-					if (tmp_result != d_default) {
-						dest_node = nm::list::insert_helper(dest, dest_node, index, tmp_result);
-					}
-					
-				} else {
-					new_level = nm::list::create();
-					dest_node = nm::list::insert_helper(dest, dest_node, index, new_level);
-				
-					ew_op_prime<op, LDType, RDType>(new_level, d_default,	&EMPTY_LIST, l_default,
-						                              reinterpret_cast<LIST*>(r_node->val), r_default,
-						                              shape, last_level, level + 1);
-				}
-				
-				r_node = r_node->next;
-				
-			} else if (r_node == NULL and l_node->key == index) {
-				/*
-				 * One source list is empty, but the index has caught up to the key of
-				 * the other list.
-				 */
-				
-				if (level == last_level) {
-				  tmp_result = ew_op_switch<op, LDType, RDType>(*reinterpret_cast<LDType*>(l_node->val), r_default);
-				  std::cerr << "2. tmp_result = " << tmp_result << std::endl;
-
-					if (tmp_result != d_default) {
-						dest_node = nm::list::insert_helper(dest, dest_node, index, tmp_result);
-					}
-					
-				} else {
-					new_level = nm::list::create();
-					dest_node = nm::list::insert_helper(dest, dest_node, index, new_level);
-				
-					ew_op_prime<op, LDType, RDType>(new_level, d_default,	reinterpret_cast<LIST*>(l_node->val), l_default,
-						                              &EMPTY_LIST, r_default,	shape, last_level, level + 1);
-				}
-				
-				l_node = l_node->next;
-				
-			} else if (l_node != NULL and r_node != NULL and index == std::min(l_node->key, r_node->key)) {
-				/*
-				 * Neither list is empty and our index has caught up to one of the
-				 * source lists.
-				 */
-				
-				if (l_node->key == r_node->key) {
-					
-					if (level == last_level) {
-					  tmp_result = ew_op_switch<op, LDType, RDType>(*reinterpret_cast<LDType*>(l_node->val),*reinterpret_cast<RDType*>(r_node->val));
-					  std::cerr << "3. tmp_result = " << tmp_result << std::endl;
-						
-						if (tmp_result != d_default) {
-							dest_node = nm::list::insert_helper(dest, dest_node, index, tmp_result);
-						}
-						
-					} else {
-						new_level = nm::list::create();
-						dest_node = nm::list::insert_helper(dest, dest_node, index, new_level);
-					
-						ew_op_prime<op, LDType, RDType>(new_level, d_default,
-                                            reinterpret_cast<LIST*>(l_node->val), l_default,
-                                            reinterpret_cast<LIST*>(r_node->val), r_default,
-                                            shape, last_level, level + 1);
-					}
-				
-					l_node = l_node->next;
-					r_node = r_node->next;
-			
-				} else if (l_node->key < r_node->key) {
-					// Advance the left node knowing that the default value is OK.
-			
-					l_node = l_node->next;
-					 
-				} else /* if (l_node->key > r_node->key) */ {
-					// Advance the right node knowing that the default value is OK.
-			
-					r_node = r_node->next;
-				}
-				
-			} else {
-				/*
-				 * Our index needs to catch up but the default value is OK.  This
-				 * conditional is here only for documentation and should be optimized
-				 * out.
-				 */
-			}
-		}
-	}
-}
 
 }} // end of namespace nm::list_storage
 

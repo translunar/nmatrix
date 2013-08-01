@@ -161,7 +161,7 @@ DENSE_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype
 			for (RIType j = 0; j < rhs->shape[1]; ++j) { // Move to next dense position.
 
         // Fill in zeros (except for diagonal)
-        if (i == j) lhs_elements[pos] = rhs_a[i];
+        if (i == j) lhs_elements[pos] = static_cast<LDType>(rhs_a[i]);
 				else        lhs_elements[pos] = LCAST_ZERO;
 
 				++pos;
@@ -173,10 +173,10 @@ DENSE_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype
 
 			for (size_t j = 0; j < rhs->shape[1]; ++j) {
         if (i == j) {
-          lhs_elements[pos] = rhs_a[i];
+          lhs_elements[pos] = static_cast<LDType>(rhs_a[i]);
 
         } else if (j == jj) {
-          lhs_elements[pos] = rhs_a[ija]; // Copy from rhs.
+          lhs_elements[pos] = static_cast<LDType>(rhs_a[ija]); // Copy from rhs.
 
           // Get next.
           ++ija;
@@ -214,14 +214,14 @@ static void cast_copy_list_contents(LDType* lhs, const LIST* rhs, RDType* defaul
 
     if (!curr || (curr->key > (size_t)(last_key+1))) {
 
-      if (recursions == 0)  lhs[pos] = *default_val;
+      if (recursions == 0)  lhs[pos] = static_cast<LDType>(*default_val);
       else               		cast_copy_list_default<LDType,RDType>(lhs, default_val, pos, shape, dim, max_elements, recursions-1);
 
       ++last_key;
 
     } else {
 
-      if (recursions == 0)  lhs[pos] = *reinterpret_cast<RDType*>(curr->val);
+      if (recursions == 0)  lhs[pos] = static_cast<LDType>(*reinterpret_cast<RDType*>(curr->val));
       else                	cast_copy_list_contents<LDType,RDType>(lhs, (const LIST*)(curr->val),
                                                                                          default_val, pos, shape, dim, max_elements, recursions-1);
 
@@ -240,7 +240,7 @@ template <typename LDType,typename RDType>
 static void cast_copy_list_default(LDType* lhs, RDType* default_val, size_t& pos, const size_t* shape, size_t dim, size_t max_elements, size_t recursions) {
 	for (size_t i = 0; i < shape[dim - 1 - recursions]; ++i, ++pos) {
 
-    if (recursions == 0)    lhs[pos] = *default_val;
+    if (recursions == 0)    lhs[pos] = static_cast<LDType>(*default_val);
     else                  	cast_copy_list_default<LDType,RDType>(lhs, default_val, pos, shape, dim, max_elements, recursions-1);
 
   }
@@ -278,7 +278,7 @@ LIST_STORAGE* create_from_dense_storage(const DENSE_STORAGE* rhs, dtype_t l_dtyp
   else    	                *l_default_val = 0;
 
   // need test default value for comparing to elements in dense matrix
-  if (rhs->dtype == l_dtype)  	  *r_default_val = *l_default_val;
+  if (rhs->dtype == l_dtype)  	  *r_default_val = static_cast<RDType>(*l_default_val);
   else if (rhs->dtype == RUBYOBJ) *r_default_val = INT2FIX(0);
   else  	                        *r_default_val = 0;
 
@@ -320,7 +320,7 @@ LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype)
 
   // copy default value from the zero location in the Yale matrix
   LDType* default_val = ALLOC_N(LDType, 1);
-  *default_val        = R_ZERO;
+  *default_val        = static_cast<LDType>(R_ZERO);
 
   LIST_STORAGE* lhs = nm_list_storage_create(l_dtype, shape, rhs->dim, default_val);
 
@@ -353,8 +353,8 @@ LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype)
         // Is there a nonzero diagonal item between the previously added item and the current one?
         if (jj > i && add_diag) {
           // Allocate and copy insertion value
-          insert_val = ALLOC_N(LDType, 1);
-          *insert_val        = rhs_a[i];
+          insert_val  = ALLOC_N(LDType, 1);
+          *insert_val = static_cast<LDType>(rhs_a[i]);
 
           // insert the item in the list at the appropriate location
           if (last_added) 	last_added = list::insert_after(last_added, i, insert_val);
@@ -366,7 +366,7 @@ LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype)
 
         // now allocate and add the current item
         insert_val  = ALLOC_N(LDType, 1);
-        *insert_val = rhs_a[ija];
+        *insert_val = static_cast<LDType>(rhs_a[ija]);
 
         if (last_added)    	last_added = list::insert_after(last_added, jj, insert_val);
         else              	last_added = list::insert(curr_row, false, jj, insert_val);
@@ -376,8 +376,8 @@ LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype)
 
       if (add_diag) {
       	// still haven't added the diagonal.
-        insert_val = ALLOC_N(LDType, 1);
-        *insert_val        = rhs_a[i];
+        insert_val         = ALLOC_N(LDType, 1);
+        *insert_val        = static_cast<LDType>(rhs_a[i]);
 
         // insert the item in the list at the appropriate location
         if (last_added)    	last_added = list::insert_after(last_added, i, insert_val);
@@ -417,7 +417,7 @@ static bool cast_copy_contents_dense(LIST* lhs, const RDType* rhs, RDType* zero,
 
         // Create a copy of our value that we will insert in the list
         LDType* insert_value = ALLOC_N(LDType, 1);
-        *insert_value        = (LDType)(rhs[pos]);
+        *insert_value        = static_cast<LDType>(rhs[pos]);
 
         if (!lhs->first)    prev = list::insert(lhs, false, coords[dim-1-recursions], insert_value);
         else               	prev = list::insert_after(prev, coords[dim-1-recursions], insert_value);
@@ -494,7 +494,7 @@ namespace yale_storage { // FIXME: Move to yale.cpp
     LIType* lhs_ija   = reinterpret_cast<LIType*>(lhs->ija);
 
     // Set the zero position in the yale matrix
-    lhs_a[shape[0]] = R_ZERO;
+    lhs_a[shape[0]] = static_cast<LDType>(R_ZERO);
 
     // Start just after the zero position.
     LIType ija = shape[0]+1;
@@ -510,11 +510,10 @@ namespace yale_storage { // FIXME: Move to yale.cpp
         pos = rhs->stride[0]*(i + rhs->offset[0]) + rhs->stride[1]*(j + rhs->offset[1]); // calc position with offsets
 
         if (i == j) { // copy to diagonal
-          lhs_a[i]  = rhs_elements[pos];
+          lhs_a[i]     = static_cast<LDType>(rhs_elements[pos]);
         } else if (rhs_elements[pos] != R_ZERO) { // copy nonzero to LU
           lhs_ija[ija] = j; // write column index
-          
-          lhs_a[ija] = rhs_elements[pos];
+          lhs_a[ija]   = static_cast<LDType>(rhs_elements[pos]);
 
           ++ija;
         }

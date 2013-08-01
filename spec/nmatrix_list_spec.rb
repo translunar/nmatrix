@@ -58,7 +58,7 @@ describe NMatrix do
     it "should allow creation of both true- and false-based matrix" do
       r1 = NMatrix.new(:list, 2, false, :object)
       r2 = NMatrix.new(:list, 2, true, :object)
-      r1.should != r2
+      r1.should_not == r2
     end
 
     it "should handle missing default value" do

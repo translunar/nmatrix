@@ -336,7 +336,6 @@ static VALUE nm_read(int argc, VALUE* argv, VALUE self);
 static VALUE nm_write(int argc, VALUE* argv, VALUE self);
 static VALUE nm_init_yale_from_old_yale(VALUE shape, VALUE dtype, VALUE ia, VALUE ja, VALUE a, VALUE from_dtype, VALUE nm);
 static VALUE nm_alloc(VALUE klass);
-static void  nm_delete_ref(NMATRIX* mat);
 static VALUE nm_dtype(VALUE self);
 static VALUE nm_itype(VALUE self);
 static VALUE nm_stype(VALUE self);
@@ -635,7 +634,7 @@ void nm_delete(NMATRIX* mat) {
 /*
  * Slicing destructor.
  */
-static void nm_delete_ref(NMATRIX* mat) {
+void nm_delete_ref(NMATRIX* mat) {
   static void (*ttable[nm::NUM_STYPES])(STORAGE*) = {
     nm_dense_storage_delete_ref,
     nm_list_storage_delete_ref,
@@ -1710,7 +1709,7 @@ static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
 
 	static STORAGE* (*ew_op[nm::NUM_STYPES])(nm::ewop_t, const STORAGE*, const STORAGE*, VALUE scalar) = {
 		nm_dense_storage_ew_op,
-		nm_list_storage_ew_op,
+		NULL,
 		nm_yale_storage_ew_op
 	};
 
@@ -1722,15 +1721,17 @@ static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
 
   if (TYPE(right_val) != T_DATA || (RDATA(right_val)->dfree != (RUBY_DATA_FUNC)nm_delete && RDATA(right_val)->dfree != (RUBY_DATA_FUNC)nm_delete_ref)) {
     // This is a matrix-scalar element-wise operation.
-    std::string sym = "__yale_scalar_" + nm::EWOP_NAMES[op] + "__";
+    std::string sym;
     switch(left->stype) {
     case nm::DENSE_STORE:
-    case nm::LIST_STORE:
       result = ALLOC(NMATRIX);
-      result->storage = ew_op[left->stype](op, reinterpret_cast<STORAGE*>(left->storage), NULL, right_val);
+      result->storage = nm_dense_storage_ew_op(op, reinterpret_cast<STORAGE*>(left->storage), NULL, right_val);
       result->stype   = left->stype;
-      break;
+    case nm::LIST_STORE:
+      sym = "__list_scalar_" + nm::EWOP_NAMES[op] + "__";
+      return rb_funcall(left_val, rb_intern(sym.c_str()), 1, right_val);
     case nm::YALE_STORE:
+      sym = "__yale_scalar_" + nm::EWOP_NAMES[op] + "__";
       return rb_funcall(left_val, rb_intern(sym.c_str()), 1, right_val);
     default:
       rb_raise(rb_eNotImpError, "unknown storage type requested scalar element-wise operation");
@@ -1752,7 +1753,7 @@ static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
     UnwrapNMatrix(right_val, right);
 
     if (left->stype == right->stype) {
-      std::string sym = "__list_elementwise_" + nm::EWOP_NAMES[op] + "__";
+      std::string sym;
 
       switch(left->stype) {
       case nm::DENSE_STORE:
@@ -1762,6 +1763,7 @@ static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
         result->stype		= left->stype;
         break;
       case nm::LIST_STORE:
+        sym = "__list_elementwise_" + nm::EWOP_NAMES[op] + "__";
         return rb_funcall(left_val, rb_intern(sym.c_str()), 1, right_val);
       default:
         rb_raise(rb_eNotImpError, "unknown storage type requested element-wise operation");
