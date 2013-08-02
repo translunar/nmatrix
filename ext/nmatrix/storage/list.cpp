@@ -62,15 +62,6 @@ namespace nm { namespace list_storage {
  * Forward Declarations
  */
 
-template <typename LDType, typename RDType>
-static LIST_STORAGE* cast_copy(const LIST_STORAGE* rhs, dtype_t new_dtype);
-
-template <typename LDType, typename RDType>
-static bool eqeq_r(const LIST_STORAGE* left, const size_t* l_offsets, const LIST_STORAGE* right, const size_t* r_offsets, const size_t* shape, const LIST* l, const LIST* r, size_t recursions, const void* l_init_, const void* r_init_);
-
-template <typename SDType, typename TDType>
-static bool eqeq_empty_r(const LIST_STORAGE* s, const size_t* offsets, const size_t* shape, const LIST* l, int recursions, const void* t_init);
-
 class RecurseData {
 public:
   // Note that providing init_obj argument does not override init.
@@ -83,7 +74,7 @@ public:
     actual_shape_ = actual->shape;
 
     if (init_obj_ == Qnil) {
-      init_obj_ = rubyobj_from_cval(s->default_val, s->dtype).rval;
+      init_obj_ = s->dtype == nm::RUBYOBJ ? *reinterpret_cast<VALUE*>(s->default_val) : rubyobj_from_cval(s->default_val, s->dtype).rval;
     }
   }
 
@@ -131,6 +122,17 @@ protected:
   VALUE init_obj_;
 
 };
+
+
+template <typename LDType, typename RDType>
+static LIST_STORAGE* cast_copy(const LIST_STORAGE* rhs, dtype_t new_dtype);
+
+template <typename LDType, typename RDType>
+static bool eqeq_r(RecurseData& left, RecurseData& right, const LIST* l, const LIST* r, size_t rec);
+
+template <typename SDType, typename TDType>
+static bool eqeq_empty_r(RecurseData& s, const LIST* l, size_t rec, const TDType* t_init);
+
 
 /*
  * Recursive helper for map_merged_stored_r which handles the case where one list is empty and the other is not.
@@ -711,29 +713,12 @@ void* nm_list_storage_remove(STORAGE* storage, SLICE* slice) {
  * Comparison of contents for list storage.
  */
 bool nm_list_storage_eqeq(const STORAGE* left, const STORAGE* right) {
-	NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::list_storage::eqeq_r, bool, const LIST_STORAGE* left, const size_t* l_offsets, const LIST_STORAGE* right, const size_t* r_offsets, const size_t* shape, const LIST* l, const LIST* r, size_t recursions, const void* l_init_, const void* r_init_)
-  size_t *l_offsets = ALLOCA_N(size_t, left->dim),
-         *r_offsets = ALLOCA_N(size_t, right->dim);
-  memset(l_offsets, 0, sizeof(size_t)*left->dim);
-  memset(r_offsets, 0, sizeof(size_t)*right->dim);
+	NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::list_storage::eqeq_r, bool, nm::list_storage::RecurseData& left, nm::list_storage::RecurseData& right, const LIST* l, const LIST* r, size_t rec)
 
-  const LIST_STORAGE* casted_left  = reinterpret_cast<const LIST_STORAGE*>(left);
+  nm::list_storage::RecurseData ldata(reinterpret_cast<const LIST_STORAGE*>(left)),
+                                rdata(reinterpret_cast<const LIST_STORAGE*>(right));
 
-  // save the shape for later (we want the slice shape)
-  size_t* shape = casted_left->shape;
-
-  while (casted_left->src != casted_left) {
-    for (size_t i = 0; i < casted_left->dim; ++i) l_offsets[i] += casted_left->offset[i];
-    casted_left                    = reinterpret_cast<const LIST_STORAGE*>(casted_left->src);
-  }
-
-  const LIST_STORAGE* casted_right = reinterpret_cast<const LIST_STORAGE*>(right);
-  while (casted_right->src != casted_right) {
-    for (size_t i = 0; i < casted_right->dim; ++i) r_offsets[i] += casted_right->offset[i];
-    casted_right                   = reinterpret_cast<const LIST_STORAGE*>(casted_right->src);
-  }
-
-	return ttable[left->dtype][right->dtype](casted_left, l_offsets, casted_right, r_offsets, shape, casted_left->rows, casted_right->rows, casted_left->dim - 1, casted_left->default_val, casted_right->default_val);
+	return ttable[left->dtype][right->dtype](ldata, rdata, ldata.top_level_list(), rdata.top_level_list(), ldata.dim()-1);
 }
 
 //////////
@@ -910,28 +895,26 @@ static LIST_STORAGE* cast_copy(const LIST_STORAGE* rhs, dtype_t new_dtype) {
  * use S and T to denote first and second passed in.
  */
 template <typename SDType, typename TDType>
-static bool eqeq_empty_r(const LIST_STORAGE* s, const size_t* offsets, const size_t* shape, const LIST* l, int recursions, const void* t_init) {
+static bool eqeq_empty_r(RecurseData& s, const LIST* l, size_t rec, const TDType* t_init) {
   NODE* curr  = l->first;
-  size_t x_shape  = shape[s->dim - recursions - 1];
-  size_t offset   = offsets[s->dim - recursions - 1];
 
   // For reference matrices, make sure we start in the correct place.
-  while (curr && curr->key < offset) {  curr = curr->next;  }
-  if (curr && curr->key - offset >= x_shape) curr = NULL;
+  while (curr && curr->key < s.offset(rec)) {  curr = curr->next;  }
+  if (curr && curr->key - s.offset(rec) >= s.shape(rec)) curr = NULL;
 
-  if (recursions) {
+  if (rec) {
     while (curr) {
-      if (!eqeq_empty_r<SDType,TDType>(s, offsets, shape, reinterpret_cast<const LIST*>(curr->val), recursions-1, t_init)) return false;
+      if (!eqeq_empty_r<SDType,TDType>(s, reinterpret_cast<const LIST*>(curr->val), rec-1, t_init)) return false;
       curr = curr->next;
 
-      if (curr && curr->key - offset >= x_shape) curr = NULL;
+      if (curr && curr->key - s.offset(rec) >= s.shape(rec)) curr = NULL;
     }
   } else {
     while (curr) {
-      if (*reinterpret_cast<SDType*>(curr->val) != *reinterpret_cast<const TDType*>(t_init)) return false;
+      if (*reinterpret_cast<SDType*>(curr->val) != *t_init) return false;
       curr = curr->next;
 
-      if (curr && curr->key - offset >= x_shape) curr = NULL;
+      if (curr && curr->key - s.offset(rec) >= s.shape(rec)) curr = NULL;
     }
   }
   return true;
@@ -945,71 +928,62 @@ static bool eqeq_empty_r(const LIST_STORAGE* s, const size_t* offsets, const siz
  * This function is recursive.
  */
 template <typename LDType, typename RDType>
-static bool eqeq_r(const LIST_STORAGE* left, const size_t* l_offsets, const LIST_STORAGE* right, const size_t* r_offsets, const size_t* shape, const LIST* l, const LIST* r, size_t recursions, const void* l_init_, const void* r_init_) {
-  const LDType* l_init = reinterpret_cast<const LDType*>(l_init_);
-  const RDType* r_init = reinterpret_cast<const RDType*>(r_init_);
-
-  bool same_init = *l_init == *r_init;
-
+static bool eqeq_r(RecurseData& left, RecurseData& right, const LIST* l, const LIST* r, size_t rec) {
   NODE *lcurr = l->first,
        *rcurr = r->first;
 
-  size_t l_offset = l_offsets[left->dim - recursions - 1];
-  size_t r_offset = r_offsets[right->dim - recursions - 1];
-  size_t x_shape  = shape[left->dim - recursions - 1];
-
   // For reference matrices, make sure we start in the correct place.
-  while (lcurr && lcurr->key < l_offset) {  lcurr = lcurr->next;  }
-  while (rcurr && rcurr->key < r_offset) {  rcurr = rcurr->next;  }
-  if (rcurr && rcurr->key - r_offset >= x_shape) rcurr = NULL;
-  if (lcurr && lcurr->key - l_offset >= x_shape) lcurr = NULL;
+  while (lcurr && lcurr->key < left.offset(rec)) {  lcurr = lcurr->next;  }
+  while (rcurr && rcurr->key < right.offset(rec)) {  rcurr = rcurr->next;  }
+  if (rcurr && rcurr->key - right.offset(rec) >= left.shape(rec)) rcurr = NULL;
+  if (lcurr && lcurr->key - left.offset(rec) >= left.shape(rec)) lcurr = NULL;
 
   bool compared = false;
 
-  if (recursions) {
+  if (rec) {
 
     while (lcurr || rcurr) {
 
-      if (!rcurr || (lcurr && (lcurr->key - l_offset < rcurr->key - r_offset))) {
-        if (!eqeq_empty_r<LDType,RDType>(left, l_offsets, shape, reinterpret_cast<const LIST*>(lcurr->val), recursions-1, r_init_)) return false;
+      if (!rcurr || (lcurr && (lcurr->key - left.offset(rec) < rcurr->key - right.offset(rec)))) {
+        if (!eqeq_empty_r<LDType,RDType>(left, reinterpret_cast<const LIST*>(lcurr->val), rec-1, reinterpret_cast<const RDType*>(right.init()))) return false;
         lcurr   = lcurr->next;
-      } else if (!lcurr || (rcurr && (rcurr->key - r_offset < lcurr->key - l_offset))) {
-        if (!eqeq_empty_r<RDType,LDType>(right, r_offsets, shape, reinterpret_cast<const LIST*>(rcurr->val), recursions-1, l_init_)) return false;
+      } else if (!lcurr || (rcurr && (rcurr->key - right.offset(rec) < lcurr->key - left.offset(rec)))) {
+        if (!eqeq_empty_r<RDType,LDType>(right, reinterpret_cast<const LIST*>(rcurr->val), rec-1, reinterpret_cast<const LDType*>(left.init()))) return false;
         rcurr   = rcurr->next;
       } else { // keys are == and both present
-        if (!eqeq_r<LDType,RDType>(left, l_offsets, right, r_offsets, shape, reinterpret_cast<const LIST*>(lcurr->val), reinterpret_cast<const LIST*>(rcurr->val), recursions-1, l_init_, r_init_)) return false;
+        if (!eqeq_r<LDType,RDType>(left, right, reinterpret_cast<const LIST*>(lcurr->val), reinterpret_cast<const LIST*>(rcurr->val), rec-1)) return false;
         lcurr   = lcurr->next;
         rcurr   = rcurr->next;
       }
-      if (rcurr && rcurr->key - r_offset >= x_shape) rcurr = NULL;
-      if (lcurr && lcurr->key - l_offset >= x_shape) lcurr = NULL;
+      if (rcurr && rcurr->key - right.offset(rec) >= left.shape(rec)) rcurr = NULL;
+      if (lcurr && lcurr->key - left.offset(rec) >= left.shape(rec)) lcurr = NULL;
       compared = true;
     }
   } else {
     while (lcurr || rcurr) {
 
-      if (rcurr && rcurr->key - r_offset >= x_shape) rcurr = NULL;
-      if (lcurr && lcurr->key - l_offset >= x_shape) lcurr = NULL;
+      if (rcurr && rcurr->key - right.offset(rec) >= left.shape(rec)) rcurr = NULL;
+      if (lcurr && lcurr->key - left.offset(rec) >= left.shape(rec)) lcurr = NULL;
 
-      if (!rcurr || (lcurr && (lcurr->key - l_offset < rcurr->key - r_offset))) {
-        if (*reinterpret_cast<LDType*>(lcurr->val) != *r_init) return false;
+      if (!rcurr || (lcurr && (lcurr->key - left.offset(rec) < rcurr->key - right.offset(rec)))) {
+        if (*reinterpret_cast<LDType*>(lcurr->val) != *reinterpret_cast<const RDType*>(right.init())) return false;
         lcurr         = lcurr->next;
-      } else if (!lcurr || (rcurr && (rcurr->key - r_offset < lcurr->key - l_offset))) {
-        if (*reinterpret_cast<RDType*>(rcurr->val) != *l_init) return false;
+      } else if (!lcurr || (rcurr && (rcurr->key - right.offset(rec) < lcurr->key - left.offset(rec)))) {
+        if (*reinterpret_cast<RDType*>(rcurr->val) != *reinterpret_cast<const LDType*>(left.init())) return false;
         rcurr         = rcurr->next;
       } else { // keys == and both left and right nodes present
         if (*reinterpret_cast<LDType*>(lcurr->val) != *reinterpret_cast<RDType*>(rcurr->val)) return false;
         lcurr         = lcurr->next;
         rcurr         = rcurr->next;
       }
-      if (rcurr && rcurr->key - r_offset >= x_shape) rcurr = NULL;
-      if (lcurr && lcurr->key - l_offset >= x_shape) lcurr = NULL;
+      if (rcurr && rcurr->key - right.offset(rec) >= left.shape(rec)) rcurr = NULL;
+      if (lcurr && lcurr->key - left.offset(rec) >= left.shape(rec)) lcurr = NULL;
       compared = true;
     }
   }
 
   // Final condition: both containers are empty, and have different default values.
-  if (!compared && !lcurr && !rcurr) return *reinterpret_cast<const LDType*>(l_init) == *reinterpret_cast<const RDType*>(r_init);
+  if (!compared && !lcurr && !rcurr) return *reinterpret_cast<const LDType*>(left.init()) == *reinterpret_cast<const RDType*>(right.init());
   return true;
 }
 
