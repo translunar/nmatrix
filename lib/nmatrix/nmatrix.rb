@@ -663,7 +663,7 @@ protected
 
   {add: :+, sub: :-, mul: :*, div: :/, pow: :**, mod: :%}.each_pair do |ewop, op|
     define_method("__list_scalar_#{ewop}__") do |rhs|
-      self.__list_map_merged_stored__(rhs) { |l,r| l.send(op,r) } #.cast(stype, NMatrix.upcast(dtype, rhs.dtype))
+      self.__list_map_merged_stored__(rhs) { |l,r| l.send(op,r) }.cast(stype, NMatrix.upcast(dtype, NMatrix.guess_dtype(rhs)))
     end
   end
 

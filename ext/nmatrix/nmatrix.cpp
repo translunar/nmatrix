@@ -354,6 +354,8 @@ static VALUE nm_is_ref(VALUE self);
 
 static VALUE is_symmetric(VALUE self, bool hermitian);
 
+static VALUE nm_guess_dtype(VALUE self, VALUE v);
+
 /*
  * Macro defines an element-wise accessor function for some operation.
  *
@@ -446,6 +448,7 @@ void Init_nmatrix() {
 
 	rb_define_singleton_method(cNMatrix, "upcast", (METHOD)nm_upcast, 2);
 	rb_define_singleton_method(cNMatrix, "itype_by_shape", (METHOD)nm_itype_by_shape, 1);
+	rb_define_singleton_method(cNMatrix, "guess_dtype", (METHOD)nm_guess_dtype, 1);
 
 	//////////////////////
 	// Instance Methods //
@@ -1727,6 +1730,7 @@ static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
       result = ALLOC(NMATRIX);
       result->storage = nm_dense_storage_ew_op(op, reinterpret_cast<STORAGE*>(left->storage), NULL, right_val);
       result->stype   = left->stype;
+      break;
     case nm::LIST_STORE:
       sym = "__list_scalar_" + nm::EWOP_NAMES[op] + "__";
       return rb_funcall(left_val, rb_intern(sym.c_str()), 1, right_val);
@@ -1820,6 +1824,16 @@ static VALUE is_symmetric(VALUE self, bool hermitian) {
 ///////////////////////
 
 /*
+ * Guess the dtype given a Ruby VALUE and return it as a symbol.
+ *
+ * Not to be confused with nm_dtype_guess, which returns an nm::dtype_t. (This calls that.)
+ */
+static VALUE nm_guess_dtype(VALUE self, VALUE v) {
+  return ID2SYM(rb_intern(DTYPE_NAMES[nm_dtype_guess(v)]));
+}
+
+
+/*
  * Guess the data type given a value.
  *
  * TODO: Probably needs some work for Bignum.
@@ -1828,14 +1842,15 @@ nm::dtype_t nm_dtype_guess(VALUE v) {
   switch(TYPE(v)) {
   case T_TRUE:
   case T_FALSE:
-    return nm::BYTE;
+    return nm::RUBYOBJ;
 
   case T_STRING:
     if (RSTRING_LEN(v) == 1) {
     	return nm::BYTE;
 
     } else {
-    	rb_raise(rb_eArgError, "Strings of length > 1 may not be stored in a matrix.");
+    	return nm::RUBYOBJ;
+
     }
 
 #if SIZEOF_INT == 8

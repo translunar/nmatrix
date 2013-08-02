@@ -112,7 +112,7 @@ describe NMatrix do
     end
 
     it "should handle element-wise greater-than-or-equals (>=)" do
-      (@n >= @m).should == NMatrix.new(:list, 2, true, :object)
+      (@n >= @m).should == NMatrix.new(:dense, 2, [true], :object).cast(:list, :object)
     end
 
     it "should handle element-wise less-than-or-equals (<=)" do

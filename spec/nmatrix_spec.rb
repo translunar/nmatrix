@@ -447,7 +447,6 @@ describe NMatrix do
     end
 
     it "should iterate correctly for reduce without a block" do
-      pending "depends on list map merged stored"
       en = @nm_1d.reduce_along_dim(0, 1.0)
       en.each { |a, e| a+e }.to_f.should eq 12
       en = @nm_2d.reduce_along_dim(1, 1.0)
@@ -502,19 +501,16 @@ describe NMatrix do
     end
 
     it "should convert integer dtypes to float when calculating mean" do
-      pending "list map merged stored"
       m = N[[1,2,3], [3,4,5], :int32]
       m.mean(0).dtype.should eq :float64
     end
 
     it "should convert integer dtypes to float when calculating variance" do
-      pending "list map merged stored"
       m = N[[1,2,3], [3,4,5], :int32]
       m.variance(0).dtype.should eq :float64
     end
 
     it "should convert integer dtypes to float when calculating standard deviation" do
-      pending "list map merged stored"
       m = N[[1,2,3], [3,4,5], :int32]
       m.std(0).dtype.should eq :float64
     end
