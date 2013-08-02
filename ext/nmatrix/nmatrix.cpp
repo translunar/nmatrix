@@ -355,6 +355,7 @@ static VALUE nm_is_ref(VALUE self);
 static VALUE is_symmetric(VALUE self, bool hermitian);
 
 static VALUE nm_guess_dtype(VALUE self, VALUE v);
+static VALUE nm_min_dtype(VALUE self, VALUE v);
 
 /*
  * Macro defines an element-wise accessor function for some operation.
@@ -449,6 +450,7 @@ void Init_nmatrix() {
 	rb_define_singleton_method(cNMatrix, "upcast", (METHOD)nm_upcast, 2);
 	rb_define_singleton_method(cNMatrix, "itype_by_shape", (METHOD)nm_itype_by_shape, 1);
 	rb_define_singleton_method(cNMatrix, "guess_dtype", (METHOD)nm_guess_dtype, 1);
+	rb_define_singleton_method(cNMatrix, "min_dtype", (METHOD)nm_min_dtype, 1);
 
 	//////////////////////
 	// Instance Methods //
@@ -1832,6 +1834,74 @@ static VALUE nm_guess_dtype(VALUE self, VALUE v) {
   return ID2SYM(rb_intern(DTYPE_NAMES[nm_dtype_guess(v)]));
 }
 
+/*
+ * Get the minimum allowable dtype for a Ruby VALUE and return it as a symbol.
+ */
+static VALUE nm_min_dtype(VALUE self, VALUE v) {
+  return ID2SYM(rb_intern(DTYPE_NAMES[nm_dtype_min(v)]));
+}
+
+/*
+ * Helper for nm_dtype_min(), handling integers.
+ */
+nm::dtype_t nm_dtype_min_fixnum(int64_t v) {
+  if (v >= 0 && v <= UCHAR_MAX) return nm::BYTE;
+  else {
+    v = std::abs(v);
+    if (v <= CHAR_MAX) return nm::INT8;
+    else if (v <= SHRT_MAX) return nm::INT16;
+    else if (v <= INT_MAX) return nm::INT32;
+    else return nm::INT64;
+  }
+}
+
+/*
+ * Helper for nm_dtype_min(), handling rationals.
+ */
+nm::dtype_t nm_dtype_min_rational(VALUE vv) {
+  nm::Rational128* v = ALLOCA_N(nm::Rational128, 1);
+  rubyval_to_cval(vv, nm::RATIONAL128, v);
+
+  int64_t i = std::max(std::abs(v->n), v->d);
+  if (i <= SHRT_MAX) return nm::INT16;
+  else if (i <= INT_MAX) return nm::INT32;
+  else return nm::INT64;
+}
+
+/*
+ * Return the minimum dtype required to store a given value.
+ *
+ * This is kind of arbitrary. For Float, it always returns :float32 for example, since in some cases neither :float64
+ * not :float32 are sufficient.
+ *
+ * This function is used in upcasting for scalar math. We want to ensure that :int8 + 1 does not return an :int64, basically.
+ *
+ * FIXME: Eventually, this function should actually look at the value stored in Fixnums (for example), so that it knows
+ * whether to return :int64 or :int32.
+ */
+nm::dtype_t nm_dtype_min(VALUE v) {
+
+  switch(TYPE(v)) {
+  case T_FIXNUM:
+    return nm_dtype_min_fixnum(FIX2LONG(v));
+  case T_BIGNUM:
+    return nm::INT64;
+  case T_FLOAT:
+    return nm::FLOAT32;
+  case T_COMPLEX:
+    return nm::COMPLEX64;
+  case T_RATIONAL:
+    return nm_dtype_min_rational(v);
+  case T_STRING:
+    return RSTRING_LEN(v) == 1 ? nm::BYTE : nm::RUBYOBJ;
+  case T_TRUE:
+  case T_FALSE:
+  case T_NIL:
+  default:
+    return nm::RUBYOBJ;
+  }
+}
+
 
 /*
  * Guess the data type given a value.
@@ -1844,15 +1914,8 @@ nm::dtype_t nm_dtype_guess(VALUE v) {
   case T_FALSE:
   case T_NIL:
     return nm::RUBYOBJ;
-
   case T_STRING:
-    if (RSTRING_LEN(v) == 1) {
-    	return nm::BYTE;
-
-    } else {
-    	return nm::RUBYOBJ;
-
-    }
+    return RSTRING_LEN(v) == 1 ? nm::BYTE : nm::RUBYOBJ;
 
 #if SIZEOF_INT == 8
   case T_FIXNUM:
