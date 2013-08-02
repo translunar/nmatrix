@@ -354,22 +354,19 @@ NODE* list_storage_get_single_node(LIST_STORAGE* s, SLICE* slice)
  * Recursive helper function for each_with_indices, based on nm_list_storage_count_elements_r.
  * Handles empty/non-existent sublists.
  */
-static void each_empty_with_indices_r(LIST_STORAGE* s, const size_t* shapes, size_t recursions, VALUE& stack) {
-  size_t dim   = s->dim;
-  VALUE empty  = s->dtype == nm::RUBYOBJ ? *reinterpret_cast<VALUE*>(s->default_val) : rubyobj_from_cval(s->default_val, s->dtype).rval;
+static void each_empty_with_indices_r(nm::list_storage::RecurseData& s, size_t rec, VALUE& stack) {
+  VALUE empty  = s.dtype() == nm::RUBYOBJ ? *reinterpret_cast<VALUE*>(s.init()) : s.init_obj();
 
-  size_t shape  = shapes[s->dim - recursions - 1];
-
-  if (recursions) {
-    for (long index = 0; index < shape; ++index) {
+  if (rec) {
+    for (long index = 0; index < s.shape(rec); ++index) {
       // Don't do an unshift/shift here -- we'll let that be handled in the lowest-level iteration (recursions == 0)
       rb_ary_push(stack, LONG2NUM(index));
-      each_empty_with_indices_r(s, shapes, recursions-1, stack);
+      each_empty_with_indices_r(s, rec-1, stack);
       rb_ary_pop(stack);
     }
   } else {
     rb_ary_unshift(stack, empty);
-    for (long index = 0; index < shape; ++index) {
+    for (long index = 0; index < s.shape(rec); ++index) {
       rb_ary_push(stack, LONG2NUM(index));
       rb_yield_splat(stack);
       rb_ary_pop(stack);
@@ -381,25 +378,23 @@ static void each_empty_with_indices_r(LIST_STORAGE* s, const size_t* shapes, siz
 /*
  * Recursive helper function for each_with_indices, based on nm_list_storage_count_elements_r.
  */
-static void each_with_indices_r(LIST_STORAGE* s, const size_t* offsets, const size_t* shapes, const LIST* l, size_t recursions, VALUE& stack) {
+static void each_with_indices_r(nm::list_storage::RecurseData& s, const LIST* l, size_t rec, VALUE& stack) {
   NODE*  curr  = l->first;
-  size_t dim   = s->dim;
-  long   max   = s->shape[dim-recursions-1];
 
-  size_t offset = offsets[s->dim - recursions - 1];
-  size_t shape  = shapes[s->dim - recursions - 1];
+  size_t offset = s.offset(rec);
+  size_t shape  = s.shape(rec);
 
-  while (curr && curr->key < offset) { curr = curr->next; }
+  while (curr && curr->key < offset) curr = curr->next;
   if (curr && curr->key >= shape) curr = NULL;
 
 
-  if (recursions) {
+  if (rec) {
     for (long index = 0; index < shape; ++index) {
       rb_ary_push(stack, LONG2NUM(index));
       if (!curr || index < curr->key - offset) {
-        each_empty_with_indices_r(s, shapes, recursions-1, stack);
+        each_empty_with_indices_r(s, rec-1, stack);
       } else {
-        each_with_indices_r(s, offsets, shapes, reinterpret_cast<const LIST*>(curr->val), recursions-1, stack);
+        each_with_indices_r(s, reinterpret_cast<const LIST*>(curr->val), rec-1, stack);
         curr = curr->next;
       }
       rb_ary_pop(stack);
@@ -410,16 +405,10 @@ static void each_with_indices_r(LIST_STORAGE* s, const size_t* offsets, const si
       rb_ary_push(stack, LONG2NUM(index));
 
       if (!curr || index < curr->key - offset) {
-        if (s->dtype == nm::RUBYOBJ)
-          rb_ary_unshift(stack, *reinterpret_cast<VALUE*>(s->default_val));
-        else
-          rb_ary_unshift(stack, rubyobj_from_cval(s->default_val, s->dtype).rval);
+        rb_ary_unshift(stack, s.dtype() == nm::RUBYOBJ ? *reinterpret_cast<VALUE*>(s.init()) : s.init_obj());
 
       } else { // index == curr->key
-        if (s->dtype == nm::RUBYOBJ)
-          rb_ary_unshift(stack, *reinterpret_cast<VALUE*>(curr->val));
-        else
-          rb_ary_unshift(stack, rubyobj_from_cval(curr->val, s->dtype).rval);
+        rb_ary_unshift(stack, s.dtype() == nm::RUBYOBJ ? *reinterpret_cast<VALUE*>(curr->val) : rubyobj_from_cval(curr->val, s.dtype()).rval);
 
         curr = curr->next;
       }
@@ -436,20 +425,20 @@ static void each_with_indices_r(LIST_STORAGE* s, const size_t* offsets, const si
 /*
  * Recursive helper function for each_stored_with_indices, based on nm_list_storage_count_elements_r.
  */
-static void each_stored_with_indices_r(LIST_STORAGE* s, const size_t* offsets, const size_t* shapes, const LIST* l, size_t recursions, VALUE& stack) {
+static void each_stored_with_indices_r(nm::list_storage::RecurseData& s, const LIST* l, size_t rec, VALUE& stack) {
   NODE* curr = l->first;
 
-  size_t offset = offsets[s->dim - recursions - 1];
-  size_t shape  = shapes[s->dim - recursions - 1];
+  size_t offset = s.offset(rec);
+  size_t shape  = s.shape(rec);
 
   while (curr && curr->key < offset) { curr = curr->next; }
   if (curr && curr->key - offset >= shape) curr = NULL;
 
-  if (recursions) {
+  if (rec) {
     while (curr) {
 
       rb_ary_push(stack, LONG2NUM(static_cast<long>(curr->key - offset)));
-      each_stored_with_indices_r(s, offsets, shapes, reinterpret_cast<const LIST*>(curr->val), recursions-1, stack);
+      each_stored_with_indices_r(s, reinterpret_cast<const LIST*>(curr->val), rec-1, stack);
       rb_ary_pop(stack);
 
       curr = curr->next;
@@ -460,11 +449,7 @@ static void each_stored_with_indices_r(LIST_STORAGE* s, const size_t* offsets, c
       rb_ary_push(stack, LONG2NUM(static_cast<long>(curr->key - offset))); // add index to end
 
       // add value to beginning
-      if (s->dtype == nm::RUBYOBJ) {
-        rb_ary_unshift(stack, *reinterpret_cast<VALUE*>(curr->val));
-      } else {
-        rb_ary_unshift(stack, rubyobj_from_cval(curr->val, s->dtype).rval);
-      }
+      rb_ary_unshift(stack, s.dtype() == nm::RUBYOBJ ? *reinterpret_cast<VALUE*>(curr->val) : rubyobj_from_cval(curr->val, s.dtype()).rval);
       // yield to the whole stack (value, i, j, k, ...)
       rb_yield_splat(stack);
 
@@ -490,20 +475,12 @@ VALUE nm_list_each_with_indices(VALUE nmatrix, bool stored) {
   // If we don't have a block, return an enumerator.
   RETURN_SIZED_ENUMERATOR(nmatrix, 0, 0, 0);
 
-  LIST_STORAGE* s = NM_STORAGE_LIST(nmatrix);
-
-  size_t* shape   = s->shape;
-  size_t* offsets = ALLOCA_N(size_t, s->dim);
-  memset(offsets, 0, sizeof(size_t)*s->dim);
-  while (s != s->src) {
-    for (size_t i = 0; i < s->dim; ++i) offsets[i] += s->offset[i];
-    s = reinterpret_cast<LIST_STORAGE*>(s->src);
-  }
+  nm::list_storage::RecurseData sdata(NM_STORAGE_LIST(nmatrix));
 
   VALUE stack = rb_ary_new();
 
-  if (stored) each_stored_with_indices_r(s, offsets, shape, s->rows, s->dim - 1, stack);
-  else        each_with_indices_r(s, offsets, shape, s->rows, s->dim - 1, stack);
+  if (stored) each_stored_with_indices_r(sdata, sdata.top_level_list(), sdata.dim() - 1, stack);
+  else        each_with_indices_r(sdata, sdata.top_level_list(), sdata.dim() - 1, stack);
 
   return nmatrix;
 }
