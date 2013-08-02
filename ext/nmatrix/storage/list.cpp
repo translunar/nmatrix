@@ -71,6 +71,179 @@ static bool eqeq_r(const LIST_STORAGE* left, const size_t* l_offsets, const LIST
 template <typename SDType, typename TDType>
 static bool eqeq_empty_r(const LIST_STORAGE* s, const size_t* offsets, const size_t* shape, const LIST* l, int recursions, const void* t_init);
 
+class RecurseData {
+public:
+  // Note that providing init_obj argument does not override init.
+  RecurseData(const LIST_STORAGE* s, VALUE init_obj__ = Qnil) : ref(s), actual(s), shape_(s->shape), offsets(s->dim, 0), init_(s->default_val), init_obj_(init_obj__) {
+    while (actual->src != actual) {
+      for (size_t i = 0; i < s->dim; ++i) // update offsets as we recurse
+        offsets[i] += actual->offset[i];
+      actual = reinterpret_cast<LIST_STORAGE*>(actual->src);
+    }
+    actual_shape_ = actual->shape;
+
+    if (init_obj_ == Qnil) {
+      init_obj_ = rubyobj_from_cval(s->default_val, s->dtype).rval;
+    }
+  }
+
+  dtype_t dtype() const { return ref->dtype; }
+
+
+  size_t dim() const { return ref->dim; }
+
+  size_t shape(size_t rec) const {
+    return shape_[ref->dim - rec - 1];
+  }
+
+  size_t* copy_alloc_shape() const {
+    size_t* new_shape = ALLOC_N(size_t, ref->dim);
+    memcpy(new_shape, shape_, sizeof(size_t)*ref->dim);
+    return new_shape;
+  }
+
+  size_t actual_shape(size_t rec) const {
+    return actual_shape_[ref->dim - rec - 1];
+  }
+
+  size_t offset(size_t rec) const {
+    return offsets[ref->dim - rec - 1];
+  }
+
+  void* init() const {
+    return init_;
+  }
+
+  VALUE init_obj() const { return init_obj_; }
+
+  LIST* top_level_list() const {
+    return reinterpret_cast<LIST*>(actual->rows);
+  }
+
+  const LIST_STORAGE* ref;
+  const LIST_STORAGE* actual;
+
+  size_t* shape_; // of ref
+  size_t* actual_shape_;
+protected:
+  std::vector<size_t> offsets; // relative to actual
+  void* init_;
+  VALUE init_obj_;
+
+};
+
+/*
+ * Recursive helper for map_merged_stored_r which handles the case where one list is empty and the other is not.
+ */
+static void map_empty_stored_r(RecurseData& result, RecurseData& s, LIST* x, const LIST* l, size_t rec, bool rev, const VALUE& t_init) {
+  NODE *curr  = l->first,
+       *xcurr = NULL;
+
+  // For reference matrices, make sure we start in the correct place.
+  size_t offset   = result.offset(rec);
+  size_t x_shape  = result.shape(rec);
+
+  while (curr && curr->key < offset) {  curr = curr->next;  }
+  if (curr && curr->key - offset >= x_shape) curr = NULL;
+
+  if (rec) {
+    while (curr) {
+      LIST* val = nm::list::create();
+      map_empty_stored_r(result, s, val, reinterpret_cast<const LIST*>(curr->val), rec-1, rev, t_init);
+
+      if (!val->first) nm::list::del(val, 0);
+      else nm::list::insert_helper(x, xcurr, curr->key - offset, val);
+
+      curr = curr->next;
+      if (curr && curr->key - offset >= x_shape) curr = NULL;
+    }
+  } else {
+    while (curr) {
+      VALUE val, s_val = rubyobj_from_cval(curr->val, s.dtype()).rval;
+      if (rev) val = rb_yield_values(2, t_init, s_val);
+      else     val = rb_yield_values(2, s_val, t_init);
+
+      if (rb_funcall(val, rb_intern("!="), 1, result.init_obj()) == Qtrue)
+        xcurr = nm::list::insert_helper(x, xcurr, curr->key - offset, val);
+
+      curr = curr->next;
+      if (curr && curr->key - offset >= x_shape) curr = NULL;
+    }
+  }
+
+}
+
+
+/*
+ * Recursive helper function for nm_list_map_merged_stored
+ */
+static void map_merged_stored_r(RecurseData& result, RecurseData& left, RecurseData& right, LIST* x, const LIST* l, const LIST* r, size_t rec) {
+  NODE *lcurr = l->first,
+       *rcurr = r->first,
+       *xcurr = x->first;
+
+  // For reference matrices, make sure we start in the correct place.
+  while (lcurr && lcurr->key < left.offset(rec))  {  lcurr = lcurr->next;  }
+  while (rcurr && rcurr->key < right.offset(rec)) {  rcurr = rcurr->next;  }
+
+  if (rcurr && rcurr->key - right.offset(rec) >= result.shape(rec)) rcurr = NULL;
+  if (lcurr && lcurr->key - left.offset(rec) >= result.shape(rec))  lcurr = NULL;
+
+  if (rec) {
+    while (lcurr || rcurr) {
+      size_t key;
+      LIST*  val = nm::list::create();
+
+      if (!rcurr || (lcurr && (lcurr->key - left.offset(rec) < rcurr->key - right.offset(rec)))) {
+        map_empty_stored_r(result, left, val, reinterpret_cast<const LIST*>(lcurr->val), rec-1, false, right.init_obj());
+        key   = lcurr->key - left.offset(rec);
+        lcurr = lcurr->next;
+      } else if (!lcurr || (rcurr && (rcurr->key - right.offset(rec) < lcurr->key - left.offset(rec)))) {
+        map_empty_stored_r(result, right, val, reinterpret_cast<const LIST*>(rcurr->val), rec-1, true, left.init_obj());
+        key   = rcurr->key - right.offset(rec);
+        rcurr = rcurr->next;
+      } else { // == and both present
+        map_merged_stored_r(result, left, right, val, reinterpret_cast<const LIST*>(lcurr->val), reinterpret_cast<const LIST*>(rcurr->val), rec-1);
+        key   = lcurr->key - left.offset(rec);
+        lcurr = lcurr->next;
+        rcurr = rcurr->next;
+      }
+
+      if (!val->first) nm::list::del(val, 0); // empty list -- don't insert
+      else xcurr = nm::list::insert_helper(x, xcurr, key, val);
+
+      if (rcurr && rcurr->key - right.offset(rec) >= result.shape(rec)) rcurr = NULL;
+      if (lcurr && lcurr->key - left.offset(rec) >= result.shape(rec)) lcurr = NULL;
+    }
+  } else {
+    while (lcurr || rcurr) {
+      size_t key;
+      VALUE  val;
+
+      if (!rcurr || (lcurr && (lcurr->key - left.offset(rec) < rcurr->key - right.offset(rec)))) {
+        val   = rb_yield_values(2, rubyobj_from_cval(lcurr->val, left.dtype()).rval, right.init_obj());
+        key   = lcurr->key - left.offset(rec);
+        lcurr = lcurr->next;
+      } else if (!lcurr || (rcurr && (rcurr->key - right.offset(rec) < lcurr->key - left.offset(rec)))) {
+        val   = rb_yield_values(2, left.init_obj(), rubyobj_from_cval(rcurr->val, right.dtype()).rval);
+        key   = rcurr->key - right.offset(rec);
+        rcurr = rcurr->next;
+      } else { // == and both present
+        val   = rb_yield_values(2, rubyobj_from_cval(lcurr->val, left.dtype()).rval, rubyobj_from_cval(rcurr->val, right.dtype()).rval);
+        key   = lcurr->key - left.offset(rec);
+        lcurr = lcurr->next;
+        rcurr = rcurr->next;
+      }
+      if (rb_funcall(val, rb_intern("!="), 1, result.init_obj()) == Qtrue)
+        xcurr = nm::list::insert_helper(x, xcurr, key, val);
+
+      if (rcurr && rcurr->key - right.offset(rec) >= result.shape(rec)) rcurr = NULL;
+      if (lcurr && lcurr->key - left.offset(rec) >= result.shape(rec)) lcurr = NULL;
+    }
+  }
+}
+
+
 } // end of namespace list_storage
 
 extern "C" {
@@ -306,122 +479,6 @@ static void each_stored_with_indices_r(LIST_STORAGE* s, const size_t* offsets, c
 }
 
 
-/*
- * Recursive helper for map_merged_stored_r which handles the case where one list is empty and the other is not.
- */
-static void map_empty_stored_r(LIST_STORAGE* result, const LIST_STORAGE* s, const size_t* offsets, const size_t* shape, LIST* x, const LIST* l, size_t recursions, bool rev, const VALUE& t_init, const VALUE& init) {
-  NODE *curr  = l->first,
-       *xcurr = NULL;
-
-  // For reference matrices, make sure we start in the correct place.
-  size_t offset   = offsets[s->dim - recursions - 1];
-  size_t x_shape  = shape[s->dim - recursions - 1];
-
-  while (curr && curr->key < offset) {  curr = curr->next;  }
-  if (curr && curr->key - offset >= x_shape) curr = NULL;
-
-  if (recursions) {
-    while (curr) {
-      LIST* val = nm::list::create();
-      map_empty_stored_r(result, s, offsets, shape, val, reinterpret_cast<const LIST*>(curr->val), recursions-1, rev, t_init, init);
-
-      if (!val->first) nm::list::del(val, 0);
-      else nm::list::insert_helper(x, xcurr, curr->key - offset, val);
-
-      curr = curr->next;
-      if (curr && curr->key - offset >= x_shape) curr = NULL;
-    }
-  } else {
-    while (curr) {
-      VALUE val, s_val = rubyobj_from_cval(curr->val, s->dtype).rval;
-      if (rev) val = rb_yield_values(2, t_init, s_val);
-      else     val = rb_yield_values(2, s_val, t_init);
-
-      if (rb_funcall(val, rb_intern("!="), 1, init) == Qtrue)
-        xcurr = nm::list::insert_helper(x, xcurr, curr->key - offset, val);
-
-      curr = curr->next;
-      if (curr && curr->key - offset >= x_shape) curr = NULL;
-    }
-  }
-
-}
-
-
-/*
- * Recursive helper function for nm_list_map_merged_stored
- */
-static void map_merged_stored_r(LIST_STORAGE* result, const LIST_STORAGE* left, const size_t* l_offsets, const LIST_STORAGE* right, const size_t* r_offsets, const size_t* shape, LIST* x, const LIST* l, const LIST* r, size_t recursions, const VALUE& l_init, const VALUE& r_init, const VALUE& init) {
-  NODE *lcurr = l->first,
-       *rcurr = r->first,
-       *xcurr = x->first;
-
-  size_t l_offset = l_offsets[left->dim - recursions - 1];
-  size_t r_offset = r_offsets[right->dim - recursions - 1];
-  size_t x_shape  = shape[right->dim - recursions - 1];
-
-  // For reference matrices, make sure we start in the correct place.
-  while (lcurr && lcurr->key < l_offset) {  lcurr = lcurr->next;  }
-  while (rcurr && rcurr->key < r_offset) {  rcurr = rcurr->next;  }
-
-  if (rcurr && rcurr->key - r_offset >= x_shape) rcurr = NULL;
-  if (lcurr && lcurr->key - l_offset >= x_shape) lcurr = NULL;
-
-  if (recursions) {
-    while (lcurr || rcurr) {
-      size_t key;
-      LIST*  val = nm::list::create();
-
-      if (!rcurr || (lcurr && (lcurr->key - l_offset < rcurr->key - r_offset))) {
-        map_empty_stored_r(result, left, l_offsets, shape, val, reinterpret_cast<const LIST*>(lcurr->val), recursions-1, false, r_init, init);
-        key   = lcurr->key - l_offset;
-        lcurr = lcurr->next;
-      } else if (!lcurr || (rcurr && (rcurr->key - r_offset < lcurr->key - l_offset))) {
-        map_empty_stored_r(result, right, r_offsets, shape, val, reinterpret_cast<const LIST*>(rcurr->val), recursions-1, true, l_init, init);
-        key   = rcurr->key - r_offset;
-        rcurr = rcurr->next;
-      } else { // == and both present
-        map_merged_stored_r(result, left, l_offsets, right, r_offsets, shape, val, reinterpret_cast<const LIST*>(lcurr->val), reinterpret_cast<const LIST*>(rcurr->val), recursions-1, l_init, r_init, init);
-        key   = lcurr->key - l_offset;
-        lcurr = lcurr->next;
-        rcurr = rcurr->next;
-      }
-
-      if (!val->first) nm::list::del(val, 0); // empty list -- don't insert
-      else xcurr = nm::list::insert_helper(x, xcurr, key, val);
-
-      if (rcurr && rcurr->key - r_offset >= x_shape) rcurr = NULL;
-      if (lcurr && lcurr->key - l_offset >= x_shape) lcurr = NULL;
-    }
-  } else {
-    while (lcurr || rcurr) {
-      size_t key;
-      VALUE  val;
-
-      if (!rcurr || (lcurr && (lcurr->key - l_offset < rcurr->key - r_offset))) {
-        val   = rb_yield_values(2, rubyobj_from_cval(lcurr->val, left->dtype).rval, r_init);
-        key   = lcurr->key - l_offset;
-        lcurr = lcurr->next;
-      } else if (!lcurr || (rcurr && (rcurr->key - r_offset < lcurr->key - l_offset))) {
-        val   = rb_yield_values(2, l_init, rubyobj_from_cval(rcurr->val, right->dtype).rval);
-        key   = rcurr->key - r_offset;
-        rcurr = rcurr->next;
-      } else { // == and both present
-        val   = rb_yield_values(2, rubyobj_from_cval(lcurr->val, left->dtype).rval, rubyobj_from_cval(rcurr->val, right->dtype).rval);
-        key   = lcurr->key - l_offset;
-        lcurr = lcurr->next;
-        rcurr = rcurr->next;
-      }
-      if (rb_funcall(val, rb_intern("!="), 1, init) == Qtrue)
-        xcurr = nm::list::insert_helper(x, xcurr, key, val);
-
-      if (rcurr && rcurr->key - r_offset >= x_shape) rcurr = NULL;
-      if (lcurr && lcurr->key - l_offset >= x_shape) lcurr = NULL;
-    }
-  }
-}
-
-
 
 /*
  * Each/each-stored iterator, brings along the indices.
@@ -463,37 +520,22 @@ VALUE nm_list_map_merged_stored(int argc, VALUE* argv, VALUE left) {
   LIST_STORAGE *s   = NM_STORAGE_LIST(left),
                *t;
 
-  size_t *s_offsets = ALLOCA_N(size_t, s->dim),
-         *t_offsets = ALLOCA_N(size_t, s->dim);
-  memset(s_offsets, 0, sizeof(size_t) * s->dim);
-  memset(t_offsets, 0, sizeof(size_t) * s->dim);
-
-  // Before we dispense with s, we need to copy down the slice shape info so we can make a new matrix.
-	size_t* shape = ALLOC_N(size_t, s->dim);
-	memcpy(shape, s->shape, sizeof(size_t) * s->dim);
-
   // For each matrix, if it's a reference, we want to deal directly with the original (with appropriate offsetting)
-  while (s->src != s) {
-    for (size_t i = 0; i < s->dim; ++i) s_offsets[i] += s->offset[i];
-    s = reinterpret_cast<LIST_STORAGE*>(s->src);
-  }
+  nm::list_storage::RecurseData sdata(s);
+
+  void* scalar_init = NULL;
+  size_t* shape;
 
   // right might be a scalar, in which case this is a scalar operation.
   if (TYPE(right) != T_DATA || (RDATA(right)->dfree != (RUBY_DATA_FUNC)nm_delete && RDATA(right)->dfree != (RUBY_DATA_FUNC)nm_delete_ref)) {
     nm::dtype_t r_dtype = nm_dtype_guess(right);
 
-    size_t* shape       = ALLOC_N(size_t, s->dim);
-    memcpy(shape, s->shape, s->dim);
-    void *scalar_init   = rubyobj_to_cval(right, r_dtype); // make a copy of right
+    scalar_init         = rubyobj_to_cval(right, r_dtype); // make a copy of right
 
-    t                   = reinterpret_cast<LIST_STORAGE*>(nm_list_storage_create(r_dtype, shape, s->dim, scalar_init));
+    t                   = reinterpret_cast<LIST_STORAGE*>(nm_list_storage_create(r_dtype, sdata.copy_alloc_shape(), s->dim, scalar_init));
     scalar              = true;
   } else {
     t                   = NM_STORAGE_LIST(right); // element-wise, not scalar.
-    while (t->src != t) {
-      for (size_t i = 0; i < t->dim; ++i) t_offsets[i] += t->offset[i];
-      t  = reinterpret_cast<LIST_STORAGE*>(t->src);
-    }
   }
 
   //if (!rb_block_given_p()) {
@@ -502,19 +544,19 @@ VALUE nm_list_map_merged_stored(int argc, VALUE* argv, VALUE left) {
   // If we don't have a block, return an enumerator.
   RETURN_SIZED_ENUMERATOR(left, 0, 0, 0); // FIXME: Test this. Probably won't work. Enable above code instead.
 
-  // Figure out a default value if one wasn't provided by the user.
-  VALUE s_init = rubyobj_from_cval(s->default_val, s->dtype).rval,
-        t_init = rubyobj_from_cval(t->default_val, t->dtype).rval;
-  if (init == Qnil) init = rb_yield_values(2, s_init, t_init);
+  // Figure out default value if none provided by the user
+  nm::list_storage::RecurseData tdata(t);
+  if (init == Qnil) init = rb_yield_values(2, sdata.init_obj(), tdata.init_obj());
 
 	// Allocate a new shape array for the resulting matrix.
   void* init_val = ALLOC(VALUE);
   memcpy(init_val, &init, sizeof(VALUE));
 
-  NMATRIX* result = nm_create(nm::LIST_STORE, nm_list_storage_create(nm::RUBYOBJ, shape, s->dim, init_val));
+  NMATRIX* result = nm_create(nm::LIST_STORE, nm_list_storage_create(nm::RUBYOBJ, sdata.copy_alloc_shape(), s->dim, init_val));
   LIST_STORAGE* r = reinterpret_cast<LIST_STORAGE*>(result->storage);
+  nm::list_storage::RecurseData rdata(r, init);
 
-  map_merged_stored_r(r, s, s_offsets, t, t_offsets, shape, r->rows, s->rows, t->rows, s->dim - 1, s_init, t_init, init);
+  map_merged_stored_r(rdata, sdata, tdata, rdata.top_level_list(), sdata.top_level_list(), tdata.top_level_list(), sdata.dim() - 1);
 
   // If we are working with a scalar operation
   if (scalar) nm_list_storage_delete(t);
@@ -894,6 +936,7 @@ static bool eqeq_empty_r(const LIST_STORAGE* s, const size_t* offsets, const siz
   }
   return true;
 }
+
 
 
 /*
