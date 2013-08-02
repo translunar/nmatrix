@@ -154,9 +154,7 @@ extern "C" {
   static VALUE nm_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1, VALUE k2, VALUE ipiv, VALUE incx);
   static VALUE nm_clapack_scal(VALUE self, VALUE n, VALUE scale, VALUE vector, VALUE incx);
   static VALUE nm_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
-  //static VALUE nm_lapack_gesvd(VALUE argc, VALUE* argv, VALUE self);
-  //static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE work, VALUE lwork, VALUE rwork, VALUE info);
-  static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE work, VALUE lwork, VALUE info); // NO RWORK
+  static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE work, VALUE lwork, VALUE info, VALUE rwork);
   static VALUE nm_gesvd(VALUE self, VALUE job_type, VALUE a, VALUE s, VALUE u, VALUE vt);
   // static VALUE nm_clapack_gesdd(VALUE self, VALUE order, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE work, VALUE lwork, VALUE iwork); // TODO
 } // end of extern "C" block
@@ -897,7 +895,7 @@ static VALUE gesvd(char *jobu, char *jobvt,
     void* vt, int ldvt, 
     int lwork, nm::dtype_t dtype) 
 {
-  int info = 0;
+/*  int info = 0;
   if (dtype == nm::FLOAT64) {
     double* A = reinterpret_cast<double*>(a);
     double* S = reinterpret_cast<double*>(s);
@@ -957,7 +955,8 @@ static VALUE gesvd(char *jobu, char *jobvt,
   } else {
     rb_raise(nm_eDataTypeError, "Illegal value in source, at position %i", info);
     return Qfalse;
-  }
+  }*/
+  return Qnil;
 }
 /*
  * Function signature conversion for calling CBLAS' gesvd functions as directly as possible.
@@ -968,7 +967,7 @@ static VALUE gesvd(char *jobu, char *jobvt,
  *
  * For documentation: http://www.netlib.org/lapack/double/dgesvd.f
  */
-static VALUE nm_gesvd(VALUE self, VALUE job_type, VALUE a, VALUE s, VALUE u, VALUE vt) { 
+/*static VALUE nm_gesvd(VALUE self, VALUE job_type, VALUE a, VALUE s, VALUE u, VALUE vt) { 
   //Raise errors if all dtypes aren't matching...? Here or in the Ruby code
 
   // Conditional evaluations of the job_type, setting jobu, jobvt
@@ -1006,9 +1005,7 @@ static VALUE nm_gesvd(VALUE self, VALUE job_type, VALUE a, VALUE s, VALUE u, VAL
   size_t ldvt = std::max(1, int(n));
   size_t lwork = std::max(std::max(1,3*std::min(intm, intn) + std::max(intm, intn)),5*std::min(intm,intn));
 
-  /*VALUE resp;
-  try { */
-    VALUE resp = gesvd(
+  VALUE resp = gesvd(
         &jobu,&jobvt,
         m, n, 
         NM_STORAGE_DENSE(a)->elements, lda,
@@ -1017,14 +1014,58 @@ static VALUE nm_gesvd(VALUE self, VALUE job_type, VALUE a, VALUE s, VALUE u, VAL
         NM_STORAGE_DENSE(vt)->elements, ldvt,
         lwork, dtype);
         
-    // make this last function templated and feed the elements directly
-    /*
-  } catch (int e) {
-    char tmp[20];
-    sprintf(tmp, "Error#: %i, cerr: %i", FIX2INT(resp), e);
-    rb_raise(rb_eArgError, tmp );
-    return 0;
-  }*/
+  return resp;
+}*/
+static VALUE nm_gesvd(VALUE self, VALUE job_type, VALUE a, VALUE s, VALUE u, VALUE vt) { 
+  //Raise errors if all dtypes aren't matching...? Here or in the Ruby code
+
+  // Conditional evaluations of the job_type, setting jobu, jobvt
+  char jobu = 'N';
+  char jobvt = 'N';
+  if (rb_to_id(job_type) == rb_intern("both")) {
+    jobu = 'S';
+    jobvt = 'S';
+  } else if ( rb_to_id(job_type) == rb_intern("all_values")) {
+    jobu = 'A';
+    jobvt = 'A';
+  } else if ( rb_to_id(job_type) == rb_intern("left")) {
+    jobu = 'S';
+  } else if ( rb_to_id(job_type) == rb_intern("right")) {
+    jobvt = 'S';
+  } else if ( rb_to_id(job_type) == rb_intern("left_matrix")) {
+    jobu = 'A';
+  } else if ( rb_to_id(job_type) == rb_intern("right_matrix")) {
+    jobvt = 'A';
+  } else if ( rb_to_id(job_type) == rb_intern("overwrite_left")) {
+    jobu = 'O';
+  } else if ( rb_to_id(job_type) == rb_intern("overwrite_right")) {
+    jobvt = 'O';
+  } else if ( rb_to_id(job_type) == rb_intern("none")) {
+  } else {
+    rb_raise(rb_eArgError, "Improper job_type value given");
+  }
+  nm::dtype_t dtype = NM_DTYPE(a);
+  size_t m = NM_STORAGE_DENSE(a)->shape[0];
+  size_t n = NM_STORAGE_DENSE(a)->shape[1];
+  int intm = int(m);
+  int intn = int(n);
+  size_t lda = std::max(1, int(m));
+  size_t ldu = std::max(1, int(m));
+  size_t ldvt = std::max(1, int(n));
+  size_t lwork = std::max(std::max(1,3*std::min(intm, intn) + std::max(intm, intn)),5*std::min(intm,intn));
+  size_t work_shape[2] = {1, lwork};
+  VALUE work = nm::dense_storage::nm_create(nm::DENSE_STORE, nm::dense_storage::nm_dense_storage_create(dtype, work_shape, lwork, NULL, lwork));
+  int info = 0;
+  VALUE resp = nm_lapack_gesvd(self,
+      rb_str_new2(&jobu),rb_str_new2(&jobvt),
+      INT2FIX(m), INT2FIX(n), 
+      a, INT2FIX(lda),
+      s, 
+      u, INT2FIX(ldu),
+      vt, INT2FIX(ldvt),
+      work, INT2FIX(lwork), 
+      INT2FIX(info), Qnil);
+
   return resp;
 }
 /*
@@ -1036,13 +1077,9 @@ template <typename DType>
 static inline lapack_gesvd_nothrow() {
 }
  */
-/*static VALUE nm_lapack_gesvd(VALUE argc, VALUE* argv, VALUE self) {
- // VALUE jobu, jobvt, m, n, a, lda, s, u, ldu, vt, ldvt, work, lwork, info, rwork;
-  //rb_scan_args(argc, argv, "12*1", &jobu, &jobvt, &m, &n, &a, &lda, &s, &u, &ldu, &vt, &ldvt, &work, &lwork, &info, &rwork); */
-    //static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE work, VALUE lwork, VALUE info, VALUE rwork) { // NO RWORK
-    static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE work, VALUE lwork, VALUE info) {
-  // static void (*ttable[nm::NUM_DTYPES])(char*, char*, int*, int*, void*, int*, void*, void*, int*, void*, int*, void*, int*, void*, int*) = { 
-  static int (*ttable[nm::NUM_DTYPES])(char*, char*, int, int, void*, int, void*, void*, int, void*, int, void*, int, int) = { // no rwork
+static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE work, VALUE lwork, VALUE info, VALUE rwork) { 
+  static int (*ttable[nm::NUM_DTYPES])(char*, char*, int, int, void*, int, void*, void*, int, void*, int, void*, int, int, void*) = { 
+  // static int (*ttable[nm::NUM_DTYPES])(char*, char*, int, int, void*, int, void*, void*, int, void*, int, void*, int, int) = { // no rwork
     NULL, NULL, NULL, NULL, NULL, // no integer ops
     nm::math::lapack_gesvd_nothrow<float,float>,
     nm::math::lapack_gesvd_nothrow<double,double>,
@@ -1056,20 +1093,22 @@ static inline lapack_gesvd_nothrow() {
     rb_raise(nm_eDataTypeError, "This operation is only available for BLAS datatypes");
     return Qfalse;
   } else {
+    void* RWORK;
     if (dtype == nm::COMPLEX64 || dtype == nm::COMPLEX128) {
-
+      void* RWORK = NM_STORAGE_DENSE(rwork)->elements;
     } else if (dtype == nm::FLOAT32 || dtype == nm::FLOAT64) {
-      // Nullify RWORK?
+      void* RWORK = NULL;
     }
-
+    char* tmp = RSTRING_PTR(jobu);
+    char* tmp2 = RSTRING_PTR(jobvt);
     int info_response = ttable[dtype](RSTRING_PTR(jobu),RSTRING_PTR(jobvt),
       FIX2INT(m), FIX2INT(n), 
       NM_STORAGE_DENSE(a)->elements, FIX2INT(lda),
       NM_STORAGE_DENSE(s)->elements, 
       NM_STORAGE_DENSE(u)->elements, FIX2INT(ldu),
       NM_STORAGE_DENSE(vt)->elements, FIX2INT(ldvt),
-      NM_STORAGE_DENSE(lwork)->elements, FIX2INT(lwork), info);
-    return Qtrue;
+      NM_STORAGE_DENSE(work)->elements, FIX2INT(lwork), FIX2INT(info), RWORK );
+    return INT2FIX(info_response);
   }
 }
 

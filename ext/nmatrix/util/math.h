@@ -828,7 +828,7 @@ inline void lapack_gesvd(char *jobu, char *jobvt,
         vt, ldvt, work, lwork, 
         info);
 }
-inline void lapack_gesvd(char *jobu, char *jobvt, 
+/*inline void lapack_gesvd(char *jobu, char *jobvt, 
   int *m, int *n, 
   nm::Complex64 *a, int *lda,   
   nm::Complex64 *s, 
@@ -853,7 +853,9 @@ inline void lapack_gesvd(char *jobu, char *jobvt,
       a, lda, s, u, ldu,
       vt, ldvt, work, lwork,
       rwork, info);
-}/*
+}
+*/
+/*
  * Function signature conversion for calling CBLAS' gesvd functions as directly as possible.
  * 
  * I'm greatly tempted, and would rather see a wrapped version, which I'm not sure where I should place.
@@ -866,14 +868,15 @@ static int lapack_gesvd_nothrow(char *jobu, char *jobvt,
   void *s, 
   void *u, int ldu,  
   void *vt, int ldvt,
-  void *work,  int lwork,// void* rwork,
-  int info) {
+  void *work,  int lwork,
+  int info, void *rwork) {
   DType* A = reinterpret_cast<DType*>(a);
   DType* S = reinterpret_cast<DType*>(s);
   DType* U = reinterpret_cast<DType*>(u);
   DType* VT = reinterpret_cast<DType*>(vt);
   DType* WORK = reinterpret_cast<DType*>(work);
-  //CType* RWORK = reinterpret_cast<CType*>(rwork);
+  
+  lapack_gesvd(jobu, jobvt, &m, &n, A, &lda, S, U, &ldu, VT, &ldvt, WORK, &lwork, &info);
   
   return info;
 }
