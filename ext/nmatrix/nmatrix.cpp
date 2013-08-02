@@ -970,10 +970,10 @@ static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
 
   size_t init_cap = 0, init_val_len = 0;
   void* init_val  = NULL;
-  if (NM_RUBYVAL_IS_NUMERIC(argv[1+offset]) || TYPE(argv[1+offset]) == T_ARRAY) {
+  if (!SYMBOL_P(argv[1+offset]) || TYPE(argv[1+offset]) == T_ARRAY) {
   	// Initial value provided (could also be initial capacity, if yale).
 
-    if (stype == nm::YALE_STORE) {
+    if (stype == nm::YALE_STORE && NM_RUBYVAL_IS_NUMERIC(argv[1+offset])) {
       init_cap = FIX2UINT(argv[1+offset]);
 
     } else {
@@ -1842,6 +1842,7 @@ nm::dtype_t nm_dtype_guess(VALUE v) {
   switch(TYPE(v)) {
   case T_TRUE:
   case T_FALSE:
+  case T_NIL:
     return nm::RUBYOBJ;
 
   case T_STRING:
@@ -1906,7 +1907,6 @@ nm::dtype_t nm_dtype_guess(VALUE v) {
 
     return nm_dtype_guess(RARRAY_PTR(v)[0]);
 
-  case T_NIL:
   default:
     rb_raise(rb_eArgError, "Unable to guess a data type from provided parameters; data type must be specified manually.");
   }

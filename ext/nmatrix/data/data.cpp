@@ -241,7 +241,7 @@ void rubyval_to_cval(VALUE val, nm::dtype_t dtype, void* loc) {
 			break;
 
 		case RUBYOBJ:
-		  *reinterpret_cast<VALUE*>(loc)        = RubyObject(val).rval;
+		  *reinterpret_cast<VALUE*>(loc)        = val;
 			//rb_raise(rb_eTypeError, "Attempting a bad conversion from a Ruby value.");
 			break;
 

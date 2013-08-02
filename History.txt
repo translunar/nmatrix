@@ -193,7 +193,7 @@
 
 === 0.0.6 / 2013-??-??
 
-* 3 major enhancements:
+* 5 major enhancements:
 
   * Refactored iteration, so that each storage type now has each of:
     #each, #each_with_indices, #each_stored_with_indices
@@ -201,12 +201,19 @@
   * Added element-wise power function (**) for dense matrices (by
     @agarie)
 
-  * Dramatically improved list matrix element-wise functions so C++
-    templates are no longer necessary; element-wise operations may
-    now be written in protected Ruby methods that look like
-    NMatrix#__list_elementwise_op__
+  * Dramatically improved list matrix element-wise and scalar
+    functions so C++ templates are no longer necessary; element-wise
+    operations may now be written in protected Ruby methods that look
+    like NMatrix#__list_elementwise_op__ and
+    NMatrix#__list_scalar_op__
 
-* 7 minor enhancements:
+  * Element-wise and scalar operations that might return a true or
+    false now return Ruby matrices (for :list; still pending for
+    dense and yale)
+
+  * Dramatically improved speed of compilation
+
+* 13 minor enhancements:
 
   * Improved documentation for exposed BLAS and LAPACK functions
 
@@ -249,6 +256,13 @@
 
   * Re-enabled list storage element-wise mod (%) method
 
+  * Added NMatrix::guess_dtype class method, which allows you to
+    figure out what dtype (roughly) should be used for any given
+    Ruby value (e.g., 3)
+
+  * String and nil objects in NMatrix cells are no longer outlawed
+    (but are not supported), provided they are of the :object dtype
+
 * 3 bug fixes:
 
   * Corrected BLAS::rot bounds checking on optional n argument
@@ -257,3 +271,6 @@
     both involve a square root
 
   * Repaired list matrix element-wise functions
+
+  * Non-numeric initial values are now permissible for list matrices
+    (e.g., nil, true, false, etc.)
