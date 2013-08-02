@@ -34,7 +34,7 @@
  * Standard Includes
  */
 
-#include <stdlib.h>
+#include <cstdlib>
 
 /*
  * Project Includes

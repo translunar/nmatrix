@@ -122,8 +122,10 @@ class NMatrix
         end
       end
       h
-    else # dense and list should use a C internal functions.
-      to_hash_c
+    else # dense and list should use a C internal function.
+      # FIXME: Write a C internal to_h function.
+      m = stype == :dense ? self.cast(:list, self.dtype) : self
+      m.__list_to_hash__
     end
   end
   alias :to_h :to_hash
@@ -293,6 +295,7 @@ class NMatrix
     '[' + ary.collect { |a| a ? a : 'nil'}.join(',') + ']'
   end
 
+
   ##
   # call-seq:
   #   each_along_dim() -> Enumerator
@@ -316,6 +319,7 @@ class NMatrix
       yield self[*dims]
     end
   end
+
 
   ##
   # call-seq:
@@ -508,7 +512,7 @@ class NMatrix
 
   ##
   # call-seq:
-  #   to_f() -> Float
+  #   to_f -> Float
   #
   # Converts an nmatrix with a single element (but any number of dimensions)
   #  to a float.
@@ -523,8 +527,24 @@ class NMatrix
 
   ##
   # call-seq:
-  #   map() -> Enumerator
-  #   map() { |elem| block } -> NMatrix
+  #   each -> Enumerator
+  #
+  # Enumerate through the matrix. @see Enumerable#each
+  #
+  # For dense, this actually calls a specialized each iterator (in C). For yale and list, it relies upon
+  # #each_with_indices (which is about as fast as reasonably possible for C code).
+  def each &block
+    if self.stype == :dense
+      self.__dense_each__(&block)
+    else
+      self.each_with_indices(&block)
+    end
+  end
+
+  ##
+  # call-seq:
+  #   map -> Enumerator
+  #   map { |elem| block } -> NMatrix
   #
   # @see Enumerable#map
   #
@@ -537,8 +557,8 @@ class NMatrix
 
   ##
   # call-seq:
-  #   map!() -> Enumerator
-  #   map!() { |elem| block } -> NMatrix
+  #   map! -> Enumerator
+  #   map! { |elem| block } -> NMatrix
   #
   # Maps in place.
   # @see #map
@@ -620,7 +640,45 @@ class NMatrix
     end
   end
 
+
+  def method_missing name, *args, &block #:nodoc:
+    if name.to_s =~ /^__list_elementwise_.*__$/
+      raise NotImplementedError, "requested list matrix element-wise operation"
+    elsif name.to_s =~ /^__yale_scalar_.*__$/
+      raise NotImplementedError, "requested yale scalar element-wise operation"
+    else
+      super(name, *args, &block)
+    end
+  end
+
 protected
+  # Define the element-wise operations for lists. Note that the __list_map_merged_stored__ iterator returns a Ruby Object
+  # matrix, which we then cast back to the appropriate type. If you don't want that, you can redefine these functions in
+  # your own code.
+  {add: :+, sub: :-, mul: :*, div: :/, pow: :**, mod: :%}.each_pair do |ewop, op|
+    define_method("__list_elementwise_#{ewop}__") do |rhs|
+      self.__list_map_merged_stored__(rhs) { |l,r| l.send(op,r) }.cast(stype, NMatrix.upcast(dtype, rhs.dtype))
+    end
+  end
+
+  {add: :+, sub: :-, mul: :*, div: :/, pow: :**, mod: :%}.each_pair do |ewop, op|
+    define_method("__list_scalar_#{ewop}__") do |rhs|
+      self.__list_map_merged_stored__(rhs) { |l,r| l.send(op,r) }.cast(stype, NMatrix.upcast(dtype, NMatrix.guess_dtype(rhs)))
+    end
+  end
+
+  # Equality operators do not involve a cast. We want to get back matrices of TrueClass and FalseClass.
+  {eqeq: :==, neq: :!=, lt: :<, gt: :>, leq: :<=, geq: :>=}.each_pair do |ewop, op|
+    define_method("__list_elementwise_#{ewop}__") do |rhs|
+      self.__list_map_merged_stored__(rhs) { |l,r| l.send(op,r) }
+    end
+  end
+
+  # This is how you write an individual element-wise operation function:
+  #def __list_elementwise_add__ rhs
+  #  self.__list_map_merged_stored__(rhs){ |l,r| l+r }.cast(self.stype, NMatrix.upcast(self.dtype, rhs.dtype))
+  #end
+
   def inspect_helper #:nodoc:
     ary = []
     ary << "shape:[#{shape.join(',')}]" << "dtype:#{dtype}" << "stype:#{stype}"
@@ -639,4 +697,6 @@ protected
 
     ary
   end
+
+
 end

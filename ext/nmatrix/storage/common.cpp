@@ -52,19 +52,26 @@
  */
 
 extern "C" {
-/*
- * Calculate the number of elements in the dense storage structure, based on
- * shape and dim.
- */
-size_t nm_storage_count_max_elements(const STORAGE* storage) {
-  unsigned int i;
-  size_t count = 1;
-  
-  for (i = storage->dim; i-- > 0;) {
-		count *= storage->shape[i];
+  /*
+   * Calculate the number of elements in the dense storage structure, based on
+   * shape and dim.
+   */
+  size_t nm_storage_count_max_elements(const STORAGE* storage) {
+    unsigned int i;
+    size_t count = 1;
+
+    for (i = storage->dim; i-- > 0;) {
+      count *= storage->shape[i];
+    }
+
+    return count;
   }
-  
-  return count;
-}
+
+  // Helper function used only for the RETURN_SIZED_ENUMERATOR macro. Returns the length of
+  // the matrix's storage.
+  VALUE nm_enumerator_length(VALUE nmatrix) {
+    long len = nm_storage_count_max_elements(NM_STORAGE_DENSE(nmatrix));
+    return LONG2NUM(len);
+  }
 
 } // end of extern "C" block

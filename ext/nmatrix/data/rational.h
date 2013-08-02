@@ -91,6 +91,8 @@ class Rational {
 	  rb_raise(rb_eNotImpError, "cannot convert from complex to rational");
 	}
 
+	Rational(const RubyObject& other);
+
   /*
    * Rational inverse function -- creates a copy, but inverted.
    */

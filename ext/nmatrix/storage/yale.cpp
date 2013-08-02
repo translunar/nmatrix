@@ -91,7 +91,6 @@ extern "C" {
   static VALUE nm_ija(int argc, VALUE* argv, VALUE self);
 
   static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self);
-  static VALUE nm_vector_insert(int argc, VALUE* argv, VALUE self);
 
 
 } // end extern "C" block
@@ -1226,22 +1225,59 @@ static STORAGE* matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resu
 
 // Helper function used only for the RETURN_SIZED_ENUMERATOR macro. Returns the length of
 // the matrix's storage.
-static VALUE nm_yale_enumerator_length(VALUE nmatrix) {
+static VALUE nm_yale_stored_enumerator_length(VALUE nmatrix) {
   long len = nm_yale_storage_get_size(NM_STORAGE_YALE(nmatrix));
   return LONG2NUM(len);
 }
 
 
 template <typename DType, typename IType>
-struct yale_each_stored_with_indices_helper {
-  static VALUE iterate(VALUE nm) {
+struct yale_iteration_helper {
 
+  static VALUE iterate_with_indices(VALUE nm) {
     YALE_STORAGE* s = NM_STORAGE_YALE(nm);
-    DType* a    = reinterpret_cast<DType*>(s->a);
-    IType* ija  = reinterpret_cast<IType*>(s->ija);
+    DType* a        = reinterpret_cast<DType*>(s->a);
+    IType* ija      = reinterpret_cast<IType*>(s->ija);
 
     // If we don't have a block, return an enumerator.
     RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_yale_enumerator_length);
+
+    // Iterate in two dimensions.
+    for (long i = 0; i < s->shape[0]; ++i) {
+      VALUE ii = LONG2NUM(i);
+
+      IType k = ija[i], k_next = ija[i+1];
+
+      for (long j = 0; j < s->shape[1]; ++j) {
+        VALUE v, jj = LONG2NUM(j);
+
+        // zero is stored in s->shape[0]
+        if (i == j) {
+          v = rubyobj_from_cval(&(a[i]), NM_DTYPE(nm)).rval;
+        } else {
+          // Walk through the row until we find the correct location.
+          while (ija[k] < j && k < k_next) ++k;
+          if (k < k_next && ija[k] == j) {
+            v = rubyobj_from_cval(&(a[k]), NM_DTYPE(nm)).rval;
+            ++k;
+          } else v = rubyobj_from_cval(&(a[s->shape[0]]), NM_DTYPE(nm)).rval;
+        }
+        rb_yield_values(3, v, ii, jj);
+      }
+    }
+
+    return nm;
+  }
+
+
+  static VALUE iterate_stored_with_indices(VALUE nm) {
+
+    YALE_STORAGE* s = NM_STORAGE_YALE(nm);
+    DType* a        = reinterpret_cast<DType*>(s->a);
+    IType* ija      = reinterpret_cast<IType*>(s->ija);
+
+    // If we don't have a block, return an enumerator.
+    RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_yale_stored_enumerator_length);
 
     // Iterate along diagonal
     for (size_t k = 0; k < s->shape[0]; ++k) {
@@ -1263,7 +1299,7 @@ struct yale_each_stored_with_indices_helper {
               jj = LONG2NUM(j);
 
         VALUE v = rubyobj_from_cval(&(a[p]), NM_DTYPE(nm)).rval;
-        rb_yield_values(3, v, ii, jj );
+        rb_yield_values(3, v, ii, jj);
       }
     }
 
@@ -1273,15 +1309,50 @@ struct yale_each_stored_with_indices_helper {
 
 
 template <typename IType>
-struct yale_each_stored_with_indices_helper<RubyObject, IType> {
-  static VALUE iterate(VALUE nm) {
-
+struct yale_iteration_helper<RubyObject, IType> {
+  static VALUE iterate_with_indices(VALUE nm) {
     YALE_STORAGE* s = NM_STORAGE_YALE(nm);
     RubyObject* a   = reinterpret_cast<RubyObject*>(s->a);
     IType* ija      = reinterpret_cast<IType*>(s->ija);
 
     // If we don't have a block, return an enumerator.
     RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_yale_enumerator_length);
+
+    // Iterate in two dimensions.
+    for (long i = 0; i < s->shape[0]; ++i) {
+      VALUE ii = LONG2NUM(i);
+
+      IType k = ija[i], k_next = ija[i+1];
+
+      for (long j = 0; j < s->shape[1]; ++j) {
+        VALUE v, jj = LONG2NUM(j);
+
+        // zero is stored in s->shape[0]
+        if (i == j) {
+          v = a[i].rval;
+        } else {
+          // Walk through the row until we find the correct location.
+          while (ija[k] < j && k < k_next) ++k;
+          if (k < k_next && ija[k] == j) {
+            v = a[k].rval;
+            ++k;
+          } else v = a[s->shape[0]].rval;
+        }
+        rb_yield_values(3, v, ii, jj);
+      }
+    }
+
+    return nm;
+  }
+
+  static VALUE iterate_stored_with_indices(VALUE nm) {
+
+    YALE_STORAGE* s = NM_STORAGE_YALE(nm);
+    RubyObject* a   = reinterpret_cast<RubyObject*>(s->a);
+    IType* ija      = reinterpret_cast<IType*>(s->ija);
+
+    // If we don't have a block, return an enumerator.
+    RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_yale_stored_enumerator_length);
 
     // Iterate along diagonal
     for (size_t k = 0; k < s->shape[0]; ++k) {
@@ -1292,8 +1363,8 @@ struct yale_each_stored_with_indices_helper<RubyObject, IType> {
 
     // Iterate through non-diagonal elements, row by row
     for (long i = 0; i < s->shape[0]; ++i) {
-      long p      = static_cast<long>( ija[i]   ),
-           next_p = static_cast<long>( ija[i+1] );
+      IType p      = ija[i],
+            next_p = ija[i+1];
 
       for (; p < next_p; ++p) {
         long j = static_cast<long>(ija[p]);
@@ -1315,7 +1386,12 @@ struct yale_each_stored_with_indices_helper<RubyObject, IType> {
  */
 template <typename DType, typename IType>
 static VALUE yale_each_stored_with_indices(VALUE nm) {
-  return yale_each_stored_with_indices_helper<DType, IType>::iterate(nm);
+  return yale_iteration_helper<DType, IType>::iterate_stored_with_indices(nm);
+}
+
+template <typename DType, typename IType>
+static VALUE yale_each_with_indices(VALUE nm) {
+  return yale_iteration_helper<DType, IType>::iterate_with_indices(nm);
 }
 
 
@@ -1345,7 +1421,6 @@ void nm_init_yale_functions() {
   rb_define_method(cNMatrix_YaleFunctions, "yale_lu", (METHOD)nm_lu, 0);
 
   rb_define_method(cNMatrix_YaleFunctions, "yale_nd_row", (METHOD)nm_nd_row, -1);
-  rb_define_method(cNMatrix_YaleFunctions, "yale_vector_insert", (METHOD)nm_vector_insert, -1);
 
   rb_define_const(cNMatrix_YaleFunctions, "YALE_GROWTH_CONSTANT", rb_float_new(nm::yale_storage::GROWTH_CONSTANT));
 }
@@ -1356,7 +1431,18 @@ void nm_init_yale_functions() {
 /////////////////
 
 
+/* C interface for NMatrix#each_with_indices (Yale) */
+VALUE nm_yale_each_with_indices(VALUE nmatrix) {
+  nm::dtype_t d = NM_DTYPE(nmatrix);
+  nm::itype_t i = NM_ITYPE(nmatrix);
 
+  NAMED_LI_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_each_with_indices, VALUE, VALUE)
+
+  return ttable[d][i](nmatrix);
+}
+
+
+/* C interface for NMatrix#each_stored_with_indices (Yale) */
 VALUE nm_yale_each_stored_with_indices(VALUE nmatrix) {
   nm::dtype_t d = NM_DTYPE(nmatrix);
   nm::itype_t i = NM_ITYPE(nmatrix);
@@ -1365,6 +1451,7 @@ VALUE nm_yale_each_stored_with_indices(VALUE nmatrix) {
 
   return ttable[d][i](nmatrix);
 }
+
 
 
 /*
@@ -1882,20 +1969,18 @@ static VALUE nm_ija(int argc, VALUE* argv, VALUE self) {
  *     yale_nd_row -> ...
  *
  * This function gets the non-diagonal contents of a Yale matrix row.
- * The first argument should be the row index. The optional second argument may be :hash or :array, but defaults
- * to :hash. If :array is given, it will only return the Hash keys (the column indices).
+ * The first argument should be the row index. The optional second argument may be :hash or :keys, but defaults
+ * to :hash. If :keys is given, it will only return the Hash keys (the column indices).
  *
  * This function is meant to accomplish its purpose as efficiently as possible. It does not check for appropriate
  * range.
- *
- * FIXME: :array doesn't make sense. This should be :keys or :values to indicate which array we want.
  */
 static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self) {
   VALUE i_, as;
   rb_scan_args(argc, argv, "11", &i_, &as);
 
-  bool array = false;
-  if (as != Qnil && rb_to_id(as) != nm_rb_hash) array = true;
+  bool keys = false;
+  if (as != Qnil && rb_to_id(as) != nm_rb_hash) keys = true;
 
   size_t i = FIX2INT(i_);
 
@@ -1912,7 +1997,7 @@ static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self) {
   //std::cerr << "diff = " << diff << "\tpos = " << pos << "\tnextpos = " << nextpos << std::endl;
 
   VALUE ret; // HERE
-  if (array) {
+  if (keys) {
     ret = rb_ary_new3(diff);
 
     for (size_t idx = pos; idx < nextpos; ++idx) {
@@ -1933,7 +2018,7 @@ static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self) {
 
 /*
  * call-seq:
- *     yale_vector_insert -> Fixnum
+ *     yale_vector_set(i, column_index_array, cell_contents_array, pos) -> Fixnum
  *
  * Insert at position pos an array of non-diagonal elements with column indices given. Note that the column indices and values
  * must be storage-contiguous -- that is, you can't insert them around existing elements in some row, only amid some
@@ -1949,18 +2034,18 @@ static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self) {
  * lead to undefined behavior.
  *
  * Example:
- *    m.yale_vector_insert(3, [0,3,4], [1,1,1], 15)
+ *    m.yale_vector_set(3, [0,3,4], [1,1,1], 15)
  *
  * The example above inserts the values 1, 1, and 1 in columns 0, 3, and 4, assumed to be located at position 15 (which
  * corresponds to row 3).
  *
  * Example:
- *    next = m.yale_vector_insert(3, [0,3,4], [1,1,1])
+ *    next = m.yale_vector_set(3, [0,3,4], [1,1,1])
  *
  * This example determines that i=3 is at position 15 automatically. The value returned, next, is the position where the
  * next value(s) should be inserted.
  */
-static VALUE nm_vector_insert(int argc, VALUE* argv, VALUE self) { //, VALUE i_, VALUE jv, VALUE vv, VALUE pos_) {
+VALUE nm_vector_set(int argc, VALUE* argv, VALUE self) { //, VALUE i_, VALUE jv, VALUE vv, VALUE pos_) {
 
   // i, jv, vv are mandatory; pos is optional; thus "31"
   VALUE i_, jv, vv, pos_;

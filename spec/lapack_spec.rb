@@ -48,6 +48,7 @@ describe NMatrix::LAPACK do
       it "exposes clapack getrf" do
         a = NMatrix.new(:dense, 3, [4,9,2,3,5,7,8,1,6], dtype)
         NMatrix::LAPACK::clapack_getrf(:row, 3, 3, a, 3)
+
         # delta varies for different dtypes
         err = case dtype
                 when :float32, :complex64
@@ -67,19 +68,15 @@ describe NMatrix::LAPACK do
         a[2,0].should == 1 # 3.quo(8)
         a[2,1].should be_within(err).of(52.quo(9))
         a[2,2].should be_within(err).of(360.quo(53))
-        # FIXME: these are rounded, == won't work
-          # be_within(TOLERANCE).of(desired_value) should work
-        a[2,1].should be_within(err).of(0.544118)
-        a[2,2].should be_within(err).of(5.294118)
       end
 
       it "exposes clapack potrf" do
         # first do upper
         begin
-        a = NMatrix.new(:dense, 3, [25,15,-5, 0,18,0, 0,0,11], dtype)
-        NMatrix::LAPACK::clapack_potrf(:row, :upper, 3, a, 3)
-        b = NMatrix.new(:dense, 3, [5,3,-1, 0,3,1, 0,0,3], dtype)
-        a.should == b
+          a = NMatrix.new(:dense, 3, [25,15,-5, 0,18,0, 0,0,11], dtype)
+          NMatrix::LAPACK::clapack_potrf(:row, :upper, 3, a, 3)
+          b = NMatrix.new(:dense, 3, [5,3,-1, 0,3,1, 0,0,3], dtype)
+          a.should == b
         rescue NotImplementedError => e
           pending e.to_s
         end
@@ -107,11 +104,12 @@ describe NMatrix::LAPACK do
       it "exposes clapack getri" do
         a = NMatrix.new(:dense, 3, [1,0,4,1,1,6,-3,0,-10], dtype)
         ipiv = NMatrix::LAPACK::clapack_getrf(:row, 3, 3, a, 3) # get pivot from getrf, use for getri
-        begin
-        NMatrix::LAPACK::clapack_getri(:row, 3, a, 3, ipiv)
 
-        b = NMatrix.new(:dense, 3, [-5,0,-2,-4,1,-1,1.5,0,0.5], dtype)
-        a.should == b
+        begin
+          NMatrix::LAPACK::clapack_getri(:row, 3, a, 3, ipiv)
+
+          b = NMatrix.new(:dense, 3, [-5,0,-2,-4,1,-1,1.5,0,0.5], dtype)
+          a.should == b
         rescue NotImplementedError => e
           pending e.to_s
         end
@@ -169,6 +167,7 @@ describe NMatrix::LAPACK do
         elsif response.is_a? NMatrix
           sing_vals = response
         end
+
 
         sing_vals.row(0).to_a.zip(s_true.row(0).to_a).each do |answer_val, truth_val|
           answer_val.should be_within(err).of(truth_val)

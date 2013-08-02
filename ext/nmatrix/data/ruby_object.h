@@ -96,6 +96,7 @@ class RubyObject {
 	inline RubyObject(int64_t other)  : rval(INT2FIX(other)) {}
 //	inline RubyObject(uint64_t other) : rval(INT2FIX(other)) {}
 
+
 	/*
 	 * Float constructor.
 	 *
@@ -103,7 +104,36 @@ class RubyObject {
 	 */
 	inline RubyObject(float other)   : rval(rb_float_new(other)) {}
 	inline RubyObject(double other)  : rval(rb_float_new(other)) {}
-	
+
+  /*
+   * Operators for converting RubyObjects to other C types.
+   */
+  inline operator int8_t()  const { return NUM2INT(this->rval);         }
+  inline operator uint8_t() const { return NUM2UINT(this->rval);        }
+  inline operator int16_t() const { return NUM2INT(this->rval);         }
+  inline operator uint16_t() const { return NUM2UINT(this->rval);       }
+  inline operator int32_t() const { return NUM2LONG(this->rval);        }
+  //inline operator uint32_t() const { return NUM2ULONG(this->rval);      }
+  inline operator int64_t() const { return NUM2LONG(this->rval);        }
+  inline operator uint64_t() const { return NUM2ULONG(this->rval);      }
+  inline operator float()   const { return NUM2DBL(this->rval);         }
+  inline operator double()  const { return NUM2DBL(this->rval);         }
+
+  //template <typename IntType>
+  //inline operator Rational<typename std::enable_if<std::is_integral<IntType>::value, IntType>::type>() const { return this->to<Rational<IntType> >(); }
+
+  //template <typename IntType>
+  //inline operator Rational<typename std::enable_if<std::is_integral<IntType>::value, IntType>::type>&() const { static Rational<IntType> x = this->to<Rational<IntType> >(); return x; }
+  //inline operator Rational32() const { return this->to<Rational32>();   }
+  //inline operator Rational64() const { return this->to<Rational64>();   }
+  //inline operator Rational128() const { return this->to<Rational128>(); }
+
+  //template <typename FloatType>
+  //inline operator Complex<typename std::enable_if<std::is_floating_point<FloatType>::value, FloatType>::type>() const { return this->to<Complex<FloatType> >();    }
+
+  //template <typename FloatType>
+  //inline operator Complex<typename std::enable_if<std::is_floating_point<FloatType>::value, FloatType>::type>&() const { static Complex<FloatType> x = this->to<Complex<FloatType> >(); return x;    }
+
   /*
 	 * Copy constructors.
 	 */
@@ -278,7 +308,7 @@ class RubyObject {
 	 * Convert a Ruby object to a complex number.
 	 */
 	template <typename ComplexType>
-	inline typename std::enable_if<made_from_same_template<ComplexType, Complex64>::value, ComplexType>::type to(void) {
+	inline typename std::enable_if<made_from_same_template<ComplexType, Complex64>::value, ComplexType>::type to(void) const {
 		if (FIXNUM_P(this->rval) or TYPE(this->rval) == T_FLOAT or TYPE(this->rval) == T_RATIONAL) {
 			return ComplexType(NUM2DBL(this->rval));
 			
@@ -294,7 +324,7 @@ class RubyObject {
 	 * Convert a Ruby object to a rational number.
 	 */
 	template <typename RationalType>
-	inline typename std::enable_if<made_from_same_template<RationalType, Rational32>::value, RationalType>::type to(void) {
+	inline typename std::enable_if<made_from_same_template<RationalType, Rational32>::value, RationalType>::type to(void) const {
 		if (FIXNUM_P(this->rval) or TYPE(this->rval) == T_FLOAT or TYPE(this->rval) == T_COMPLEX) {
 			return RationalType(NUM2INT(this->rval));
 			
@@ -305,11 +335,7 @@ class RubyObject {
 			rb_raise(rb_eTypeError, "Invalid conversion to Rational type.");
 		}
 	}
-	
-	template <typename OtherType>
-	inline operator OtherType () {
-		return to<OtherType>();
-	}
+
 };
 
 // Negative operator

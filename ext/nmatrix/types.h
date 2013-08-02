@@ -32,7 +32,7 @@
  * Standard Includes
  */
 
-#include <stdint.h>
+#include <cstdint>
 
 /*
  * Macros

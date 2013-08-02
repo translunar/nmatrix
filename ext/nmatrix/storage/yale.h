@@ -97,6 +97,7 @@ extern "C" {
   // Accessors //
   ///////////////
 
+  VALUE nm_yale_each_with_indices(VALUE nmatrix);
   VALUE nm_yale_each_stored_with_indices(VALUE nmatrix);
   void* nm_yale_storage_get(STORAGE* s, SLICE* slice);
   void*	nm_yale_storage_ref(STORAGE* s, SLICE* slice);
@@ -169,6 +170,8 @@ extern "C" {
 
 
   void nm_init_yale_functions(void);
+
+  VALUE nm_vector_set(int argc, VALUE* argv, VALUE self);
 
 
 } // end of extern "C" block

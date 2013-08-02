@@ -51,6 +51,7 @@
  */
 namespace nm {
 
+class RubyObject;
 template <typename IntType> class Rational;
 template <typename Type> class Complex;
 
@@ -85,6 +86,8 @@ class Complex {
 
 	template <typename IntType, typename = typename std::enable_if<std::is_integral<IntType>::value>::type>
 	inline Complex(const Rational<IntType>& other) : r(Type(other.n) / Type(other.d)), i(0) {}
+
+  Complex(const RubyObject& other);
 
   /*
    * Complex conjugate function -- creates a copy, but inverted.
@@ -358,6 +361,12 @@ template <typename Type>
 inline std::ostream& operator<<(std::ostream& out, const Complex<Type>& rhs) {
   out << "(" << rhs.r << "," << rhs.i << "i)" << std::flush;
   return out;
+}
+
+// Negative operator
+template <typename IntType, typename = typename std::enable_if<std::is_integral<IntType>::value>::type>
+inline Complex<IntType> operator-(const Complex<IntType>& rhs) {
+  return Complex<IntType>(-rhs.r, -rhs.i);
 }
 
 } // end of namespace nm
