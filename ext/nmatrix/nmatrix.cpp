@@ -485,9 +485,11 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "complex_conjugate!", (METHOD)nm_complex_conjugate_bang, 0);
 
 	rb_define_protected_method(cNMatrix, "__dense_each__", (METHOD)nm_dense_each, 0);
+	rb_define_protected_method(cNMatrix, "__dense_map__", (METHOD)nm_dense_map, 0);
+	rb_define_protected_method(cNMatrix, "__dense_map_pair__", (METHOD)nm_dense_map_pair, 1);
 	rb_define_method(cNMatrix, "each_with_indices", (METHOD)nm_each_with_indices, 0);
 	rb_define_method(cNMatrix, "each_stored_with_indices", (METHOD)nm_each_stored_with_indices, 0);
-	rb_define_protected_method(cNMatrix, "__list_map_merged_stored__", (METHOD)nm_list_map_merged_stored, -1);
+	rb_define_protected_method(cNMatrix, "__list_map_merged_stored__", (METHOD)nm_list_map_merged_stored, 2);
 
 	rb_define_method(cNMatrix, "==",	  (METHOD)nm_eqeq,				1);
 
@@ -1712,11 +1714,6 @@ static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLIC
 static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
 	STYPE_MARK_TABLE(mark);
 
-	static STORAGE* (*ew_op[nm::NUM_STYPES])(nm::ewop_t, const STORAGE*, const STORAGE*, VALUE scalar) = {
-		nm_dense_storage_ew_op,
-		NULL,
-		nm_yale_storage_ew_op
-	};
 
 	NMATRIX* left;
 	NMATRIX* result;
@@ -1729,10 +1726,8 @@ static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
     std::string sym;
     switch(left->stype) {
     case nm::DENSE_STORE:
-      result = ALLOC(NMATRIX);
-      result->storage = nm_dense_storage_ew_op(op, reinterpret_cast<STORAGE*>(left->storage), NULL, right_val);
-      result->stype   = left->stype;
-      break;
+      sym = "__dense_scalar_" + nm::EWOP_NAMES[op] + "__";
+      return rb_funcall(left_val, rb_intern(sym.c_str()), 1, right_val);
     case nm::LIST_STORE:
       sym = "__list_scalar_" + nm::EWOP_NAMES[op] + "__";
       return rb_funcall(left_val, rb_intern(sym.c_str()), 1, right_val);
@@ -1763,9 +1758,11 @@ static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
 
       switch(left->stype) {
       case nm::DENSE_STORE:
+        sym = "__dense_elementwise_" + nm::EWOP_NAMES[op] + "__";
+        return rb_funcall(left_val, rb_intern(sym.c_str()), 1, right_val);
       case nm::YALE_STORE:
         result = ALLOC(NMATRIX);
-        result->storage	= ew_op[left->stype](op, reinterpret_cast<STORAGE*>(left->storage), reinterpret_cast<STORAGE*>(right->storage), Qnil);
+        result->storage	= nm_yale_storage_ew_op(op, reinterpret_cast<STORAGE*>(left->storage), reinterpret_cast<STORAGE*>(right->storage), Qnil);
         result->stype		= left->stype;
         break;
       case nm::LIST_STORE:

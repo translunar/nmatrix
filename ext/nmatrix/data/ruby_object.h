@@ -108,16 +108,19 @@ class RubyObject {
   /*
    * Operators for converting RubyObjects to other C types.
    */
-  inline operator int8_t()  const { return NUM2INT(this->rval);         }
-  inline operator uint8_t() const { return NUM2UINT(this->rval);        }
-  inline operator int16_t() const { return NUM2INT(this->rval);         }
-  inline operator uint16_t() const { return NUM2UINT(this->rval);       }
-  inline operator int32_t() const { return NUM2LONG(this->rval);        }
+
+#define RETURN_OBJ2NUM(mac)   if (this->rval == Qtrue) return 1; else if (this->rval == Qfalse) return 0; else return mac(this->rval);
+
+  inline operator int8_t()  const { RETURN_OBJ2NUM(NUM2INT)         }
+  inline operator uint8_t() const { RETURN_OBJ2NUM(NUM2UINT)        }
+  inline operator int16_t() const { RETURN_OBJ2NUM(NUM2INT)         }
+  inline operator uint16_t() const { RETURN_OBJ2NUM(NUM2UINT)       }
+  inline operator int32_t() const { RETURN_OBJ2NUM(NUM2LONG)        }
   //inline operator uint32_t() const { return NUM2ULONG(this->rval);      }
-  inline operator int64_t() const { return NUM2LONG(this->rval);        }
-  inline operator uint64_t() const { return NUM2ULONG(this->rval);      }
-  inline operator float()   const { return NUM2DBL(this->rval);         }
-  inline operator double()  const { return NUM2DBL(this->rval);         }
+  inline operator int64_t() const { RETURN_OBJ2NUM(NUM2LONG)        }
+  inline operator uint64_t() const { RETURN_OBJ2NUM(NUM2ULONG)      }
+  inline operator double()   const { RETURN_OBJ2NUM(NUM2DBL)        }
+  inline operator float()  const { RETURN_OBJ2NUM(NUM2DBL)          }
 
   //template <typename IntType>
   //inline operator Rational<typename std::enable_if<std::is_integral<IntType>::value, IntType>::type>() const { return this->to<Rational<IntType> >(); }

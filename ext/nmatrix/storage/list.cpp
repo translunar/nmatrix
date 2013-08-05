@@ -489,12 +489,9 @@ VALUE nm_list_each_with_indices(VALUE nmatrix, bool stored) {
 /*
  * map merged stored iterator. Always returns a matrix containing RubyObjects which probably needs to be casted.
  */
-VALUE nm_list_map_merged_stored(int argc, VALUE* argv, VALUE left) {
+VALUE nm_list_map_merged_stored(VALUE left, VALUE right, VALUE init) {
 
-  VALUE right, init;
   bool scalar = false;
-
-  rb_scan_args(argc, argv, "11", &right, &init);
 
   LIST_STORAGE *s   = NM_STORAGE_LIST(left),
                *t;
