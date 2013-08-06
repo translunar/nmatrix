@@ -1086,8 +1086,8 @@ static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE
     NULL, NULL, NULL, NULL, NULL, // no integer ops
     nm::math::lapack_gesvd_nothrow<float,float>,
     nm::math::lapack_gesvd_nothrow<double,double>,
-    NULL, NULL, //nm::math::lapack_gesvd_nothrow<nm::Complex64,float>,
-    //nm::math::lapack_gesvd_nothrow<nm::Complex128,double>,
+    nm::math::lapack_gesvd_nothrow<nm::Complex64,float>,
+    nm::math::lapack_gesvd_nothrow<nm::Complex128,double>,
     NULL, NULL, NULL, NULL};
   nm::dtype_t dtype = NM_DTYPE(a);
 
