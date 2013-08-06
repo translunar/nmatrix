@@ -114,6 +114,7 @@
 
 #include "math.h"
 #include "lapack.h"
+#include "storage/dense.h"
 
 #include "nmatrix.h"
 #include "ruby_constants.h"
@@ -1054,7 +1055,9 @@ static VALUE nm_gesvd(VALUE self, VALUE job_type, VALUE a, VALUE s, VALUE u, VAL
   size_t ldvt = std::max(1, int(n));
   size_t lwork = std::max(std::max(1,3*std::min(intm, intn) + std::max(intm, intn)),5*std::min(intm,intn));
   size_t work_shape[2] = {1, lwork};
-  VALUE work = nm::dense_storage::nm_create(nm::DENSE_STORE, nm::dense_storage::nm_dense_storage_create(dtype, work_shape, lwork, NULL, lwork));
+  NMATRIX* work = nm_create(nm::DENSE_STORE, nm_dense_storage_create(dtype, work_shape, lwork, NULL, lwork));
+
+  VALUE WORK = Data_Wrap_Struct(CLASS_OF(self), nm_dense_storage_mark, nm_delete, work);
   int info = 0;
   VALUE resp = nm_lapack_gesvd(self,
       rb_str_new2(&jobu),rb_str_new2(&jobvt),
@@ -1063,7 +1066,7 @@ static VALUE nm_gesvd(VALUE self, VALUE job_type, VALUE a, VALUE s, VALUE u, VAL
       s, 
       u, INT2FIX(ldu),
       vt, INT2FIX(ldvt),
-      work, INT2FIX(lwork), 
+      WORK, INT2FIX(lwork), 
       INT2FIX(info), Qnil);
 
   return resp;
