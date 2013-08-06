@@ -876,8 +876,6 @@ static int lapack_gesvd_nothrow(char *jobu, char *jobvt,
   
   if (typeid(DType) == typeid(CType)) {
     lapack_gesvd(jobu, jobvt, &m, &n, A, &lda, S, U, &ldu, VT, &ldvt, WORK, &lwork, &info);
-  } else if (rwork == NULL) {
-    lapack_gesvd(jobu, jobvt, &m, &n, A, &lda, S, U, &ldu, VT, &ldvt, WORK, &lwork, &info);
   } else {
     CType* RWORK = reinterpret_cast<CType*>(rwork);
    // lapack_gesvd(jobu, jobvt, &m, &n, A, &lda, S, U, &ldu, VT, &ldvt, WORK, &lwork, RWORK, &info);
