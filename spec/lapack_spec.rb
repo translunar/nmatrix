@@ -167,7 +167,7 @@ describe NMatrix::LAPACK do
         end
         lefts.row(0).to_a.zip(left_true.row(0).to_a).each { |a, t| a.should be_within(err).of(t) }
         rights.row(0).to_a.zip(right_true.row(0).to_a).each {|a, t| a.should be_within(err).of(t) }
-        sings.row(0).to_a.zip(s_true.row(0).to_a).each { |a, t| a.should be_within(err).of(t) }
+        sings.row(0).to_a.zip(s_true.row(0).to_a).each { |a, t| a.should(be_within(err).of(t), sings.pp) }
       end
     end
   end

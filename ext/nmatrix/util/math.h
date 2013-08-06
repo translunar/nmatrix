@@ -874,32 +874,13 @@ static int lapack_gesvd_nothrow(char *jobu, char *jobvt,
   DType* VT = reinterpret_cast<DType*>(vt);
   DType* WORK = reinterpret_cast<DType*>(work);
   
-  if (typeid(DType) == typeid(CType)) {
+  if (rwork == NULL) {
     lapack_gesvd(jobu, jobvt, &m, &n, A, &lda, S, U, &ldu, VT, &ldvt, WORK, &lwork, &info);
   } else {
     CType* RWORK = reinterpret_cast<CType*>(rwork);
     lapack_gesvd(jobu, jobvt, &m, &n, A, &lda, S, U, &ldu, VT, &ldvt, WORK, &lwork, RWORK, &info);
   }
   
-  return info;
-}
-
-template <typename DType>
-static int lapack_gesvd_nothrow(char *jobu, char *jobvt, 
-  int m, int n, 
-  void *a, int lda,   
-  void *s, 
-  void *u, int ldu,  
-  void *vt, int ldvt,
-  void *work,  int lwork,
-  int info, void *rwork) {
-  DType* A = reinterpret_cast<DType*>(a);
-  DType* S = reinterpret_cast<DType*>(s);
-  DType* U = reinterpret_cast<DType*>(u);
-  DType* VT = reinterpret_cast<DType*>(vt);
-  DType* WORK = reinterpret_cast<DType*>(work);
-  
-  lapack_gesvd(jobu, jobvt, &m, &n, A, &lda, S, U, &ldu, VT, &ldvt, WORK, &lwork, &info);
   return info;
 }
 
