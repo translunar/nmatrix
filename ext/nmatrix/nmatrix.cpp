@@ -339,6 +339,7 @@ static VALUE nm_alloc(VALUE klass);
 static VALUE nm_dtype(VALUE self);
 static VALUE nm_itype(VALUE self);
 static VALUE nm_stype(VALUE self);
+static VALUE nm_default_value(VALUE self);
 static VALUE nm_dim(VALUE self);
 static VALUE nm_shape(VALUE self);
 static VALUE nm_capacity(VALUE self);
@@ -469,7 +470,9 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "itype", (METHOD)nm_itype, 0);
 	rb_define_method(cNMatrix, "stype", (METHOD)nm_stype, 0);
 	rb_define_method(cNMatrix, "cast",  (METHOD)nm_cast, 2);
+	rb_define_method(cNMatrix, "default_value", (METHOD)nm_default_value, 0);
 	rb_define_protected_method(cNMatrix, "__list_default_value__", (METHOD)nm_list_default_value, 0);
+	rb_define_protected_method(cNMatrix, "__yale_default_value__", (METHOD)nm_yale_default_value, 0);
 
 	rb_define_method(cNMatrix, "[]", (METHOD)nm_mref, -1);
 	rb_define_method(cNMatrix, "slice", (METHOD)nm_mget, -1);
@@ -490,6 +493,7 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "each_with_indices", (METHOD)nm_each_with_indices, 0);
 	rb_define_method(cNMatrix, "each_stored_with_indices", (METHOD)nm_each_stored_with_indices, 0);
 	rb_define_protected_method(cNMatrix, "__list_map_merged_stored__", (METHOD)nm_list_map_merged_stored, 2);
+	rb_define_protected_method(cNMatrix, "__yale_map_merged_stored__", (METHOD)nm_yale_map_merged_stored, 2);
 
 	rb_define_method(cNMatrix, "==",	  (METHOD)nm_eqeq,				1);
 
@@ -695,7 +699,7 @@ static VALUE nm_itype_by_shape(VALUE self, VALUE shape_arg) {
 
 /*
  * call-seq:
- *     upcast(first_dtype, second_dtype) ->
+ *     upcast(first_dtype, second_dtype) -> Symbol
  *
  * Given a binary operation between types t1 and t2, what type will be returned?
  *
@@ -709,6 +713,25 @@ static VALUE nm_upcast(VALUE self, VALUE t1, VALUE t2) {
   return ID2SYM(rb_intern( DTYPE_NAMES[ Upcast[d1][d2] ] ));
 }
 
+
+/*
+ * call-seq:
+       default_value -> ...
+ *
+ * Get the default value for the matrix. For dense, this is undefined and will return Qnil. For list, it is user-defined.
+ * For yale, it's going to be some variation on zero, but may be Qfalse or Qnil.
+ */
+static VALUE nm_default_value(VALUE self) {
+  switch(NM_DTYPE(self)) {
+  case nm::YALE_STORE:
+    return nm_yale_default_value(self);
+  case nm::LIST_STORE:
+    return nm_list_default_value(self);
+  case nm::DENSE_STORE:
+  default:
+    return Qnil;
+  }
+}
 
 
 /*
@@ -1029,7 +1052,7 @@ static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
 
   	case nm::YALE_STORE:
   		nmatrix->storage = (STORAGE*)nm_yale_storage_create(dtype, shape, dim, init_cap, nm::UINT8);
-  		nm_yale_storage_init((YALE_STORAGE*)(nmatrix->storage));
+  		nm_yale_storage_init((YALE_STORAGE*)(nmatrix->storage), NULL);
   		break;
   }
 
@@ -1714,7 +1737,6 @@ static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLIC
 static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
 	STYPE_MARK_TABLE(mark);
 
-
 	NMATRIX* left;
 	NMATRIX* result;
 
@@ -1727,16 +1749,17 @@ static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
     switch(left->stype) {
     case nm::DENSE_STORE:
       sym = "__dense_scalar_" + nm::EWOP_NAMES[op] + "__";
-      return rb_funcall(left_val, rb_intern(sym.c_str()), 1, right_val);
-    case nm::LIST_STORE:
-      sym = "__list_scalar_" + nm::EWOP_NAMES[op] + "__";
-      return rb_funcall(left_val, rb_intern(sym.c_str()), 1, right_val);
+      break;
     case nm::YALE_STORE:
       sym = "__yale_scalar_" + nm::EWOP_NAMES[op] + "__";
-      return rb_funcall(left_val, rb_intern(sym.c_str()), 1, right_val);
+      break;
+    case nm::LIST_STORE:
+      sym = "__list_scalar_" + nm::EWOP_NAMES[op] + "__";
+      break;
     default:
       rb_raise(rb_eNotImpError, "unknown storage type requested scalar element-wise operation");
     }
+    return rb_funcall(left_val, rb_intern(sym.c_str()), 1, right_val);
 
   } else {
 
@@ -1759,18 +1782,17 @@ static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
       switch(left->stype) {
       case nm::DENSE_STORE:
         sym = "__dense_elementwise_" + nm::EWOP_NAMES[op] + "__";
-        return rb_funcall(left_val, rb_intern(sym.c_str()), 1, right_val);
+        break;
       case nm::YALE_STORE:
-        result = ALLOC(NMATRIX);
-        result->storage	= nm_yale_storage_ew_op(op, reinterpret_cast<STORAGE*>(left->storage), reinterpret_cast<STORAGE*>(right->storage), Qnil);
-        result->stype		= left->stype;
+        sym = "__yale_elementwise_" + nm::EWOP_NAMES[op] + "__";
         break;
       case nm::LIST_STORE:
         sym = "__list_elementwise_" + nm::EWOP_NAMES[op] + "__";
-        return rb_funcall(left_val, rb_intern(sym.c_str()), 1, right_val);
+        break;
       default:
         rb_raise(rb_eNotImpError, "unknown storage type requested element-wise operation");
       }
+      return rb_funcall(left_val, rb_intern(sym.c_str()), 1, right_val);
 
     } else {
       rb_raise(rb_eArgError, "Element-wise operations are not currently supported between matrices with differing stypes.");

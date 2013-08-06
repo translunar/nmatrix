@@ -43,6 +43,7 @@
 #include <algorithm>  // std::min
 #include <cstdio>     // std::fprintf
 #include <iostream>
+#include <array>
 
 /*
  * Project Includes
@@ -80,6 +81,9 @@
 extern "C" {
   static YALE_STORAGE*  nm_copy_alloc_struct(const YALE_STORAGE* rhs, const nm::dtype_t new_dtype, const size_t new_capacity, const size_t new_size);
   static YALE_STORAGE*	alloc(nm::dtype_t dtype, size_t* shape, size_t dim, nm::itype_t min_itype);
+
+  static void* default_value_ptr(YALE_STORAGE* s);
+  static VALUE default_value(YALE_STORAGE* s);
 
   /* Ruby-accessible functions */
   static VALUE nm_size(VALUE self);
@@ -238,7 +242,7 @@ YALE_STORAGE* create_from_old_yale(dtype_t dtype, size_t* shape, void* r_ia, voi
  * Uses the left as a template for the creation of a new one.
  */
 template <typename DType, typename IType>
-YALE_STORAGE* create_merged(const YALE_STORAGE* left, const YALE_STORAGE* right) {
+YALE_STORAGE* create_merged__(const YALE_STORAGE* left, const YALE_STORAGE* right) {
   char ins_type;
 
   size_t size = get_size<IType>(left);
@@ -304,7 +308,7 @@ YALE_STORAGE* create_merged(const YALE_STORAGE* left, const YALE_STORAGE* right)
  * Called when most YALE_STORAGE objects are created.
  */
 template <typename DType, typename IType>
-void init(YALE_STORAGE* s) {
+void init(YALE_STORAGE* s, void* init_val) {
   IType IA_INIT = s->shape[0] + 1;
 
   IType* ija = reinterpret_cast<IType*>(s->ija);
@@ -313,7 +317,7 @@ void init(YALE_STORAGE* s) {
     ija[i] = IA_INIT; // set initial values for IJA
   }
 
-  clear_diagonal_and_zero<DType>(s);
+  clear_diagonal_and_zero<DType>(s, init_val);
 }
 
 size_t max_size(YALE_STORAGE* s) {
@@ -375,7 +379,7 @@ void* get(YALE_STORAGE* storage, SLICE* slice) {
     rb_raise(nm_eStorageTypeError, "conversion failed; capacity of %ld requested, max allowable is %ld", request_capacity, ns->capacity);
 
    // Initialize the A and IJA arrays
-  init<DType,IType>(ns);
+  init<DType,IType>(ns, default_value_ptr(storage));
   IType* dst_ija = reinterpret_cast<IType*>(ns->ija);
   DType* dst_a   = reinterpret_cast<DType*>(ns->a);
  
@@ -554,6 +558,8 @@ static bool eqeq(const YALE_STORAGE* left, const YALE_STORAGE* right) {
   return true;
 }
 
+
+
 /*
  * Are two non-diagonal rows the same? We already know.
  */
@@ -571,6 +577,9 @@ static bool ndrow_eqeq_ndrow(const YALE_STORAGE* l, const YALE_STORAGE* r, IType
         r_ja = rij[r_ija];
         
   IType ja = std::min(l_ja, r_ja);
+
+  LDType LZERO = la[l->shape[0]];
+  RDType RZERO = ra[r->shape[0]];
 
   while (!(l_no_more && r_no_more)) {
     if (l_ja == r_ja) {
@@ -598,7 +607,7 @@ static bool ndrow_eqeq_ndrow(const YALE_STORAGE* l, const YALE_STORAGE* r, IType
 
     } else if (l_no_more || ja < l_ja) {
 
-      if (ra[r_ija] != 0) return false;
+      if (ra[r_ija] != RZERO) return false;
 
       ++r_ija;
       if (r_ija < r_ija_next) {
@@ -612,7 +621,7 @@ static bool ndrow_eqeq_ndrow(const YALE_STORAGE* l, const YALE_STORAGE* r, IType
 
     } else if (r_no_more || ja < r_ja) {
 
-      if (la[l_ija] != 0) return false;
+      if (la[l_ija] != LZERO) return false;
 
       ++l_ija;
       if (l_ija < l_ija_next) {
@@ -922,6 +931,36 @@ int binary_search(YALE_STORAGE* s, IType left, IType right, IType key) {
 }
 
 
+/*
+ * Resize yale storage vectors A and IJA, copying values.
+ */
+static void vector_grow(YALE_STORAGE* s) {
+  size_t new_capacity = s->capacity * GROWTH_CONSTANT;
+  size_t max_capacity = max_size(s);
+
+  if (new_capacity > max_capacity) new_capacity = max_capacity;
+
+  void* new_ija       = ALLOC_N(char, ITYPE_SIZES[s->itype] * new_capacity);
+  NM_CHECK_ALLOC(new_ija);
+
+  void* new_a         = ALLOC_N(char, DTYPE_SIZES[s->dtype] * new_capacity);
+  NM_CHECK_ALLOC(new_a);
+
+  void* old_ija       = s->ija;
+  void* old_a         = s->a;
+
+  memcpy(new_ija, old_ija, s->capacity * ITYPE_SIZES[s->itype]);
+  memcpy(new_a,   old_a,   s->capacity * DTYPE_SIZES[s->dtype]);
+
+  s->capacity         = new_capacity;
+
+  xfree(old_ija);
+  xfree(old_a);
+
+  s->ija              = new_ija;
+  s->a                = new_a;
+}
+
 
 /*
  * Resize yale storage vectors A and IJA in preparation for an insertion.
@@ -978,13 +1017,11 @@ static char vector_insert_resize(YALE_STORAGE* s, size_t current_size, size_t po
 
   s->capacity = new_capacity;
 
-  free(s->ija);
-  free(s->a);
+  xfree(s->ija);
+  xfree(s->a);
 
   s->ija = reinterpret_cast<void*>(new_ija);
   s->a   = reinterpret_cast<void*>(new_a);
-
-  fprintf(stderr, "resize\n");
 
   return 'i';
 }
@@ -1144,6 +1181,8 @@ static YALE_STORAGE* copy_alloc_struct(const YALE_STORAGE* rhs, const dtype_t ne
   YALE_STORAGE* lhs = ALLOC( YALE_STORAGE );
   lhs->dim          = rhs->dim;
   lhs->shape        = ALLOC_N( size_t, lhs->dim );
+  lhs->offset       = ALLOC_N( size_t, lhs->dim );
+  memcpy(lhs->shape, rhs->shape, lhs->dim * sizeof(size_t));
   memcpy(lhs->shape, rhs->shape, lhs->dim * sizeof(size_t));
   lhs->itype        = rhs->itype;
   lhs->capacity     = new_capacity;
@@ -1175,9 +1214,7 @@ static STORAGE* matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resu
   IType* ijl;
   if (left->itype == result_itype) ijl = reinterpret_cast<IType*>(left->ija);
   else {  // make a temporary copy of the IJA vector for L with the correct itype
-    std::cerr << "changing left itype from " << static_cast<uint8_t>(left->itype) << " to " << static_cast<int8_t>(result_itype) << std::endl;
     size_t length = nm_yale_storage_get_size(left);
-    std::cerr << "length = " << length << std::endl;
     ijl = ALLOCA_N(IType, length);
     copy_recast_itype_vector(reinterpret_cast<void*>(left->ija), left->itype, reinterpret_cast<void*>(ijl), result_itype, length);
   }
@@ -1185,9 +1222,7 @@ static STORAGE* matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resu
   IType* ijr;
   if (right->itype == result_itype) ijr = reinterpret_cast<IType*>(right->ija);
   else {  // make a temporary copy of the IJA vector for R with the correct itype
-    std::cerr << "changing right itype from " << static_cast<uint8_t>(right->itype) << " to " << static_cast<int8_t>(result_itype) << std::endl;
     size_t length = nm_yale_storage_get_size(right);
-    std::cerr << "length = " << length << std::endl;
     ijr = ALLOCA_N(IType, length);
     copy_recast_itype_vector(reinterpret_cast<void*>(right->ija), right->itype, reinterpret_cast<void*>(ijr), result_itype, length);
   }
@@ -1199,7 +1234,7 @@ static STORAGE* matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resu
 
   // Create result storage.
   YALE_STORAGE* result = nm_yale_storage_create(left->dtype, resulting_shape, 2, result_ndnz, result_itype);
-  init<DType,IType>(result);
+  init<DType,IType>(result, NULL);
   IType* ija = reinterpret_cast<IType*>(result->ija);
 
   // Symbolic multiplication step (build the structure)
@@ -1220,6 +1255,130 @@ static STORAGE* matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resu
 }
 
 
+/*
+ * Get the sum of offsets from the original matrix (for sliced iteration).
+ */
+static std::array<size_t,2> get_offsets(YALE_STORAGE* x) {
+  std::array<size_t, 2> offsets{ {0,0} };
+  while (x != x->src) {
+    offsets[0] += x->offset[0];
+    offsets[1] += x->offset[1];
+    x = reinterpret_cast<YALE_STORAGE*>(x->src);
+  }
+  return offsets;
+}
+
+
+static VALUE obj_at(YALE_STORAGE* s, size_t k) {
+  if (s->dtype == nm::RUBYOBJ)  return reinterpret_cast<VALUE*>(s->a)[k];
+  else  return rubyobj_from_cval(reinterpret_cast<void*>(reinterpret_cast<char*>(s->a) + k * DTYPE_SIZES[s->dtype]), s->dtype).rval;
+}
+
+
+
+template <typename IType>
+class IJAManager {
+protected:
+  bool needs_free;
+
+public:
+  IType* ija;
+
+  IJAManager(YALE_STORAGE* s, itype_t temp_itype) : needs_free(false), ija(reinterpret_cast<IType*>(s->ija)) {
+    if (s->itype != temp_itype) {
+      size_t len  = nm_yale_storage_get_size(s);
+      needs_free  = true;
+      ija         = ALLOC_N(IType, len);
+      copy_recast_itype_vector(s->ija, s->itype, reinterpret_cast<void*>(ija), temp_itype, len);
+    }
+  }
+
+  ~IJAManager() {
+    if (needs_free) xfree(ija);
+  }
+};
+
+
+template <typename IType>
+static VALUE map_merged_stored(VALUE left, VALUE right, VALUE init, nm::itype_t itype) {
+
+  YALE_STORAGE *s = NM_STORAGE_YALE(left),
+               *t = NM_STORAGE_YALE(right);
+
+  size_t* shape   = ALLOC_N(size_t, 2);
+  shape[0]        = s->shape[0];
+  shape[1]        = s->shape[1];
+
+  std::array<size_t,2>  s_offsets = get_offsets(s),
+                        t_offsets = get_offsets(t);
+
+  RETURN_SIZED_ENUMERATOR(left, 0, 0, 0);
+
+  if (init == Qnil)
+    init          = rb_yield_values(2, default_value(s), default_value(t));
+
+  YALE_STORAGE* r = nm_yale_storage_create(nm::RUBYOBJ, shape, 2, NM_MAX(s->capacity, t->capacity), itype);
+  nm_yale_storage_init(r, &init);
+
+  IJAManager<IType> sm(s, itype),
+                    tm(t, itype);
+  IType* rija     = reinterpret_cast<IType*>(r->ija);
+
+  VALUE s_init    = default_value(s),
+        t_init    = default_value(t);
+
+  for (IType ri = 0; ri < shape[0]; ++ri) {
+
+    IType si = ri + s_offsets[0],
+          ti = ri + t_offsets[0];
+
+    IType sk = sm.ija[ri], sk_next = sm.ija[ri+1],
+          tk = tm.ija[ri], tk_next = tm.ija[ri+1],
+          rk = rija[ri];
+
+    IType sj = sm.ija[sk++], tj = tm.ija[tk++];
+    IType rj = NM_MIN(sj - s_offsets[1], tj - t_offsets[1]);
+
+    while ((tk < tk_next || sk < sk_next) && rj < shape[1]) {
+      VALUE rv;
+
+      // Perform the computation. Use a default value if the matrix doesn't have some value stored.
+      if (tk == tk_next || sj - s_offsets[1] < tj - t_offsets[1]) {
+        rv = rb_yield_values(2, obj_at(s, sk++), t_init);
+
+      } else if (sk == sk_next || sj - s_offsets[1] > tj - t_offsets[1]) {
+        rv = rb_yield_values(2, s_init, obj_at(t, tk++));
+
+      } else {  // same index
+        rv = rb_yield_values(2, obj_at(s, sk++), obj_at(t, tk++));
+
+      }
+
+      // if the result value is non-default, insert it. That means increasing the rk_next entry.
+      if (rb_funcall(rv, rb_intern("!="), 1, init) == Qtrue) {
+
+        // We may need to grow the vector.
+        if (rk >= r->capacity) {
+          vector_grow(r);
+          rija = reinterpret_cast<IType*>(r->ija);
+        }
+
+        // Insert the new value and column index
+        reinterpret_cast<VALUE*>(r->a)[rk] = rv;
+        rija[rk]                           = rj;
+        ++rk;
+      }
+
+    }
+    // Update the row end information.
+    rija[ri+1] = rk;
+  }
+
+  NMATRIX* m = nm_create(nm::YALE_STORE, reinterpret_cast<STORAGE*>(r));
+  return Data_Wrap_Struct(CLASS_OF(left), nm_yale_storage_mark, nm_delete, m);
+}
+
+
 } // end of namespace nm::yale_storage
 
 
@@ -1229,6 +1388,7 @@ static VALUE nm_yale_stored_enumerator_length(VALUE nmatrix) {
   long len = nm_yale_storage_get_size(NM_STORAGE_YALE(nmatrix));
   return LONG2NUM(len);
 }
+
 
 
 template <typename DType, typename IType>
@@ -1509,6 +1669,7 @@ void* nm_yale_storage_ref(STORAGE* storage, SLICE* slice) {
   return ttable[casted_storage->dtype][casted_storage->itype](casted_storage, slice);
 }
 
+
 /*
  * C accessor for determining whether two YALE_STORAGE objects have the same contents.
  *
@@ -1522,6 +1683,7 @@ bool nm_yale_storage_eqeq(const STORAGE* left, const STORAGE* right) {
   return ttable[casted_left->dtype][right->dtype][casted_left->itype](casted_left, (const YALE_STORAGE*)right);
 }
 
+
 /*
  * Copy constructor for changing dtypes. (C accessor)
  */
@@ -1533,6 +1695,7 @@ STORAGE* nm_yale_storage_cast_copy(const STORAGE* rhs, nm::dtype_t new_dtype) {
   return (STORAGE*)ttable[new_dtype][casted_rhs->dtype][casted_rhs->itype](casted_rhs, new_dtype);
 }
 
+
 /*
  * Returns size of Yale storage as a size_t (no matter what the itype is). (C accessor)
  */
@@ -1541,6 +1704,31 @@ size_t nm_yale_storage_get_size(const YALE_STORAGE* storage) {
 
   return ttable[storage->itype](storage);
 }
+
+
+/*
+ * Return a void pointer to the matrix's default value entry.
+ */
+static void* default_value_ptr(YALE_STORAGE* s) {
+  return reinterpret_cast<void*>(reinterpret_cast<char*>(s->a) + (s->shape[0] * DTYPE_SIZES[s->dtype]));
+}
+
+
+/*
+ * Return the matrix's default value as a Ruby VALUE.
+ */
+static VALUE default_value(YALE_STORAGE* s) {
+  return rubyobj_from_cval(default_value_ptr(s), s->dtype).rval;
+}
+
+
+/*
+ * Check to see if a default value is some form of zero. Easy for non-Ruby object matrices, which should always be 0.
+ */
+static bool default_value_is_numeric_zero(YALE_STORAGE* s) {
+  return rb_funcall(default_value(s), rb_intern("=="), 1, INT2FIX(0)) == Qtrue;
+}
+
 
 /*
  * C accessor for allocating a yale storage object for cast-copying. Copies the IJA vector, does not copy the A vector.
@@ -1563,8 +1751,8 @@ STORAGE* nm_yale_storage_copy_transposed(const STORAGE* rhs_base) {
 
   size_t size   = nm_yale_storage_get_size(rhs);
 
-  YALE_STORAGE* lhs = nm_yale_storage_create(rhs->dtype, shape, 2, size, nm::UINT8);
-  nm_yale_storage_init(lhs);
+  YALE_STORAGE* lhs = nm_yale_storage_create(rhs->dtype, shape, 2, size, rhs->itype);
+  nm_yale_storage_init(lhs, default_value_ptr(rhs));
 
   NAMED_LI_DTYPE_TEMPLATE_TABLE(transp, nm::math::transpose_yale, void, const size_t n, const size_t m, const void* ia_, const void* ja_, const void* a_, const bool diaga, void* ib_, void* jb_, void* b_, const bool move);
 
@@ -1584,6 +1772,11 @@ STORAGE* nm_yale_storage_matrix_multiply(const STORAGE_PAIR& casted_storage, siz
 
   YALE_STORAGE* left = reinterpret_cast<YALE_STORAGE*>(casted_storage.left);
   YALE_STORAGE* right = reinterpret_cast<YALE_STORAGE*>(casted_storage.right);
+
+  if (!default_value_is_numeric_zero(left) || !default_value_is_numeric_zero(right)) {
+    rb_raise(rb_eNotImpError, "matrix default value must be some form of zero (not false or nil) for multiplication");
+    return NULL;
+  }
 
   // Determine the itype for the matrix that will be returned.
   nm::itype_t itype = nm_yale_storage_itype_by_shape(resulting_shape),
@@ -1707,10 +1900,11 @@ YALE_STORAGE* nm_yale_storage_create(nm::dtype_t dtype, size_t* shape, size_t di
 void nm_yale_storage_delete(STORAGE* s) {
   if (s) {
     YALE_STORAGE* storage = (YALE_STORAGE*)s;
-    free(storage->shape);
-    free(storage->ija);
-    free(storage->a);
-    free(storage);
+    xfree(storage->shape);
+    xfree(storage->offset);
+    xfree(storage->ija);
+    xfree(storage->a);
+    xfree(storage);
   }
 }
 
@@ -1719,10 +1913,10 @@ void nm_yale_storage_delete(STORAGE* s) {
  *
  * Initializes the IJA vector of the YALE_STORAGE matrix.
  */
-void nm_yale_storage_init(YALE_STORAGE* s) {
-  NAMED_LI_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::init, void, YALE_STORAGE* s);
+void nm_yale_storage_init(YALE_STORAGE* s, void* init_val) {
+  NAMED_LI_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::init, void, YALE_STORAGE*, void*);
 
-  ttable[s->dtype][s->itype](s);
+  ttable[s->dtype][s->itype](s, init_val);
 }
 
 
@@ -1751,8 +1945,12 @@ static YALE_STORAGE* alloc(nm::dtype_t dtype, size_t* shape, size_t dim, nm::ity
   s->ndnz        = 0;
   s->dtype       = dtype;
   s->shape       = shape;
+  s->offset      = ALLOC_N(size_t, dim);
+  for (size_t i = 0; i < dim; ++i)
+    s->offset[i] = 0;
   s->dim         = dim;
   s->itype       = nm_yale_storage_itype_by_shape(shape);
+  s->src         = reinterpret_cast<STORAGE*>(s);
 
   // See if a higher itype has been requested.
   if (static_cast<int8_t>(s->itype) < static_cast<int8_t>(min_itype))
@@ -2086,5 +2284,34 @@ VALUE nm_vector_set(int argc, VALUE* argv, VALUE self) { //, VALUE i_, VALUE jv,
   return INT2FIX(pos);
 }
 
+
+
+
+/*
+ * call-seq:
+ *     __yale_default_value__ -> ...
+ *
+ * Get the default_value property from a yale matrix.
+ */
+VALUE nm_yale_default_value(VALUE self) {
+  return default_value(NM_STORAGE_YALE(self));
+}
+
+
+/*
+ * call-seq:
+ *     __yale_map_merged_stored__ -> Enumerator
+ *
+ * A map operation on two Yale matrices which only iterates across the stored indices.
+ */
+VALUE nm_yale_map_merged_stored(VALUE left, VALUE right, VALUE init) {
+  YALE_STORAGE *s = NM_STORAGE_YALE(left),
+               *t = NM_STORAGE_YALE(right);
+
+  ITYPE_TEMPLATE_TABLE(nm::yale_storage::map_merged_stored, VALUE, VALUE l, VALUE r, VALUE init, nm::itype_t)
+
+  nm::itype_t itype = NM_MAX_ITYPE(s->itype, t->itype);
+  return ttable[itype](left, right, init, itype);
+}
 
 } // end of extern "C" block

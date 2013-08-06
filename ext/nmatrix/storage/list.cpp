@@ -981,7 +981,7 @@ extern "C" {
      * call-seq:
      *     __list_default_value__ -> ...
      *
-     * Get the default_val property from a list matrix.
+     * Get the default_value property from a list matrix.
      */
     VALUE nm_list_default_value(VALUE self) {
       return rubyobj_from_cval(NM_DEFAULT_VAL(self), NM_DTYPE(self)).rval;

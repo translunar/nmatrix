@@ -444,8 +444,6 @@ class NMatrix
   #
   def min(dimen=0)
     reduce_along_dim(dimen) do |min, sub_mat|
-      require 'pry'
-      binding.pry
       if min.is_a? NMatrix then 
         min * (min <= sub_mat).cast(self.stype, self.dtype) + ((min)*0.0 + (min > sub_mat).cast(self.stype, self.dtype)) * sub_mat
       else
@@ -664,6 +662,9 @@ protected
     define_method("__dense_elementwise_#{ewop}__") do |rhs|
       self.__dense_map_pair__(rhs) { |l,r| l.send(op,r) }.cast(stype, NMatrix.upcast(dtype, rhs.dtype))
     end
+    define_method("__yale_elementwise_#{ewop}__") do |rhs|
+      self.__yale_map_merged_stored__(rhs, nil) { |l,r| l.send(op,r) }.cast(stype, NMatrix.upcast(dtype, rhs.dtype))
+    end
   end
 
   {add: :+, sub: :-, mul: :*, div: :/, pow: :**, mod: :%}.each_pair do |ewop, op|
@@ -684,6 +685,10 @@ protected
 
     define_method("__dense_elementwise_#{ewop}__") do |rhs|
       self.__dense_map_pair__(rhs) { |l,r| l.send(op,r) }
+    end
+
+    define_method("__yale_elementwise_#{ewop}__") do |rhs|
+      self.__list_map_merged_stored__(rhs, nil) { |l,r| l.send(op,r) }
     end
   end
 

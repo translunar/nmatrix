@@ -533,9 +533,12 @@ namespace yale_storage { // FIXME: Move to yale.cpp
   YALE_STORAGE* create_from_list_storage(const LIST_STORAGE* rhs, nm::dtype_t l_dtype) {
     if (rhs->dim != 2) rb_raise(nm_eStorageTypeError, "can only convert matrices of dim 2 to yale");
 
-    if ((rhs->dtype == RUBYOBJ and (*reinterpret_cast<RubyObject*>(rhs->default_val)) == RubyObject(INT2FIX(0)))
-        || strncmp(reinterpret_cast<const char*>(rhs->default_val), "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", DTYPE_SIZES[rhs->dtype]))
-      rb_raise(nm_eStorageTypeError, "list matrix must have default value of 0 to convert to yale");
+    if (rhs->dtype == RUBYOBJ) {
+      VALUE init_val = *reinterpret_cast<VALUE*>(rhs->default_val);
+      if (rb_funcall(init_val, rb_intern("!="), 1, Qnil) == Qtrue && rb_funcall(init_val, rb_intern("!="), 1, Qfalse) == Qtrue && rb_funcall(init_val, rb_intern("!="), 1, INT2FIX(0)) == Qtrue)
+        rb_raise(nm_eStorageTypeError, "list matrix of Ruby objects must have default value equal to 0, nil, or false to convert to yale");
+    } else if (strncmp(reinterpret_cast<const char*>(rhs->default_val), "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", DTYPE_SIZES[rhs->dtype]))
+      rb_raise(nm_eStorageTypeError, "list matrix of non-Ruby objects must have default value of 0 to convert to yale");
 
 
     size_t ndnz = nm_list_storage_count_nd_elements(rhs);
@@ -551,7 +554,7 @@ namespace yale_storage { // FIXME: Move to yale.cpp
       rb_raise(nm_eStorageTypeError, "conversion failed; capacity of %ld requested, max allowable is %ld", (unsigned long)request_capacity, (unsigned long)(lhs->capacity));
 
     // Initialize the A and IJA arrays
-    init<LDType,LIType>(lhs);
+    init<LDType,LIType>(lhs, rhs->default_val);
 
     LIType* lhs_ija = reinterpret_cast<LIType*>(lhs->ija);
     LDType* lhs_a   = reinterpret_cast<LDType*>(lhs->a);
