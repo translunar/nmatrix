@@ -32,6 +32,8 @@
  * Standard Includes
  */
 
+#include <cmath> // pow().
+
 /*
  * Project Includes
  */
@@ -41,7 +43,7 @@
 /*
  * Macros
  */
- 
+
 extern "C" {
 
 /*
@@ -69,6 +71,7 @@ struct SLICE {
  */
 
   size_t nm_storage_count_max_elements(const STORAGE* storage);
+  VALUE nm_enumerator_length(VALUE nmatrix);
 
 } // end of extern "C" block
 
@@ -91,6 +94,9 @@ namespace nm {
 
       case EW_DIV:
         return left / right;
+
+      case EW_POW:
+        return pow(left, right);
 
       case EW_MOD:
         rb_raise(rb_eNotImpError, "Element-wise modulo is currently not supported.");

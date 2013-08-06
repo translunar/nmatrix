@@ -42,6 +42,76 @@
  * Global Variables
  */
 
+namespace nm {
+  const char* const EWOP_OPS[nm::NUM_EWOPS] = {
+    "+",
+    "-",
+    "*",
+    "/",
+    "**",
+    "%",
+    "==",
+    "!=",
+    "<",
+    ">",
+    "<=",
+    ">="
+  };
+
+  const std::string EWOP_NAMES[nm::NUM_EWOPS] = {
+    "add",
+    "sub",
+    "mul",
+    "div",
+    "pow",
+    "mod",
+    "eqeq",
+    "neq",
+    "lt",
+    "gt",
+    "leq",
+    "geq"
+  };
+
+
+  template <typename Type>
+  Complex<Type>::Complex(const RubyObject& other) {
+    switch(TYPE(other.rval)) {
+    case T_COMPLEX:
+      r = NUM2DBL(rb_funcall(other.rval, rb_intern("real"), 0));
+      i = NUM2DBL(rb_funcall(other.rval, rb_intern("imag"), 0));
+      break;
+    case T_FLOAT:
+    case T_RATIONAL:
+      r = NUM2DBL(other.rval);
+      i = 0.0;
+      break;
+    default:
+      rb_raise(rb_eTypeError, "not sure how to convert this type of VALUE to a complex");
+    }
+  }
+
+  template <typename Type>
+  Rational<Type>::Rational(const RubyObject& other) {
+    switch (TYPE(other.rval)) {
+    case T_RATIONAL:
+      n = NUM2LONG(rb_funcall(this->rval, rb_intern("numerator"), 0));
+      d = NUM2LONG(rb_funcall(this->rval, rb_intern("denominator"), 0));
+      break;
+    case T_FIXNUM:
+      n = NUM2LONG(other.rval);
+      d = 1;
+      break;
+    case T_COMPLEX:
+    case T_FLOAT:
+      rb_raise(rb_eTypeError, "cannot convert float to a rational");
+      break;
+    default:
+      rb_raise(rb_eTypeError, "not sure how to convert this type of VALUE to a rational");
+    }
+  }
+
+} // end of namespace nm
 extern "C" {
 
 const char* const DTYPE_NAMES[nm::NUM_DTYPES] = {
@@ -66,6 +136,7 @@ const char* const ITYPE_NAMES[nm::NUM_ITYPES] = {
 	"uint32",
 	"uint64"
 };
+
 
 const size_t DTYPE_SIZES[nm::NUM_DTYPES] = {
 	sizeof(uint8_t),
@@ -170,7 +241,7 @@ void rubyval_to_cval(VALUE val, nm::dtype_t dtype, void* loc) {
 			break;
 
 		case RUBYOBJ:
-		  *reinterpret_cast<VALUE*>(loc)        = RubyObject(val).rval;
+		  *reinterpret_cast<VALUE*>(loc)        = val;
 			//rb_raise(rb_eTypeError, "Attempting a bad conversion from a Ruby value.");
 			break;
 
@@ -266,5 +337,6 @@ void* rubyobj_to_cval(VALUE val, nm::dtype_t dtype) {
 
   return ret_val;
 }
+
 
 } // end of extern "C" block

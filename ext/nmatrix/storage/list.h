@@ -82,7 +82,7 @@ extern "C" {
   // Accessors //
   ///////////////
 
-  VALUE nm_list_each_stored_with_indices(VALUE nmatrix);
+  VALUE nm_list_each_with_indices(VALUE nmatrix, bool stored);
   void* nm_list_storage_ref(STORAGE* s, SLICE* slice);
   void* nm_list_storage_get(STORAGE* s, SLICE* slice);
   void* nm_list_storage_insert(STORAGE* s, SLICE* slice, void* val);
@@ -98,7 +98,6 @@ extern "C" {
   // Math //
   //////////
 
-  STORAGE* nm_list_storage_ew_op(nm::ewop_t op, const STORAGE* left, const STORAGE* right, VALUE scalar);
   STORAGE* nm_list_storage_matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resulting_shape, bool vector);
 
 
@@ -125,6 +124,10 @@ extern "C" {
   STORAGE*      nm_list_storage_cast_copy(const STORAGE* rhs, nm::dtype_t new_dtype);
   VALUE         nm_list_storage_to_hash(const LIST_STORAGE* s, const nm::dtype_t dtype);
 
+  // Exposed functions
+  VALUE nm_to_hash(VALUE self);
+  VALUE nm_list_map_merged_stored(int argc, VALUE* argv, VALUE left);
+  VALUE nm_list_default_value(VALUE self);
 } // end of extern "C" block
 
 #endif // LIST_H

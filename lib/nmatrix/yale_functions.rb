@@ -39,33 +39,36 @@ module NMatrix::YaleFunctions
   end
 
   # call-seq:
-  #     yale_nd_row_as_array -> Array
+  #     yale_ja_at(i) -> Array
   #
   # Returns the non-diagonal column indices which are stored in a given row.
-  def yale_nd_row_as_array i
-    yale_nd_row(i, :array)
+  def yale_ja_at i
+    yale_nd_row(i, :keys)
   end
+  alias :yale_nd_row_as_array :yale_ja_at
 
   # call-seq:
-  #     yale_nd_row_as_set -> Set
+  #     yale_ja_set_at(i) -> Set
   #
   # Returns the non-diagonal column indices which are stored in a given row, as a Set.
-  def yale_nd_row_as_set i
+  def yale_ja_set_at i
     require 'set'
-    yale_nd_row(i, :array).to_set
+    yale_nd_row(i, :keys).to_set
   end
+  alias :yale_nd_row_as_set :yale_ja_set_at
 
   # call-seq:
-  #     yale_nd_row_as_sorted_set -> SortedSet
+  #     yale_ja_sorted_set_at -> SortedSet
   #
   # Returns the non-diagonal column indices which are stored in a given row, as a Set.
-  def yale_nd_row_as_sorted_set i
+  def yale_ja_sorted_set_at i
     require 'set'
-    SortedSet.new(yale_nd_row(i, :array))
+    SortedSet.new(yale_nd_row(i, :keys))
   end
+  alias :yale_nd_row_as_sorted_set :yale_ja_sorted_set_at
 
   # call-seq:
-  #     yale_nd_row_as_hash -> Hash
+  #     yale_nd_row_as_hash(i) -> Hash
   #
   # Returns the non-diagonal column indices and entries stored in a given row.
   def yale_nd_row_as_hash i
@@ -73,35 +76,38 @@ module NMatrix::YaleFunctions
   end
 
   # call-seq:
-  #     yale_row_as_array -> Array
+  #     yale_ja_d_keys_at(i) -> Array
   #
   # Returns the diagonal and non-digonal column indices stored in a given row.
-  def yale_row_as_array i
-    ary = yale_nd_row(i, :array)
+  def yale_ja_d_keys_at i
+    ary = yale_nd_row(i, :keys)
     return ary if i >= self.shape[1] || self[i,i].nil? || self[i,i] == 0
     ary << i
   end
+  alias :yale_row_as_array :yale_ja_d_keys_at
 
   # call-seq:
-  #     yale_row_as_set -> Set
+  #     yale_ja_d_keys_set_at(i) -> Set
   #
   # Returns the diagonal and non-diagonal column indices stored in a given row.
-  def yale_row_as_set i
+  def yale_ja_d_keys_set_at i
     require 'set'
-    yale_row_as_array(i).to_set
+    yale_ja_d_keys_at(i).to_set
   end
+  alias :yale_row_as_set :yale_ja_d_keys_set_at
 
   # call-seq:
-  #     yale_row_as_sorted_set -> SortedSet
+  #     yale_ja_d_keys_sorted_set_at(i) -> SortedSet
   #
   # Returns the diagonal and non-diagonal column indices stored in a given row.
-  def yale_row_as_sorted_set i
+  def yale_ja_d_keys_sorted_set_at i
     require 'set'
     SortedSet.new(yale_row_as_array(i))
   end
+  alias :yale_row_as_sorted_set :yale_ja_d_keys_sorted_set_at
 
   # call-seq:
-  #     yale_row_as_hash -> Hash
+  #     yale_row_as_hash(i) -> Hash
   #
   # Returns the diagonal and non-diagonal column indices and entries stored in a given row.
   def yale_row_as_hash i

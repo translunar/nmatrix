@@ -67,10 +67,6 @@ describe NMatrix::LAPACK do
         a[2,0].should == 1 # 3.quo(8)
         a[2,1].should be_within(err).of(52.quo(9))
         a[2,2].should be_within(err).of(360.quo(53))
-        # FIXME: these are rounded, == won't work
-          # be_within(TOLERANCE).of(desired_value) should work
-        a[2,1].should be_within(err).of(0.544118)
-        a[2,2].should be_within(err).of(5.294118)
       end
 
       it "exposes clapack potrf" do
@@ -168,7 +164,7 @@ describe NMatrix::LAPACK do
           sings, lefts, rights = NMatrix::LAPACK.svd(a, :both)
         rescue NotImplementedError => e
           pending e.to_s
-          end
+        end
         lefts.row(0).to_a.zip(left_true.row(0).to_a).each { |a, t| a.should be_within(err).of(t) }
         rights.row(0).to_a.zip(right_true.row(0).to_a).each {|a, t| a.should be_within(err).of(t) }
         sings.row(0).to_a.zip(s_true.row(0).to_a).each { |a, t| a.should be_within(err).of(t) }

@@ -31,7 +31,7 @@ describe NMatrix do
 
   it "calculates exact determinants on small square matrices" do
     a = NMatrix.new(:dense, 2, [1,2,3,4], :int64)
-    x = a.det_exact
+    a.det_exact.should == -2
   end
 
   it "calculates determinants" do
@@ -39,16 +39,28 @@ describe NMatrix do
     m.det.should == 6
   end
 
+  it "allows casting to Ruby objects" do
+    m = NMatrix.new(:dense, [3,3], [0,0,1,0,2,0,3,4,5], :int64)
+    n = m.cast(:dense, :object)
+    n.should == m
+  end
+
+  it "allows casting from Ruby objects" do
+    m = NMatrix.new(:dense, [3,3], [0,0,1,0,2,0,3,4,5], :object)
+    n = m.cast(:dense, :int64)
+    m.should == n
+  end
+
   it "allows stype casting of a dim 2 matrix between dense, sparse, and list (different dtypes)" do
     m = NMatrix.new(:dense, [3,3], [0,0,1,0,2,0,3,4,5], :int64).
-        cast(:yale, :int32).
-        cast(:dense, :float64).
-        cast(:list, :int32).
-        cast(:dense, :int16).
-        cast(:list, :int32).
-        cast(:yale, :int64) #.
-        #cast(:list, :int32).
-        #cast(:dense, :int16)
+      cast(:yale, :int32).
+      cast(:dense, :float64).
+      cast(:list, :object).
+      cast(:dense, :int16).
+      cast(:list, :int32).
+      cast(:yale, :int64) #.
+    #cast(:list, :int32).
+    #cast(:dense, :int16)
     #m.should.equal?(original)
     # For some reason this causes some weird garbage collector problems when we uncomment these. The above lines won't
     # work at all in IRB, but work fine when run in a regular Ruby session.
@@ -141,7 +153,7 @@ describe NMatrix do
 
   [:dense, :list, :yale].each do |storage_type|
     context storage_type do
-      it "can be duplicated" do
+    it "can be duplicated" do
         n = NMatrix.new(storage_type, [2,3], storage_type == :yale ? :float64 : 1.1)
         n.stype.should equal(storage_type)
 
@@ -185,14 +197,31 @@ describe NMatrix do
         c = dtype == :object ? "Ruby object" : "non-Ruby object"
         context c do
           it "allows iteration of matrices" do
-            pending("yale and list not implemented yet") unless storage_type == :dense
+            n = nil
+            if storage_type == :dense
             n = NMatrix.new(:dense, [3,3], [1,2,3,4,5,6,7,8,9], dtype)
+            else
+              n = storage_type == :yale ? NMatrix.new(storage_type, [3,4], dtype) : NMatrix.new(storage_type, [3,4], 0, dtype)
+              n[0,0] = 1
+              n[0,1] = 2
+              n[2,3] = 4
+              n[2,0] = 3
+            end
+            ary = []
             n.each do |x|
-              puts x
+              ary << x
+            end
+
+            if storage_type == :dense
+              ary.should == [1,2,3,4,5,6,7,8,9]
+            else
+              ary.should == [1,2,0,0,0,0,0,0,3,0,0,4]
             end
           end
 
           it "allows storage-based iteration of matrices" do
+            STDERR.puts storage_type.inspect
+            STDERR.puts dtype.inspect
             n = storage_type == :yale ? NMatrix.new(storage_type, [3,3], dtype) : NMatrix.new(storage_type, [3,3], 0, dtype)
             n[0,0] = 1
             n[0,1] = 2
@@ -239,7 +268,7 @@ describe NMatrix do
         NMatrix.new(storage_type, [3,2,8], 0).shape.should == [3,2,8]
         NMatrix.new(storage_type, [3,2,8], 0).dim.should  == 3
       end
-      
+
       it "returns number of rows and columns" do
         NMatrix.new(storage_type, [7, 4], 3).rows.should == 7
         NMatrix.new(storage_type, [7, 4], 3).cols.should == 4
@@ -261,7 +290,7 @@ describe NMatrix do
 
   it "converts from list to yale properly" do
     m = NMatrix.new(:list, 3, 0)
-    m[0,2] = 333 
+    m[0,2] = 333
     m[2,2] = 777
     n = m.cast(:yale, :int32)
     puts n.capacity
@@ -478,12 +507,12 @@ describe NMatrix do
 
     it "should convert integer dtypes to float when calculating variance" do
       m = N[[1,2,3], [3,4,5], :int32]
-      m.mean(0).dtype.should eq :float64
+      m.variance(0).dtype.should eq :float64
     end
 
     it "should convert integer dtypes to float when calculating standard deviation" do
       m = N[[1,2,3], [3,4,5], :int32]
-      m.mean(0).dtype.should eq :float64
+      m.std(0).dtype.should eq :float64
     end
 
     context "_like constructors" do
@@ -501,5 +530,5 @@ describe NMatrix do
     end
 
   end
-
+  
 end

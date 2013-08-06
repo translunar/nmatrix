@@ -165,10 +165,14 @@ $objs = %w{nmatrix ruby_constants data/data util/io util/math util/sl_list stora
 CONFIG['CXX'] = 'g++'
 
 def find_newer_gplusplus #:nodoc:
-  [8,7,6,5,4,3].each do |minor|
-    result = `which g++-4.#{minor}`
+  print "checking for apparent GNU g++ binary with C++0x/C++11 support... "
+  [9,8,7,6,5,4,3].each do |minor|
+    ver = "4.#{minor}"
+    gpp = "g++-#{ver}"
+    result = `which #{gpp}`
     next if result.empty?
-    CONFIG['CXX'] = "g++-4.#{minor}"
+    CONFIG['CXX'] = gpp
+    puts ver
     return CONFIG['CXX']
   end
   false
@@ -196,13 +200,15 @@ else
   else
     $CPP_STANDARD = 'c++11'
   end
+  puts "using C++ standard... #{$CPP_STANDARD}"
+  puts "g++ reports version... " + `#{CONFIG['CXX']} --version|head -n 1|cut -f 3 -d " "`
 end
 
 # For release, these next two should both be changed to -O3.
-$CFLAGS += " -O0 -g" #" -O0 -g "
-# $CFLAGS += " -static -O0 -g "
-$CPPFLAGS += " -O0 -std=#{$CPP_STANDARD}" #" -O0 -g -std=#{$CPP_STANDARD} " #-fmax-errors=10 -save-temps
-# $CPPFLAGS += " -static -O0 -g -std=#{$CPP_STANDARD} "
+#$CFLAGS += " -O3 " #" -O0 -g "
+$CFLAGS += " -static -O0 -g "
+#$CPPFLAGS += " -O3 -std=#{$CPP_STANDARD} " #" -O0 -g -std=#{$CPP_STANDARD} " #-fmax-errors=10 -save-temps
+$CPPFLAGS += " -static -O0 -g -std=#{$CPP_STANDARD} "
 
 CONFIG['warnflags'].gsub!('-Wshorten-64-to-32', '') # doesn't work except in Mac-patched gcc (4.2)
 CONFIG['warnflags'].gsub!('-Wdeclaration-after-statement', '')

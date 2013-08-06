@@ -50,6 +50,8 @@ extern "C" {
 #include "util/math.h"
 #include "util/io.h"
 #include "storage/storage.h"
+#include "storage/list.h"
+#include "storage/yale.h"
 
 #include "nmatrix.h"
 
@@ -329,21 +331,18 @@ extern "C" {
 static VALUE nm_init(int argc, VALUE* argv, VALUE nm);
 static VALUE nm_init_copy(VALUE copy, VALUE original);
 static VALUE nm_init_transposed(VALUE self);
-static VALUE nm_init_cast_copy(VALUE self, VALUE new_stype_symbol, VALUE new_dtype_symbol);
+static VALUE nm_cast(VALUE self, VALUE new_stype_symbol, VALUE new_dtype_symbol);
 static VALUE nm_read(int argc, VALUE* argv, VALUE self);
 static VALUE nm_write(int argc, VALUE* argv, VALUE self);
-static VALUE nm_to_hash(VALUE self);
 static VALUE nm_init_yale_from_old_yale(VALUE shape, VALUE dtype, VALUE ia, VALUE ja, VALUE a, VALUE from_dtype, VALUE nm);
 static VALUE nm_alloc(VALUE klass);
-static void  nm_delete(NMATRIX* mat);
-static void  nm_delete_ref(NMATRIX* mat);
 static VALUE nm_dtype(VALUE self);
 static VALUE nm_itype(VALUE self);
 static VALUE nm_stype(VALUE self);
 static VALUE nm_dim(VALUE self);
 static VALUE nm_shape(VALUE self);
 static VALUE nm_capacity(VALUE self);
-static VALUE nm_each(VALUE nmatrix);
+static VALUE nm_each_with_indices(VALUE nmatrix);
 static VALUE nm_each_stored_with_indices(VALUE nmatrix);
 
 static SLICE* get_slice(size_t dim, VALUE* c, VALUE self);
@@ -354,6 +353,8 @@ static VALUE nm_mref(int argc, VALUE* argv, VALUE self);
 static VALUE nm_is_ref(VALUE self);
 
 static VALUE is_symmetric(VALUE self, bool hermitian);
+
+static VALUE nm_guess_dtype(VALUE self, VALUE v);
 
 /*
  * Macro defines an element-wise accessor function for some operation.
@@ -374,6 +375,8 @@ DECL_ELEMENTWISE_RUBY_ACCESSOR(add)
 DECL_ELEMENTWISE_RUBY_ACCESSOR(subtract)
 DECL_ELEMENTWISE_RUBY_ACCESSOR(multiply)
 DECL_ELEMENTWISE_RUBY_ACCESSOR(divide)
+DECL_ELEMENTWISE_RUBY_ACCESSOR(power)
+DECL_ELEMENTWISE_RUBY_ACCESSOR(mod)
 DECL_ELEMENTWISE_RUBY_ACCESSOR(eqeq)
 DECL_ELEMENTWISE_RUBY_ACCESSOR(neq)
 DECL_ELEMENTWISE_RUBY_ACCESSOR(lt)
@@ -417,17 +420,17 @@ void Init_nmatrix() {
 	///////////////////////
 	// Class Definitions //
 	///////////////////////
-	
+
 	cNMatrix = rb_define_class("NMatrix", rb_cObject);
 	cNVector = rb_define_class("NVector", cNMatrix);
-	
+
 	// Special exceptions
-	
+
 	/*
 	 * Exception raised when there's a problem with data.
 	 */
 	nm_eDataTypeError    = rb_define_class("DataTypeError", rb_eStandardError);
-	
+
 	/*
 	 * Exception raised when something goes wrong with the storage of a matrix.
 	 */
@@ -436,7 +439,7 @@ void Init_nmatrix() {
 	///////////////////
 	// Class Methods //
 	///////////////////
-	
+
 	rb_define_alloc_func(cNMatrix, nm_alloc);
 
 	///////////////////////
@@ -445,6 +448,7 @@ void Init_nmatrix() {
 
 	rb_define_singleton_method(cNMatrix, "upcast", (METHOD)nm_upcast, 2);
 	rb_define_singleton_method(cNMatrix, "itype_by_shape", (METHOD)nm_itype_by_shape, 1);
+	rb_define_singleton_method(cNMatrix, "guess_dtype", (METHOD)nm_guess_dtype, 1);
 
 	//////////////////////
 	// Instance Methods //
@@ -462,7 +466,8 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "dtype", (METHOD)nm_dtype, 0);
 	rb_define_method(cNMatrix, "itype", (METHOD)nm_itype, 0);
 	rb_define_method(cNMatrix, "stype", (METHOD)nm_stype, 0);
-	rb_define_method(cNMatrix, "cast",  (METHOD)nm_init_cast_copy, 2);
+	rb_define_method(cNMatrix, "cast",  (METHOD)nm_cast, 2);
+	rb_define_protected_method(cNMatrix, "__list_default_value__", (METHOD)nm_list_default_value, 0);
 
 	rb_define_method(cNMatrix, "[]", (METHOD)nm_mref, -1);
 	rb_define_method(cNMatrix, "slice", (METHOD)nm_mget, -1);
@@ -470,16 +475,17 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "is_ref?", (METHOD)nm_is_ref, 0);
 	rb_define_method(cNMatrix, "dimensions", (METHOD)nm_dim, 0);
 
-	rb_define_protected_method(cNMatrix, "to_hash_c", (METHOD)nm_to_hash, 0); // handles list and dense, which are n-dimensional
-	//rb_define_alias(cNMatrix,  "to_h",    "to_hash");
+	rb_define_protected_method(cNMatrix, "__list_to_hash__", (METHOD)nm_to_hash, 0); // handles list and dense, which are n-dimensional
 
 	rb_define_method(cNMatrix, "shape", (METHOD)nm_shape, 0);
 	rb_define_method(cNMatrix, "det_exact", (METHOD)nm_det_exact, 0);
 	//rb_define_method(cNMatrix, "transpose!", (METHOD)nm_transpose_self, 0);
 	rb_define_method(cNMatrix, "complex_conjugate!", (METHOD)nm_complex_conjugate_bang, 0);
 
-	rb_define_method(cNMatrix, "each", (METHOD)nm_each, 0);
+	rb_define_protected_method(cNMatrix, "__dense_each__", (METHOD)nm_dense_each, 0);
+	rb_define_method(cNMatrix, "each_with_indices", (METHOD)nm_each_with_indices, 0);
 	rb_define_method(cNMatrix, "each_stored_with_indices", (METHOD)nm_each_stored_with_indices, 0);
+	rb_define_protected_method(cNMatrix, "__list_map_merged_stored__", (METHOD)nm_list_map_merged_stored, -1);
 
 	rb_define_method(cNMatrix, "==",	  (METHOD)nm_eqeq,				1);
 
@@ -487,7 +493,8 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "-",			(METHOD)nm_ew_subtract,	1);
   rb_define_method(cNMatrix, "*",			(METHOD)nm_ew_multiply,	1);
 	rb_define_method(cNMatrix, "/",			(METHOD)nm_ew_divide,		1);
-  //rb_define_method(cNMatrix, "%",			(METHOD)nm_ew_mod,			1);
+  rb_define_method(cNMatrix, "**",    (METHOD)nm_ew_power,    1);
+  rb_define_method(cNMatrix, "%",     (METHOD)nm_ew_mod,      1);
 
 	rb_define_method(cNMatrix, "=~", (METHOD)nm_ew_eqeq, 1);
 	rb_define_method(cNMatrix, "!~", (METHOD)nm_ew_neq, 1);
@@ -495,6 +502,11 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, ">=", (METHOD)nm_ew_geq, 1);
 	rb_define_method(cNMatrix, "<", (METHOD)nm_ew_lt, 1);
 	rb_define_method(cNMatrix, ">", (METHOD)nm_ew_gt, 1);
+
+	/////////////////////////////
+	// Helper Instance Methods //
+	/////////////////////////////
+	rb_define_protected_method(cNMatrix, "__yale_vector_set__", (METHOD)nm_vector_set, -1);
 
 	/////////////////////////
 	// Matrix Math Methods //
@@ -507,18 +519,18 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "hermitian?", (METHOD)nm_hermitian, 0);
 
 	rb_define_method(cNMatrix, "capacity", (METHOD)nm_capacity, 0);
-	
+
 	/////////////
 	// Aliases //
 	/////////////
-	
+
 	rb_define_alias(cNMatrix, "dim", "dimensions");
 	rb_define_alias(cNMatrix, "equal?", "eql?");
-	
+
 	///////////////////////
 	// Symbol Generation //
 	///////////////////////
-	
+
 	nm_init_ruby_constants();
 
 	//////////////////////////
@@ -611,7 +623,7 @@ static VALUE nm_capacity(VALUE self) {
 /*
  * Destructor.
  */
-static void nm_delete(NMATRIX* mat) {
+void nm_delete(NMATRIX* mat) {
   static void (*ttable[nm::NUM_STYPES])(STORAGE*) = {
     nm_dense_storage_delete,
     nm_list_storage_delete,
@@ -625,10 +637,10 @@ static void nm_delete(NMATRIX* mat) {
 /*
  * Slicing destructor.
  */
-static void nm_delete_ref(NMATRIX* mat) {
+void nm_delete_ref(NMATRIX* mat) {
   static void (*ttable[nm::NUM_STYPES])(STORAGE*) = {
     nm_dense_storage_delete_ref,
-    nm_list_storage_delete_ref, 
+    nm_list_storage_delete_ref,
     nm_yale_storage_delete
   };
   ttable[mat->stype](mat->storage);
@@ -697,25 +709,30 @@ static VALUE nm_upcast(VALUE self, VALUE t1, VALUE t2) {
 
 /*
  * call-seq:
- *     each -> Enumerator
+ *     each_with_indices -> Enumerator
  *
- * Iterate over the matrix as you would an Enumerable (e.g., Array).
- *
- * Currently only works for dense.
+ * Iterate over all entries of any matrix in standard storage order (as with #each), and include the indices.
  */
-static VALUE nm_each(VALUE nmatrix) {
-  volatile VALUE nm = nmatrix; // not sure why we do this, but it gets done in ruby's array.c.
+static VALUE nm_each_with_indices(VALUE nmatrix) {
+  volatile VALUE nm = nmatrix;
 
   switch(NM_STYPE(nm)) {
+  case nm::YALE_STORE:
+    return nm_yale_each_with_indices(nm);
   case nm::DENSE_STORE:
-    return nm_dense_each(nm);
+    return nm_dense_each_with_indices(nm);
+  case nm::LIST_STORE:
+    return nm_list_each_with_indices(nm, false);
   default:
-    rb_raise(rb_eNotImpError, "only dense matrix's each method works right now");
+    rb_raise(nm_eDataTypeError, "Not a proper storage type");
   }
 }
 
 /*
- * Iterate over the sparse entries of any matrix. For dense and yale, this iterates over non-zero
+ * call-seq:
+ *     each_stored_with_indices -> Enumerator
+ *
+ * Iterate over the stored entries of any matrix. For dense and yale, this iterates over non-zero
  * entries; for list, this iterates over non-default entries. Yields dim+1 values for each entry:
  * i, j, ..., and the entry itself.
  */
@@ -728,12 +745,11 @@ static VALUE nm_each_stored_with_indices(VALUE nmatrix) {
   case nm::DENSE_STORE:
     return nm_dense_each_with_indices(nm);
   case nm::LIST_STORE:
-    return nm_list_each_stored_with_indices(nm);
+    return nm_list_each_with_indices(nm, true);
   default:
     rb_raise(nm_eDataTypeError, "Not a proper storage type");
   }
 }
-
 
 
 /*
@@ -777,7 +793,8 @@ DEF_ELEMENTWISE_RUBY_ACCESSOR(ADD, add)
 DEF_ELEMENTWISE_RUBY_ACCESSOR(SUB, subtract)
 DEF_ELEMENTWISE_RUBY_ACCESSOR(MUL, multiply)
 DEF_ELEMENTWISE_RUBY_ACCESSOR(DIV, divide)
-//DEF_ELEMENTWISE_RUBY_ACCESSOR(MOD, mod)
+DEF_ELEMENTWISE_RUBY_ACCESSOR(POW, power)
+DEF_ELEMENTWISE_RUBY_ACCESSOR(MOD, mod)
 DEF_ELEMENTWISE_RUBY_ACCESSOR(EQEQ, eqeq)
 DEF_ELEMENTWISE_RUBY_ACCESSOR(NEQ, neq)
 DEF_ELEMENTWISE_RUBY_ACCESSOR(LEQ, leq)
@@ -927,7 +944,7 @@ static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
 
   if (!SYMBOL_P(argv[0]) && TYPE(argv[0]) != T_STRING) {
     stype = nm::DENSE_STORE;
-    
+
   } else {
   	// 0: String or Symbol
     stype  = interpret_stype(argv[0]);
@@ -938,12 +955,12 @@ static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
   if (argc == 7) {
   	if (stype == nm::YALE_STORE) {
 			return nm_init_yale_from_old_yale(argv[1], argv[2], argv[3], argv[4], argv[5], argv[6], nm);
-			
+
 		} else {
 			rb_raise(rb_eArgError, "Expected 2-4 arguments (or 7 for internal Yale creation)");
 		}
   }
-	
+
 	// 1: Array or Fixnum
 	size_t dim;
   size_t* shape = interpret_shape(argv[offset], &dim);
@@ -953,23 +970,23 @@ static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
 
   size_t init_cap = 0, init_val_len = 0;
   void* init_val  = NULL;
-  if (NM_RUBYVAL_IS_NUMERIC(argv[1+offset]) || TYPE(argv[1+offset]) == T_ARRAY) {
+  if (!SYMBOL_P(argv[1+offset]) || TYPE(argv[1+offset]) == T_ARRAY) {
   	// Initial value provided (could also be initial capacity, if yale).
-  	
-    if (stype == nm::YALE_STORE) {
+
+    if (stype == nm::YALE_STORE && NM_RUBYVAL_IS_NUMERIC(argv[1+offset])) {
       init_cap = FIX2UINT(argv[1+offset]);
-      
+
     } else {
     	// 4: initial value / dtype
       init_val = interpret_initial_value(argv[1+offset], dtype);
-      
+
       if (TYPE(argv[1+offset]) == T_ARRAY) 	init_val_len = RARRAY_LEN(argv[1+offset]);
       else                                  init_val_len = 1;
     }
-    
+
   } else {
   	// DType is RUBYOBJ.
-  	
+
     if (stype == nm::DENSE_STORE) {
     	/*
     	 * No need to initialize dense with any kind of default value unless it's
@@ -979,9 +996,9 @@ static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
       	// Pretend [nil] was passed for RUBYOBJ.
       	init_val = ALLOC(VALUE);
         *(VALUE*)init_val = Qnil;
-        
+
         init_val_len = 1;
-        
+
       } else {
       	init_val = NULL;
       }
@@ -990,22 +1007,22 @@ static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
       std::memset(init_val, 0, DTYPE_SIZES[dtype]);
     }
   }
-	
+
   // TODO: Update to allow an array as the initial value.
 	NMATRIX* nmatrix;
   UnwrapNMatrix(nm, nmatrix);
 
   nmatrix->stype = stype;
-  
+
   switch (stype) {
   	case nm::DENSE_STORE:
   		nmatrix->storage = (STORAGE*)nm_dense_storage_create(dtype, shape, dim, init_val, init_val_len);
   		break;
-  		
+
   	case nm::LIST_STORE:
   		nmatrix->storage = (STORAGE*)nm_list_storage_create(dtype, shape, dim, init_val);
   		break;
-  		
+
   	case nm::YALE_STORE:
   		nmatrix->storage = (STORAGE*)nm_yale_storage_create(dtype, shape, dim, init_cap, nm::UINT8);
   		nm_yale_storage_init((YALE_STORAGE*)(nmatrix->storage));
@@ -1015,26 +1032,11 @@ static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
   return nm;
 }
 
-/*
- * call-seq:
- *     to_hash -> Hash
- * 
- * Create a Ruby Hash from an NMatrix.
- *
- * This is an internal C function which handles list stype only.
- */
-static VALUE nm_to_hash(VALUE self) {
-  if (NM_STYPE(self) != nm::LIST_STORE) {
-    rb_raise(rb_eNotImpError, "please cast to :list first");
-  }
-
-  return nm_list_storage_to_hash(NM_STORAGE_LIST(self), NM_DTYPE(self));
-}
 
 /*
  * Copy constructor for changing dtypes and stypes.
  */
-static VALUE nm_init_cast_copy(VALUE self, VALUE new_stype_symbol, VALUE new_dtype_symbol) {
+static VALUE nm_cast(VALUE self, VALUE new_stype_symbol, VALUE new_dtype_symbol) {
   nm::dtype_t new_dtype = nm_dtype_from_rbsymbol(new_dtype_symbol);
   nm::stype_t new_stype = nm_stype_from_rbsymbol(new_stype_symbol);
 
@@ -1047,7 +1049,7 @@ static VALUE nm_init_cast_copy(VALUE self, VALUE new_stype_symbol, VALUE new_dty
   UnwrapNMatrix( self, rhs );
 
   // Copy the storage
-  STYPE_CAST_COPY_TABLE(cast_copy);
+  CAST_TABLE(cast_copy);
   lhs->storage = cast_copy[lhs->stype][rhs->stype](rhs->storage, new_dtype);
 
   STYPE_MARK_TABLE(mark);
@@ -1090,7 +1092,7 @@ static VALUE nm_init_copy(VALUE copy, VALUE original) {
   lhs->stype = rhs->stype;
 
   // Copy the storage
-  STYPE_CAST_COPY_TABLE(ttable);
+  CAST_TABLE(ttable);
   lhs->storage = ttable[lhs->stype][rhs->stype](rhs->storage, rhs->storage->dtype);
 
   return copy;
@@ -1438,7 +1440,7 @@ static VALUE nm_mget(int argc, VALUE* argv, VALUE self) {
     nm_list_storage_get,
     nm_yale_storage_get
   };
-  
+
   return nm_xslice(argc, argv, ttable[NM_STYPE(self)], nm_delete, self);
 }
 
@@ -1551,7 +1553,7 @@ static VALUE nm_multiply(VALUE left_v, VALUE right_v) {
 
     return matrix_multiply(left, right);
 
-  } 
+  }
 
   return Qnil;
 }
@@ -1710,23 +1712,33 @@ static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
 
 	static STORAGE* (*ew_op[nm::NUM_STYPES])(nm::ewop_t, const STORAGE*, const STORAGE*, VALUE scalar) = {
 		nm_dense_storage_ew_op,
-		nm_list_storage_ew_op,
+		NULL,
 		nm_yale_storage_ew_op
 	};
-	
-	NMATRIX *result = ALLOC(NMATRIX), *left;
-	
+
+	NMATRIX* left;
+	NMATRIX* result;
+
 	CheckNMatrixType(left_val);
 	UnwrapNMatrix(left_val, left);
 
   if (TYPE(right_val) != T_DATA || (RDATA(right_val)->dfree != (RUBY_DATA_FUNC)nm_delete && RDATA(right_val)->dfree != (RUBY_DATA_FUNC)nm_delete_ref)) {
     // This is a matrix-scalar element-wise operation.
-
-    if (left->stype != nm::YALE_STORE) {
-      result->storage = ew_op[left->stype](op, reinterpret_cast<STORAGE*>(left->storage), NULL, right_val);
+    std::string sym;
+    switch(left->stype) {
+    case nm::DENSE_STORE:
+      result = ALLOC(NMATRIX);
+      result->storage = nm_dense_storage_ew_op(op, reinterpret_cast<STORAGE*>(left->storage), NULL, right_val);
       result->stype   = left->stype;
-    } else {
-      rb_raise(rb_eNotImpError, "Scalar element-wise operations not implemented for Yale storage yet");
+      break;
+    case nm::LIST_STORE:
+      sym = "__list_scalar_" + nm::EWOP_NAMES[op] + "__";
+      return rb_funcall(left_val, rb_intern(sym.c_str()), 1, right_val);
+    case nm::YALE_STORE:
+      sym = "__yale_scalar_" + nm::EWOP_NAMES[op] + "__";
+      return rb_funcall(left_val, rb_intern(sym.c_str()), 1, right_val);
+    default:
+      rb_raise(rb_eNotImpError, "unknown storage type requested scalar element-wise operation");
     }
 
   } else {
@@ -1743,20 +1755,30 @@ static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
 
     NMATRIX* right;
     UnwrapNMatrix(right_val, right);
-	
-    if (left->stype == right->stype) {
 
-      result->storage	= ew_op[left->stype](op, reinterpret_cast<STORAGE*>(left->storage), reinterpret_cast<STORAGE*>(right->storage), Qnil);
-      result->stype		= left->stype;
+    if (left->stype == right->stype) {
+      std::string sym;
+
+      switch(left->stype) {
+      case nm::DENSE_STORE:
+      case nm::YALE_STORE:
+        result = ALLOC(NMATRIX);
+        result->storage	= ew_op[left->stype](op, reinterpret_cast<STORAGE*>(left->storage), reinterpret_cast<STORAGE*>(right->storage), Qnil);
+        result->stype		= left->stype;
+        break;
+      case nm::LIST_STORE:
+        sym = "__list_elementwise_" + nm::EWOP_NAMES[op] + "__";
+        return rb_funcall(left_val, rb_intern(sym.c_str()), 1, right_val);
+      default:
+        rb_raise(rb_eNotImpError, "unknown storage type requested element-wise operation");
+      }
 
     } else {
       rb_raise(rb_eArgError, "Element-wise operations are not currently supported between matrices with differing stypes.");
     }
   }
 
-	VALUE result_val = Data_Wrap_Struct(CLASS_OF(left_val), mark[result->stype], nm_delete, result);
-
-	return result_val;
+	return Data_Wrap_Struct(CLASS_OF(left_val), mark[result->stype], nm_delete, result);
 }
 
 /*
@@ -1767,7 +1789,7 @@ bool is_ref(const NMATRIX* matrix) {
   if (matrix->stype != nm::DENSE_STORE) {
     return false;
   }
-  
+
   return ((DENSE_STORAGE*)(matrix->storage))->src != matrix->storage;
 }
 
@@ -1782,11 +1804,11 @@ static VALUE is_symmetric(VALUE self, bool hermitian) {
 		if (NM_STYPE(self) == nm::DENSE_STORE) {
       if (hermitian) {
         nm_dense_storage_is_hermitian((DENSE_STORAGE*)(m->storage), m->storage->shape[0]);
-        
+
       } else {
       	nm_dense_storage_is_symmetric((DENSE_STORAGE*)(m->storage), m->storage->shape[0]);
       }
-      
+
     } else {
       // TODO: Implement, at the very least, yale_is_symmetric. Model it after yale/transp.template.c.
       rb_raise(rb_eNotImpError, "symmetric? and hermitian? only implemented for dense currently");
@@ -1802,6 +1824,16 @@ static VALUE is_symmetric(VALUE self, bool hermitian) {
 ///////////////////////
 
 /*
+ * Guess the dtype given a Ruby VALUE and return it as a symbol.
+ *
+ * Not to be confused with nm_dtype_guess, which returns an nm::dtype_t. (This calls that.)
+ */
+static VALUE nm_guess_dtype(VALUE self, VALUE v) {
+  return ID2SYM(rb_intern(DTYPE_NAMES[nm_dtype_guess(v)]));
+}
+
+
+/*
  * Guess the data type given a value.
  *
  * TODO: Probably needs some work for Bignum.
@@ -1810,35 +1842,37 @@ nm::dtype_t nm_dtype_guess(VALUE v) {
   switch(TYPE(v)) {
   case T_TRUE:
   case T_FALSE:
-    return nm::BYTE;
-    
+  case T_NIL:
+    return nm::RUBYOBJ;
+
   case T_STRING:
     if (RSTRING_LEN(v) == 1) {
     	return nm::BYTE;
-    	
+
     } else {
-    	rb_raise(rb_eArgError, "Strings of length > 1 may not be stored in a matrix.");
+    	return nm::RUBYOBJ;
+
     }
 
 #if SIZEOF_INT == 8
   case T_FIXNUM:
     return nm::INT64;
-    
+
   case T_RATIONAL:
     return nm::RATIONAL128;
-    
+
 #else
 # if SIZEOF_INT == 4
   case T_FIXNUM:
     return nm::INT32;
-    
+
   case T_RATIONAL:
     return nm::RATIONAL64;
-    
+
 #else
   case T_FIXNUM:
     return nm::INT16;
-    
+
   case T_RATIONAL:
     return nm::RATIONAL32;
 # endif
@@ -1850,15 +1884,15 @@ nm::dtype_t nm_dtype_guess(VALUE v) {
 #if SIZEOF_FLOAT == 4
   case T_COMPLEX:
     return nm::COMPLEX128;
-    
+
   case T_FLOAT:
     return nm::FLOAT64;
-    
+
 #else
 # if SIZEOF_FLOAT == 2
   case T_COMPLEX:
     return nm::COMPLEX64;
-    
+
   case T_FLOAT:
     return nm::FLOAT32;
 # endif
@@ -1867,13 +1901,12 @@ nm::dtype_t nm_dtype_guess(VALUE v) {
   case T_ARRAY:
   	/*
   	 * May be passed for dense -- for now, just look at the first element.
-  	 * 
+     *
   	 * TODO: Look at entire array for most specific type.
   	 */
-  	
+
     return nm_dtype_guess(RARRAY_PTR(v)[0]);
 
-  case T_NIL:
   default:
     rb_raise(rb_eArgError, "Unable to guess a data type from provided parameters; data type must be specified manually.");
   }
@@ -1928,9 +1961,9 @@ static SLICE* get_slice(size_t dim, VALUE* c, VALUE self) {
 static double get_time(void) {
   struct timeval t;
   struct timezone tzp;
-  
+
   gettimeofday(&t, &tzp);
-  
+
   return t.tv_sec + t.tv_usec*1e-6;
 }
 #endif
@@ -1942,16 +1975,16 @@ static double get_time(void) {
  */
 static nm::dtype_t interpret_dtype(int argc, VALUE* argv, nm::stype_t stype) {
   int offset;
-  
+
   switch (argc) {
   	case 1:
   		offset = 0;
   		break;
-  	
+
   	case 2:
   		offset = 1;
   		break;
-  		
+
   	default:
   		rb_raise(rb_eArgError, "Need an initial value or a dtype.");
   		break;
@@ -1959,13 +1992,13 @@ static nm::dtype_t interpret_dtype(int argc, VALUE* argv, nm::stype_t stype) {
 
   if (SYMBOL_P(argv[offset])) {
   	return nm_dtype_from_rbsymbol(argv[offset]);
-  	
+
   } else if (TYPE(argv[offset]) == T_STRING) {
   	return nm_dtype_from_rbstring(StringValue(argv[offset]));
-  	
+
   } else if (stype == nm::YALE_STORE) {
   	rb_raise(rb_eArgError, "Yale storage class requires a dtype.");
-  	
+
   } else {
   	return nm_dtype_guess(argv[0]);
   }
@@ -1977,18 +2010,18 @@ static nm::dtype_t interpret_dtype(int argc, VALUE* argv, nm::stype_t stype) {
 static void* interpret_initial_value(VALUE arg, nm::dtype_t dtype) {
   unsigned int index;
   void* init_val;
-  
+
   if (TYPE(arg) == T_ARRAY) {
   	// Array
-    
+
     init_val = ALLOC_N(int8_t, DTYPE_SIZES[dtype] * RARRAY_LEN(arg));
     for (index = 0; index < RARRAY_LEN(arg); ++index) {
     	rubyval_to_cval(RARRAY_PTR(arg)[index], dtype, (char*)init_val + (index * DTYPE_SIZES[dtype]));
     }
-    
+
   } else {
   	// Single value
-  	
+
     init_val = rubyobj_to_cval(arg, dtype);
   }
 
@@ -2007,18 +2040,18 @@ static size_t* interpret_shape(VALUE arg, size_t* dim) {
   if (TYPE(arg) == T_ARRAY) {
     *dim = RARRAY_LEN(arg);
     shape = ALLOC_N(size_t, *dim);
-    
+
     for (size_t index = 0; index < *dim; ++index) {
       shape[index] = FIX2UINT( RARRAY_PTR(arg)[index] );
     }
-    
+
   } else if (FIXNUM_P(arg)) {
     *dim = 2;
     shape = ALLOC_N(size_t, *dim);
-    
+
     shape[0] = FIX2UINT(arg);
     shape[1] = FIX2UINT(arg);
-    
+
   } else {
     rb_raise(rb_eArgError, "Expected an array of numbers or a single Fixnum for matrix shape");
   }
@@ -2032,10 +2065,10 @@ static size_t* interpret_shape(VALUE arg, size_t* dim) {
 static nm::stype_t interpret_stype(VALUE arg) {
   if (SYMBOL_P(arg)) {
   	return nm_stype_from_rbsymbol(arg);
-  	
+
   } else if (TYPE(arg) == T_STRING) {
   	return nm_stype_from_rbstring(StringValue(arg));
-  	
+
   } else {
   	rb_raise(rb_eArgError, "Expected storage type");
   }
@@ -2049,7 +2082,7 @@ STORAGE* matrix_storage_cast_alloc(NMATRIX* matrix, nm::dtype_t new_dtype) {
   if (matrix->storage->dtype == new_dtype && !is_ref(matrix))
     return matrix->storage;
 
-  STYPE_CAST_COPY_TABLE(cast_copy_storage);
+  CAST_TABLE(cast_copy_storage);
   return cast_copy_storage[matrix->stype][matrix->stype](matrix->storage, new_dtype);
 }
 
@@ -2156,7 +2189,7 @@ VALUE rb_nmatrix_dense_create(nm::dtype_t dtype, size_t* shape, size_t dim, void
     shape_copy		= ALLOC_N(size_t, nm_dim);
     shape_copy[0]	= shape[0];
     shape_copy[1]	= 1;
-    
+
   } else {
     klass				= cNMatrix;
     nm_dim			= dim;

@@ -31,6 +31,7 @@
 /*
  * Standard Includes
  */
+#include <string>
 
 /*
  * Project Includes
@@ -48,17 +49,18 @@ namespace nm {
   /*
    * Constants
    */
-	
+
 	const int NUM_DTYPES = 13;
 	const int NUM_ITYPES = 4;
-	const int NUM_EWOPS = 11;
-	const int NUM_NONCOMP_EWOPS = 5;
-	
+	const int NUM_EWOPS = 12;
+	const int NUM_NONCOMP_EWOPS = 6;
+
   enum ewop_t {
     EW_ADD,
     EW_SUB,
     EW_MUL,
     EW_DIV,
+    EW_POW,
     EW_MOD,
     EW_EQEQ,
     EW_NEQ,
@@ -67,7 +69,11 @@ namespace nm {
     EW_LEQ,
     EW_GEQ
   };
-  
+
+  // element-wise and scalar operators
+  extern const char* const  EWOP_OPS[nm::NUM_EWOPS];
+  extern const std::string  EWOP_NAMES[nm::NUM_EWOPS];
+
 } // end of namespace nm
 
 /*
@@ -81,7 +87,7 @@ namespace nm {
     nm_yale_storage_mark												\
   };
 
-#define STYPE_CAST_COPY_TABLE(name)                                                   \
+#define CAST_TABLE(name)                                                   \
   static STORAGE* (*(name)[nm::NUM_STYPES][nm::NUM_STYPES])(const STORAGE*, nm::dtype_t) = {      \
     { nm_dense_storage_cast_copy,  nm_dense_storage_from_list,  nm_dense_storage_from_yale },  \
     { nm_list_storage_from_dense,  nm_list_storage_cast_copy,   nm_list_storage_from_yale  },  \
@@ -162,50 +168,21 @@ namespace nm {
 #define LR_DTYPE_TEMPLATE_TABLE(fun, ret, ...) NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, fun, ret, __VA_ARGS__)
 
 #define NAMED_LR_DTYPE_TEMPLATE_TABLE(name, fun, ret, ...)																																																								\
-	static ret (*(name)[nm::NUM_DTYPES][nm::NUM_DTYPES])(__VA_ARGS__) = {																																																						\
-		{fun<uint8_t, uint8_t>, fun<uint8_t, int8_t>, fun<uint8_t, int16_t>, fun<uint8_t, int32_t>, fun<uint8_t, int64_t>, fun<uint8_t, float32_t>, fun<uint8_t, float64_t>,	\
-			fun<uint8_t, nm::Complex64>, fun<uint8_t, nm::Complex128>, fun<uint8_t, nm::Rational32>, fun<uint8_t, nm::Rational64>,																							\
-			fun<uint8_t, nm::Rational128>, NULL},																																																																\
-																																																																																					\
-		{fun<int8_t, uint8_t>, fun<int8_t, int8_t>, fun<int8_t, int16_t>, fun<int8_t, int32_t>, fun<int8_t, int64_t>, fun<int8_t, float32_t>, fun<int8_t, float64_t>,					\
-			fun<int8_t, nm::Complex64>, fun<int8_t, nm::Complex128>, fun<int8_t, nm::Rational32>, fun<int8_t, nm::Rational64>, fun<int8_t, nm::Rational128>, NULL},							\
-																																																																																					\
-		{fun<int16_t, uint8_t>, fun<int16_t, int8_t>, fun<int16_t, int16_t>, fun<int16_t, int32_t>, fun<int16_t, int64_t>, fun<int16_t, float32_t>, fun<int16_t, float64_t>,	\
-			fun<int16_t, nm::Complex64>, fun<int16_t, nm::Complex128>, fun<int16_t, nm::Rational32>, fun<int16_t, nm::Rational64>, fun<int16_t, nm::Rational128>, NULL},				\
-																																																																																					\
-		{fun<int32_t, uint8_t>, fun<int32_t, int8_t>, fun<int32_t, int16_t>, fun<int32_t, int32_t>, fun<int32_t, int64_t>, fun<int32_t, float32_t>, fun<int32_t, float64_t>,	\
-			fun<int32_t, nm::Complex64>, fun<int32_t, nm::Complex128>, fun<int32_t, nm::Rational32>, fun<int32_t, nm::Rational64>, fun<int32_t, nm::Rational128>, NULL},				\
-																																																																																					\
-		{fun<int64_t, uint8_t>, fun<int64_t, int8_t>, fun<int64_t, int16_t>, fun<int64_t, int32_t>, fun<int64_t, int64_t>, fun<int64_t, float32_t>, fun<int64_t, float64_t>,	\
-			fun<int64_t, nm::Complex64>, fun<int64_t, nm::Complex128>, fun<int64_t, nm::Rational32>, fun<int64_t, nm::Rational64>, fun<int64_t, nm::Rational128>, NULL},				\
-																																																																																					\
-		{fun<float32_t, uint8_t>, fun<float32_t, int8_t>, fun<float32_t, int16_t>, fun<float32_t, int32_t>, fun<float32_t, int64_t>,																					\
-			fun<float32_t, float32_t>, fun<float32_t, float64_t>, fun<float32_t, nm::Complex64>, fun<float32_t, nm::Complex128>,  fun<float32_t, nm::Rational32>,								\
-			fun<float32_t, nm::Rational64>, fun<float32_t, nm::Rational128>, NULL},																																															\
-                                                                                                                                                                          \
-		{fun<float64_t, uint8_t>, fun<float64_t, int8_t>, fun<float64_t, int16_t>, fun<float64_t, int32_t>, fun<float64_t, int64_t>,																					\
-			fun<float64_t, float32_t>, fun<float64_t, float64_t>, fun<float64_t, nm::Complex64>, fun<float64_t, nm::Complex128>, fun<float64_t, nm::Rational32>,                \
-			fun<float64_t, nm::Rational64>, fun<float64_t, nm::Rational128>, NULL},																																															\
-                                                                                                                                                                          \
-		{fun<nm::Complex64, uint8_t>, fun<nm::Complex64, int8_t>, fun<nm::Complex64, int16_t>, fun<nm::Complex64, int32_t>, fun<nm::Complex64, int64_t>,											\
-			fun<nm::Complex64, float32_t>, fun<nm::Complex64, float64_t>, fun<nm::Complex64, nm::Complex64>, fun<nm::Complex64, nm::Complex128>,																\
-			fun<nm::Complex64, nm::Rational32>, fun<nm::Complex64, nm::Rational64>, fun<nm::Complex64, nm::Rational128>, NULL},																									\
-																																																																																					\
-		{fun<nm::Complex128, uint8_t>, fun<nm::Complex128, int8_t>, fun<nm::Complex128, int16_t>, fun<nm::Complex128, int32_t>, fun<nm::Complex128, int64_t>,									\
-			fun<nm::Complex128, float32_t>, fun<nm::Complex128, float64_t>, fun<nm::Complex128, nm::Complex64>, fun<nm::Complex128, nm::Complex128>,														\
-			fun<nm::Complex128, nm::Rational32>, fun<nm::Complex128, nm::Rational64>, fun<nm::Complex128, nm::Rational128>, NULL},																							\
-																																																																																					\
-		{fun<nm::Rational32, uint8_t>, fun<nm::Rational32, int8_t>, fun<nm::Rational32, int16_t>, fun<nm::Rational32, int32_t>, fun<nm::Rational32, int64_t>, NULL, NULL,			\
-			NULL, NULL, fun<nm::Rational32, nm::Rational32>, fun<nm::Rational32, nm::Rational64>, fun<nm::Rational32, nm::Rational128>, NULL},																	\
-																																																																																					\
-		{fun<nm::Rational64, uint8_t>, fun<nm::Rational64, int8_t>, fun<nm::Rational64, int16_t>, fun<nm::Rational64, int32_t>, fun<nm::Rational64, int64_t>, NULL, NULL,			\
-			NULL, NULL, fun<nm::Rational64, nm::Rational32>, fun<nm::Rational64, nm::Rational64>, fun<nm::Rational64, nm::Rational128>, NULL},																	\
-																																																																																					\
-		{fun<nm::Rational128, uint8_t>, fun<nm::Rational128, int8_t>, fun<nm::Rational128, int16_t>, fun<nm::Rational128, int32_t>, fun<nm::Rational128, int64_t>, NULL,			\
-			NULL, NULL, NULL, fun<nm::Rational128, nm::Rational32>, fun<nm::Rational128, nm::Rational64>, fun<nm::Rational128, nm::Rational128>, NULL},													\
-																																																																																					\
-		{NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, fun<nm::RubyObject, nm::RubyObject>}																													\
-	};
+	static ret (*(name)[nm::NUM_DTYPES][nm::NUM_DTYPES])(__VA_ARGS__) = {  \
+	  {fun<uint8_t, uint8_t>, fun<uint8_t, int8_t>, fun<uint8_t, int16_t>, fun<uint8_t, int32_t>, fun<uint8_t, int64_t>, fun<uint8_t, float32_t>, fun<uint8_t, float64_t>, fun<uint8_t, nm::Complex64>, fun<uint8_t, nm::Complex128>, fun<uint8_t, nm::Rational32>, fun<uint8_t, nm::Rational64>, fun<uint8_t, nm::Rational128>, fun<uint8_t, nm::RubyObject>}, \
+    {fun<int8_t, uint8_t>, fun<int8_t, int8_t>, fun<int8_t, int16_t>, fun<int8_t, int32_t>, fun<int8_t, int64_t>, fun<int8_t, float32_t>, fun<int8_t, float64_t>, fun<int8_t, nm::Complex64>, fun<int8_t, nm::Complex128>, fun<int8_t, nm::Rational32>, fun<int8_t, nm::Rational64>, fun<int8_t, nm::Rational128>, fun<int8_t, nm::RubyObject>},               \
+    {fun<int16_t, uint8_t>, fun<int16_t, int8_t>, fun<int16_t, int16_t>, fun<int16_t, int32_t>, fun<int16_t, int64_t>, fun<int16_t, float32_t>, fun<int16_t, float64_t>, fun<int16_t, nm::Complex64>, fun<int16_t, nm::Complex128>, fun<int16_t, nm::Rational32>, fun<int16_t, nm::Rational64>, fun<int16_t, nm::Rational128>, fun<int16_t, nm::RubyObject>},  \
+    {fun<int32_t, uint8_t>, fun<int32_t, int8_t>, fun<int32_t, int16_t>, fun<int32_t, int32_t>, fun<int32_t, int64_t>, fun<int32_t, float32_t>, fun<int32_t, float64_t>, fun<int32_t, nm::Complex64>, fun<int32_t, nm::Complex128>, fun<int32_t, nm::Rational32>, fun<int32_t, nm::Rational64>, fun<int32_t, nm::Rational128>, fun<int32_t, nm::RubyObject>},  \
+    {fun<int64_t, uint8_t>, fun<int64_t, int8_t>, fun<int64_t, int16_t>, fun<int64_t, int32_t>, fun<int64_t, int64_t>, fun<int64_t, float32_t>, fun<int64_t, float64_t>, fun<int64_t, nm::Complex64>, fun<int64_t, nm::Complex128>, fun<int64_t, nm::Rational32>, fun<int64_t, nm::Rational64>, fun<int64_t, nm::Rational128>, fun<int64_t, nm::RubyObject>},  \
+    {fun<float32_t, uint8_t>, fun<float32_t, int8_t>, fun<float32_t, int16_t>, fun<float32_t, int32_t>, fun<float32_t, int64_t>, fun<float32_t, float32_t>, fun<float32_t, float64_t>, fun<float32_t, nm::Complex64>, fun<float32_t, nm::Complex128>, fun<float32_t, nm::Rational32>, fun<float32_t, nm::Rational64>, fun<float32_t, nm::Rational128>, fun<float32_t, nm::RubyObject>},  \
+    {fun<float64_t, uint8_t>, fun<float64_t, int8_t>, fun<float64_t, int16_t>, fun<float64_t, int32_t>, fun<float64_t, int64_t>, fun<float64_t, float32_t>, fun<float64_t, float64_t>, fun<float64_t, nm::Complex64>, fun<float64_t, nm::Complex128>, fun<float64_t, nm::Rational32>, fun<float64_t, nm::Rational64>, fun<float64_t, nm::Rational128>, fun<float64_t, nm::RubyObject>},  \
+    {fun<nm::Complex64, uint8_t>, fun<nm::Complex64, int8_t>, fun<nm::Complex64, int16_t>, fun<nm::Complex64, int32_t>, fun<nm::Complex64, int64_t>, fun<nm::Complex64, float32_t>, fun<nm::Complex64, float64_t>, fun<nm::Complex64, nm::Complex64>, fun<nm::Complex64, nm::Complex128>, fun<nm::Complex64, nm::Rational32>, fun<nm::Complex64, nm::Rational64>, fun<nm::Complex64, nm::Rational128>, fun<nm::Complex64, nm::RubyObject>},               \
+    {fun<nm::Complex128, uint8_t>, fun<nm::Complex128, int8_t>, fun<nm::Complex128, int16_t>, fun<nm::Complex128, int32_t>, fun<nm::Complex128, int64_t>, fun<nm::Complex128, float32_t>, fun<nm::Complex128, float64_t>, fun<nm::Complex128, nm::Complex64>, fun<nm::Complex128, nm::Complex128>, fun<nm::Complex128, nm::Rational32>, fun<nm::Complex128, nm::Rational64>, fun<nm::Complex128, nm::Rational128>, fun<nm::Complex128, nm::RubyObject>},  \
+    {fun<nm::Rational32, uint8_t>, fun<nm::Rational32, int8_t>, fun<nm::Rational32, int16_t>, fun<nm::Rational32, int32_t>, fun<nm::Rational32, int64_t>, NULL, NULL, NULL, NULL, fun<nm::Rational32, nm::Rational32>, fun<nm::Rational32, nm::Rational64>, fun<nm::Rational32, nm::Rational128>, fun<nm::Rational32, nm::RubyObject>},             \
+    {fun<nm::Rational64, uint8_t>, fun<nm::Rational64, int8_t>, fun<nm::Rational64, int16_t>, fun<nm::Rational64, int32_t>, fun<nm::Rational64, int64_t>, NULL, NULL, NULL, NULL, fun<nm::Rational64, nm::Rational32>, fun<nm::Rational64, nm::Rational64>, fun<nm::Rational64, nm::Rational128>, fun<nm::Rational64, nm::RubyObject>},             \
+    {fun<nm::Rational128, uint8_t>, fun<nm::Rational128, int8_t>, fun<nm::Rational128, int16_t>, fun<nm::Rational128, int32_t>, fun<nm::Rational128, int64_t>, NULL, NULL, NULL, NULL, fun<nm::Rational128, nm::Rational32>, fun<nm::Rational128, nm::Rational64>, fun<nm::Rational128, nm::Rational128>, fun<nm::Rational128, nm::RubyObject>},    \
+    {fun<nm::RubyObject, uint8_t>, fun<nm::RubyObject, int8_t>, fun<nm::RubyObject, int16_t>, fun<nm::RubyObject, int32_t>, fun<nm::RubyObject, int64_t>, fun<nm::RubyObject, float32_t>, fun<nm::RubyObject, float64_t>, fun<nm::RubyObject, nm::Complex64>, fun<nm::RubyObject, nm::Complex128>, fun<nm::RubyObject, nm::Rational32>, fun<nm::RubyObject, nm::Rational64>, fun<nm::RubyObject, nm::Rational128>, fun<nm::RubyObject, nm::RubyObject>}   \
+  };
 
 /*
  * Defines a static array that holds function pointers to operation, and left-
@@ -427,10 +404,64 @@ namespace nm {
 			{fun<nm::EW_DIV, nm::Rational128, uint8_t>, fun<nm::EW_DIV, nm::Rational128, int8_t>, fun<nm::EW_DIV, nm::Rational128, int16_t>, fun<nm::EW_DIV, nm::Rational128, int32_t>,						\
 				fun<nm::EW_DIV, nm::Rational128, int64_t>, NULL, NULL, NULL, NULL, fun<nm::EW_DIV, nm::Rational128, nm::Rational32>, fun<nm::EW_DIV, nm::Rational128, nm::Rational64>,					\
 				fun<nm::EW_DIV, nm::Rational128, nm::Rational128>, NULL},																																																								\
-																																																																																						\
+\
 			{NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, fun<nm::EW_DIV, nm::RubyObject, nm::RubyObject>}																									\
 		},																																																																																			\
-																																																																																						\
+		  \
+    { \
+      {fun<nm::EW_POW, uint8_t, uint8_t>, fun<nm::EW_POW, uint8_t, int8_t>, fun<nm::EW_POW, uint8_t, int16_t>, fun<nm::EW_POW, uint8_t, int32_t>, fun<nm::EW_POW, uint8_t, int64_t>,						\
+        fun<nm::EW_POW, uint8_t, float32_t>, fun<nm::EW_POW, uint8_t, float64_t>, fun<nm::EW_POW, uint8_t, nm::Complex64>, fun<nm::EW_POW, uint8_t, nm::Complex128>,												\
+        fun<nm::EW_POW, uint8_t, nm::Rational32>, fun<nm::EW_POW, uint8_t, nm::Rational64>, fun<nm::EW_POW, uint8_t, nm::Rational128>, NULL},																						\
+\
+      {fun<nm::EW_POW, int8_t, uint8_t>, fun<nm::EW_POW, int8_t, int8_t>, fun<nm::EW_POW, int8_t, int16_t>, fun<nm::EW_POW, int8_t, int32_t>, fun<nm::EW_POW, int8_t, int64_t>,									\
+        fun<nm::EW_POW, int8_t, float32_t>, fun<nm::EW_POW, int8_t, float64_t>, fun<nm::EW_POW, int8_t, nm::Complex64>, fun<nm::EW_POW, int8_t, nm::Complex128>,														\
+        fun<nm::EW_POW, int8_t, nm::Rational32>, fun<nm::EW_POW, int8_t, nm::Rational64>, fun<nm::EW_POW, int8_t, nm::Rational128>, NULL},																							\
+\
+      {fun<nm::EW_POW, int16_t, uint8_t>, fun<nm::EW_POW, int16_t, int8_t>, fun<nm::EW_POW, int16_t, int16_t>, fun<nm::EW_POW, int16_t, int32_t>, fun<nm::EW_POW, int16_t, int64_t>,						\
+        fun<nm::EW_POW, int16_t, float32_t>, fun<nm::EW_POW, int16_t, float64_t>, fun<nm::EW_POW, int16_t, nm::Complex64>, fun<nm::EW_POW, int16_t, nm::Complex128>,												\
+        fun<nm::EW_POW, int16_t, nm::Rational32>, fun<nm::EW_POW, int16_t, nm::Rational64>, fun<nm::EW_POW, int16_t, nm::Rational128>, NULL},																						\
+\
+      {fun<nm::EW_POW, int32_t, uint8_t>, fun<nm::EW_POW, int32_t, int8_t>, fun<nm::EW_POW, int32_t, int16_t>, fun<nm::EW_POW, int32_t, int32_t>, fun<nm::EW_POW, int32_t, int64_t>,						\
+        fun<nm::EW_POW, int32_t, float32_t>, fun<nm::EW_POW, int32_t, float64_t>, fun<nm::EW_POW, int32_t, nm::Complex64>, fun<nm::EW_POW, int32_t, nm::Complex128>,												\
+        fun<nm::EW_POW, int32_t, nm::Rational32>, fun<nm::EW_POW, int32_t, nm::Rational64>, fun<nm::EW_POW, int32_t, nm::Rational128>, NULL},																						\
+\
+      {fun<nm::EW_POW, int64_t, uint8_t>, fun<nm::EW_POW, int64_t, int8_t>, fun<nm::EW_POW, int64_t, int16_t>, fun<nm::EW_POW, int64_t, int32_t>, fun<nm::EW_POW, int64_t, int64_t>,						\
+        fun<nm::EW_POW, int64_t, float32_t>, fun<nm::EW_POW, int64_t, float64_t>, fun<nm::EW_POW, int64_t, nm::Complex64>, fun<nm::EW_POW, int64_t, nm::Complex128>,												\
+        fun<nm::EW_POW, int64_t, nm::Rational32>, fun<nm::EW_POW, int64_t, nm::Rational64>, fun<nm::EW_POW, int64_t, nm::Rational128>, NULL}, 																					\
+\
+      {fun<nm::EW_POW, float32_t, uint8_t>, fun<nm::EW_POW, float32_t, int8_t>, fun<nm::EW_POW, float32_t, int16_t>, fun<nm::EW_POW, float32_t, int32_t>, fun<nm::EW_POW, float32_t, int64_t>,	\
+        fun<nm::EW_POW, float32_t, float32_t>, fun<nm::EW_POW, float32_t, float64_t>, fun<nm::EW_POW, float32_t, nm::Complex64>, fun<nm::EW_POW, float32_t, nm::Complex128>,								\
+        fun<nm::EW_POW, float32_t, nm::Rational32>, fun<nm::EW_POW, float32_t, nm::Rational64>, fun<nm::EW_POW, float32_t, nm::Rational128>, NULL},																			\
+\
+      {fun<nm::EW_POW, float64_t, uint8_t>, fun<nm::EW_POW, float64_t, int8_t>, fun<nm::EW_POW, float64_t, int16_t>, fun<nm::EW_POW, float64_t, int32_t>, fun<nm::EW_POW, float64_t, int64_t>,	\
+        fun<nm::EW_POW, float64_t, float32_t>, fun<nm::EW_POW, float64_t, float64_t>, fun<nm::EW_POW, float64_t, nm::Complex64>, fun<nm::EW_POW, float64_t, nm::Complex128>,								\
+        fun<nm::EW_POW, float64_t, nm::Rational32>, fun<nm::EW_POW, float64_t, nm::Rational64>, fun<nm::EW_POW, float64_t, nm::Rational128>, NULL},																			\
+\
+      {fun<nm::EW_POW, nm::Complex64, uint8_t>, fun<nm::EW_POW, nm::Complex64, int8_t>, fun<nm::EW_POW, nm::Complex64, int16_t>, fun<nm::EW_POW, nm::Complex64, int32_t>,										\
+        fun<nm::EW_POW, nm::Complex64, int64_t>, fun<nm::EW_POW, nm::Complex64, float32_t>, fun<nm::EW_POW, nm::Complex64, float64_t>, fun<nm::EW_POW, nm::Complex64, nm::Complex64>,				\
+        fun<nm::EW_POW, nm::Complex64, nm::Complex128>, fun<nm::EW_POW, nm::Complex64, nm::Rational32>, fun<nm::EW_POW, nm::Complex64, nm::Rational64>,																	\
+        fun<nm::EW_POW, nm::Complex64, nm::Rational128>, NULL},																																																									\
+\
+      {fun<nm::EW_POW, nm::Complex128, uint8_t>, fun<nm::EW_POW, nm::Complex128, int8_t>, fun<nm::EW_POW, nm::Complex128, int16_t>, fun<nm::EW_POW, nm::Complex128, int32_t>,								\
+        fun<nm::EW_POW, nm::Complex128, int64_t>, fun<nm::EW_POW, nm::Complex128, float32_t>, fun<nm::EW_POW, nm::Complex128, float64_t>, fun<nm::EW_POW, nm::Complex128, nm::Complex64>,		\
+        fun<nm::EW_POW, nm::Complex128, nm::Complex128>,	fun<nm::EW_POW, nm::Complex128, nm::Rational32>, fun<nm::EW_POW, nm::Complex128, nm::Rational64>,															\
+        fun<nm::EW_POW, nm::Complex128, nm::Rational128>, NULL},																																																								\
+\
+      {fun<nm::EW_POW, nm::Rational32, uint8_t>, fun<nm::EW_POW, nm::Rational32, int8_t>, fun<nm::EW_POW, nm::Rational32, int16_t>, fun<nm::EW_POW, nm::Rational32, int32_t>,								\
+        fun<nm::EW_POW, nm::Rational32, int64_t>, NULL, NULL, NULL, NULL, fun<nm::EW_POW, nm::Rational32, nm::Rational32>, fun<nm::EW_POW, nm::Rational32, nm::Rational64>,							\
+        fun<nm::EW_POW, nm::Rational32, nm::Rational128>, NULL},																																																								\
+\
+      {fun<nm::EW_POW, nm::Rational64, uint8_t>, fun<nm::EW_POW, nm::Rational64, int8_t>, fun<nm::EW_POW, nm::Rational64, int16_t>, fun<nm::EW_POW, nm::Rational64, int32_t>,								\
+        fun<nm::EW_POW, nm::Rational64, int64_t>, NULL, NULL, NULL, NULL, fun<nm::EW_POW, nm::Rational64, nm::Rational32>, fun<nm::EW_POW, nm::Rational64, nm::Rational64>,							\
+        fun<nm::EW_POW, nm::Rational64, nm::Rational128>, NULL},																																																								\
+\
+      {fun<nm::EW_POW, nm::Rational128, uint8_t>, fun<nm::EW_POW, nm::Rational128, int8_t>, fun<nm::EW_POW, nm::Rational128, int16_t>, fun<nm::EW_POW, nm::Rational128, int32_t>,						\
+        fun<nm::EW_POW, nm::Rational128, int64_t>, NULL, NULL, NULL, NULL, fun<nm::EW_POW, nm::Rational128, nm::Rational32>, fun<nm::EW_POW, nm::Rational128, nm::Rational64>,					\
+        fun<nm::EW_POW, nm::Rational128, nm::Rational128>, NULL},																																																								\
+\
+      {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, fun<nm::EW_POW, nm::RubyObject, nm::RubyObject>}																									\
+    },  \
+\
 		{																																																																																				\
 			{fun<nm::EW_MOD, uint8_t, uint8_t>, fun<nm::EW_MOD, uint8_t, int8_t>, fun<nm::EW_MOD, uint8_t, int16_t>, fun<nm::EW_MOD, uint8_t, int32_t>, fun<nm::EW_MOD, uint8_t, int64_t>,						\
 				fun<nm::EW_MOD, uint8_t, float32_t>, fun<nm::EW_MOD, uint8_t, float64_t>, fun<nm::EW_MOD, uint8_t, nm::Complex64>, fun<nm::EW_MOD, uint8_t, nm::Complex128>,												\
@@ -481,7 +512,7 @@ namespace nm {
 			{fun<nm::EW_MOD, nm::Rational128, uint8_t>, fun<nm::EW_MOD, nm::Rational128, int8_t>, fun<nm::EW_MOD, nm::Rational128, int16_t>, fun<nm::EW_MOD, nm::Rational128, int32_t>,						\
 				fun<nm::EW_MOD, nm::Rational128, int64_t>, NULL, NULL, NULL, NULL, fun<nm::EW_MOD, nm::Rational128, nm::Rational32>, fun<nm::EW_MOD, nm::Rational128, nm::Rational64>,					\
 				fun<nm::EW_MOD, nm::Rational128, nm::Rational128>, NULL},																																																								\
-																																																																																						\
+\
 			{NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, fun<nm::EW_MOD, nm::RubyObject, nm::RubyObject>}																									\
 		},																																																																																			\
       																																																																																			\
@@ -733,6 +764,7 @@ extern const char* const  ITYPE_NAMES[nm::NUM_ITYPES];
 extern const size_t 			ITYPE_SIZES[nm::NUM_ITYPES];
 
 extern const nm::dtype_t Upcast[nm::NUM_DTYPES][nm::NUM_DTYPES];
+
 
 /*
  * Functions
