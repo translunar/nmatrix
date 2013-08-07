@@ -356,6 +356,7 @@ extern "C" {
 	VALUE rb_nvector_dense_create(NM_DECL_ENUM(dtype_t, dtype), void* elements, size_t length);
 
 	NM_DECL_ENUM(dtype_t, nm_dtype_guess(VALUE));   // (This is a function)
+	NM_DECL_ENUM(dtype_t, nm_dtype_min(VALUE));
 
   // Non-API functions needed by other cpp files.
 	NMATRIX* nm_create(nm::stype_t stype, STORAGE* storage);

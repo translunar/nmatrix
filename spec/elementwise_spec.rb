@@ -173,33 +173,33 @@ describe NMatrix do
 
       it "equals" do
         r = @n =~ @m
-        r.should == NMatrix.new(:dense, [2,2], [0, 0, 1, 0], :byte)
+        r.should == NMatrix.new(:dense, [2,2], [false, false, true, false], :object)
       end
 
       it "is not equal" do
         r = @n !~ @m
-        r.should == NMatrix.new(:dense, [2,2], [1, 1, 0, 1], :byte)
+        r.should == NMatrix.new(:dense, [2,2], [true, true, false, true], :object)
       end
 
       it "is less than" do
         r = @n < @m
-        r.should == NMatrix.new(:dense, [2,2], 0, :byte)
+        r.should == NMatrix.new(:dense, [2,2], false, :object)
       end
 
       it "is greater than" do
         r = @n > @m
-        r.should == NMatrix.new(:dense, [2,2], [1, 1, 0, 1], :byte)
+        r.should == NMatrix.new(:dense, [2,2], [true, true, false, true], :object)
       end
 
       it "is less than or equal to" do
         r = @n <= @m
-        r.should == NMatrix.new(:dense, [2,2], [0, 0, 1, 0], :byte)
+        r.should == NMatrix.new(:dense, [2,2], [false, false, true, false], :object)
       end
 
       it "is greater than or equal to" do
-        n = NMatrix.new(:dense, [2,2], [ 1,  2, 2, 4], :int64)
+        n = NMatrix.new(:dense, [2,2], [1, 2, 2, 4], :int64)
         r = n >= @m
-        r.should == NMatrix.new(:dense, [2,2], [1, 1, 0, 1], :byte)
+        r.should == NMatrix.new(:dense, [2,2], [true, true, false, true], :object)
       end
     end
   end

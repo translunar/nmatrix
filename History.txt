@@ -201,11 +201,10 @@
   * Added element-wise power function (**) for dense matrices (by
     @agarie)
 
-  * Dramatically improved list matrix element-wise and scalar
-    functions so C++ templates are no longer necessary; element-wise
-    operations may now be written in protected Ruby methods that look
-    like NMatrix#__list_elementwise_op__ and
-    NMatrix#__list_scalar_op__
+  * Dramatically improved matrix element-wise and scalar functions so
+    C++ templates are no longer necessary; element-wise operations
+    may now be written in protected Ruby methods that look like
+    NMatrix#__list_elementwise_op__ and NMatrix#__list_scalar_op__
 
   * Element-wise and scalar operations that might return a true or
     false now return Ruby matrices (for :list; still pending for
