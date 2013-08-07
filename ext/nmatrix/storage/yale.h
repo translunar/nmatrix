@@ -108,6 +108,7 @@ extern "C" {
 
   size_t  nm_yale_storage_get_size(const YALE_STORAGE* storage);
   VALUE   nm_yale_default_value(VALUE self);
+  VALUE   nm_yale_map_stored(VALUE self);
   VALUE   nm_yale_map_merged_stored(VALUE left, VALUE right, VALUE init);
 
   ///////////
@@ -119,8 +120,7 @@ extern "C" {
   //////////
   // Math //
   //////////
-	
-	STORAGE* nm_yale_storage_ew_op(nm::ewop_t op, const STORAGE* left, const STORAGE* right, VALUE scalar);
+
   STORAGE* nm_yale_storage_matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resulting_shape, bool vector);
 
   /////////////

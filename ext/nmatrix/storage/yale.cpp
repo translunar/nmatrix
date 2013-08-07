@@ -1061,6 +1061,56 @@ public:
 
 
 template <typename IType>
+static VALUE map_stored(VALUE self) {
+
+  YALE_STORAGE* s = NM_STORAGE_YALE(self);
+
+  size_t* shape   = ALLOC_N(size_t, 2);
+  shape[0]        = s->shape[0];
+  shape[1]        = s->shape[1];
+
+  std::array<size_t,2>  s_offsets = get_offsets(s);
+
+  RETURN_SIZED_ENUMERATOR(self, 0, 0, nm_yale_enumerator_length);
+  VALUE init      = rb_yield(default_value(s));
+
+  YALE_STORAGE* r = nm_yale_storage_create(nm::RUBYOBJ, shape, 2, s->capacity, NM_ITYPE(self));
+  nm_yale_storage_init(r, &init);
+
+  IType* rija     = reinterpret_cast<IType*>(r->ija);
+  IType* sija     = reinterpret_cast<IType*>(s->ija);
+
+
+  for (IType ri = 0; ri < shape[0]; ++ri) {
+    IType si = ri + s_offsets[0];
+    IType sk = sija[ri], sk_next = sija[ri+1], rk = rija[ri];
+
+    IType sj = sija[sk++];
+    IType rj = sj - s_offsets[1];
+
+    while (sk < sk_next && rj < shape[1]) {
+      VALUE rv = rb_yield(obj_at(s, sk++));
+      if (rb_funcall(rv, rb_intern("!="), 1, init) == Qtrue) {
+        if (rk >= r->capacity) {
+          vector_grow(r);
+          rija = reinterpret_cast<IType*>(r->ija);
+        }
+
+        // Insert the new value and column index
+        reinterpret_cast<VALUE*>(r->a)[rk] = rv;
+        rija[rk++]                         = rj;
+      }
+    }
+    // Update the row end information.
+    rija[ri+1] = rk;
+  }
+
+  NMATRIX* m = nm_create(nm::YALE_STORE, reinterpret_cast<STORAGE*>(r));
+  return Data_Wrap_Struct(CLASS_OF(self), nm_yale_storage_mark, nm_delete, m);
+}
+
+
+template <typename IType>
 static VALUE map_merged_stored(VALUE left, VALUE right, VALUE init, nm::itype_t itype) {
 
   YALE_STORAGE *s = NM_STORAGE_YALE(left),
@@ -1073,10 +1123,13 @@ static VALUE map_merged_stored(VALUE left, VALUE right, VALUE init, nm::itype_t 
   std::array<size_t,2>  s_offsets = get_offsets(s),
                         t_offsets = get_offsets(t);
 
+  VALUE s_init    = default_value(s),
+        t_init    = default_value(t);
+
   RETURN_SIZED_ENUMERATOR(left, 0, 0, 0);
 
   if (init == Qnil)
-    init          = rb_yield_values(2, default_value(s), default_value(t));
+    init          = rb_yield_values(2, s_init, t_init);
 
   YALE_STORAGE* r = nm_yale_storage_create(nm::RUBYOBJ, shape, 2, NM_MAX(s->capacity, t->capacity), itype);
   nm_yale_storage_init(r, &init);
@@ -1084,9 +1137,6 @@ static VALUE map_merged_stored(VALUE left, VALUE right, VALUE init, nm::itype_t 
   IJAManager<IType> sm(s, itype),
                     tm(t, itype);
   IType* rija     = reinterpret_cast<IType*>(r->ija);
-
-  VALUE s_init    = default_value(s),
-        t_init    = default_value(t);
 
   for (IType ri = 0; ri < shape[0]; ++ri) {
 
@@ -1126,8 +1176,7 @@ static VALUE map_merged_stored(VALUE left, VALUE right, VALUE init, nm::itype_t 
 
         // Insert the new value and column index
         reinterpret_cast<VALUE*>(r->a)[rk] = rv;
-        rija[rk]                           = rj;
-        ++rk;
+        rija[rk++]                         = rj;
       }
 
     }
@@ -1997,7 +2046,7 @@ VALUE nm_yale_default_value(VALUE self) {
 
 /*
  * call-seq:
- *     __yale_map_merged_stored__ -> Enumerator
+ *     __yale_map_merged_stored__(right) -> Enumerator
  *
  * A map operation on two Yale matrices which only iterates across the stored indices.
  */
@@ -2009,6 +2058,19 @@ VALUE nm_yale_map_merged_stored(VALUE left, VALUE right, VALUE init) {
 
   nm::itype_t itype = NM_MAX_ITYPE(s->itype, t->itype);
   return ttable[itype](left, right, init, itype);
+}
+
+
+/*
+ * call-seq:
+ *     __yale_map_stored__ -> Enumerator
+ *
+ * A map operation on two Yale matrices which only iterates across the stored indices.
+ */
+VALUE nm_yale_map_stored(VALUE self) {
+  ITYPE_TEMPLATE_TABLE(nm::yale_storage::map_stored, VALUE, VALUE)
+
+  return ttable[NM_ITYPE(self)](self);
 }
 
 } // end of extern "C" block
