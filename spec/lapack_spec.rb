@@ -48,7 +48,6 @@ describe NMatrix::LAPACK do
       it "exposes clapack getrf" do
         a = NMatrix.new(:dense, 3, [4,9,2,3,5,7,8,1,6], dtype)
         NMatrix::LAPACK::clapack_getrf(:row, 3, 3, a, 3)
-
         # delta varies for different dtypes
         err = case dtype
                 when :float32, :complex64
@@ -73,10 +72,10 @@ describe NMatrix::LAPACK do
       it "exposes clapack potrf" do
         # first do upper
         begin
-          a = NMatrix.new(:dense, 3, [25,15,-5, 0,18,0, 0,0,11], dtype)
-          NMatrix::LAPACK::clapack_potrf(:row, :upper, 3, a, 3)
-          b = NMatrix.new(:dense, 3, [5,3,-1, 0,3,1, 0,0,3], dtype)
-          a.should == b
+        a = NMatrix.new(:dense, 3, [25,15,-5, 0,18,0, 0,0,11], dtype)
+        NMatrix::LAPACK::clapack_potrf(:row, :upper, 3, a, 3)
+        b = NMatrix.new(:dense, 3, [5,3,-1, 0,3,1, 0,0,3], dtype)
+        a.should == b
         rescue NotImplementedError => e
           pending e.to_s
         end
@@ -104,18 +103,18 @@ describe NMatrix::LAPACK do
       it "exposes clapack getri" do
         a = NMatrix.new(:dense, 3, [1,0,4,1,1,6,-3,0,-10], dtype)
         ipiv = NMatrix::LAPACK::clapack_getrf(:row, 3, 3, a, 3) # get pivot from getrf, use for getri
-
         begin
-          NMatrix::LAPACK::clapack_getri(:row, 3, a, 3, ipiv)
+        NMatrix::LAPACK::clapack_getri(:row, 3, a, 3, ipiv)
 
-          b = NMatrix.new(:dense, 3, [-5,0,-2,-4,1,-1,1.5,0,0.5], dtype)
-          a.should == b
+        b = NMatrix.new(:dense, 3, [-5,0,-2,-4,1,-1,1.5,0,0.5], dtype)
+        a.should == b
         rescue NotImplementedError => e
           pending e.to_s
         end
       end
-      it "exposes gesvd and gesdd via #svd" do 
+      it "supports #svd" do 
         # http://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/mkl_lapack_examples/dgesvd_ex.c.htm
+        if [:float32, :float64].include? dtype
         a = NMatrix.new([5,6], 
           %w|8.79 9.93 9.83 5.45 3.16
             6.11 6.91 5.04 -0.27 7.98 
@@ -143,6 +142,15 @@ describe NMatrix::LAPACK do
         #    0.40  -0.45   0.25   0.43  -0.62
         #   -0.22   0.14   0.59  -0.63  -0.44|.map(&:to_f),
         # dtype)
+        elsif [:complex64, :complex128].include? dtype
+        #http://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/mkl_lapack_examples/cgesvd_ex.c.htm
+          a = NMatrix.new([4,3], [[[  5.91, -5.69], [  7.09,  2.72], [  7.78, -4.06], [ -0.79, -7.21]], [ [ -3.15, -4.08], [ -1.89,  3.27], [  4.57, -2.07], [ -3.88, -3.30]], [ [ -4.89,  4.20], [  4.10, -6.70], [  3.28, -3.84], [  3.84,  1.19]]].map {|row| row.map {|e| Complex *e}} , dtype)
+          s_true = NMatrix.new([3,1], [17.63, 11.61, 6.78], dtype)
+          left_true = NMatrix.new([3,3], [[[-0.86, 0.0], [0.4, 0.0], [0.32, 0.0]], [[-0.35, 0.13], [-0.24, -0.21], [-0.63, 0.6]], [[0.15, 0.32], [0.61, 0.61], [-0.36, 0.1]]].map {|row| row.map {|e| Complex *e}}, dtype)
+          right_true = NMatrix.new([4,3], [[[ -0.22, 0.51], [ -0.37, -0.32], [ -0.53, 0.11], [ 0.15, 0.38]], [[ 0.31, 0.31], [ 0.09, -0.57], [ 0.18, -0.39], [ 0.38, -0.39]], [[ 0.53, 0.24], [ 0.49, 0.28], [ -0.47, -0.25], [ -0.15, 0.19]]].map {|row| row.map {|e| Complex *e}} , dtype)
+        else 
+          a = NMatrix.new([4,3], dtype)
+        end
         err = case dtype
               when :float32, :complex64
                 1e-6
@@ -151,27 +159,15 @@ describe NMatrix::LAPACK do
               else
                 1e-64 # FIXME: should be 0, but be_within(0) does not work.
               end
+        err = err *5e1
         begin
-          response = NMatrix::LAPACK.svd(a, :arrays)
+          sings, lefts, rights = NMatrix::LAPACK.svd(a, :both)
         rescue NotImplementedError => e
           pending e.to_s
         end
-        if response.is_a? Array
-          sing_vals, left_vals, right_vals = response
-          left_vals.row(0).to_a.zip(left_true.row(0).to_a).each do |a_val, t_val|
-            a_val.should be_within(err).of(t_val)
-          end
-          right_vals.row(0).to_a.zip(right_true.row(0).to_a).each do |a_val, t_val|
-            a_val.should be_within(err).of(t_val)
-          end
-        elsif response.is_a? NMatrix
-          sing_vals = response
-        end
-
-
-        sing_vals.row(0).to_a.zip(s_true.row(0).to_a).each do |answer_val, truth_val|
-          answer_val.should be_within(err).of(truth_val)
-        end
+        lefts.row(0).to_a.zip(left_true.row(0).to_a).each { |a, t| a.should be_within(err).of(t) }
+        rights.row(0).to_a.zip(right_true.row(0).to_a).each {|a, t| a.should be_within(err).of(t) }
+        sings.row(0).to_a.zip(s_true.row(0).to_a).each { |a, t| a.should(be_within(err).of(t), sings.pp) }
       end
     end
   end
