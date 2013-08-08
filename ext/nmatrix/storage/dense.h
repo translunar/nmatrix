@@ -78,6 +78,9 @@ void						nm_dense_storage_mark(void*);
 // Accessors //
 ///////////////
 
+
+VALUE nm_dense_map_pair(VALUE self, VALUE right);
+VALUE nm_dense_map(VALUE self);
 VALUE nm_dense_each(VALUE nmatrix);
 VALUE nm_dense_each_with_indices(VALUE nmatrix);
 void*	nm_dense_storage_get(STORAGE* s, SLICE* slice);
@@ -96,7 +99,6 @@ bool nm_dense_storage_is_hermitian(const DENSE_STORAGE* mat, int lda);
 // Math //
 //////////
 
-STORAGE* nm_dense_storage_ew_op(nm::ewop_t op, const STORAGE* left, const STORAGE* right, VALUE scalar);
 STORAGE* nm_dense_storage_matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resulting_shape, bool vector);
 
 /////////////

@@ -489,12 +489,9 @@ VALUE nm_list_each_with_indices(VALUE nmatrix, bool stored) {
 /*
  * map merged stored iterator. Always returns a matrix containing RubyObjects which probably needs to be casted.
  */
-VALUE nm_list_map_merged_stored(int argc, VALUE* argv, VALUE left) {
+VALUE nm_list_map_merged_stored(VALUE left, VALUE right, VALUE init) {
 
-  VALUE right, init;
   bool scalar = false;
-
-  rb_scan_args(argc, argv, "11", &right, &init);
 
   LIST_STORAGE *s   = NM_STORAGE_LIST(left),
                *t;
@@ -507,7 +504,7 @@ VALUE nm_list_map_merged_stored(int argc, VALUE* argv, VALUE left) {
 
   // right might be a scalar, in which case this is a scalar operation.
   if (TYPE(right) != T_DATA || (RDATA(right)->dfree != (RUBY_DATA_FUNC)nm_delete && RDATA(right)->dfree != (RUBY_DATA_FUNC)nm_delete_ref)) {
-    nm::dtype_t r_dtype = nm_dtype_guess(right);
+    nm::dtype_t r_dtype = nm_dtype_min(right);
 
     scalar_init         = rubyobj_to_cval(right, r_dtype); // make a copy of right
 
@@ -984,7 +981,7 @@ extern "C" {
      * call-seq:
      *     __list_default_value__ -> ...
      *
-     * Get the default_val property from a list matrix.
+     * Get the default_value property from a list matrix.
      */
     VALUE nm_list_default_value(VALUE self) {
       return rubyobj_from_cval(NM_DEFAULT_VAL(self), NM_DTYPE(self)).rval;

@@ -133,13 +133,55 @@ class NMatrix
 
       # Fill the diagonal with 1's.
       m = NMatrix.zeros(stype, dim, dtype)
-      (0 .. (dim - 1)).each do |i|
+      (0...dim).each do |i|
         m[i, i] = 1
       end
 
       m
     end
     alias :identity :eye
+    #
+    # call-seq:
+    #     diagonals(array) -> NMatrix
+    #     diagonals(stype, array, dtype) -> NMatrix
+    #     diagonals(array, dtype) -> NMatrix
+    #     diagonals(stype, array) -> NMatrix
+    #
+    # Creates a matrix filled with specified diagonals.
+    #
+    # * *Arguments* :
+    #   - +stype+ -> (optional) Storage type for the matrix (default is :dense)
+    #   - +entries+ -> Array containing input values for diagonal matrix
+    #   - +dtype+ -> (optional) Default is based on values in supplied Array
+    # * *Returns* :
+    #   - NMatrix filled with specified diagonal values.
+    #
+    # Examples:
+    #
+    #   NMatrix.diagonal([1.0,2,3,4]) # => 1.0 0.0 0.0 0.0
+    #                                      0.0 2.0 0.0 0.0
+    #                                      0.0 0.0 3.0 0.0
+    #                                      0.0 0.0 0.0 4.0
+    #
+    #   NMatrix.diagonal(:dense, [1,2,3,4], :int32) # => 1 0 0 0
+    #                                                    0 2 0 0
+    #                                                    0 0 3 0
+    #                                                    0 0 0 4
+    #
+    #
+    def diagonal(*params)
+      dtype = params.last.is_a?(Symbol) ? params.pop : nil
+      stype = params.first.is_a?(Symbol) ? params.shift : :dense
+      ary   = params.shift
+
+      m = NMatrix.zeros(stype, ary.length, dtype || guess_dtype(ary[0]))
+      ary.each_with_index do |n, i|
+        m[i,i] = n
+      end
+      m
+    end
+    alias :diag :diagonal
+    alias :diagonals :diagonal
 
     #
     # call-seq:

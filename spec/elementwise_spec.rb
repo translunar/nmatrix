@@ -30,6 +30,100 @@ require File.join(File.dirname(__FILE__), "spec_helper.rb")
 
 describe NMatrix do
 
+  context "yale" do
+    before :each do
+      @n = NMatrix.new(:yale, 3, :int64)
+      @m = NMatrix.new(:yale, 3, :int64)
+      @n[0,0] = 52
+      @n[0,2] = 5
+      @n[1,1] = 40
+      @n[0,1] = 30
+      @n[2,0] = 6
+      @m[1,1] = -48
+      @m[0,2] = -5
+      @n.extend NMatrix::YaleFunctions
+    end
+
+    it "should perform scalar math" do
+      x = @n * 3
+      x[0,0].should == 52 * 3
+      x[0,1].should == 30 * 3
+      x[0,2].should == 5 * 3
+      x[1,1].should == 40 * 3
+      x[2,0].should == 6 * 3
+
+      r = NMatrix.new(:yale, 3, :int64)
+      y = r + 3
+      y[0,0].should == 3
+    end
+
+    it "should refuse to perform a dot operation on a yale with non-zero default" do
+      r = NMatrix.new(:yale, 3, :int64)
+      y = r + 3
+      expect { y.dot(r) }.to raise_error
+      expect { r.dot(y) }.to raise_error
+    end
+
+    it "should perform element-wise addition" do
+      r = NMatrix.new(:dense, 3, [52,30,0,0,-8,0,6,0,0], :int64).cast(:yale, :int64)
+      r[0,0] = 52
+      r[1,1] = -8
+      q = @n + @m
+      q.should == r
+    end
+
+    it "should perform element-wise subtraction" do
+      r = NMatrix.new(:dense, 3, [52,30,10,0,88,0,6,0,0], :int64).cast(:yale, :int64)
+      (@n-@m).should == r
+    end
+
+    it "should perform element-wise multiplication" do
+      r = NMatrix.new(:dense, 3, [0,0,-25,0,-1920,0,0,0,0], :int64).cast(:yale, :int64)
+      m = NMatrix.new(:yale, 2, :int64)
+      (@n*@m).should == r
+    end
+
+    it "should perform element-wise division" do
+      r = NMatrix.new(:dense, 3, [52, 30, -2, 0, -1, 0, 6, 0, 0], :int64).cast(:yale, :int64)
+      (@n/(@m+1)).should == r
+    end
+
+    it "should perform element-wise modulo" do
+      m = NMatrix.new(:yale, 3, :int64) + 5
+      (@n % m).should == NMatrix.new(:dense, 3, [2,0,0,0,0,0,1,0,0], :int64).cast(:yale, :int64)
+    end
+
+    it "should handle element-wise equality (=~)" do
+      r = NMatrix.new(:dense, 3, [false,false,false,true,false,true,false,true,true], :object).cast(:yale, :object)
+
+      (@n =~ @m).should == r
+    end
+
+    it "should handle element-wise inequality (!~)" do
+      r = NMatrix.new(:dense, 3, [true,true,true,false,true,false,true,false,false], :object).cast(:yale, :object)
+
+      (@n !~ @m).should == r
+    end
+
+    it "should handle element-wise less-than (<)" do
+      (@m < @n).should == NMatrix.new(:dense, 3, [true,true,true,false,true,false,true,false,false], :object).cast(:yale, :object)
+    end
+
+    it "should handle element-wise greater-than (>)" do
+      (@n > @m).should == NMatrix.new(:dense, 3, [true,true,true,false,true,false,true,false,false], :object).cast(:yale, :object)
+    end
+
+    it "should handle element-wise greater-than-or-equals (>=)" do
+      (@n >= @m).should == NMatrix.new(:dense, 3, true, :object).cast(:yale,:object)
+    end
+
+    it "should handle element-wise less-than-or-equals (<=)" do
+      r = NMatrix.new(:dense, 3, [false,false,false,true,false,true,false,true,true], :object).cast(:yale, :object)
+      (@n <= @m).should == r
+    end
+  end
+
+
   context "list" do
     before :each do
       @n = NMatrix.new(:list, 2, 0, :int64)
@@ -173,33 +267,33 @@ describe NMatrix do
 
       it "equals" do
         r = @n =~ @m
-        r.should == NMatrix.new(:dense, [2,2], [0, 0, 1, 0], :byte)
+        r.should == NMatrix.new(:dense, [2,2], [false, false, true, false], :object)
       end
 
       it "is not equal" do
         r = @n !~ @m
-        r.should == NMatrix.new(:dense, [2,2], [1, 1, 0, 1], :byte)
+        r.should == NMatrix.new(:dense, [2,2], [true, true, false, true], :object)
       end
 
       it "is less than" do
         r = @n < @m
-        r.should == NMatrix.new(:dense, [2,2], 0, :byte)
+        r.should == NMatrix.new(:dense, [2,2], false, :object)
       end
 
       it "is greater than" do
         r = @n > @m
-        r.should == NMatrix.new(:dense, [2,2], [1, 1, 0, 1], :byte)
+        r.should == NMatrix.new(:dense, [2,2], [true, true, false, true], :object)
       end
 
       it "is less than or equal to" do
         r = @n <= @m
-        r.should == NMatrix.new(:dense, [2,2], [0, 0, 1, 0], :byte)
+        r.should == NMatrix.new(:dense, [2,2], [false, false, true, false], :object)
       end
 
       it "is greater than or equal to" do
-        n = NMatrix.new(:dense, [2,2], [ 1,  2, 2, 4], :int64)
+        n = NMatrix.new(:dense, [2,2], [1, 2, 2, 4], :int64)
         r = n >= @m
-        r.should == NMatrix.new(:dense, [2,2], [1, 1, 0, 1], :byte)
+        r.should == NMatrix.new(:dense, [2,2], [true, true, false, true], :object)
       end
     end
   end

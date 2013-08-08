@@ -90,7 +90,7 @@ extern "C" {
   YALE_STORAGE* nm_yale_storage_create_from_old_yale(nm::dtype_t dtype, size_t* shape, void* ia, void* ja, void* a, nm::dtype_t from_dtype);
   YALE_STORAGE*	nm_yale_storage_create_merged(const YALE_STORAGE* merge_template, const YALE_STORAGE* other);
   void          nm_yale_storage_delete(STORAGE* s);
-  void					nm_yale_storage_init(YALE_STORAGE* s);
+  void					nm_yale_storage_init(YALE_STORAGE* s, void* default_val);
   void					nm_yale_storage_mark(void*);
 
   ///////////////
@@ -107,6 +107,9 @@ extern "C" {
   //void  nm_yale_storage_increment_ia_after(YALE_STORAGE* s, size_t ija_size, size_t i, size_t n);
 
   size_t  nm_yale_storage_get_size(const YALE_STORAGE* storage);
+  VALUE   nm_yale_default_value(VALUE self);
+  VALUE   nm_yale_map_stored(VALUE self);
+  VALUE   nm_yale_map_merged_stored(VALUE left, VALUE right, VALUE init);
 
   ///////////
   // Tests //
@@ -117,8 +120,7 @@ extern "C" {
   //////////
   // Math //
   //////////
-	
-	STORAGE* nm_yale_storage_ew_op(nm::ewop_t op, const STORAGE* left, const STORAGE* right, VALUE scalar);
+
   STORAGE* nm_yale_storage_matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resulting_shape, bool vector);
 
   /////////////
@@ -196,19 +198,26 @@ namespace nm { namespace yale_storage {
    * the zero value).
    *
    * Note: This sets a literal 0 value. If your dtype is RUBYOBJ (a Ruby object),
-   * it'll actually be INT2FIX(0) instead of a string of NULLs.
+   * it'll actually be INT2FIX(0) instead of a string of NULLs. You can actually
+   * set a default for Ruby objects other than zero -- you generally want it to
+   * be Qfalse, Qnil, or INT2FIX(0). The last is the default.
    */
   template <typename DType>
-  inline void clear_diagonal_and_zero(YALE_STORAGE* s) {
+  inline void clear_diagonal_and_zero(YALE_STORAGE* s, void* init_val) {
     DType* a = reinterpret_cast<DType*>(s->a);
 
     // Clear out the diagonal + one extra entry
-    for (size_t i = 0; i < s->shape[0]+1; ++i) // insert Ruby zeros
-      a[i] = 0;
+    if (init_val) {
+      for (size_t i = 0; i <= s->shape[0]; ++i) // insert Ruby zeros, falses, or whatever else.
+        a[i] = *reinterpret_cast<DType*>(init_val);
+    } else {
+      for (size_t i = 0; i <= s->shape[0]; ++i) // insert zeros.
+        a[i] = 0;
+    }
   }
 
   template <typename DType, typename IType>
-  void init(YALE_STORAGE* s);
+  void init(YALE_STORAGE* s, void* init_val);
 
   template <typename IType>
   size_t  get_size(const YALE_STORAGE* storage);

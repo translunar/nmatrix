@@ -48,6 +48,7 @@ describe NMatrix::LAPACK do
       it "exposes clapack getrf" do
         a = NMatrix.new(:dense, 3, [4,9,2,3,5,7,8,1,6], dtype)
         NMatrix::LAPACK::clapack_getrf(:row, 3, 3, a, 3)
+
         # delta varies for different dtypes
         err = case dtype
                 when :float32, :complex64
@@ -72,10 +73,10 @@ describe NMatrix::LAPACK do
       it "exposes clapack potrf" do
         # first do upper
         begin
-        a = NMatrix.new(:dense, 3, [25,15,-5, 0,18,0, 0,0,11], dtype)
-        NMatrix::LAPACK::clapack_potrf(:row, :upper, 3, a, 3)
-        b = NMatrix.new(:dense, 3, [5,3,-1, 0,3,1, 0,0,3], dtype)
-        a.should == b
+          a = NMatrix.new(:dense, 3, [25,15,-5, 0,18,0, 0,0,11], dtype)
+          NMatrix::LAPACK::clapack_potrf(:row, :upper, 3, a, 3)
+          b = NMatrix.new(:dense, 3, [5,3,-1, 0,3,1, 0,0,3], dtype)
+          a.should == b
         rescue NotImplementedError => e
           pending e.to_s
         end
@@ -103,11 +104,12 @@ describe NMatrix::LAPACK do
       it "exposes clapack getri" do
         a = NMatrix.new(:dense, 3, [1,0,4,1,1,6,-3,0,-10], dtype)
         ipiv = NMatrix::LAPACK::clapack_getrf(:row, 3, 3, a, 3) # get pivot from getrf, use for getri
-        begin
-        NMatrix::LAPACK::clapack_getri(:row, 3, a, 3, ipiv)
 
-        b = NMatrix.new(:dense, 3, [-5,0,-2,-4,1,-1,1.5,0,0.5], dtype)
-        a.should == b
+        begin
+          NMatrix::LAPACK::clapack_getri(:row, 3, a, 3, ipiv)
+
+          b = NMatrix.new(:dense, 3, [-5,0,-2,-4,1,-1,1.5,0,0.5], dtype)
+          a.should == b
         rescue NotImplementedError => e
           pending e.to_s
         end
@@ -144,6 +146,7 @@ describe NMatrix::LAPACK do
         # dtype)
         elsif [:complex64, :complex128].include? dtype
         #http://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/mkl_lapack_examples/cgesvd_ex.c.htm
+        pending
           a = NMatrix.new([4,3], [[[  5.91, -5.69], [  7.09,  2.72], [  7.78, -4.06], [ -0.79, -7.21]], [ [ -3.15, -4.08], [ -1.89,  3.27], [  4.57, -2.07], [ -3.88, -3.30]], [ [ -4.89,  4.20], [  4.10, -6.70], [  3.28, -3.84], [  3.84,  1.19]]].map {|row| row.map {|e| Complex *e}} , dtype)
           s_true = NMatrix.new([3,1], [17.63, 11.61, 6.78], dtype)
           left_true = NMatrix.new([3,3], [[[-0.86, 0.0], [0.4, 0.0], [0.32, 0.0]], [[-0.35, 0.13], [-0.24, -0.21], [-0.63, 0.6]], [[0.15, 0.32], [0.61, 0.61], [-0.36, 0.1]]].map {|row| row.map {|e| Complex *e}}, dtype)
@@ -161,7 +164,7 @@ describe NMatrix::LAPACK do
               end
         err = err *5e1
         begin
-          sings, lefts, rights = NMatrix::LAPACK.svd(a, :both)
+            sings, lefts, rights = NMatrix::LAPACK.svd(a, :both)
         rescue NotImplementedError => e
           pending e.to_s
         end

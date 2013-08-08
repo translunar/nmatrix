@@ -64,9 +64,6 @@ namespace nm { namespace dense_storage {
 	template <typename LDType, typename RDType>
 	bool eqeq(const DENSE_STORAGE* left, const DENSE_STORAGE* right);
 
-	template <ewop_t op, typename LDType, typename RDType>
-	static DENSE_STORAGE* ew_op(const DENSE_STORAGE* left, const DENSE_STORAGE* right, const void* rscalar);
-
   template <typename DType>
   static DENSE_STORAGE* matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resulting_shape, bool vector);
 
@@ -211,6 +208,78 @@ void nm_dense_storage_mark(void* storage_base) {
 
 
 
+/*
+ * map_pair iterator for dense matrices (for element-wise operations)
+ */
+VALUE nm_dense_map_pair(VALUE self, VALUE right) {
+  DENSE_STORAGE *s = NM_STORAGE_DENSE(self),
+                *t = NM_STORAGE_DENSE(right);
+
+  RETURN_SIZED_ENUMERATOR(self, 0, 0, nm_enumerator_length);
+
+  size_t* coords = ALLOCA_N(size_t, s->dim);
+  memset(coords, 0, sizeof(size_t) * s->dim);
+
+  size_t *shape_copy = ALLOC_N(size_t, s->dim);
+  memcpy(shape_copy, s->shape, sizeof(size_t) * s->dim);
+
+  size_t count = nm_storage_count_max_elements(s);
+
+  DENSE_STORAGE* result = nm_dense_storage_create(nm::RUBYOBJ, shape_copy, s->dim, NULL, 0);
+  VALUE* result_elem = reinterpret_cast<VALUE*>(result->elements);
+
+  for (size_t k = 0; k < count; ++k) {
+    nm_dense_storage_coords(result, k, coords);
+    size_t s_index = nm_dense_storage_pos(s, coords),
+           t_index = nm_dense_storage_pos(t, coords);
+
+    VALUE sval = NM_DTYPE(self) == nm::RUBYOBJ ? reinterpret_cast<VALUE*>(s->elements)[s_index] : rubyobj_from_cval((char*)(s->elements) + s_index*DTYPE_SIZES[NM_DTYPE(self)], NM_DTYPE(self)).rval;
+    VALUE tval = NM_DTYPE(right) == nm::RUBYOBJ ? reinterpret_cast<VALUE*>(t->elements)[t_index] : rubyobj_from_cval((char*)(t->elements) + t_index*DTYPE_SIZES[NM_DTYPE(right)], NM_DTYPE(right)).rval;
+
+    result_elem[k] = rb_yield_values(2, sval, tval);
+  }
+
+  NMATRIX* m = nm_create(nm::DENSE_STORE, reinterpret_cast<STORAGE*>(result));
+
+  return Data_Wrap_Struct(CLASS_OF(self), nm_dense_storage_mark, nm_delete, m);
+}
+
+
+/*
+ * map enumerator for dense matrices.
+ */
+VALUE nm_dense_map(VALUE self) {
+  DENSE_STORAGE *s = NM_STORAGE_DENSE(self);
+
+  RETURN_SIZED_ENUMERATOR(self, 0, 0, nm_enumerator_length);
+
+  size_t* coords = ALLOCA_N(size_t, s->dim);
+  memset(coords, 0, sizeof(size_t) * s->dim);
+
+  size_t *shape_copy = ALLOC_N(size_t, s->dim);
+  memcpy(shape_copy, s->shape, sizeof(size_t) * s->dim);
+
+  size_t count = nm_storage_count_max_elements(s);
+
+  DENSE_STORAGE* result = nm_dense_storage_create(nm::RUBYOBJ, shape_copy, s->dim, NULL, 0);
+  VALUE* result_elem = reinterpret_cast<VALUE*>(result->elements);
+
+  for (size_t k = 0; k < count; ++k) {
+    nm_dense_storage_coords(result, k, coords);
+    size_t s_index = nm_dense_storage_pos(s, coords);
+
+    result_elem[k] = rb_yield(NM_DTYPE(self) == nm::RUBYOBJ ? reinterpret_cast<VALUE*>(s->elements)[s_index] : rubyobj_from_cval((char*)(s->elements) + s_index*DTYPE_SIZES[NM_DTYPE(self)], NM_DTYPE(self)).rval);
+  }
+
+  NMATRIX* m = nm_create(nm::DENSE_STORE, reinterpret_cast<STORAGE*>(result));
+
+  return Data_Wrap_Struct(CLASS_OF(self), nm_dense_storage_mark, nm_delete, m);
+}
+
+
+/*
+ * each_with_indices iterator for dense matrices.
+ */
 VALUE nm_dense_each_with_indices(VALUE nmatrix) {
   volatile VALUE nm = nmatrix;
 
@@ -420,35 +489,6 @@ bool nm_dense_storage_is_symmetric(const DENSE_STORAGE* mat, int lda) {
 // Math //
 //////////
 
-/*
- * Dense matrix-matrix and matrix-scalar element-wise operations.
- *
- * right or rscalar should be NULL; they should not both be initialized. If right is NULL, it'll use the scalar value instead.
- */
-STORAGE* nm_dense_storage_ew_op(nm::ewop_t op, const STORAGE* left, const STORAGE* right, VALUE scalar) {
-	OP_LR_DTYPE_TEMPLATE_TABLE(nm::dense_storage::ew_op, DENSE_STORAGE*, const DENSE_STORAGE* left, const DENSE_STORAGE* right, const void*);
-
-	if (right) {
-	  if (!ttable[op][left->dtype][right->dtype]) {
-      rb_raise(nm_eDataTypeError, "element-wise operations between these dtypes are undefined");
-      return NULL;
-    }
-
-	  return ttable[op][left->dtype][right->dtype](reinterpret_cast<const DENSE_STORAGE*>(left), reinterpret_cast<const DENSE_STORAGE*>(right), NULL);
-	} else {
-	  nm::dtype_t r_dtype = nm_dtype_guess(scalar);
-
-    if (!ttable[op][left->dtype][r_dtype]) {
-      rb_raise(nm_eDataTypeError, "scalar operations between these dtypes are undefined");
-      return NULL;
-    }
-
-	  void* r_scalar  = ALLOCA_N(char, DTYPE_SIZES[r_dtype]);
-	  rubyval_to_cval(scalar, r_dtype, r_scalar);
-
-    return ttable[op][left->dtype][r_dtype](reinterpret_cast<const DENSE_STORAGE*>(left), NULL, r_scalar);
-	}
-}
 
 /*
  * Dense matrix-matrix multiplication.
@@ -754,135 +794,6 @@ bool is_symmetric(const DENSE_STORAGE* mat, int lda) {
 	return true;
 }
 
-/*
- * Templated dense storage element-wise operations which return the same DType.
- */
-template <ewop_t op, typename LDType, typename RDType>
-static DENSE_STORAGE* ew_op(const DENSE_STORAGE* left, const DENSE_STORAGE* right, const void* rscalar) {
-	unsigned int count;
-  size_t l_count;
-  size_t r_count;
-
-	size_t* temp_coords = ALLOCA_N(size_t, left->dim);
-
-	size_t* new_shape = ALLOC_N(size_t, left->dim);
-	memcpy(new_shape, left->shape, sizeof(size_t) * left->dim);
-
-  // Determine the return dtype. This depends on the type of operation we're doing. Usually, it's going to be
-  // set by the left matrix, but for comparisons, we'll use BYTE (in lieu of boolean).
-  dtype_t new_dtype = static_cast<uint8_t>(op) < NUM_NONCOMP_EWOPS ? left->dtype : BYTE;
-
-	DENSE_STORAGE* result = nm_dense_storage_create(new_dtype, new_shape, left->dim, NULL, 0);
-
-	LDType* l_elems = reinterpret_cast<LDType*>(left->elements);
-
-	if (right) { // matrix-matrix operation
-	  RDType* r_elems = reinterpret_cast<RDType*>(right->elements);
-
-    if (static_cast<uint8_t>(op) < NUM_NONCOMP_EWOPS) { // use left-dtype
-
-      for (count = nm_storage_count_max_elements(result); count-- > 0;) {
-        nm_dense_storage_coords(result, count, temp_coords);
-        l_count = nm_dense_storage_pos(left, temp_coords);
-        r_count = nm_dense_storage_pos(right, temp_coords);
-
-        reinterpret_cast<LDType*>(result->elements)[count] = ew_op_switch<op,LDType,RDType>(l_elems[l_count], r_elems[r_count]);
-      }
-
-    } else { // new_dtype is BYTE: comparison operators
-      uint8_t* res_elems = reinterpret_cast<uint8_t*>(result->elements);
-
-      for (count = nm_storage_count_max_elements(result); count-- > 0;) {
-        nm_dense_storage_coords(result, count, temp_coords);
-        l_count = nm_dense_storage_pos(left, temp_coords);
-        r_count = nm_dense_storage_pos(right, temp_coords);
-
-        switch (op) {
-          case EW_EQEQ:
-            res_elems[count] = l_elems[l_count] == r_elems[r_count];
-            break;
-
-          case EW_NEQ:
-            res_elems[count] = l_elems[l_count] != r_elems[r_count];
-            break;
-
-          case EW_LT:
-            res_elems[count] = l_elems[l_count] < r_elems[r_count];
-            break;
-
-          case EW_GT:
-            res_elems[count] = l_elems[l_count] > r_elems[r_count];
-            break;
-
-          case EW_LEQ:
-            res_elems[count] = l_elems[l_count] <= r_elems[r_count];
-            break;
-
-          case EW_GEQ:
-            res_elems[count] = l_elems[l_count] >= r_elems[r_count];
-            break;
-
-          default:
-            rb_raise(rb_eStandardError, "this should not happen");
-        }
-      }
-    }
-
-  } else { // matrix-scalar operation
-    const RDType* r_elem = reinterpret_cast<const RDType*>(rscalar);
-
-    if (static_cast<uint8_t>(op) < NUM_NONCOMP_EWOPS) { // use left-dtype
-
-      for (count = nm_storage_count_max_elements(result); count-- > 0;) {
-        nm_dense_storage_coords(result, count, temp_coords);
-        l_count = nm_dense_storage_pos(left, temp_coords);
-
-        // TODO: When doing an exponentiation, we might have problems with the
-        // TODO: dtype. Should we use float64 always?
-        reinterpret_cast<LDType*>(result->elements)[count] = ew_op_switch<op,LDType,RDType>(l_elems[l_count], *r_elem);
-      }
-
-    } else {
-      uint8_t* res_elems = reinterpret_cast<uint8_t*>(result->elements);
-
-      for (count = nm_storage_count_max_elements(result); count-- > 0;) {
-        nm_dense_storage_coords(result, count, temp_coords);
-        l_count = nm_dense_storage_pos(left, temp_coords);
-
-        switch (op) {
-          case EW_EQEQ:
-            res_elems[count] = l_elems[l_count] == *r_elem;
-            break;
-
-          case EW_NEQ:
-            res_elems[count] = l_elems[l_count] != *r_elem;
-            break;
-
-          case EW_LT:
-            res_elems[count] = l_elems[l_count] < *r_elem;
-            break;
-
-          case EW_GT:
-            res_elems[count] = l_elems[l_count] > *r_elem;
-            break;
-
-          case EW_LEQ:
-            res_elems[count] = l_elems[l_count] <= *r_elem;
-            break;
-
-          case EW_GEQ:
-            res_elems[count] = l_elems[l_count] >= *r_elem;
-            break;
-
-          default:
-            rb_raise(rb_eStandardError, "this should not happen");
-        }
-      }
-
-    }
-  }
-	return result;
-}
 
 
 /*
