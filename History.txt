@@ -193,7 +193,7 @@
 
 === 0.0.6 / 2013-??-??
 
-* 5 major enhancements:
+* 8 major enhancements:
 
   * Refactored iteration, so that each storage type now has each of:
     #each, #each_with_indices, #each_stored_with_indices
@@ -207,12 +207,19 @@
     NMatrix#__list_elementwise_op__ and NMatrix#__list_scalar_op__
 
   * Element-wise and scalar operations that might return a true or
-    false now return Ruby matrices (for :list; still pending for
-    dense and yale)
+    false now return Ruby matrices
+
+  * Yale element-wise and scalar operations have been added
+
+  * Yale is now allowed to have a non-zero default (specifically to
+    permit true-false matrices and nil sparse bases)
+
+  * Dramatically improved NMatrix#cast to allow for hashed options
+    including a :default for list and yale casts
 
   * Dramatically improved speed of compilation
 
-* 13 minor enhancements:
+* 14 minor enhancements:
 
   * Improved documentation for exposed BLAS and LAPACK functions
 
@@ -253,7 +260,7 @@
     circa v0.0.2 (Array#min, Array#max, String#constantize,
     String#camelize, String#underscore)
 
-  * Re-enabled list storage element-wise mod (%) method
+  * Re-enabled element-wise mod (%) method
 
   * Added NMatrix::guess_dtype class method, which allows you to
     figure out what dtype (roughly) should be used for any given
@@ -261,6 +268,9 @@
 
   * String and nil objects in NMatrix cells are no longer outlawed
     (but are not supported), provided they are of the :object dtype
+
+  * NMatrix#diag shortcut for specifying sparse matrix with a user-
+    specified diagonal array (by @ryanmt)
 
 * 3 bug fixes:
 
@@ -271,5 +281,3 @@
 
   * Repaired list matrix element-wise functions
 
-  * Non-numeric initial values are now permissible for list matrices
-    (e.g., nil, true, false, etc.)
