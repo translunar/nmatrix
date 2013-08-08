@@ -121,7 +121,7 @@ extern "C" {
 
   LIST_STORAGE* nm_list_storage_copy(const LIST_STORAGE* rhs);
   STORAGE*      nm_list_storage_copy_transposed(const STORAGE* rhs_base);
-  STORAGE*      nm_list_storage_cast_copy(const STORAGE* rhs, nm::dtype_t new_dtype);
+  STORAGE*      nm_list_storage_cast_copy(const STORAGE* rhs, nm::dtype_t new_dtype, void*);
   VALUE         nm_list_storage_to_hash(const LIST_STORAGE* s, const nm::dtype_t dtype);
 
   // Exposed functions

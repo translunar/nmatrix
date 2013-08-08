@@ -88,7 +88,7 @@ namespace nm {
   };
 
 #define CAST_TABLE(name)                                                   \
-  static STORAGE* (*(name)[nm::NUM_STYPES][nm::NUM_STYPES])(const STORAGE*, nm::dtype_t) = {      \
+  static STORAGE* (*(name)[nm::NUM_STYPES][nm::NUM_STYPES])(const STORAGE*, nm::dtype_t, void*) = {      \
     { nm_dense_storage_cast_copy,  nm_dense_storage_from_list,  nm_dense_storage_from_yale },  \
     { nm_list_storage_from_dense,  nm_list_storage_cast_copy,   nm_list_storage_from_yale  },  \
     { nm_yale_storage_from_dense,  nm_yale_storage_from_list,   nm_yale_storage_cast_copy  }   \

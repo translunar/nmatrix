@@ -246,7 +246,7 @@ void rubyval_to_cval(VALUE val, nm::dtype_t dtype, void* loc) {
 			break;
 
 	  default:
-	    rb_raise(rb_eTypeError, "Attempting a bad conversion from a Ruby value.");
+	    rb_raise(rb_eTypeError, "Attempting a bad conversion.");
 	    break;
 	}
 }
@@ -325,6 +325,7 @@ nm::RubyObject rubyobj_from_cval_by_itype(void* val, nm::itype_t itype) {
 	}
 	return Qnil;
 }
+
 
 /*
  * Allocate and return a piece of data of the correct dtype, converted from a

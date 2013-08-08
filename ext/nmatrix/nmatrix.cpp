@@ -331,7 +331,7 @@ extern "C" {
 static VALUE nm_init(int argc, VALUE* argv, VALUE nm);
 static VALUE nm_init_copy(VALUE copy, VALUE original);
 static VALUE nm_init_transposed(VALUE self);
-static VALUE nm_cast(VALUE self, VALUE new_stype_symbol, VALUE new_dtype_symbol);
+static VALUE nm_cast(VALUE self, VALUE new_stype_symbol, VALUE new_dtype_symbol, VALUE init);
 static VALUE nm_read(int argc, VALUE* argv, VALUE self);
 static VALUE nm_write(int argc, VALUE* argv, VALUE self);
 static VALUE nm_init_yale_from_old_yale(VALUE shape, VALUE dtype, VALUE ia, VALUE ja, VALUE a, VALUE from_dtype, VALUE nm);
@@ -469,7 +469,7 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "dtype", (METHOD)nm_dtype, 0);
 	rb_define_method(cNMatrix, "itype", (METHOD)nm_itype, 0);
 	rb_define_method(cNMatrix, "stype", (METHOD)nm_stype, 0);
-	rb_define_method(cNMatrix, "cast",  (METHOD)nm_cast, 2);
+	rb_define_method(cNMatrix, "cast_full",  (METHOD)nm_cast, 3);
 	rb_define_method(cNMatrix, "default_value", (METHOD)nm_default_value, 0);
 	rb_define_protected_method(cNMatrix, "__list_default_value__", (METHOD)nm_list_default_value, 0);
 	rb_define_protected_method(cNMatrix, "__yale_default_value__", (METHOD)nm_yale_default_value, 0);
@@ -723,7 +723,7 @@ static VALUE nm_upcast(VALUE self, VALUE t1, VALUE t2) {
  * For yale, it's going to be some variation on zero, but may be Qfalse or Qnil.
  */
 static VALUE nm_default_value(VALUE self) {
-  switch(NM_DTYPE(self)) {
+  switch(NM_STYPE(self)) {
   case nm::YALE_STORE:
     return nm_yale_default_value(self);
   case nm::LIST_STORE:
@@ -1062,9 +1062,13 @@ static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
 
 
 /*
+ * call-seq:
+ *     cast(stype) -> NMatrix
+ *     cast(stype, dtype, sparse_basis) -> NMatrix
+ *
  * Copy constructor for changing dtypes and stypes.
  */
-static VALUE nm_cast(VALUE self, VALUE new_stype_symbol, VALUE new_dtype_symbol) {
+static VALUE nm_cast(VALUE self, VALUE new_stype_symbol, VALUE new_dtype_symbol, VALUE init) {
   nm::dtype_t new_dtype = nm_dtype_from_rbsymbol(new_dtype_symbol);
   nm::stype_t new_stype = nm_stype_from_rbsymbol(new_stype_symbol);
 
@@ -1076,9 +1080,12 @@ static VALUE nm_cast(VALUE self, VALUE new_stype_symbol, VALUE new_dtype_symbol)
 
   UnwrapNMatrix( self, rhs );
 
+  void* init_ptr = ALLOCA_N(char, DTYPE_SIZES[new_dtype]);
+  rubyval_to_cval(init, new_dtype, init_ptr);
+
   // Copy the storage
   CAST_TABLE(cast_copy);
-  lhs->storage = cast_copy[lhs->stype][rhs->stype](rhs->storage, new_dtype);
+  lhs->storage = cast_copy[lhs->stype][rhs->stype](rhs->storage, new_dtype, init_ptr);
 
   STYPE_MARK_TABLE(mark);
 
@@ -1121,7 +1128,7 @@ static VALUE nm_init_copy(VALUE copy, VALUE original) {
 
   // Copy the storage
   CAST_TABLE(ttable);
-  lhs->storage = ttable[lhs->stype][rhs->stype](rhs->storage, rhs->storage->dtype);
+  lhs->storage = ttable[lhs->stype][rhs->stype](rhs->storage, rhs->storage->dtype, NULL);
 
   return copy;
 }
@@ -2166,7 +2173,7 @@ STORAGE* matrix_storage_cast_alloc(NMATRIX* matrix, nm::dtype_t new_dtype) {
     return matrix->storage;
 
   CAST_TABLE(cast_copy_storage);
-  return cast_copy_storage[matrix->stype][matrix->stype](matrix->storage, new_dtype);
+  return cast_copy_storage[matrix->stype][matrix->stype](matrix->storage, new_dtype, NULL);
 }
 
 STORAGE_PAIR binary_storage_cast_alloc(NMATRIX* left_matrix, NMATRIX* right_matrix) {

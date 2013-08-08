@@ -94,31 +94,33 @@ describe NMatrix do
     end
 
     it "should handle element-wise equality (=~)" do
-      r = NMatrix.new(:dense, 3, [false,false,false,true,false,true,false,true,true], :object).cast(:yale, :object)
+      rd = NMatrix.new(:dense, 3, [false,false,false,true,false,true,false,true,true], :object)
 
-      (@n =~ @m).should == r
+
+      (@n =~ @m).should == rd.cast(:yale, :object, false)
+      (@n =~ @m).should == rd.cast(:yale, :object, true)
     end
 
     it "should handle element-wise inequality (!~)" do
-      r = NMatrix.new(:dense, 3, [true,true,true,false,true,false,true,false,false], :object).cast(:yale, :object)
+      r = NMatrix.new(:dense, 3, [true,true,true,false,true,false,true,false,false], :object).cast(:yale, :object, true)
 
       (@n !~ @m).should == r
     end
 
     it "should handle element-wise less-than (<)" do
-      (@m < @n).should == NMatrix.new(:dense, 3, [true,true,true,false,true,false,true,false,false], :object).cast(:yale, :object)
+      (@m < @n).should == NMatrix.new(:dense, 3, [true,true,true,false,true,false,true,false,false], :object).cast(:yale, :object, true)
     end
 
     it "should handle element-wise greater-than (>)" do
-      (@n > @m).should == NMatrix.new(:dense, 3, [true,true,true,false,true,false,true,false,false], :object).cast(:yale, :object)
+      (@n > @m).should == NMatrix.new(:dense, 3, [true,true,true,false,true,false,true,false,false], :object).cast(:yale, :object, false)
     end
 
     it "should handle element-wise greater-than-or-equals (>=)" do
-      (@n >= @m).should == NMatrix.new(:dense, 3, true, :object).cast(:yale,:object)
+      (@n >= @m).should == NMatrix.new(:dense, 3, true, :object).cast(:yale,:object, true)
     end
 
     it "should handle element-wise less-than-or-equals (<=)" do
-      r = NMatrix.new(:dense, 3, [false,false,false,true,false,true,false,true,true], :object).cast(:yale, :object)
+      r = NMatrix.new(:dense, 3, [false,false,false,true,false,true,false,true,true], :object).cast(:yale, :object, false)
       (@n <= @m).should == r
     end
   end

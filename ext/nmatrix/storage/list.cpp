@@ -805,7 +805,7 @@ LIST_STORAGE* nm_list_storage_copy(const LIST_STORAGE* rhs)
 /*
  * List storage copy constructor C access with casting.
  */
-STORAGE* nm_list_storage_cast_copy(const STORAGE* rhs, dtype_t new_dtype) {
+STORAGE* nm_list_storage_cast_copy(const STORAGE* rhs, dtype_t new_dtype, void* dummy) {
   NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::list_storage::cast_copy, LIST_STORAGE*, const LIST_STORAGE* rhs, dtype_t new_dtype);
 
   return (STORAGE*)ttable[new_dtype][rhs->dtype]((LIST_STORAGE*)rhs, new_dtype);
@@ -984,6 +984,6 @@ extern "C" {
      * Get the default_value property from a list matrix.
      */
     VALUE nm_list_default_value(VALUE self) {
-      return rubyobj_from_cval(NM_DEFAULT_VAL(self), NM_DTYPE(self)).rval;
+      return (NM_DTYPE(self) == nm::RUBYOBJ) ? *reinterpret_cast<VALUE*>(NM_DEFAULT_VAL(self)) : rubyobj_from_cval(NM_DEFAULT_VAL(self), NM_DTYPE(self)).rval;
     }
 } // end of extern "C" block

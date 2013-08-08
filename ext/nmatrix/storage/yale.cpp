@@ -45,6 +45,10 @@
 #include <iostream>
 #include <array>
 
+#define RB_P(OBJ) \
+	rb_funcall(rb_stderr, rb_intern("print"), 1, rb_funcall(OBJ, rb_intern("object_id"), 0)); \
+	rb_funcall(rb_stderr, rb_intern("puts"), 1, rb_funcall(OBJ, rb_intern("inspect"), 0));
+
 /*
  * Project Includes
  */
@@ -82,8 +86,8 @@ extern "C" {
   static YALE_STORAGE*  nm_copy_alloc_struct(const YALE_STORAGE* rhs, const nm::dtype_t new_dtype, const size_t new_capacity, const size_t new_size);
   static YALE_STORAGE*	alloc(nm::dtype_t dtype, size_t* shape, size_t dim, nm::itype_t min_itype);
 
-  static void* default_value_ptr(YALE_STORAGE* s);
-  static VALUE default_value(YALE_STORAGE* s);
+  static void* default_value_ptr(const YALE_STORAGE* s);
+  static VALUE default_value(const YALE_STORAGE* s);
 
   /* Ruby-accessible functions */
   static VALUE nm_size(VALUE self);
@@ -109,6 +113,9 @@ static bool						ndrow_eqeq_ndrow(const YALE_STORAGE* l, const YALE_STORAGE* r, 
 
 template <typename LDType, typename RDType, typename IType>
 static bool           eqeq(const YALE_STORAGE* left, const YALE_STORAGE* right);
+
+template <typename LDType, typename RDType, typename IType>
+static bool eqeq_different_defaults(const YALE_STORAGE* s, const LDType& s_init, const YALE_STORAGE* t, const RDType& t_init);
 
 template <typename IType>
 static YALE_STORAGE*	copy_alloc_struct(const YALE_STORAGE* rhs, const dtype_t new_dtype, const size_t new_capacity, const size_t new_size);
@@ -517,6 +524,13 @@ char set(YALE_STORAGE* storage, SLICE* slice, void* value) {
  */
 template <typename LDType, typename RDType, typename IType>
 static bool eqeq(const YALE_STORAGE* left, const YALE_STORAGE* right) {
+  LDType l_init = reinterpret_cast<LDType*>(left->a )[left->shape[0] ];
+  RDType r_init = reinterpret_cast<RDType*>(right->a)[right->shape[0]];
+
+  // If the defaults are different between the two matrices, or if slicing is involved, use this other function instead:
+  if (l_init != r_init || left->src != left || right->src != right)
+    return eqeq_different_defaults<LDType,RDType,IType>(left, l_init, right, r_init);
+
   LDType* la = reinterpret_cast<LDType*>(left->a);
   RDType* ra = reinterpret_cast<RDType*>(right->a);
 
@@ -1083,7 +1097,7 @@ public:
       j_shape(j_shape_),
       diag(diag_is_only() || diag_is_first()),
       End(false),
-      init(s->dtype == nm::RUBYOBJ ? *reinterpret_cast<VALUE*>(default_value_ptr(s_)) : default_value(s_))
+      init(default_value(s))
     { }
 
   RowIterator(YALE_STORAGE* s_, IType i_, size_t j_shape_, size_t j_offset_ = 0)
@@ -1097,13 +1111,19 @@ public:
       j_shape(j_shape_),
       diag(diag_is_only() || diag_is_first()),
       End(false),
-      init(s->dtype == nm::RUBYOBJ ? *reinterpret_cast<VALUE*>(default_value_ptr(s_)) : default_value(s_))
+      init(default_value(s))
   { }
 
   RowIterator(const RowIterator& rhs) : s(rhs.s), ija(rhs.ija), a(s->a), i(rhs.i), k(rhs.k), k_end(rhs.k_end), j_offset(rhs.j_offset), j_shape(rhs.j_shape), diag(rhs.diag), End(rhs.End), init(rhs.init) { }
 
   VALUE obj() const {
     return diag ? obj_at(s, i) : obj_at(s, k);
+  }
+
+  template <typename T>
+  T cobj() const {
+    if (typeid(T) == typeid(RubyObject)) return obj();
+    return diag ? reinterpret_cast<T*>(s->a)[i] : reinterpret_cast<T*>(s->a)[k];
   }
 
   IType offset_j() const {
@@ -1113,20 +1133,16 @@ public:
   /* Returns true if an additional value is inserted, false if it goes on the diagonal */
   bool insert(IType j, VALUE v) {
     if (j == i) { // insert regardless on diagonal
-      std::cerr << int(i) << ": inserting at diagonal j=" << int(j) << std::endl;
       reinterpret_cast<VALUE*>(a)[j] = v;
       return false;
 
     } else {
       if (rb_funcall(v, rb_intern("!="), 1, init) == Qtrue) {
         if (k >= s->capacity) {
-          std::cerr << "growing from " << s->capacity << std::endl;
           vector_grow(s);
           ija = reinterpret_cast<IType*>(s->ija);
           a   = s->a;
-          std::cerr << "new capacity: " << s->capacity << std::endl;
         }
-        std::cerr << int(i) << ": inserting at k=" << int(k) << std::endl;
         reinterpret_cast<VALUE*>(a)[k] = v;
         ija[k] = j;
         k++;
@@ -1137,7 +1153,6 @@ public:
   }
 
   void update_row_end() {
-    std::cerr << "updating row " << int(i) << " end to " << int(k) << std::endl;
     ija[i+1] = k;
   }
 
@@ -1225,6 +1240,42 @@ static VALUE map_stored(VALUE self) {
 
   NMATRIX* m = nm_create(nm::YALE_STORE, reinterpret_cast<STORAGE*>(r));
   return Data_Wrap_Struct(CLASS_OF(self), nm_yale_storage_mark, nm_delete, m);
+}
+
+
+/*
+ * eqeq function for slicing and different defaults.
+ */
+template <typename LDType, typename RDType, typename IType>
+static bool eqeq_different_defaults(const YALE_STORAGE* s, const LDType& s_init, const YALE_STORAGE* t, const RDType& t_init) {
+
+  std::array<size_t,2>  s_offsets = get_offsets(const_cast<YALE_STORAGE*>(s)),
+                        t_offsets = get_offsets(const_cast<YALE_STORAGE*>(t));
+
+  for (IType ri = 0; ri < s->shape[0]; ++ri) {
+    RowIterator<IType> sit(const_cast<YALE_STORAGE*>(s), reinterpret_cast<IType*>(s->ija), ri + s_offsets[0], s->shape[1], s_offsets[1]);
+    RowIterator<IType> tit(const_cast<YALE_STORAGE*>(t), reinterpret_cast<IType*>(t->ija), ri + t_offsets[0], s->shape[1], t_offsets[1]);
+
+    while (!sit.end() || !tit.end()) {
+
+      // Perform the computation. Use a default value if the matrix doesn't have some value stored.
+      if (tit.end() || sit.offset_j() < tit.offset_j()) {
+        if (sit.template cobj<LDType>() != t_init) return false;
+
+        ++sit;
+
+      } else if (sit.end() || sit.offset_j() > tit.offset_j()) {
+        if (s_init != tit.template cobj<RDType>()) return false;
+        ++tit;
+
+      } else {  // same index
+        if (sit.template cobj<LDType>() != tit.template cobj<RDType>()) return false;
+        ++sit;
+        ++tit;
+      }
+    }
+  }
+  return true;
 }
 
 
@@ -1588,8 +1639,6 @@ void* nm_yale_storage_ref(STORAGE* storage, SLICE* slice) {
 
 /*
  * C accessor for determining whether two YALE_STORAGE objects have the same contents.
- *
- * FIXME: Is this for element-wise or whole-matrix equality?
  */
 bool nm_yale_storage_eqeq(const STORAGE* left, const STORAGE* right) {
   NAMED_LRI_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::eqeq, bool, const YALE_STORAGE* left, const YALE_STORAGE* right);
@@ -1603,7 +1652,7 @@ bool nm_yale_storage_eqeq(const STORAGE* left, const STORAGE* right) {
 /*
  * Copy constructor for changing dtypes. (C accessor)
  */
-STORAGE* nm_yale_storage_cast_copy(const STORAGE* rhs, nm::dtype_t new_dtype) {
+STORAGE* nm_yale_storage_cast_copy(const STORAGE* rhs, nm::dtype_t new_dtype, void* dummy) {
   NAMED_LRI_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::cast_copy, YALE_STORAGE*, const YALE_STORAGE* rhs, nm::dtype_t new_dtype);
 
   const YALE_STORAGE* casted_rhs = reinterpret_cast<const YALE_STORAGE*>(rhs);
@@ -1625,7 +1674,7 @@ size_t nm_yale_storage_get_size(const YALE_STORAGE* storage) {
 /*
  * Return a void pointer to the matrix's default value entry.
  */
-static void* default_value_ptr(YALE_STORAGE* s) {
+static void* default_value_ptr(const YALE_STORAGE* s) {
   return reinterpret_cast<void*>(reinterpret_cast<char*>(s->a) + (s->shape[0] * DTYPE_SIZES[s->dtype]));
 }
 
@@ -1633,15 +1682,16 @@ static void* default_value_ptr(YALE_STORAGE* s) {
 /*
  * Return the matrix's default value as a Ruby VALUE.
  */
-static VALUE default_value(YALE_STORAGE* s) {
-  return rubyobj_from_cval(default_value_ptr(s), s->dtype).rval;
+static VALUE default_value(const YALE_STORAGE* s) {
+  if (s->dtype == nm::RUBYOBJ) return *reinterpret_cast<VALUE*>(default_value_ptr(s));
+  else return rubyobj_from_cval(default_value_ptr(s), s->dtype).rval;
 }
 
 
 /*
  * Check to see if a default value is some form of zero. Easy for non-Ruby object matrices, which should always be 0.
  */
-static bool default_value_is_numeric_zero(YALE_STORAGE* s) {
+static bool default_value_is_numeric_zero(const YALE_STORAGE* s) {
   return rb_funcall(default_value(s), rb_intern("=="), 1, INT2FIX(0)) == Qtrue;
 }
 
@@ -1860,8 +1910,14 @@ static VALUE nm_a(int argc, VALUE* argv, VALUE self) {
   if (idx == Qnil) {
     VALUE* vals = ALLOCA_N(VALUE, size);
 
-    for (size_t i = 0; i < size; ++i) {
-      vals[i] = rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype]*i, s->dtype).rval;
+    if (NM_DTYPE(self) == nm::RUBYOBJ) {
+      for (size_t i = 0; i < size; ++i) {
+        vals[i] = reinterpret_cast<VALUE*>(s->a)[i];
+      }
+    } else {
+      for (size_t i = 0; i < size; ++i) {
+        vals[i] = rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype]*i, s->dtype).rval;
+      }
     }
     VALUE ary = rb_ary_new4(size, vals);
 
@@ -1894,9 +1950,16 @@ static VALUE nm_d(int argc, VALUE* argv, VALUE self) {
   if (idx == Qnil) {
     VALUE* vals = ALLOCA_N(VALUE, s->shape[0]);
 
-    for (size_t i = 0; i < s->shape[0]; ++i) {
-      vals[i] = rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype]*i, s->dtype).rval;
+    if (NM_DTYPE(self) == nm::RUBYOBJ) {
+      for (size_t i = 0; i < s->shape[0]; ++i) {
+        vals[i] = reinterpret_cast<VALUE*>(s->a)[i];
+      }
+    } else {
+      for (size_t i = 0; i < s->shape[0]; ++i) {
+        vals[i] = rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype]*i, s->dtype).rval;
+      }
     }
+
     return rb_ary_new4(s->shape[0], vals);
   } else {
     size_t index = FIX2INT(idx);
@@ -1919,8 +1982,14 @@ static VALUE nm_lu(VALUE self) {
 
   VALUE* vals = ALLOCA_N(VALUE, size - s->shape[0] - 1);
 
-  for (size_t i = 0; i < size - s->shape[0] - 1; ++i) {
-    vals[i] = rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype]*(s->shape[0] + 1 + i), s->dtype).rval;
+  if (NM_DTYPE(self) == nm::RUBYOBJ) {
+    for (size_t i = 0; i < size - s->shape[0] - 1; ++i) {
+      vals[i] = reinterpret_cast<VALUE*>(s->a)[s->shape[0] + 1 + i];
+    }
+  } else {
+    for (size_t i = 0; i < size - s->shape[0] - 1; ++i) {
+      vals[i] = rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype]*(s->shape[0] + 1 + i), s->dtype).rval;
+    }
   }
 
   VALUE ary = rb_ary_new4(size - s->shape[0] - 1, vals);

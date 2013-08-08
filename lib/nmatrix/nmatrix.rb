@@ -82,6 +82,48 @@ class NMatrix
   end
   alias :pp :pretty_print
 
+
+  #
+  # call-seq:
+  #     cast(stype, dtype, default) -> NMatrix
+  #     cast(stype, dtype) -> NMatrix
+  #     cast(stype) -> NMatrix
+  #     cast(options) -> NMatrix
+  #
+  # This is a user-friendly helper for calling #cast_full. The easiest way to call this function is using an
+  # options hash, e.g.,
+  #
+  #     n.cast(:stype => :yale, :dtype => :int64, :default => false)
+  #
+  # For list and yale, :default sets the "default value" or "init" of the matrix. List allows a bit more freedom
+  # since non-zeros are permitted. For yale, unpredictable behavior may result if the value is not false, nil, or
+  # some version of 0. Dense discards :default.
+  #
+  # dtype and stype are inferred from the matrix upon which #cast is called -- so you only really need to provide
+  # one. You can actually call this function with no arguments, in which case it functions like #clone.
+  #
+  # If your dtype is :object and you are converting from :dense to a sparse type, it is recommended that you
+  # provide a :default, as 0 may behave differently from its Float, Rational, or Complex equivalent. If no option
+  # is given, Fixnum 0 will be used.
+  def cast(*params)
+    if (params.size > 0 && params[0].is_a?(Hash))
+      opts = {
+          :stype => self.stype,
+          :dtype => self.dtype,
+          :default => self.stype == :dense ? 0 : self.default_value
+      }.merge(params[0])
+
+      self.cast_full(opts[:stype], opts[:dtype], opts[:default])
+    else
+      params << self.stype if params.size == 0
+      params << self.dtype if params.size == 1
+      params << (self.stype == :dense ? 0 : self.default_value) if params.size == 2
+
+      self.cast_full(*params)
+    end
+
+  end
+
   #
   # call-seq:
   #     rows -> Integer

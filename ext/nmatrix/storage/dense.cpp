@@ -578,7 +578,7 @@ static void slice_copy(DENSE_STORAGE *dest, const DENSE_STORAGE *src, size_t* le
 /*
  * Copy dense storage, changing dtype if necessary.
  */
-STORAGE* nm_dense_storage_cast_copy(const STORAGE* rhs, nm::dtype_t new_dtype) {
+STORAGE* nm_dense_storage_cast_copy(const STORAGE* rhs, nm::dtype_t new_dtype, void* dummy) {
 	NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::dense_storage::cast_copy, DENSE_STORAGE*, const DENSE_STORAGE* rhs, nm::dtype_t new_dtype);
 
   if (!ttable[new_dtype][rhs->dtype]) {
