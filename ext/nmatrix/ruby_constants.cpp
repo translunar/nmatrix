@@ -9,8 +9,8 @@
 //
 // == Copyright Information
 //
-// SciRuby is Copyright (c) 2010 - 2013, Ruby Science Foundation
-// NMatrix is Copyright (c) 2013, Ruby Science Foundation
+// SciRuby is Copyright (c) 2010 - 2012, Ruby Science Foundation
+// NMatrix is Copyright (c) 2012, Ruby Science Foundation
 //
 // Please see LICENSE.txt for additional copyright notices.
 //
@@ -57,11 +57,12 @@ ID	nm_rb_real,
 
 		nm_rb_row,
 		nm_rb_column,
-
 		nm_rb_add,
 		nm_rb_sub,
 		nm_rb_mul,
 		nm_rb_div,
+    nm_rb_both,
+    nm_rb_none,
 
 		nm_rb_negate,
 
@@ -84,6 +85,7 @@ VALUE cNMatrix,
 			cNMatrix_LAPACK,
 			
 			nm_eDataTypeError,
+      nm_eConvergenceError,
 			nm_eStorageTypeError;
 
 /*
@@ -127,9 +129,12 @@ void nm_init_ruby_constants(void) {
 	nm_rb_lower             = rb_intern("lower");
 	nm_rb_unit              = rb_intern("unit");
 	nm_rb_nonunit           = rb_intern("nonunit");
-
 	nm_rb_hash              = rb_intern("hash");
 
 	nm_rb_column            = rb_intern("column");
 	nm_rb_row               = rb_intern("row");
+
+  //Added by Ryan
+  nm_rb_both              = rb_intern("both");
+  nm_rb_none              = rb_intern("none");
 }

@@ -140,7 +140,6 @@ class NMatrix
       m
     end
     alias :identity :eye
-
     #
     # call-seq:
     #     diagonals(array) -> NMatrix

@@ -199,7 +199,7 @@ describe NMatrix do
           it "allows iteration of matrices" do
             n = nil
             if storage_type == :dense
-              n = NMatrix.new(:dense, [3,3], [1,2,3,4,5,6,7,8,9], dtype)
+            n = NMatrix.new(:dense, [3,3], [1,2,3,4,5,6,7,8,9], dtype)
             else
               n = storage_type == :yale ? NMatrix.new(storage_type, [3,4], dtype) : NMatrix.new(storage_type, [3,4], 0, dtype)
               n[0,0] = 1
@@ -326,7 +326,7 @@ describe NMatrix do
       val = (a.each { })
       val.should eq a
     end
-
+    
     it "should return the matrix being iterated over when each_stored_with_indices is called with a block" do
       a = NMatrix.new(2,1)
       val = (a.each_stored_with_indices { })
@@ -350,13 +350,13 @@ describe NMatrix do
 
     end
   end
-
+      
   it "should iterate through element 256 without a segfault" do
     t = NVector.random(256)
     t.each { |x| x + 0 }
   end
 
-  context "mapping and reduction related functions" do
+  context "mapping and reduction related functions" do 
 
     before :each do
       @nm_1d = N[5.0,0.0,1.0,2.0,3.0]
@@ -373,7 +373,7 @@ describe NMatrix do
       @nm_2d.mean.should eq N[[1.0,2.0]]
     end
 
-    it "should calculate the minimum along the specified dimension" do
+    it "should calculate the minimum along the specified dimension" do 
       @nm_1d.min.should eq 0.0
       @nm_2d.min.should eq N[[0.0, 1.0]]
       @nm_2d.min(1).should eq N[[0.0], [2.0]]
@@ -399,11 +399,11 @@ describe NMatrix do
       @nm_2d.std(1).should eq N[[Math.sqrt(0.5)], [Math.sqrt(0.5)]]
     end
 
-    it "should raise an ArgumentError when any invalid dimension is provided" do
+    it "should raise an ArgumentError when any invalid dimension is provided" do 
       expect { @nm_1d.mean(3) }.to raise_exception(ArgumentError)
     end
 
-    it "should convert to float if it contains only a single element" do
+    it "should convert to float if it contains only a single element" do 
       N[4.0].to_f.should eq 4.0
       N[[[[4.0]]]].to_f.should eq 4.0
     end
@@ -412,7 +412,7 @@ describe NMatrix do
       expect { @nm_1d.to_f }.to raise_error(IndexError)
     end
 
-    it "should map a block to all elements" do
+    it "should map a block to all elements" do 
       @nm_1d.map { |e| e ** 2 }.should eq N[25.0,0.0,1.0,4.0,9.0]
       @nm_2d.map { |e| e ** 2 }.should eq N[[0.0,1.0],[4.0,9.0]]
     end
@@ -522,10 +522,13 @@ describe NMatrix do
         NMatrix.ones_like(@nm_2d).should eq N[[1.0, 1.0], [1.0, 1.0]]
       end
 
-      it "should create an nmatrix of zeros with dimensions and type the same as its argument" do
+      it "should create an nmatrix of zeros with dimensions and type the same as its argument" do 
         NMatrix.zeros_like(@nm_1d).should eq N[0.0, 0.0, 0.0, 0.0, 0.0]
         NMatrix.zeros_like(@nm_2d).should eq N[[0.0, 0.0], [0.0, 0.0]]
       end
+
     end
+
   end
+  
 end

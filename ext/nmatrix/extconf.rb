@@ -148,6 +148,7 @@ have_header("clapack.h")
 have_header("cblas.h")
 
 have_func("clapack_dgetrf", "clapack.h")
+have_func("dgesvd_", "clapack.h")
 
 
 #find_library("cblas", "cblas_dgemm")

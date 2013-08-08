@@ -86,6 +86,7 @@ describe NMatrix::BLAS do
         y[4].should be_within(1e-4).of(-1.3660254037844386)
       end
 
+
       it "exposes cblas rotg" do
         ab = NVector.new(2, [6,-8], dtype)
         c,s = NMatrix::BLAS::rotg(ab)
