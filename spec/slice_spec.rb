@@ -157,8 +157,6 @@ describe "Slice operation" do
             @m[0,1].should eql(-9)
           end
 
-          it 'should set value from NMatrix'
-
           it 'should slice again' do
             n = @m[1..2, 1..2]
             nm_eql(n[1,0..1], NVector.new(2, [7,8], :int32).transpose).should be_true
@@ -225,12 +223,10 @@ describe "Slice operation" do
               end
 
               it "scalar adds to slices" do
-                pending "list map merged stored"
                 (@m[1,0..2]+1).should eq N[[4, 5, 6]]
               end
 
               it "compares slices to scalars" do
-                pending "list map merged stored"
                 (@m[1, 0..2] > 2).each { |e| (e != 0).should be_true }
               end
 

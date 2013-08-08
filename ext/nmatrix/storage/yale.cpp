@@ -952,6 +952,7 @@ static YALE_STORAGE* copy_alloc_struct(const YALE_STORAGE* rhs, const dtype_t ne
 
   lhs->ija          = ALLOC_N( IType, lhs->capacity );
   lhs->a            = ALLOC_N( char, DTYPE_SIZES[new_dtype] * lhs->capacity );
+  lhs->src          = lhs;
 
   // Now copy the contents -- but only within the boundaries set by the size. Leave
   // the rest uninitialized.
@@ -1061,6 +1062,137 @@ public:
 
 
 template <typename IType>
+class RowIterator {
+protected:
+  YALE_STORAGE* s;
+  IType* ija;
+  void*  a;
+  IType i, k, k_end;
+  size_t j_offset, j_shape;
+  bool diag, End;
+  VALUE init;
+public:
+  RowIterator(YALE_STORAGE* s_, IType* ija_, IType i_, size_t j_shape_, size_t j_offset_ = 0)
+    : s(s_),
+      ija(ija_),
+      a(s->a),
+      i(i_),
+      k(ija[i]),
+      k_end(ija[i+1]),
+      j_offset(j_offset_),
+      j_shape(j_shape_),
+      diag(diag_is_only() || diag_is_first()),
+      End(false),
+      init(s->dtype == nm::RUBYOBJ ? *reinterpret_cast<VALUE*>(default_value_ptr(s_)) : default_value(s_))
+    { }
+
+  RowIterator(YALE_STORAGE* s_, IType i_, size_t j_shape_, size_t j_offset_ = 0)
+    : s(s_),
+      ija(reinterpret_cast<IType*>(s->ija)),
+      a(s->a),
+      i(i_),
+      k(ija[i]),
+      k_end(ija[i+1]),
+      j_offset(j_offset_),
+      j_shape(j_shape_),
+      diag(diag_is_only() || diag_is_first()),
+      End(false),
+      init(s->dtype == nm::RUBYOBJ ? *reinterpret_cast<VALUE*>(default_value_ptr(s_)) : default_value(s_))
+  { }
+
+  RowIterator(const RowIterator& rhs) : s(rhs.s), ija(rhs.ija), a(s->a), i(rhs.i), k(rhs.k), k_end(rhs.k_end), j_offset(rhs.j_offset), j_shape(rhs.j_shape), diag(rhs.diag), End(rhs.End), init(rhs.init) { }
+
+  VALUE obj() const {
+    return diag ? obj_at(s, i) : obj_at(s, k);
+  }
+
+  IType offset_j() const {
+    return proper_j() - j_offset;
+  }
+
+  /* Returns true if an additional value is inserted, false if it goes on the diagonal */
+  bool insert(IType j, VALUE v) {
+    if (j == i) { // insert regardless on diagonal
+      std::cerr << int(i) << ": inserting at diagonal j=" << int(j) << std::endl;
+      reinterpret_cast<VALUE*>(a)[j] = v;
+      return false;
+
+    } else {
+      if (rb_funcall(v, rb_intern("!="), 1, init) == Qtrue) {
+        if (k >= s->capacity) {
+          std::cerr << "growing from " << s->capacity << std::endl;
+          vector_grow(s);
+          ija = reinterpret_cast<IType*>(s->ija);
+          a   = s->a;
+          std::cerr << "new capacity: " << s->capacity << std::endl;
+        }
+        std::cerr << int(i) << ": inserting at k=" << int(k) << std::endl;
+        reinterpret_cast<VALUE*>(a)[k] = v;
+        ija[k] = j;
+        k++;
+        return true;
+      }
+      return false;
+    }
+  }
+
+  void update_row_end() {
+    std::cerr << "updating row " << int(i) << " end to " << int(k) << std::endl;
+    ija[i+1] = k;
+  }
+
+  IType proper_j() const {
+    return diag ? i : ija[k];
+  }
+
+  /* Past the j_shape? */
+  bool end() const {
+    if (End)  return true;
+    return (diag ? i : ija[k]) - j_offset >= j_shape;
+  }
+
+  bool diag_is_only() const  { return ija[i] == k_end;  }
+  bool diag_is_first() const { return i < ija[ija[i]];  }
+  bool diag_is_last() const  { return i > ija[k_end-1]; }
+  bool k_is_last_nd() const  { return k == k_end-1;     }
+  bool k_is_last() const     { return k_is_last_nd() && !diag_is_last(); }
+  bool diag_is_ahead() const { return i > ija[k]; }
+  bool diag_is_next() const  { // assumes we've already tested for diag, diag_is_only(), diag_is_first()
+    if (i == ija[k]+1) return true; // definite next
+    else if (k+1 < k_end && i >= ija[k+1]+1) return false; // at least one item before it
+    else return true;
+  }
+
+  RowIterator<IType>& operator++() {
+    if (diag) {
+      diag = false;
+      //if (diag_is_first()) {
+      if (diag_is_only() || diag_is_last()) End = true;
+      // No need to increment; k pointer already at the right place.
+    } else { // !diag
+      if (k_is_last_nd()) {
+        if (diag_is_last()) diag = true;
+        else End = true;
+      } else if (diag_is_ahead()) {
+        k++;
+        if (diag_is_next()) diag = true;
+      } else { // diag is past (and k is not last)
+        k++;
+      }
+    }
+    return *this;
+  }
+
+
+  RowIterator<IType> operator++(int unused) {
+    RowIterator<IType> x(*this);
+    ++(*this);
+    return x;
+  }
+};
+
+
+template <typename IType>
 static VALUE map_stored(VALUE self) {
 
   YALE_STORAGE* s = NM_STORAGE_YALE(self);
@@ -1077,32 +1209,18 @@ static VALUE map_stored(VALUE self) {
   YALE_STORAGE* r = nm_yale_storage_create(nm::RUBYOBJ, shape, 2, s->capacity, NM_ITYPE(self));
   nm_yale_storage_init(r, &init);
 
-  IType* rija     = reinterpret_cast<IType*>(r->ija);
-  IType* sija     = reinterpret_cast<IType*>(s->ija);
-
-
   for (IType ri = 0; ri < shape[0]; ++ri) {
-    IType si = ri + s_offsets[0];
-    IType sk = sija[ri], sk_next = sija[ri+1], rk = rija[ri];
+    RowIterator<IType> sit(s, ri + s_offsets[0], shape[1], s_offsets[1]);
+    RowIterator<IType> rit(r, ri, shape[1]);
 
-    IType sj = sija[sk++];
-    IType rj = sj - s_offsets[1];
-
-    while (sk < sk_next && rj < shape[1]) {
-      VALUE rv = rb_yield(obj_at(s, sk++));
-      if (rb_funcall(rv, rb_intern("!="), 1, init) == Qtrue) {
-        if (rk >= r->capacity) {
-          vector_grow(r);
-          rija = reinterpret_cast<IType*>(r->ija);
-        }
-
-        // Insert the new value and column index
-        reinterpret_cast<VALUE*>(r->a)[rk] = rv;
-        rija[rk++]                         = rj;
-      }
+    while (!sit.end()) {
+      VALUE rv = rb_yield(sit.obj());
+      VALUE rj = sit.offset_j();
+      rit.insert(rj, rv);
+      ++sit;
     }
     // Update the row end information.
-    rija[ri+1] = rk;
+    rit.update_row_end();
   }
 
   NMATRIX* m = nm_create(nm::YALE_STORE, reinterpret_cast<STORAGE*>(r));
@@ -1136,52 +1254,40 @@ static VALUE map_merged_stored(VALUE left, VALUE right, VALUE init, nm::itype_t 
 
   IJAManager<IType> sm(s, itype),
                     tm(t, itype);
-  IType* rija     = reinterpret_cast<IType*>(r->ija);
 
   for (IType ri = 0; ri < shape[0]; ++ri) {
+    RowIterator<IType> sit(s, sm.ija, ri + s_offsets[0], shape[1], s_offsets[1]);
+    RowIterator<IType> tit(t, tm.ija, ri + t_offsets[0], shape[1], t_offsets[1]);
 
-    IType si = ri + s_offsets[0],
-          ti = ri + t_offsets[0];
-
-    IType sk = sm.ija[ri], sk_next = sm.ija[ri+1],
-          tk = tm.ija[ri], tk_next = tm.ija[ri+1],
-          rk = rija[ri];
-
-    IType sj = sm.ija[sk++], tj = tm.ija[tk++];
-    IType rj = NM_MIN(sj - s_offsets[1], tj - t_offsets[1]);
-
-    while ((tk < tk_next || sk < sk_next) && rj < shape[1]) {
+    RowIterator<IType> rit(r, reinterpret_cast<IType*>(r->ija), ri, shape[1]);
+    while (!rit.end() && (!sit.end() || !tit.end())) {
       VALUE rv;
+      IType rj;
 
       // Perform the computation. Use a default value if the matrix doesn't have some value stored.
-      if (tk == tk_next || sj - s_offsets[1] < tj - t_offsets[1]) {
-        rv = rb_yield_values(2, obj_at(s, sk++), t_init);
+      if (tit.end() || sit.offset_j() < tit.offset_j()) {
+        rv = rb_yield_values(2, sit.obj(), t_init);
+        rj = sit.offset_j();
+        ++sit;
 
-      } else if (sk == sk_next || sj - s_offsets[1] > tj - t_offsets[1]) {
-        rv = rb_yield_values(2, s_init, obj_at(t, tk++));
+      } else if (sit.end() || sit.offset_j() > tit.offset_j()) {
+        rv = rb_yield_values(2, s_init, tit.obj());
+        rj = tit.offset_j();
+        ++tit;
 
       } else {  // same index
-        rv = rb_yield_values(2, obj_at(s, sk++), obj_at(t, tk++));
-
+        rv = rb_yield_values(2, sit.obj(), tit.obj());
+        rj = sit.offset_j();
+        ++sit;
+        ++tit;
       }
 
-      // if the result value is non-default, insert it. That means increasing the rk_next entry.
-      if (rb_funcall(rv, rb_intern("!="), 1, init) == Qtrue) {
-
-        // We may need to grow the vector.
-        if (rk >= r->capacity) {
-          vector_grow(r);
-          rija = reinterpret_cast<IType*>(r->ija);
-        }
-
-        // Insert the new value and column index
-        reinterpret_cast<VALUE*>(r->a)[rk] = rv;
-        rija[rk++]                         = rj;
-      }
+      rit.insert(rj, rv); // handles increment (and testing for default, etc)
 
     }
+
     // Update the row end information.
-    rija[ri+1] = rk;
+    rit.update_row_end();
   }
 
   NMATRIX* m = nm_create(nm::YALE_STORE, reinterpret_cast<STORAGE*>(r));
