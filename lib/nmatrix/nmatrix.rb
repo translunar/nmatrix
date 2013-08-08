@@ -643,9 +643,9 @@ class NMatrix
 
   def method_missing name, *args, &block #:nodoc:
     if name.to_s =~ /^__list_elementwise_.*__$/
-      raise NotImplementedError, "requested list matrix element-wise operation"
+      raise NotImplementedError, "requested undefined list matrix element-wise operation"
     elsif name.to_s =~ /^__yale_scalar_.*__$/
-      raise NotImplementedError, "requested yale scalar element-wise operation"
+      raise NotImplementedError, "requested undefined yale scalar element-wise operation"
     else
       super(name, *args, &block)
     end
@@ -665,13 +665,12 @@ protected
     define_method("__yale_elementwise_#{ewop}__") do |rhs|
       self.__yale_map_merged_stored__(rhs, nil) { |l,r| l.send(op,r) }.cast(stype, NMatrix.upcast(dtype, rhs.dtype))
     end
-  end
-
-  {add: :+, sub: :-, mul: :*, div: :/, pow: :**, mod: :%}.each_pair do |ewop, op|
     define_method("__list_scalar_#{ewop}__") do |rhs|
       self.__list_map_merged_stored__(rhs, nil) { |l,r| l.send(op,r) }.cast(stype, NMatrix.upcast(dtype, NMatrix.min_dtype(rhs)))
     end
-
+    define_method("__yale_scalar_#{ewop}__") do |rhs|
+      self.__yale_map_stored__ { |l| l.send(op,rhs) }.cast(stype, NMatrix.upcast(dtype, NMatrix.min_dtype(rhs)))
+    end
     define_method("__dense_scalar_#{ewop}__") do |rhs|
       self.__dense_map__ { |l| l.send(op,rhs) }.cast(stype, NMatrix.upcast(dtype, NMatrix.min_dtype(rhs)))
     end
@@ -682,13 +681,21 @@ protected
     define_method("__list_elementwise_#{ewop}__") do |rhs|
       self.__list_map_merged_stored__(rhs, nil) { |l,r| l.send(op,r) }
     end
-
     define_method("__dense_elementwise_#{ewop}__") do |rhs|
       self.__dense_map_pair__(rhs) { |l,r| l.send(op,r) }
     end
-
     define_method("__yale_elementwise_#{ewop}__") do |rhs|
+      self.__yale_map_merged_stored__(rhs, nil) { |l,r| l.send(op,r) }
+    end
+
+    define_method("__list_scalar_#{ewop}__") do |rhs|
       self.__list_map_merged_stored__(rhs, nil) { |l,r| l.send(op,r) }
+    end
+    define_method("__yale_scalar_#{ewop}__") do |rhs|
+      self.__yale_map_stored__ { |l| l.send(op,rhs) }
+    end
+    define_method("__dense_scalar_#{ewop}__") do |rhs|
+      self.__dense_map__ { |l| l.send(op,rhs) }
     end
   end
 

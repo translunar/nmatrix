@@ -494,6 +494,7 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "each_stored_with_indices", (METHOD)nm_each_stored_with_indices, 0);
 	rb_define_protected_method(cNMatrix, "__list_map_merged_stored__", (METHOD)nm_list_map_merged_stored, 2);
 	rb_define_protected_method(cNMatrix, "__yale_map_merged_stored__", (METHOD)nm_yale_map_merged_stored, 2);
+	rb_define_protected_method(cNMatrix, "__yale_map_stored__", (METHOD)nm_yale_map_stored, 0);
 
 	rb_define_method(cNMatrix, "==",	  (METHOD)nm_eqeq,				1);
 
@@ -1328,7 +1329,7 @@ static VALUE nm_read(int argc, VALUE* argv, VALUE self) {
 
 
   if (!RB_FILE_EXISTS(file)) { // FIXME: Errno::ENOENT
-    rb_raise(rb_get_errno_exc("ENOENT"), RSTRING_PTR(file));
+    rb_raise(rb_get_errno_exc("ENOENT"), "%s", RSTRING_PTR(file));
   }
 
   // Open a file stream
