@@ -51,6 +51,21 @@ describe NMatrix do
     m.should.eql? identity3
   end
 
+  it "diag() creates a matrix with pre-supplied diagonal" do
+    arr = [1,2,3,4]
+    m = NMatrix.diag(arr)
+    m.is_a?(NMatrix).should be_true
+  end
+
+  it "diagonals() contains the seeded values on the diagonal" do
+    arr = [1,2,3,4]
+    m = NMatrix.diagonals(arr)
+    m[0,0].should eq(arr[0])
+    m[1,1].should eq(arr[1])
+    m[2,2].should eq(arr[2])
+    m[3,3].should eq(arr[3])
+  end
+
   it "random() creates a matrix of random numbers" do
     m = NMatrix.random(2)
 
