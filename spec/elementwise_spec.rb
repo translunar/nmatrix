@@ -73,8 +73,7 @@ describe NMatrix do
     end
 
     it "should perform element-wise subtraction" do
-      r = NMatrix.new(:dense, 3, [52,30,10,0,88,0,6,0,0], :int64).cast(:yale, :int64)
-      (@n-@m).should == r
+      (@n-@m).should == NMatrix.new(:dense, 3, [52,30,10,0,88,0,6,0,0], :int64).cast(:yale, :int64)
     end
 
     it "should perform element-wise multiplication" do
@@ -94,17 +93,11 @@ describe NMatrix do
     end
 
     it "should handle element-wise equality (=~)" do
-      rd = NMatrix.new(:dense, 3, [false,false,false,true,false,true,false,true,true], :object)
-
-
-      (@n =~ @m).should == rd.cast(:yale, :object, false)
-      (@n =~ @m).should == rd.cast(:yale, :object, true)
+      (@n =~ @m).should == NMatrix.new(:dense, 3, [false,false,false,true,false,true,false,true,true], :object).cast(:yale, :object, false)
     end
 
     it "should handle element-wise inequality (!~)" do
-      r = NMatrix.new(:dense, 3, [true,true,true,false,true,false,true,false,false], :object).cast(:yale, :object, true)
-
-      (@n !~ @m).should == r
+      (@n !~ @m).should == NMatrix.new(:dense, 3, [true,true,true,false,true,false,true,false,false], :object).cast(:yale, :object, true)
     end
 
     it "should handle element-wise less-than (<)" do
