@@ -186,7 +186,7 @@ class NMatrix
     pivot = self.getrf!
 
     # Now calculate the inverse using the pivot array
-    NMatrix::LAPACK::clapack_getri(:row, self.shape[0], self, self.shape[0], pivot)
+    NMatrix::LAPACK::clapack_getri(:row, self.shape[1], self, self.shape[1], pivot)
 
     self
   end
@@ -219,7 +219,7 @@ class NMatrix
   #
   def getrf!
     raise(StorageTypeError, "ATLAS functions only work on dense matrices") unless self.stype == :dense
-    NMatrix::LAPACK::clapack_getrf(:row, self.shape[0], self.shape[1], self, self.shape[0])
+    NMatrix::LAPACK::clapack_getrf(:row, self.shape[0], self.shape[1], self, self.shape[1])
   end
 
   #
