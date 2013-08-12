@@ -44,6 +44,7 @@
 #include <cstdio>     // std::fprintf
 #include <iostream>
 #include <array>
+#include <typeinfo>
 
 #define RB_P(OBJ) \
 	rb_funcall(rb_stderr, rb_intern("print"), 1, rb_funcall(OBJ, rb_intern("object_id"), 0)); \
