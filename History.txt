@@ -291,8 +291,11 @@
 
   * Added NMatrix#permute_columns! and NMatrix#permute_columns
 
-* 2 bug fixes:
+* 3 bug fixes:
 
   * Fixed compilation problem involving missing STL headers
 
   * Fixed NMatrix#inverse problem with non-square matrices
+
+  * Fixed invalid read problem detected by Valgrind for
+    Yale element-wise subtraction in spec
