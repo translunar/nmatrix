@@ -1326,7 +1326,7 @@ static VALUE map_merged_stored(VALUE left, VALUE right, VALUE init, nm::itype_t 
     RowIterator<IType> tit(t, tm.ija, ri + t_offsets[0], shape[1], t_offsets[1]);
 
     RowIterator<IType> rit(r, reinterpret_cast<IType*>(r->ija), ri, shape[1]);
-    while (!rit.end() && (!sit.end() || !tit.end())) {
+    while (!sit.end() || !tit.end()) {
       VALUE rv;
       IType rj;
 
