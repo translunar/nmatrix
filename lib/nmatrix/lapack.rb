@@ -123,6 +123,9 @@ class NMatrix
       #
       # call-seq:
       #     laswp(matrix, ipiv) -> NMatrix
+      #
+      # Permute the columns of a matrix (in-place) according to the Array +ipiv+.
+      #
       def laswp(matrix, ipiv)
         raise(ArgumentError, "expected NMatrix for argument 0") unless matrix.is_a?(NMatrix)
         raise(StorageTypeError, "LAPACK functions only work on :dense NMatrix instances") unless matrix.stype == :dense
