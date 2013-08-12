@@ -38,6 +38,17 @@ describe NMatrix::LAPACK do
         b = NMatrix.new(:dense, [3,4], [3,2,4,1,7,6,8,5,11,10,12,9], dtype)
         a.should == b
       end
+
+      it "exposes NMatrix#permute_columns and #permute_columns! (user-friendly laswp)" do
+        a = NMatrix.new(:dense, [3,4], [1,2,3,4,5,6,7,8,9,10,11,12], dtype)
+        b = NMatrix.new(:dense, [3,4], [3,2,4,1,7,6,8,5,11,10,12,9], dtype)
+        piv = [2,1,3,0]
+        r = a.permute_columns(piv)
+        r.should_not == a
+        r.should == b
+        a.permute_columns!(piv)
+        a.should == b
+      end
     end
   end
 

@@ -120,6 +120,17 @@ class NMatrix
         clapack_potrs(order, uplo, n, nrhs, a, lda, b, ldb)
       end
 
+      #
+      # call-seq:
+      #     laswp(matrix, ipiv) -> NMatrix
+      def laswp(matrix, ipiv)
+        raise(ArgumentError, "expected NMatrix for argument 0") unless matrix.is_a?(NMatrix)
+        raise(StorageTypeError, "LAPACK functions only work on :dense NMatrix instances") unless matrix.stype == :dense
+        raise(ArgumentError, "expected Array ipiv to have no more entries than NMatrix a has columns") if ipiv.size > matrix.shape[1]
+
+        clapack_laswp(matrix.shape[0], matrix, matrix.shape[1], 0, ipiv.size-1, ipiv, 1)
+      end
+
     end
   end
 end

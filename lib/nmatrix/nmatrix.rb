@@ -224,6 +224,28 @@ class NMatrix
 
   #
   # call-seq:
+  #     permute_columns!(ary) -> NMatrix
+  #
+  # In-place permute the columns of a dense matrix using LASWP according to the order given in an Array +ary+.
+  # Not yet implemented for yale or list.
+  def permute_columns!(ary)
+    NMatrix::LAPACK::laswp(self, ary)
+  end
+  alias :laswp! :permute_columns!
+
+  #
+  # call-seq:
+  #     permute_columns(ary) -> NMatrix
+  #
+  # Permute the columns of a dense matrix using LASWP according to the order given in an Array +ary+.
+  # Not yet implemented for yale or list.
+  def permute_columns(ary)
+    self.clone.permute_columns!(ary)
+  end
+  alias :laswp :permute_columns
+
+  #
+  # call-seq:
   #     det -> determinant
   #
   # Calculate the determinant by way of LU decomposition. This is accomplished
