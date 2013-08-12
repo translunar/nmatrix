@@ -1422,7 +1422,7 @@ inline int getrf_nothrow(const int M, const int N, DType* A, const int lda, int*
   const int MN = std::min(M, N);
   int ierr = 0;
 
-  // Symbols used by ATLAS:
+  // Symbols used by ATLAS in the several versions of this function:
   // Row   Col      Us
   // Nup   Nleft    N_ul
   // Ndown Nright   N_dr

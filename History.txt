@@ -281,3 +281,16 @@
 
   * Repaired list matrix element-wise functions
 
+=== 0.0.7 / 2013-08-??
+
+* 0 major enhancements:
+
+* 2 minor enhancements:
+
+  * Added user-friendly NMatrix::LAPACK::laswp method
+
+  * Added NMatrix#permute_columns! and NMatrix#permute_columns
+
+* 1 bug fixes:
+
+  * Fixed compilation problem involving missing STL headers
