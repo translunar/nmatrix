@@ -122,7 +122,7 @@ class NMatrix
 
       #
       # call-seq:
-      #     svd(matrix, type)
+      #     gesvd(matrix, type)
       # 
       #
       # * *Arguments* :
@@ -133,19 +133,19 @@ class NMatrix
       # * *Raises* :
       #   - +ArgumentError+ -> Expected dense NMatrix as first argument.
       #
-      def svd(matrix, type = :both)
+      def gesvd(matrix, type = :both)
         raise ArgumentError, 'Expected dense NMatrix as first argument.' unless matrix.is_a?(NMatrix) and matrix.stype == :dense
         #define jobu, jobvt
-        jobu, jobvt = 'N', 'N'
+        jobu, jobvt = :none, :none
         case type
         when :both
-         jobu, jobvt = 'A', 'A'
+         jobu, jobvt = :all, :all
         when :arrays
-          jobu, jobvt = 'S', 'S'
+          jobu, jobvt = :return, :return
         when :left
-          jobu = 'S'
+          jobu = :return
         when :right
-          jobvt = 'S'
+          jobvt = :return
         end
         
         # Build up the u and vt matrices

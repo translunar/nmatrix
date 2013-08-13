@@ -44,6 +44,7 @@
 #include <cstdio>     // std::fprintf
 #include <iostream>
 #include <array>
+#include <typeinfo>
 
 #define RB_P(OBJ) \
 	rb_funcall(rb_stderr, rb_intern("print"), 1, rb_funcall(OBJ, rb_intern("object_id"), 0)); \
@@ -1095,7 +1096,7 @@ public:
       k_end(ija[i+1]),
       j_offset(j_offset_),
       j_shape(j_shape_),
-      diag(diag_is_only() || diag_is_first()),
+      diag(row_has_no_nd() || diag_is_first()),
       End(false),
       init(default_value(s))
     { }
@@ -1109,7 +1110,7 @@ public:
       k_end(ija[i+1]),
       j_offset(j_offset_),
       j_shape(j_shape_),
-      diag(diag_is_only() || diag_is_first()),
+      diag(row_has_no_nd() || diag_is_first()),
       End(false),
       init(default_value(s))
   { }
@@ -1126,7 +1127,15 @@ public:
     return diag ? reinterpret_cast<T*>(s->a)[i] : reinterpret_cast<T*>(s->a)[k];
   }
 
-  IType offset_j() const {
+  inline IType proper_j() const {
+    //if (!diag && k >= s->capacity) {
+    //  std::cerr << "proper_j(): Warning: (nondiag) k exceeded capacity at row " << int(i) << ": k=" << int(k) << ", cap=" << s->capacity << std::endl;
+    //  throw;
+    //}
+    return diag ? i : ija[k];
+  }
+
+  inline IType offset_j() const {
     return proper_j() - j_offset;
   }
 
@@ -1154,47 +1163,54 @@ public:
 
   void update_row_end() {
     ija[i+1] = k;
-  }
-
-  IType proper_j() const {
-    return diag ? i : ija[k];
+    k_end    = k;
   }
 
   /* Past the j_shape? */
-  bool end() const {
+  inline bool end() const {
     if (End)  return true;
+    //if (diag) return i - j_offset >= j_shape;
+    //else return k >= s->capacity || ija[k] - j_offset >= j_shape;
     return (diag ? i : ija[k]) - j_offset >= j_shape;
   }
 
-  bool diag_is_only() const  { return ija[i] == k_end;  }
-  bool diag_is_first() const { return i < ija[ija[i]];  }
-  bool diag_is_last() const  { return i > ija[k_end-1]; }
-  bool k_is_last_nd() const  { return k == k_end-1;     }
-  bool k_is_last() const     { return k_is_last_nd() && !diag_is_last(); }
-  bool diag_is_ahead() const { return i > ija[k]; }
-  bool diag_is_next() const  { // assumes we've already tested for diag, diag_is_only(), diag_is_first()
+  inline bool row_has_no_nd() const { return ija[i] == k_end; /* k_start == k_end */  }
+  inline bool diag_is_first() const { return i < ija[ija[i]];  }
+  inline bool diag_is_last() const  { return i > ija[k_end-1]; } // only works if !row_has_no_nd()
+  inline bool k_is_last_nd() const  { return k == k_end-1;     }
+  inline bool k_is_last() const     { return k_is_last_nd() && !diag_is_last(); }
+  inline bool diag_is_ahead() const { return i > ija[k]; }
+  inline bool row_has_diag() const  { return i < s->shape[1];  }
+  inline bool diag_is_next() const  { // assumes we've already tested for diag, row_has_no_nd(), diag_is_first()
     if (i == ija[k]+1) return true; // definite next
     else if (k+1 < k_end && i >= ija[k+1]+1) return false; // at least one item before it
     else return true;
   }
 
   RowIterator<IType>& operator++() {
-    if (diag) {
+    if (diag) {                                             // we're at the diagonal
+      if (row_has_no_nd() || diag_is_last()) End = true;    //  and there are no non-diagonals (or none still to visit)
       diag = false;
-      //if (diag_is_first()) {
-      if (diag_is_only() || diag_is_last()) End = true;
-      // No need to increment; k pointer already at the right place.
-    } else { // !diag
-      if (k_is_last_nd()) {
-        if (diag_is_last()) diag = true;
-        else End = true;
-      } else if (diag_is_ahead()) {
-        k++;
-        if (diag_is_next()) diag = true;
-      } else { // diag is past (and k is not last)
-        k++;
+    } else if (!row_has_diag()) {                           // row has no diagonal entries
+      if (row_has_no_nd() || k_is_last_nd()) End = true;    // row is totally empty, or we're at last entry
+      else k++;                                             // still entries to visit
+//    } else if (row_has_no_nd()) { // in this case we started at diag, so don't check it
+    } else { // not at diag but it exists somewhere in the row, and row has at least one nd entry
+      if (diag_is_ahead()) { // diag is ahead
+        if (k_is_last_nd()) diag = true; // diag is next and last
+        else if (diag_is_next()) {       // diag is next and not last
+          diag = true;
+          k++;
+        } else k++;                      // diag is not next
+      } else {                           // diag is past
+        if (k_is_last_nd()) End = true;  //   and we're at the end
+        else k++;                        //   and we're not at the end
       }
     }
+
+    //if (k >= s->capacity)
+    //  std::cerr << "operator++: Warning: k has exceeded capacity for row " << int(i) << "; k=" << int(k) << ", cap=" << s->capacity << std::endl;
+
     return *this;
   }
 
@@ -1259,12 +1275,11 @@ static bool eqeq_different_defaults(const YALE_STORAGE* s, const LDType& s_init,
     while (!sit.end() || !tit.end()) {
 
       // Perform the computation. Use a default value if the matrix doesn't have some value stored.
-      if (tit.end() || sit.offset_j() < tit.offset_j()) {
+      if (tit.end() || (!sit.end() && sit.offset_j() < tit.offset_j())) {
         if (sit.template cobj<LDType>() != t_init) return false;
-
         ++sit;
 
-      } else if (sit.end() || sit.offset_j() > tit.offset_j()) {
+      } else if (sit.end() || (!tit.end() && sit.offset_j() > tit.offset_j())) {
         if (s_init != tit.template cobj<RDType>()) return false;
         ++tit;
 
@@ -1311,17 +1326,17 @@ static VALUE map_merged_stored(VALUE left, VALUE right, VALUE init, nm::itype_t 
     RowIterator<IType> tit(t, tm.ija, ri + t_offsets[0], shape[1], t_offsets[1]);
 
     RowIterator<IType> rit(r, reinterpret_cast<IType*>(r->ija), ri, shape[1]);
-    while (!rit.end() && (!sit.end() || !tit.end())) {
+    while (!sit.end() || !tit.end()) {
       VALUE rv;
       IType rj;
 
       // Perform the computation. Use a default value if the matrix doesn't have some value stored.
-      if (tit.end() || sit.offset_j() < tit.offset_j()) {
+      if (tit.end() || (!sit.end() && sit.offset_j() < tit.offset_j())) {
         rv = rb_yield_values(2, sit.obj(), t_init);
         rj = sit.offset_j();
         ++sit;
 
-      } else if (sit.end() || sit.offset_j() > tit.offset_j()) {
+      } else if (sit.end() || (!tit.end() && sit.offset_j() > tit.offset_j())) {
         rv = rb_yield_values(2, s_init, tit.obj());
         rj = tit.offset_j();
         ++tit;
