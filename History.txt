@@ -283,7 +283,9 @@
 
 === 0.0.7 / 2013-08-??
 
-* 0 major enhancements:
+* 1 major enhancements:
+
+  * Began major re-factoring of headers for math.cpp
 
 * 5 minor enhancements:
 
@@ -303,6 +305,9 @@
 
   * Added experimental NMatrix::LAPACK::lapack_gesvd function (which
     does NOT depend upon CLAPACK) (by @ryanmt and @mohawkjohn)
+
+  * Added experimental non-LAPACK-dependent function
+    NMatrix::LAPACK::lapack_gesdd
 
 * 4 bug fixes:
 
