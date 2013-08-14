@@ -24,9 +24,7 @@
 #
 # Common data for testing. 
 require "./lib/nmatrix"
-require_relative "./rspec_monkeys.rb"
-
-TOLERANCE = 0.001
+require "./lib/nmatrix/rspec"
 
 MATRIX43A_ARRAY = [14.0, 9.0, 3.0, 2.0, 11.0, 15.0, 0.0, 12.0, 17.0, 5.0, 2.0, 3.0]
 MATRIX32A_ARRAY = [12.0, 25.0, 9.0, 10.0, 8.0, 5.0]

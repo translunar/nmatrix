@@ -46,6 +46,8 @@
 #include "ruby_object.h"
 
 namespace nm {
+
+
   /*
    * Constants
    */
@@ -775,6 +777,8 @@ void*	    			rubyobj_to_cval(VALUE val, nm::dtype_t dtype);
 void  		  		rubyval_to_cval(VALUE val, nm::dtype_t dtype, void* loc);
 nm::RubyObject	rubyobj_from_cval(void* val, nm::dtype_t dtype);
 nm::RubyObject  rubyobj_from_cval_by_itype(void* val, nm::itype_t itype);
+
+void nm_init_data();
 
 } // end of extern "C" block
 

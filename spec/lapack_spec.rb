@@ -39,6 +39,17 @@ describe NMatrix::LAPACK do
         b = NMatrix.new(:dense, [3,4], [3,2,4,1,7,6,8,5,11,10,12,9], dtype)
         a.should == b
       end
+
+      it "exposes NMatrix#permute_columns and #permute_columns! (user-friendly laswp)" do
+        a = NMatrix.new(:dense, [3,4], [1,2,3,4,5,6,7,8,9,10,11,12], dtype)
+        b = NMatrix.new(:dense, [3,4], [3,2,4,1,7,6,8,5,11,10,12,9], dtype)
+        piv = [2,1,3,0]
+        r = a.permute_columns(piv)
+        r.should_not == a
+        r.should == b
+        a.permute_columns!(piv)
+        a.should == b
+      end
     end
   end
 
@@ -151,7 +162,7 @@ describe NMatrix::LAPACK do
           #pending
           a = NMatrix.new([4,3], [[  5.91, -5.69], [  7.09,  2.72], [  7.78, -4.06], [ -0.79, -7.21], [ -3.15, -4.08], [ -1.89,  3.27], [  4.57, -2.07], [ -3.88, -3.30], [ -4.89,  4.20], [  4.10, -6.70], [  3.28, -3.84], [  3.84,  1.19]].map {|e| Complex(*e) } , dtype)
           s_true = NMatrix.new([3,1], [17.63, 11.61, 6.78], dtype)
-          left_true = NMatrix.new([3,3], [[-0.86, 0.0], [0.4, 0.0], [0.32, 0.0], [-0.35, 0.13], [-0.24, -0.21], [-0.63, 0.6], [0.15, 0.32], [0.61, 0.61], [-0.36, 0.1]].map {|e| Complex(*e)}, dtype)
+          left_true = NMatrix.new([4,4], [[-0.86, 0.0], [0.4, 0.0], [0.32, 0.0], [-0.35, 0.13], [-0.24, -0.21], [-0.63, 0.6], [0.15, 0.32], [0.61, 0.61], [-0.36, 0.1]].map {|e| Complex(*e)}, dtype)
           right_true = NMatrix.new([4,3], [[ -0.22, 0.51], [ -0.37, -0.32], [ -0.53, 0.11], [ 0.15, 0.38], [ 0.31, 0.31], [ 0.09, -0.57], [ 0.18, -0.39], [ 0.38, -0.39], [ 0.53, 0.24], [ 0.49, 0.28], [ -0.47, -0.25], [ -0.15, 0.19]].map {|e| Complex *e} , dtype)
 
           s   = NMatrix.new([3,1], 0, dtype)
@@ -174,18 +185,15 @@ describe NMatrix::LAPACK do
         begin
 
           info = NMatrix::LAPACK::lapack_gesvd(:a, :a, a.shape[0], a.shape[1], a, a.shape[0], s, u, ldu, vt, ldvt, 500)
-          STDERR.puts "info=#{info}"
-
-          require 'pry'
-          binding.pry
 
         rescue NotImplementedError => e
           pending e.to_s
         end
 
-        left_true.row(0).should be_within(err).of(u.row(0))
-        right_true.row(0).should be_within(err).of(vt.row(0))
-        s_true.row(0).should be_within(err).of(s)
+        u.should be_within(err).of(left_true)
+        #FIXME: Is the next line correct?
+        vt[0...right_true.shape[0], 0...right_true.shape[1]-1].should be_within(err).of(right_true[0...right_true.shape[0],0...right_true.shape[1]-1])
+        s.transpose.should be_within(err).of(s_true.row(0))
 
       end
     end

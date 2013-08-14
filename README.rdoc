@@ -9,9 +9,8 @@ Fast Numerical Linear Algebra Library for Ruby
 
 == Description
 
-NMatrix is a fast numerical linear algebra library for Ruby, with dense and
-sparse matrices, written mostly in C and C++. It is part of the SciRuby
-project.
+NMatrix is a fast numerical linear algebra library for Ruby, with dense and sparse matrices, written mostly in C and
+C++. It is part of the SciRuby project.
 
 NMatrix was inspired by {NArray}[http://narray.rubyforge.org], by Masahiro Tanaka.
 
@@ -21,9 +20,9 @@ To install the latest stable version:
 
     gem install nmatrix
 
-However, you will need to install {ATLAS}[http://math-atlas.sourceforge.net/] with CBLAS (C interface
-to {BLAS}[http://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms]) first. Detailed directions can be
-found {here}[https://github.com/SciRuby/nmatrix/wiki/Installation]. The requirements for NMatrix are:
+However, you will need to install {ATLAS}[http://math-atlas.sourceforge.net/] with CBLAS (C interface to
+{BLAS}[http://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms]) first. Detailed directions can be found
+{here}[https://github.com/SciRuby/nmatrix/wiki/Installation]. The requirements for NMatrix are:
 
 * ATLAS
 * LAPACK, probably ({see here for details}[https://github.com/SciRuby/nmatrix/wiki/Installation])
@@ -31,14 +30,14 @@ found {here}[https://github.com/SciRuby/nmatrix/wiki/Installation]. The requirem
 * Ruby 1.9+
 * {packable}[http://github.com/marcandre/packable] 1.3.5 (used for I/O)
 
-If you want to obtain the latest (development)code, you should generally do:
+If you want to obtain the latest (development) code, you should generally do:
 
     git clone https://github.com/SciRuby/nmatrix.git
     cd nmatrix/
     bundle install
     bundle exec rake compile
     bundle exec rake repackage
-    gem install pkg/nmatrix-0.0.6.gem
+    gem install pkg/nmatrix-0.0.7.gem
 
 Detailed instructions are available for {Mac}[https://github.com/SciRuby/nmatrix/wiki/Installation#mac-os-x] and {Linux}[https://github.com/SciRuby/nmatrix/wiki/Installation#linux].
 
@@ -80,16 +79,17 @@ Read the instructions in +CONTRIBUTING.md+ if you want to help NMatrix.
 
 == Features
 
-The following features exist in the current version of NMatrix (0.0.5):
+The following features exist in the current version of NMatrix (0.0.6):
 
 * Matrix and vector storage containers: dense, yale, list (more to come)
-* Data types: uint8, int8, int16, int32, int64, float32, float64, complex64, complex128, rational64, rational128
-  (incomplete)
+* Data types: byte (uint8), int8, int16, int32, int64, float32, float64, complex64, complex128, rational64, rational128,
+  Ruby object
 * Conversion between storage and data types (except from-complex, and from-float-to-rational)
-* Element-wise operations and comparisons for dense and yale
-* Matrix-matrix multiplication for dense (using ATLAS) and yale
-* Matrix-vector multiplication for dense (using ATLAS)
-* Dense and list matrix slicing and referencing
+* Element-wise and right-hand-scalar operations and comparisons for all matrix types
+* Matrix-matrix multiplication for dense (with and without ATLAS) and yale
+* Matrix-vector multiplication for dense (with and without ATLAS)
+* Dense and list matrix slicing by copy and reference
+* Yale matrix slicing by copy
 * Native reading and writing of dense and yale matrices
   * Optional compression for dense matrices with symmetry or triangularity: symmetric, skew, hermitian, upper, lower
 * Matlab .MAT v5 file input
@@ -114,8 +114,9 @@ The following features exist in the current version of NMatrix (0.0.5):
 
 === Planned Features (Short-to-Medium Term)
 
-These are features planned for NMatrix 0.1.0, our first beta.
+These are features planned for NMatrix 0.1.0, our first beta:
 
+* Yale matrix slicing
 * calculation of determinant (LAPACK-free), trace, and eigenvalues (characteristic polynomial)
 * exponentials and square roots
 * matrix inversions (LAPACK-free)
@@ -137,9 +138,7 @@ now.
 
 You should also be aware that NMatrix and NArray are incompatible with one another; you should not try to require both
 at the same time. Unfortunately, that causes problems with Ruby/GSL, which currently depends upon NArray. As such, we
-are working on a {patch for Ruby/GSL}[https://github.com/SciRuby/rb-gsl]. You can find the most recent version in
-{the work branch of Masaomi's fork}[https://github.com/masaomi/rb-gsl/tree/work] (not currently compiling as of this
-writing).
+have a {fork of Ruby/GSL}[https://github.com/SciRuby/rb-gsl].
 
 == License
 

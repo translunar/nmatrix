@@ -160,6 +160,19 @@ class NMatrix
         # what should this return?
         [s_matrix, u_matrix, v_matrix]
       end # #svd
+
+      #     laswp(matrix, ipiv) -> NMatrix
+      #
+      # Permute the columns of a matrix (in-place) according to the Array +ipiv+.
+      #
+      def laswp(matrix, ipiv)
+        raise(ArgumentError, "expected NMatrix for argument 0") unless matrix.is_a?(NMatrix)
+        raise(StorageTypeError, "LAPACK functions only work on :dense NMatrix instances") unless matrix.stype == :dense
+        raise(ArgumentError, "expected Array ipiv to have no more entries than NMatrix a has columns") if ipiv.size > matrix.shape[1]
+
+        clapack_laswp(matrix.shape[0], matrix, matrix.shape[1], 0, ipiv.size-1, ipiv, 1)
+      end
+
     end
   end
 end

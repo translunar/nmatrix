@@ -33,6 +33,7 @@
 #include <ruby.h>
 #include <algorithm> // std::min
 #include <iostream>
+#include <vector>
 
 /*
  * Project Includes
@@ -500,7 +501,6 @@ VALUE nm_list_map_merged_stored(VALUE left, VALUE right, VALUE init) {
   nm::list_storage::RecurseData sdata(s);
 
   void* scalar_init = NULL;
-  size_t* shape;
 
   // right might be a scalar, in which case this is a scalar operation.
   if (TYPE(right) != T_DATA || (RDATA(right)->dfree != (RUBY_DATA_FUNC)nm_delete && RDATA(right)->dfree != (RUBY_DATA_FUNC)nm_delete_ref)) {
