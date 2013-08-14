@@ -301,6 +301,9 @@
   * Added RSpec monkey patches for #be_within to work with NMatrix
     objects; usable by requiring "nmatrix/rspec"
 
+  * Added experimental NMatrix::LAPACK::lapack_gesvd function (which
+    does NOT depend upon CLAPACK) (by @ryanmt and @mohawkjohn)
+
 * 4 bug fixes:
 
   * Fixed compilation problem involving <typeinfo> and <vector> STL
