@@ -226,6 +226,24 @@ class NMatrix
 
   #
   # call-seq:
+  #     matrix.factorize_lu -> ...
+  #
+  # LU factorization of a matrix.
+  #
+  # FIXME: For some reason, getrf seems to require that the matrix be transposed first -- and then you have to transpose the
+  # FIXME: result again. Ideally, this would be an in-place factorize instead, and would be called nm_factorize_lu_bang.
+  #
+  def factorize_lu
+    raise(NotImplementedError, "only implemented for dense storage") unless self.stype == :dense
+    raise(NotImplementedError, "matrix is not 2-dimensional") unless self.dimensions == 2
+
+    t = self.transpose
+    NMatrix::LAPACK::clapack_getrf(:row, t.shape[0], t.shape[1], t, t.shape[1])
+    t.transpose
+  end
+
+  #
+  # call-seq:
   #     permute_columns!(ary) -> NMatrix
   #
   # In-place permute the columns of a dense matrix using LASWP according to the order given in an Array +ary+.
@@ -402,7 +420,7 @@ class NMatrix
   # The block should behave the same way as for Enumerable#reduce.
   #
   # @param [Integer] dimen the dimension being reduced
-  # @param [Numeric] initial the initial value for the reduction 
+  # @param [Numeric] initial the initial value for the reduction
   #  (i.e. the usual parameter to Enumerable#reduce).  Supply nil or do not
   #  supply this argument to have it follow the usual Enumerable#reduce 
   #  behavior of using the first element as the initial value.

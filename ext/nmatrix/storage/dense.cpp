@@ -35,9 +35,11 @@
  * Project Includes
  */
 // #include "types.h"
-#include "util/math.h"
-
 #include "data/data.h"
+#include "math/long_dtype.h"
+#include "math/gemm.h"
+#include "math/gemv.h"
+#include "math/math.h"
 #include "common.h"
 #include "dense.h"
 

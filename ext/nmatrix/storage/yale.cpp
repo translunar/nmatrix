@@ -55,9 +55,8 @@
  */
 
 // #include "types.h"
-#include "util/math.h"
-
 #include "data/data.h"
+#include "math/math.h"
 
 #include "common.h"
 #include "yale.h"

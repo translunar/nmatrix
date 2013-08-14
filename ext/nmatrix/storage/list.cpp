@@ -46,7 +46,7 @@
 #include "common.h"
 #include "list.h"
 
-#include "util/math.h"
+#include "math/math.h"
 #include "util/sl_list.h"
 
 /*

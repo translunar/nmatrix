@@ -105,7 +105,7 @@ $srcs = [
          'ruby_constants.cpp',
 
          'data/data.cpp',
-         'util/math.cpp',
+         'math.cpp',
          'util/sl_list.cpp',
          'util/io.cpp',
          'storage/common.cpp',
@@ -159,7 +159,7 @@ have_func("cblas_dgemm", "cblas.h")
 # Order matters here: ATLAS has to go after LAPACK: http://mail.scipy.org/pipermail/scipy-user/2007-January/010717.html
 $libs += " -llapack -lcblas -latlas "
 
-$objs = %w{nmatrix ruby_constants data/data util/io util/math util/sl_list storage/common storage/storage storage/dense storage/yale storage/list}.map { |i| i + ".o" }
+$objs = %w{nmatrix ruby_constants data/data util/io math util/sl_list storage/common storage/storage storage/dense storage/yale storage/list}.map { |i| i + ".o" }
 
 #CONFIG['CXX'] = 'clang++'
 CONFIG['CXX'] = 'g++'
