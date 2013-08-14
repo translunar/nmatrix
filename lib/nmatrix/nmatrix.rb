@@ -32,6 +32,8 @@ require_relative './lapack.rb'
 require_relative './yale_functions.rb'
 
 class NMatrix
+  include Enumerable
+
   # Read and write extensions for NMatrix. These are only loaded when needed.
   #
   module IO
@@ -574,19 +576,81 @@ class NMatrix
     variance(dimen).map! { |e| Math.sqrt(e) }
   end
 
-  ##
+
+  #
   # call-seq:
-  #   to_f -> Float
+  #     abs_dtype -> Symbol
+  #
+  # Returns the dtype of the result of a call to #abs. In most cases, this is the same as dtype; it should only differ
+  # for :complex64 (where it's :float32) and :complex128 (:float64).
+  def abs_dtype
+    if self.dtype == :complex64
+      :float32
+    elsif self.dtype == :complex128
+      :float64
+    else
+      self.dtype
+    end
+  end
+
+
+  #
+  # call-seq:
+  #     abs -> NMatrix
+  #
+  # Maps all values in a matrix to their absolute values.
+  def abs
+    if stype == :dense
+      self.__dense_map__ { |v| v.abs }
+    elsif stype == :list
+      # FIXME: Need __list_map_stored__, but this will do for now.
+      self.__list_map_merged_stored__(nil, nil) { |v,dummy| v.abs }
+    else
+      self.__yale_map_stored__ { |v| v.abs }
+    end.cast(self.stype, abs_dtype)
+  end
+
+  #
+  # call-seq:
+  #     to_f -> Float
   #
   # Converts an nmatrix with a single element (but any number of dimensions)
   #  to a float.
   #
   # Raises an IndexError if the matrix does not have just a single element.
   #
-  # FIXME: Does this actually happen? Matrices should not have just one element.
   def to_f
     raise IndexError, 'to_f only valid for matrices with a single element' unless shape.all? { |e| e == 1 }
     self[*Array.new(shape.size, 0)]
+  end
+
+  #
+  # call-seq:
+  #     to_flat_array -> Array
+  #     to_flat_a -> Array
+  #
+  # Converts an NMatrix to a one-dimensional Ruby Array.
+  #
+  def to_flat_array
+    ary = Array.new(self.size)
+    self.each.with_index { |v,i| ary[i] = v }
+    ary
+  end
+  alias :to_flat_a :to_flat_array
+
+  #
+  # call-seq:
+  #     size -> Fixnum
+  #
+  # Returns the total size of the NMatrix based on its shape.
+  #
+  def size
+    s = self.shape
+    (0...self.dimensions).inject(1) { |x,i| x * s[i] }
+  end
+
+  def to_s #:nodoc:
+    self.to_flat_array.to_s
   end
 
   ##

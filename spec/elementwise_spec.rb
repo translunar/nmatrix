@@ -209,6 +209,21 @@ describe NMatrix do
   end
 
   context "dense" do
+    context "scalar arithmetic" do
+      before :each do
+        @n = NMatrix.new(:dense, 2, [1,2,3,4], :int64)
+      end
+
+      it "works for integers" do
+        (@n+1).should == NMatrix.new(:dense, 2, [2,3,4,5], :int64)
+      end
+
+      #it "works for complex64" do
+      #  n = @n.cast(:dtype => :complex64)
+      #  (n + 10.0).to_a.should == [Complex(11.0), Complex(12.0), Complex(13.0), Complex(14.0)]
+      #end
+    end
+
     context "elementwise arithmetic" do
       before :each do
         @n = NMatrix.new(:dense, 2, [1,2,3,4], :int64)

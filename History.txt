@@ -285,17 +285,30 @@
 
 * 0 major enhancements:
 
-* 2 minor enhancements:
+* 5 minor enhancements:
 
   * Added user-friendly NMatrix::LAPACK::laswp method
 
   * Added NMatrix#permute_columns! and NMatrix#permute_columns
 
-* 3 bug fixes:
+  * Added NMatrix#abs to compute element-wise absolute values, and
+    #abs_dtype to determine the dtype returned by a call to #abs on a
+    given matrix (needed for RSpec)
 
-  * Fixed compilation problem involving missing STL headers
+  * Added NMatrix#size to compute the total number of cells in an
+    NMatrix object (solely accounting for the shape, not sparsity)
+
+  * Added RSpec monkey patches for #be_within to work with NMatrix
+    objects; usable by requiring "nmatrix/rspec"
+
+* 4 bug fixes:
+
+  * Fixed compilation problem involving <typeinfo> and <vector> STL
+    headers
 
   * Fixed NMatrix#inverse problem with non-square matrices
 
   * Fixed invalid read problem detected by Valgrind for
     Yale element-wise subtraction in spec
+
+  * Fixed conversion from Ruby object to Complex and Rational
