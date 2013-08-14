@@ -283,9 +283,13 @@
 
 === 0.0.7 / 2013-08-??
 
-* 1 major enhancements:
+* 2 major enhancements:
 
   * Began major re-factoring of headers for math.cpp
+
+  * Added two singular value decomposition functions for dense
+    NMatrix objects, #gesvd and #gesdd, for floating point and
+    complex dtypes
 
 * 5 minor enhancements:
 
