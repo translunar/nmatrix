@@ -342,6 +342,7 @@ static VALUE nm_stype(VALUE self);
 static VALUE nm_default_value(VALUE self);
 static VALUE nm_dim(VALUE self);
 static VALUE nm_shape(VALUE self);
+static VALUE nm_supershape(int argc, VALUE* argv, VALUE self);
 static VALUE nm_capacity(VALUE self);
 static VALUE nm_each_with_indices(VALUE nmatrix);
 static VALUE nm_each_stored_with_indices(VALUE nmatrix);
@@ -484,6 +485,7 @@ void Init_nmatrix() {
 	rb_define_protected_method(cNMatrix, "__list_to_hash__", (METHOD)nm_to_hash, 0); // handles list and dense, which are n-dimensional
 
 	rb_define_method(cNMatrix, "shape", (METHOD)nm_shape, 0);
+	rb_define_method(cNMatrix, "supershape", (METHOD)nm_supershape, -1);
 	rb_define_method(cNMatrix, "det_exact", (METHOD)nm_det_exact, 0);
 	//rb_define_method(cNMatrix, "transpose!", (METHOD)nm_transpose_self, 0);
 	rb_define_method(cNMatrix, "complex_conjugate!", (METHOD)nm_complex_conjugate_bang, 0);
@@ -1622,11 +1624,39 @@ static VALUE nm_dim(VALUE self) {
  */
 static VALUE nm_shape(VALUE self) {
   STORAGE* s   = NM_STORAGE(self);
-  size_t index;
 
   // Copy elements into a VALUE array and then use those to create a Ruby array with rb_ary_new4.
   VALUE* shape = ALLOCA_N(VALUE, s->dim);
-  for (index = 0; index < s->dim; ++index)
+  for (size_t index = 0; index < s->dim; ++index)
+    shape[index] = INT2FIX(s->shape[index]);
+
+  return rb_ary_new4(s->dim, shape);
+}
+
+
+/*
+ * call-seq:
+ *     supershape(n) -> Array
+ *     supershape -> Array
+ *
+ * Get the shape of a slice's nth-order parent. If the slice doesn't have n orders, returns the shape
+ * of the original ancestor.
+ */
+static VALUE nm_supershape(int argc, VALUE* argv, VALUE self) {
+  VALUE n; rb_scan_args(argc, argv, "01", &n);
+
+  STORAGE* s   = NM_STORAGE(self);
+  if (s->src == s) return nm_shape(self); // easy case (not a slice)
+  int order = n == Qnil ? 1 : FIX2INT(n);
+
+  if (order <= 0) rb_raise(rb_eRangeError, "expected argument to be positive");
+
+  for (; order > 0; --order) {
+    s = s->src; // proceed to next parent
+  }
+
+  VALUE* shape = ALLOCA_N(VALUE, s->dim);
+  for (size_t index = 0; index < s->dim; ++index)
     shape[index] = INT2FIX(s->shape[index]);
 
   return rb_ary_new4(s->dim, shape);

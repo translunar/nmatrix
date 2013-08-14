@@ -33,6 +33,22 @@ describe "Slice operation" do
         @m = create_matrix(stype)
       end
 
+      it "should return correct shape and 1st-order supershape" do
+        x = NMatrix.random([10,12])
+        y = x[0...8,5...12]
+        y.shape.should == [8,7]
+        y.supershape.should == [10,12]
+      end
+
+      it "should return correct 1st- and 2nd-order supershape" do
+        pending "Not yet sure if we ever want to enable reference slices of reference slices"
+        x = NMatrix.random([10,12])
+        y = x[0...8,5...12]
+        z = y[0...3,0...4]
+        z.supershape(2).should == y.supershape(1)
+        z.supershape(1).should == [8,7]
+      end
+
       unless stype == :yale
         it "should have #is_ref? method" do
           a = @m[0..1, 0..1]

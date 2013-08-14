@@ -291,7 +291,7 @@
     NMatrix objects, #gesvd and #gesdd, for floating point and
     complex dtypes
 
-* 5 minor enhancements:
+* 8 minor enhancements:
 
   * Added user-friendly NMatrix::LAPACK::laswp method
 
@@ -312,6 +312,10 @@
 
   * Added experimental non-LAPACK-dependent function
     NMatrix::LAPACK::lapack_gesdd
+
+  * Added NMatrix#supershape method for getting the shape of a
+    slice's parent or other ancestor, which may be useful for calling
+    ATLAS and LAPACK functions on slices
 
 * 4 bug fixes:
 
