@@ -82,7 +82,7 @@ describe "Slice operation" do
           @m[2,1].should eql(7)
         end
 
-        it 'should return a 1x2 vector with refs to self elements' do
+        it 'should return a 1x2 matrix with refs to self elements' do
           n = @m.slice(0,1..2)
           n.shape.should eql([1,2])
 
@@ -94,6 +94,9 @@ describe "Slice operation" do
         it 'should return a 2x1 matrix with refs to self elements' do
           n = @m.slice(0..1,1)
           n.shape.should eql([2,1])
+
+          require 'pry'
+          binding.pry
 
           n[0].should == @m[0,1]
           n[0] = -9

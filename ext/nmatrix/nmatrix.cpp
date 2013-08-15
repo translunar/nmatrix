@@ -340,6 +340,8 @@ static VALUE nm_dtype(VALUE self);
 static VALUE nm_itype(VALUE self);
 static VALUE nm_stype(VALUE self);
 static VALUE nm_default_value(VALUE self);
+static size_t effective_dim(STORAGE* s);
+static VALUE nm_effective_dim(VALUE self);
 static VALUE nm_dim(VALUE self);
 static VALUE nm_shape(VALUE self);
 static VALUE nm_supershape(int argc, VALUE* argv, VALUE self);
@@ -347,7 +349,7 @@ static VALUE nm_capacity(VALUE self);
 static VALUE nm_each_with_indices(VALUE nmatrix);
 static VALUE nm_each_stored_with_indices(VALUE nmatrix);
 
-static SLICE* get_slice(size_t dim, VALUE* c, VALUE self);
+static SLICE* get_slice(size_t dim, int argc, VALUE* arg, size_t* shape);
 static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLICE*), void (*delete_func)(NMATRIX*), VALUE self);
 static VALUE nm_mset(int argc, VALUE* argv, VALUE self);
 static VALUE nm_mget(int argc, VALUE* argv, VALUE self);
@@ -481,6 +483,7 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "[]=", (METHOD)nm_mset, -1);
 	rb_define_method(cNMatrix, "is_ref?", (METHOD)nm_is_ref, 0);
 	rb_define_method(cNMatrix, "dimensions", (METHOD)nm_dim, 0);
+	rb_define_method(cNMatrix, "effective_dimensions", (METHOD)nm_effective_dim, 0);
 
 	rb_define_protected_method(cNMatrix, "__list_to_hash__", (METHOD)nm_to_hash, 0); // handles list and dense, which are n-dimensional
 
@@ -1481,7 +1484,6 @@ static VALUE nm_mget(int argc, VALUE* argv, VALUE self) {
     nm_list_storage_get,
     nm_yale_storage_get
   };
-
   return nm_xslice(argc, argv, ttable[NM_STYPE(self)], nm_delete, self);
 }
 
@@ -1514,16 +1516,14 @@ static VALUE nm_mref(int argc, VALUE* argv, VALUE self) {
  *     n[3,3] = n[2,3] = 5.0
  */
 static VALUE nm_mset(int argc, VALUE* argv, VALUE self) {
-  size_t dim = argc - 1; // last arg is the value
+  size_t dim = NM_DIM(self); // last arg is the value
 
-  if (argc <= 1) {
-    rb_raise(rb_eArgError, "Expected coordinates and r-value");
+  if ((size_t)(argc) > NM_DIM(self)+1) {
+    rb_raise(rb_eArgError, "wrong number of arguments (%d for %u)", argc, effective_dim(NM_STORAGE(self))+1);
+  } else {
+    SLICE* slice = get_slice(dim, argc-1, argv, NM_STORAGE(self)->shape);
 
-  } else if (NM_DIM(self) == dim) {
-
-    SLICE* slice = get_slice(dim, argv, self);
-
-    void* value = rubyobj_to_cval(argv[dim], NM_DTYPE(self));
+    void* value = rubyobj_to_cval(argv[argc-1], NM_DTYPE(self));
 
     // FIXME: Can't use a function pointer table here currently because these functions have different
     // signatures (namely the return type).
@@ -1550,12 +1550,7 @@ static VALUE nm_mset(int argc, VALUE* argv, VALUE self) {
     }
     free_slice(slice);
 
-    return argv[dim];
-
-  } else if (NM_DIM(self) < dim) {
-    rb_raise(rb_eArgError, "Coordinates given exceed number of matrix dimensions");
-  } else {
-    rb_raise(rb_eNotImpError, "Slicing not supported yet");
+    return argv[argc-1];
   }
   return Qnil;
 }
@@ -1683,14 +1678,43 @@ static VALUE nm_symmetric(VALUE self) {
   return is_symmetric(self, false);
 }
 
+
+/*
+ * Gets the dimension of a matrix which might be a vector (have one or more shape components of size 1).
+ */
+static size_t effective_dim(STORAGE* s) {
+  size_t d = 0;
+  for (size_t i = 0; i < s->dim; ++i) {
+    if (s->shape[i] != 1) d++;
+  }
+  return d;
+}
+
+
+/*
+ * call-seq:
+ *     effective_dim -> Fixnum
+ *
+ * Returns the number of dimensions that don't have length 1. Guaranteed to be less than or equal to #dim.
+ */
+static VALUE nm_effective_dim(VALUE self) {
+  return INT2FIX(effective_dim(NM_STORAGE(self)));
+}
+
+
 /*
  * Get a slice of an NMatrix.
  */
 static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLICE*), void (*delete_func)(NMATRIX*), VALUE self) {
   VALUE result = Qnil;
+  STORAGE* s = NM_STORAGE(self);
 
-  if (NM_DIM(self) == (size_t)(argc)) {
-    SLICE* slice = get_slice((size_t)(argc), argv, self);
+  std::cerr << "xslice: argc=" << int(argc) << std::endl;
+
+  if (NM_DIM(self) < (size_t)(argc)) {
+    rb_raise(rb_eArgError, "wrong number of arguments (%d for %u)", argc, effective_dim(s));
+  } else {
+    SLICE* slice = get_slice(NM_DIM(self), argc, argv, s->shape);
 
     if (slice->single) {
       static void* (*ttable[nm::NUM_STYPES])(STORAGE*, SLICE*) = {
@@ -1699,30 +1723,20 @@ static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLIC
         nm_yale_storage_ref
       };
 
-      if (NM_DTYPE(self) == nm::RUBYOBJ)  result = *reinterpret_cast<VALUE*>( ttable[NM_STYPE(self)](NM_STORAGE(self), slice) );
-      else                                result = rubyobj_from_cval( ttable[NM_STYPE(self)](NM_STORAGE(self), slice), NM_DTYPE(self) ).rval;
+      if (NM_DTYPE(self) == nm::RUBYOBJ)  result = *reinterpret_cast<VALUE*>( ttable[NM_STYPE(self)](s, slice) );
+      else                                result = rubyobj_from_cval( ttable[NM_STYPE(self)](s, slice), NM_DTYPE(self) ).rval;
 
     } else {
       STYPE_MARK_TABLE(mark_table);
 
       NMATRIX* mat = ALLOC(NMATRIX);
       mat->stype = NM_STYPE(self);
-      mat->storage = (STORAGE*)((*slice_func)( NM_STORAGE(self), slice ));
+      mat->storage = (STORAGE*)((*slice_func)( s, slice ));
 
-      // Do we want an NVector instead of an NMatrix?
-      VALUE klass = cNMatrix, orient = Qnil;
-      // FIXME: Generalize for n dimensional slicing somehow
-      if (mat->storage->shape[0] == 1 || mat->storage->shape[1] == 1) klass  = cNVector;
-
-      result = Data_Wrap_Struct(klass, mark_table[mat->stype], delete_func, mat);
+      result = Data_Wrap_Struct(CLASS_OF(self), mark_table[mat->stype], delete_func, mat);
     }
 
     free_slice(slice);
-
-  } else if (NM_DIM(self) < (size_t)(argc)) {
-    rb_raise(rb_eArgError, "Coordinates given exceed number of matrix dimensions");
-  } else {
-    rb_raise(rb_eNotImpError, "This type of slicing not supported yet");
   }
 
   return result;
@@ -1995,40 +2009,57 @@ nm::dtype_t nm_dtype_guess(VALUE v) {
 
 
 /*
- * Documentation goes here.
+ * Allocate and return a SLICE object, which will contain the appropriate coordinate and length information for
+ * accessing some part of a matrix.
  */
-static SLICE* get_slice(size_t dim, VALUE* c, VALUE self) {
-  size_t r;
+static SLICE* get_slice(size_t dim, int argc, VALUE* arg, size_t* shape) {
   VALUE beg, end;
-  int exl;
+  int excl;
 
   SLICE* slice = alloc_slice(dim);
   slice->single = true;
 
-  for (r = 0; r < dim; ++r) {
+  // r is the shape position; t is the slice position. They may differ when we're dealing with a
+  // matrix where the effective dimension is less than the dimension (e.g., a vector).
+  for (size_t r = 0, t = 0; r < dim; ++r) {
+    VALUE v = t == argc ? Qnil : arg[t];
 
-    if (FIXNUM_P(c[r])) { // this used CLASS_OF before, which is inefficient for fixnum
-
-      slice->coords[r]  = FIX2UINT(c[r]);
+    // if the current shape indicates a vector and fewer args were supplied than necessary, just use 0
+    if (argc - t + r < dim && shape[r] == 1) {
+      slice->coords[r]  = 0;
       slice->lengths[r] = 1;
 
-    } else if (CLASS_OF(c[r]) == rb_cRange) {
-        rb_range_values(c[r], &beg, &end, &exl);
-        slice->coords[r]  = FIX2UINT(beg);
-        slice->lengths[r] = FIX2UINT(end) - slice->coords[r] + 1;
+    } else if (FIXNUM_P(v)) { // this used CLASS_OF before, which is inefficient for fixnum
 
-        // Exclude last element for a...b range
-        if (exl)
-          slice->lengths[r] -= 1;
+      slice->coords[r]  = FIX2UINT(v);
+      slice->lengths[r] = 1;
+      t++;
 
-        slice->single     = false;
+    } else if (TYPE(arg[t]) == T_HASH) { // 3:5 notation (inclusive)
+      VALUE begin_end   = rb_funcall(v, rb_intern("shift"), 0); // rb_hash_shift
+      slice->coords[r]  = FIX2UINT(rb_ary_entry(begin_end, 0));
+      slice->lengths[r] = FIX2UINT(rb_ary_entry(begin_end, 1)) - slice->coords[r];
+
+      if (RHASH_EMPTY_P(v)) t++; // go on to the next
+
+      slice->single = false;
+
+    } else if (CLASS_OF(v) == rb_cRange) {
+      rb_range_values(arg[t], &beg, &end, &excl);
+      slice->coords[r]  = FIX2UINT(beg);
+      // Exclude last element for a...b range
+      slice->lengths[r] = FIX2UINT(end) - slice->coords[r] + (excl ? 0 : 1);
+
+      slice->single     = false;
+
+      t++;
 
     } else {
-      rb_raise(rb_eArgError, "cannot slice using class %s, needs a number or range or something", rb_obj_classname(c[r]));
+      rb_raise(rb_eArgError, "expected Fixnum, Range, or Hash for slice component instead of %s", rb_obj_classname(v));
     }
 
-    if (slice->coords[r] + slice->lengths[r] > NM_SHAPE(self,r))
-      rb_raise(rb_eArgError, "out of range");
+    if (slice->coords[r] > shape[r] || slice->coords[r] + slice->lengths[r] > shape[r])
+      rb_raise(rb_eRangeError, "slice is larger than matrix in dimension %u (slice component %u)", r, t);
   }
 
   return slice;

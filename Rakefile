@@ -33,7 +33,8 @@ require 'rspec/core/rake_task'
 require 'rspec/core'
 require 'rspec/core/rake_task'
 RSpec::Core::RakeTask.new(:spec) do |spec|
-  spec.pattern = FileList['spec/**/*_spec.rb']
+  # Load nmatrix_spec first.
+  spec.pattern = FileList['spec/nmatrix_spec.rb', 'spec/**/*_spec.rb'].uniq
 end
 
 BASEDIR = Pathname( __FILE__ ).dirname.relative_path_from( Pathname.pwd )
@@ -98,7 +99,7 @@ namespace :spec do
   # spurious (and eminently ignorable) warnings from the ruby
   # interpreter
 
-  RSPEC_CMD = [ 'ruby', '-S', 'rspec', '-Ilib:ext', SPECDIR ]
+  RSPEC_CMD = [ 'ruby', '-S', 'rspec', '-Ilib:ext', "#{SPECDIR}/nmatrix_spec.rb #{SPECDIR}" ]
 
   #desc "Run the spec for generator.rb"
   #task :generator do |task|

@@ -376,7 +376,6 @@ VALUE nm_dense_each(VALUE nmatrix) {
  */
 void* nm_dense_storage_get(STORAGE* storage, SLICE* slice) {
   DENSE_STORAGE* s = (DENSE_STORAGE*)storage;
-  DENSE_STORAGE* ns;
 
   if (slice->single)
     return (char*)(s->elements) + nm_dense_storage_pos(s, slice->coords) * DTYPE_SIZES[s->dtype];
@@ -386,7 +385,7 @@ void* nm_dense_storage_get(STORAGE* storage, SLICE* slice) {
       shape[i]  = slice->lengths[i];
     }
 
-    ns = nm_dense_storage_create(s->dtype, shape, s->dim, NULL, 0);
+    DENSE_STORAGE* ns = nm_dense_storage_create(s->dtype, shape, s->dim, NULL, 0);
 
     slice_copy(ns,
         reinterpret_cast<const DENSE_STORAGE*>(s->src),
