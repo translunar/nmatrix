@@ -2285,24 +2285,23 @@ static VALUE nm_det_exact(VALUE self) {
  *
  * Returns a properly-wrapped Ruby object as a VALUE.
  *
+ * *** Note that this function is for API only. Please do not use it internally.
+ *
  * TODO: Add a column-major option for libraries that use column-major matrices.
  */
 VALUE rb_nmatrix_dense_create(nm::dtype_t dtype, size_t* shape, size_t dim, void* elements, size_t length) {
   NMATRIX* nm;
-  VALUE klass;
   size_t nm_dim;
   size_t* shape_copy;
 
   // Do not allow a dim of 1; if dim == 1, this should probably be an NVector instead, but that still has dim 2.
   if (dim == 1) {
-    klass					= cNVector;
     nm_dim				= 2;
     shape_copy		= ALLOC_N(size_t, nm_dim);
     shape_copy[0]	= shape[0];
     shape_copy[1]	= 1;
 
   } else {
-    klass				= cNMatrix;
     nm_dim			= dim;
     shape_copy	= ALLOC_N(size_t, nm_dim);
     memcpy(shape_copy, shape, sizeof(size_t)*nm_dim);
@@ -2316,7 +2315,7 @@ VALUE rb_nmatrix_dense_create(nm::dtype_t dtype, size_t* shape, size_t dim, void
   nm = nm_create(nm::DENSE_STORE, nm_dense_storage_create(dtype, shape_copy, dim, elements_copy, length));
 
   // tell Ruby about the matrix and its storage, particularly how to garbage collect it.
-  return Data_Wrap_Struct(klass, nm_dense_storage_mark, nm_dense_storage_delete, nm);
+  return Data_Wrap_Struct(cNMatrix, nm_dense_storage_mark, nm_dense_storage_delete, nm);
 }
 
 /*
