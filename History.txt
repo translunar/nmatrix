@@ -317,6 +317,9 @@
     slice's parent or other ancestor, which may be useful for calling
     ATLAS and LAPACK functions on slices
 
+  * Aliased NMatrix[] to function like N[] shortcut for matrix
+    creation (by @agarie)
+
 * 4 bug fixes:
 
   * Fixed compilation problem involving <typeinfo> and <vector> STL
