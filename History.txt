@@ -283,7 +283,13 @@
 
 === 0.0.7 / 2013-08-??
 
-* 2 major enhancements:
+* 5 major enhancements:
+
+  * Eliminated NVector in favor of NMatrix objects with
+    #effective_dim smaller than #dim; added NVector-like
+    functionality to NMatrix, sometimes with #respond_to? dependent
+    upon matrix dimensions; allowed for NVector.new to continue
+    to function as before, but now returns an NMatrix instead
 
   * Began major re-factoring of headers for math.cpp
 
@@ -291,7 +297,14 @@
     NMatrix objects, #gesvd and #gesdd, for floating point and
     complex dtypes
 
-* 8 minor enhancements:
+  * Added additional slicing shorthand, which uses hashes (e.g.,
+    n[0=>3,2] for n[0..3,2]), which may eventually allow users to use
+    n[0:3,2] notation instead (needs Ruby core patch)
+
+  * #[] and #[]= calls no longer need index on those matrix shape
+    elements which are equal to 1 (e.g., vectors)
+
+* 12 minor enhancements:
 
   * Added user-friendly NMatrix::LAPACK::laswp method
 
@@ -319,6 +332,14 @@
 
   * Aliased NMatrix[] to function like N[] shortcut for matrix
     creation (by @agarie)
+
+  * Added #section and #each_section generics for #row/#column and
+    #each_row/#each_column respectively
+
+  * NMatrix#to_a now works for up to two dimensional matrices; and
+    returns a flattened array for single-row matrices
+
+  * NMatrix#to_flat_a now returns a flattened array of all entries
 
 * 4 bug fixes:
 
