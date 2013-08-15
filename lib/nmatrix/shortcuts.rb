@@ -698,3 +698,15 @@ class NMatrix
     end
   end
 end
+
+# Use this constant as you would use NMatrix[].
+# Examples:
+#
+#   a = N[ 1,2,3,4 ]          =>  1.0  2.0  3.0  4.0
+#
+#   a = N[ 1,2,3,4, :int32 ]  =>  1  2  3  4
+#
+#   a = N[ [1,2,3], [3,4,5] ] =>  1.0  2.0  3.0
+#                                 3.0  4.0  5.0
+#
+N = NMatrix
