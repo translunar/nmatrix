@@ -49,13 +49,6 @@ describe NVector do
     v[0].should == 1.555
   end
 
-  it "transpose!() changes destructively its raw and column stored structure" do
-    v = NVector.new 5, :float64
-    v.transpose!
-    v.shape[0].should == 5
-    v.shape[1].should == 1
-  end
-
   it "dot() multiples itself by another NVector" do
     v1 = NVector.new(2, :float64)
     v2 = NVector.new(2, :float64).transpose
@@ -63,10 +56,11 @@ describe NVector do
     v1[1] = 2.3
     v2[0] = 1.3
     v2[1] = 2.5
-    v1.dot(v2).should == 12.0
+    v1.dot(v2).should be_within(0.000000001).of(7.7)
   end
 
   it "dot!() multiples itself destructively by another NVector" do
+    pending "dot! not yet implemented"
     v1 = NVector.new 2, :float64
     v2 = NVector.new(2, :float64).transpose
     v1[0] = 1.5
@@ -74,7 +68,7 @@ describe NVector do
     v2[0] = 1.3
     v2[1] = 2.5
     v1.dot!(v2)
-    v1.should == 12.0
+    v1.should be_within(0.000000001).of(7.7)
   end
 
   it "pretty_print() prints values to standard output with a pretty format" do

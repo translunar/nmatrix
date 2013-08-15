@@ -95,9 +95,6 @@ describe "Slice operation" do
           n = @m.slice(0..1,1)
           n.shape.should eql([2,1])
 
-          require 'pry'
-          binding.pry
-
           n[0].should == @m[0,1]
           n[0] = -9
           @m[0,1].should eql(1)

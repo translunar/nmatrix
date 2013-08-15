@@ -165,34 +165,18 @@ describe NMatrix do
     m.column(2).is_a?(NMatrix).should be_true
   end
 
-  it "column() accepts a second parameter (only :copy or :reference)" do
-    m = NMatrix.random(3)
-
-    expect { m.column(1, :copy) }.to_not raise_error
-    expect { m.column(1, :reference) }.to_not raise_error
-
-    expect { m.column(1, :derp) }.to raise_error
-  end
-
   it "row() returns a NMatrix" do
     m = NMatrix.random(3)
 
     m.row(2).is_a?(NMatrix).should be_true
   end
 
-  it "row() accepts a second parameter (only :copy or :reference)" do
-    m = NMatrix.random(3)
-
-    expect { m.row(1, :copy) }.to_not raise_error
-    expect { m.row(1, :reference) }.to_not raise_error
-
-    expect { m.row(1, :derp) }.to raise_error
-  end
   it "diagonals() creates an NMatrix" do
     arr = [1,2,3,4]
     m = NMatrix.diagonals(arr)
     m.is_a?(NMatrix).should be_true
   end
+
   it "diagonals() contains the seeded values on the diagonal" do
     arr = [1,2,3,4]
     m = NMatrix.diagonals(arr)

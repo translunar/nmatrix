@@ -185,68 +185,6 @@ class NVector < NMatrix
   end
   alias :norm2 :nrm2
 
-  #
-  # call-seq:
-  #     to_a -> Array
-  #
-  # Converts the NVector to a regular Ruby Array.
-  def to_a
-    if self.stype == :dense
-      ary = Array.new(size)
-      self.each.with_index { |v,idx| ary[idx] = v }
-    else
-      begin
-        ary = Array.new(size, self[0] - self[0]) # Fill the Array with 0s of the appropriate class
-      rescue NoMethodError  # handle Ruby Object arrays that might have nils instead of 0s
-        ary = Array.new(size)
-      end
-      self.each_stored_with_index { |v,idx| ary[idx] = v }
-    end
-    ary
-  end
-
-  #
-  # call-seq:
-  #     each_stored_with_index -> Enumerator
-  #
-  # Allow iteration across an NVector's stored values. See also NMatrix#each_stored_with_indices
-  #
-  def each_stored_with_index(&block)
-    return enum_for(:each_stored_with_index) unless block_given?
-    self.each_stored_with_indices do |v, i, j|
-      shape[0] == 1 ? yield(v,j) : yield(v,i)
-    end
-    self
-  end
-
-  #
-  # call-seq:
-  #     shuffle! -> ...
-  #     shuffle!(random: rng) -> ...
-  #
-  # Re-arranges the contents of an NVector.
-  #
-  # TODO: Write more efficient version for Yale, list.
-  def shuffle!(*args)
-    ary = self.to_a
-    ary.shuffle!(*args)
-    ary.each.with_index { |v,idx| self[idx] = v }
-    self
-  end
-
-
-  #
-  # call-seq:
-  #     shuffle -> ...
-  #     shuffle(rng) -> ...
-  #
-  # Re-arranges the contents of an NVector.
-  #
-  # TODO: Write more efficient version for Yale, list.
-  def shuffle(*args)
-    t = self.clone
-    t.shuffle!(*args)
-  end
 
   #
   # call-seq:

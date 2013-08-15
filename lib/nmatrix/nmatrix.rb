@@ -714,6 +714,56 @@ class NMatrix
     self.to_flat_array.to_s
   end
 
+  #
+  # call-seq:
+  #     nvector? -> true or false
+  #
+  # Shortcut function for determining whether the effective dimension is less than the dimension.
+  # Useful when we take slices of n-dimensional matrices where n > 2.
+  #
+  def nvector?
+    self.effective_dim < self.dim
+  end
+
+  #
+  # call-seq:
+  #     vector? -> true or false
+  #
+  # Shortcut function for determining whether the effective dimension is 1. See also #nvector?
+  #
+  def vector?
+    self.effective_dim == 1
+  end
+
+
+  #
+  # call-seq:
+  #     to_a -> Array
+  #
+  # Converts an NMatrix to an array of arrays, or an NMatrix of effective dimension 1 to an array.
+  #
+  # Does not yet work for dimensions > 2
+  def to_a(dimen=nil)
+    if self.dim == 2
+
+      return self.to_flat_a if self.shape[0] == 1
+
+      ary = []
+      begin
+        self.each_row do |row|
+          ary << row.to_flat_a
+        end
+      #rescue NotImplementedError # Oops. Try copying instead
+      #  self.each_row(:copy) do |row|
+      #    ary << row.to_a.flatten
+      #  end
+      end
+      ary
+    else
+      to_a_rec(0)
+    end
+  end
+
   ##
   # call-seq:
   #   each -> Enumerator
@@ -722,20 +772,34 @@ class NMatrix
   #
   # For dense, this actually calls a specialized each iterator (in C). For yale and list, it relies upon
   # #each_with_indices (which is about as fast as reasonably possible for C code).
-  def each &block
+  def each &bl
     if self.stype == :dense
-      self.__dense_each__(&block)
-    else
-      self.each_with_indices(&block)
+      self.__dense_each__(&bl)
+    elsif block_given?
+      self.each_with_indices(&bl)
+    else # Handle case where no block is given
+      Enumerator.new do |yielder|
+        self.each_with_indices do |params|
+          yielder.yield params
+        end
+      end
     end
   end
+
+  #
+  # call-seq:
+  #     flat_map -> Enumerator
+  #     flat_map { |elem| block } -> Array
+  #
+  # Maps using Enumerator (returns an Array or an Enumerator)
+  alias_method :flat_map, :map
 
   ##
   # call-seq:
   #   map -> Enumerator
   #   map { |elem| block } -> NMatrix
   #
-  # @see Enumerable#map
+  # Returns an NMatrix if a block is given. For an Array, use #flat_map
   #
   def map(&bl)
     return enum_for(:map) unless block_given?
@@ -763,7 +827,21 @@ class NMatrix
 
   #
   # call-seq:
-  #     each_row -> ...
+  #     each_section { |section| block } -> ...
+  #
+  # Generic for @each_row, @each_col
+  #
+  # Iterate through each section by reference.
+  def each_section(which, get_by=:reference)
+    (0...self.shape[which]).each do |idx|
+      yield self.section(which, idx, get_by)
+    end
+    self
+  end
+
+  #
+  # call-seq:
+  #     each_row -> { |row| block } -> ...
   #
   # Iterate through each row, referencing it as an NVector.
   def each_row(get_by=:reference, &block)
@@ -775,7 +853,7 @@ class NMatrix
 
   #
   # call-seq:
-  #     each_column -> ...
+  #     each_column -> { |column| block } -> ...
   #
   # Iterate through each column, referencing it as an NVector.
   def each_row(get_by=:reference, &block)
@@ -783,6 +861,60 @@ class NMatrix
       yield self.row(i, get_by)
     end
     self
+  end
+
+
+  #
+  # call-seq:
+  #     each_stored_with_index -> Enumerator
+  #
+  # Allow iteration across a vector NMatrix's stored values. See also @each_stored_with_indices
+  #
+  def each_stored_with_index(&block)
+    raise(NotImplementedError, "only works for dim 2 vectors") unless self.dim <= 2
+    return enum_for(:each_stored_with_index) unless block_given?
+
+    self.each_stored_with_indices do |v, i, j|
+      if shape[0] == 1
+        yield(v,j)
+      elsif shape[1] == 1
+        yield(v,i)
+      else
+        method_missing(:each_stored_with_index, &block)
+      end
+    end
+    self
+  end
+
+  #
+  # call-seq:
+  #     shuffle! -> ...
+  #     shuffle!(random: rng) -> ...
+  #
+  # Re-arranges the contents of an NVector.
+  #
+  # TODO: Write more efficient version for Yale, list.
+  def shuffle!(*args)
+    method_missing(:shuffle!, *args) if self.effective_dim > 1
+    ary = self.to_flat_a
+    ary.shuffle!(*args)
+    ary.each.with_index { |v,idx| self[idx] = v }
+    self
+  end
+
+
+  #
+  # call-seq:
+  #     shuffle -> ...
+  #     shuffle(rng) -> ...
+  #
+  # Re-arranges the contents of an NVector.
+  #
+  # TODO: Write more efficient version for Yale, list.
+  def shuffle(*args)
+    method_missing(:shuffle!, *args) if self.effective_dim > 1
+    t = self.clone
+    t.shuffle!(*args)
   end
 
 
@@ -838,6 +970,11 @@ class NMatrix
     else
       super(name, *args, &block)
     end
+  end
+
+
+  def respond_to?(method) #:nodoc:
+    [:shuffle, :shuffle!, :each_with_index].include?(method.intern) ? vector? : super(method.intern)
   end
 
 protected
@@ -909,6 +1046,19 @@ protected
 
     end
 
+    ary
+  end
+
+
+
+  # Helper for converting a matrix into an array of arrays recursively
+  def to_a_rec(dimen = 0) #:nodoc:
+    return self.flat_map { |v| v } if dimen == self.dim-1
+
+    ary = []
+    self.each_section(dimen) do |sect|
+      ary << sect.to_a_rec(dimen+1)
+    end
     ary
   end
 

@@ -180,7 +180,7 @@ module NMatrix::BLAS
     #   - +ArgumentError+ -> Need to supply n for non-standard incx, incy values.
     #
     def rot(x, y, c, s, incx = 1, incy = 1, n = nil, in_place=false)
-      raise(ArgumentError, 'Expected dense NVectors as first two arguments.') unless x.is_a?(NMatrix) and y.is_a?(NMatrix) and x.stype == :dense and y.stype == :dense
+      raise(ArgumentError, 'Expected dense NMatrices as first two arguments.') unless x.is_a?(NMatrix) and y.is_a?(NMatrix) and x.stype == :dense and y.stype == :dense
       raise(ArgumentError, 'NMatrix dtype mismatch.')													unless x.dtype == y.dtype
       raise(ArgumentError, 'Need to supply n for non-standard incx, incy values') if n.nil? && incx != 1 && incx != -1 && incy != 1 && incy != -1
 
@@ -228,7 +228,7 @@ module NMatrix::BLAS
     #   - +ArgumentError+ -> Expected dense NVector of size 2
     #
     def rotg(ab)
-      raise(ArgumentError, "Expected dense NVector of size 2") unless ab.is_a?(NVector) && ab.size == 2
+      raise(ArgumentError, "Expected dense NMatrix of shape [2,1] or [1,2]") unless ab.is_a?(NMatrix) && ab.stype == :dense && ab.size == 2
 
       ::NMatrix::BLAS.cblas_rotg(ab)
     end
@@ -252,7 +252,7 @@ module NMatrix::BLAS
     #
     def asum(x, incx = 1, n = nil)
       n ||= x.size / incx
-      raise(ArgumentError, "Expected dense NVector (or NMatrix on rare occasions) for arg 0") unless x.is_a?(NMatrix)
+      raise(ArgumentError, "Expected dense NMatrix for arg 0") unless x.is_a?(NMatrix)
       raise(RangeError, "n out of range") if n*incx > x.size || n*incx <= 0 || n <= 0
       ::NMatrix::BLAS.cblas_asum(n, x, incx)
     end
@@ -275,7 +275,7 @@ module NMatrix::BLAS
     #
     def nrm2(x, incx = 1, n = nil)
       n ||= x.size / incx
-      raise(ArgumentError, "Expected dense NVector (or NMatrix on rare occasions) for arg 0") unless x.is_a?(NMatrix)
+      raise(ArgumentError, "Expected dense NMatrix for arg 0") unless x.is_a?(NMatrix)
       raise(RangeError, "n out of range") if n*incx > x.size || n*incx <= 0 || n <= 0
       ::NMatrix::BLAS.cblas_nrm2(n, x, incx)
     end

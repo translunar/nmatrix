@@ -37,6 +37,57 @@ class NMatrix
   class << self
     #
     # call-seq:
+    #     NMatrix[array-of-arrays, dtype = nil]
+    #
+    # You can use the old +N+ constant in this way:
+    #   N = NMatrix
+    #   N[1, 2, 3]
+    # NMatrix needs to have a succinct way to create a matrix by specifying the
+    # components directly. This is very useful for using it as an advanced
+    # calculator, it is useful for learning how to use, for testing language
+    # features and for developing algorithms.
+    #
+    # The NMatrix::[] method provides a way to create a matrix in a way that is compact and
+    # natural. The components are specified using Ruby array syntax. Optionally,
+    # one can specify a dtype as the last parameter (default is :float64).
+    #
+    # Examples:
+    #
+    #   a = NMatrix[ 1,2,3,4 ]          =>  1.0  2.0  3.0  4.0
+    #
+    #   a = NMatrix[ 1,2,3,4, :int32 ]  =>  1  2  3  4
+    #
+    #   a = NMatrix[ [1,2,3], [3,4,5] ] =>  1.0  2.0  3.0
+    #                                       3.0  4.0  5.0
+    #
+    # SYNTAX COMPARISON:
+    #
+    #   MATLAB:		a = [ [1 2 3] ; [4 5 6] ]   or  [ 1 2 3 ; 4 5 6 ]
+    #   IDL:			a = [ [1,2,3] , [4,5,6] ]
+    #   NumPy:		a = array( [1,2,3], [4,5,6] )
+    #
+    #   SciRuby:      a = NMatrix[ [1,2,3], [4,5,6] ]
+    #   Ruby array:   a =  [ [1,2,3], [4,5,6] ]
+    #
+    def [](*params)
+      dtype = params.last.is_a?(Symbol) ? params.pop : nil
+
+      # First find the dimensions of the array.
+      i = 0
+      dim = []
+      foo = params
+      while foo.is_a?(Array)
+        dim[i] = foo.length
+        foo = foo[0]
+        i += 1
+      end
+
+      # Then flatten the array.
+      NMatrix.new(dim, params.flatten, dtype)
+    end
+
+    #
+    # call-seq:
     #    zeros(size) -> NMatrix
     #    zeros(size, dtype) -> NMatrix
     #    zeros(stype, size, dtype) -> NMatrix
@@ -326,6 +377,24 @@ as dimension."
 
   #
   # call-seq:
+  #     section(dimension, row_or_column_number) -> NMatrix
+  #     section(dimension, row_or_column_number, :reference) -> NMatrix reference slice
+  #
+  # Returns the section (e.g., row or column) specified, using slicing by copy as default.
+  #
+  # See @row (dimension = 0), @column (dimension = 1)
+  def section(shape_idx, section_idx, meth = :copy)
+
+    params = Array.new(self.dim)
+    params.each.with_index do |v,d|
+      params[d] = d == shape_idx ? section_idx : 0...self.shape[d]
+    end
+
+    meth == :reference ? self[*params] : self.slice(*params)
+  end
+
+  #
+  # call-seq:
   #     column(column_number) -> NMatrix
   #     column(column_number, get_by) -> NMatrix
   #
@@ -346,15 +415,7 @@ as dimension."
   #                     14
   #
   def column(column_number, get_by = :copy)
-    unless [:copy, :reference].include?(get_by)
-      raise ArgumentError, "column() 2nd parameter must be :copy or :reference"
-    end
-
-    if get_by == :copy
-      self.slice(0 ... self.shape[0], column_number)
-    else # by reference
-      self[0 ... self.shape[0], column_number]
-    end
+    section(1, column_number, get_by)
   end
 
   alias :col :column
@@ -371,27 +432,52 @@ as dimension."
   #   - A NMatrix representing the requested row .
   #
   def row(row_number, get_by = :copy)
-    unless [:copy, :reference].include?(get_by)
-      raise ArgumentError, "row() 2nd parameter must be :copy or :reference"
-    end
-
-    if get_by == :copy
-      self.slice(row_number, 0 ... self.shape[1])
-    else # by reference
-      self[row_number, 0 ... self.shape[1]]
-    end
+    section(0, row_number, get_by)
   end
 end
 
-class NVector < NMatrix
+module NVector
 
   class << self
+    #
+    # call-seq:
+    #     new(shape) -> NVector
+    #     new(stype, shape) -> NVector
+    #     new(shape, init) -> NVector
+    #     new(:dense, shape, init) -> NVector
+    #     new(:list, shape, init) -> NVector
+    #     new(shape, init, dtype) -> NVector
+    #     new(stype, shape, init, dtype) -> NVector
+    #     new(stype, shape, dtype) -> NVector
+    #
+    # Creates a new NVector. See also NMatrix#initialize for a more detailed explanation of
+    # the arguments.
+    #
+    # * *Arguments* :
+    #   - +stype+ -> (optional) Storage type of the vector (:list, :dense, :yale). Defaults to :dense.
+    #   - +shape+ -> Shape of the vector. Accepts [n,1], [1,n], or n, where n is a Fixnum.
+    #   - +init+ -> (optional) Yale: capacity; List: default value (0); Dense: initial value or values (uninitialized by default).
+    #   - +dtype+ -> (optional if +init+ provided) Data type stored in the vector. For :dense and :list, can be inferred from +init+.
+    # * *Returns* :
+    #   -
+    #
+    def new(*args)
+      stype = args[0].is_a?(Symbol) ? args.shift : :dense
+      shape = args[0].is_a?(Array) ? args.shift  : [1,args.shift]
+
+      if shape.size != 2 || !shape.include?(1) || shape == [1,1]
+        raise(ArgumentError, "shape must be a Fixnum or an Array of positive Fixnums where exactly one value is 1")
+      end
+
+      NMatrix.new(stype, shape, *args)
+    end
+
     #
     # call-seq:
     #     zeros(size) -> NMatrix
     #     zeros(size, dtype) -> NMatrix
     #
-    # Creates a new matrix of zeros with the dimensions supplied as
+    # Creates a new vector of zeros with the dimensions supplied as
     # parameters.
     #
     # * *Arguments* :
@@ -491,14 +577,10 @@ class NVector < NMatrix
     #                                  1.0
     #                                  2.0
     #
-    def seq(n, dtype = :int64)
-      unless n.is_a?(Integer)
-        raise ArgumentError, "NVector::seq() only accepts integers as size."
-      end
+    def seq(size, dtype = :int64)
+      values = (0 ... size).to_a
 
-      values = (0 ... n).to_a
-
-      NVector.new(n, values, dtype)
+      NVector.new(size, values, dtype)
     end
 
     #
@@ -644,60 +726,6 @@ class NVector < NMatrix
   end
 end
 
-# NMatrix needs to have a succinct way to create a matrix by specifying the
-# components directly. This is very useful for using it as an advanced
-# calculator, it is useful for learning how to use, for testing language
-# features and for developing algorithms.
-#
-# The NMatrix::[] method provides a way to create a matrix in a way that is compact and
-# natural. The components are specified using Ruby array syntax. Optionally,
-# one can specify a dtype as the last parameter (default is :float64).
-#
-# Examples:
-#
-#   a = NMatrix[ 1,2,3,4 ]          =>  1.0  2.0  3.0  4.0
-#
-#   a = NMatrix[ 1,2,3,4, :int32 ]  =>  1  2  3  4
-#
-#   a = NMatrix[ [1,2,3], [3,4,5] ] =>  1.0  2.0  3.0
-#                                       3.0  4.0  5.0
-#
-# SYNTAX COMPARISON:
-#
-#   MATLAB:		a = [ [1 2 3] ; [4 5 6] ]   or  [ 1 2 3 ; 4 5 6 ]
-#   IDL:			a = [ [1,2,3] , [4,5,6] ]
-#   NumPy:		a = array( [1,2,3], [4,5,6] )
-#
-#   SciRuby:      a = NMatrix[ [1,2,3], [4,5,6] ]
-#   Ruby array:   a =  [ [1,2,3], [4,5,6] ]
-#
-class NMatrix
-  class << self
-    #
-    # call-seq:
-    #     NMatrix[array-of-arrays, dtype = nil]
-    #
-    # You can use the old +N+ constant in this way:
-    #   N = NMatrix
-    #   N[1, 2, 3]
-    def [](*params)
-      dtype = params.last.is_a?(Symbol) ? params.pop : nil
-
-      # First find the dimensions of the array.
-      i = 0
-      dim = []
-      foo = params
-      while foo.is_a?(Array)
-        dim[i] = foo.length
-        foo = foo[0]
-        i += 1
-      end
-
-      # Then flatten the array.
-      NMatrix.new(dim, params.flatten, dtype)
-    end
-  end
-end
 
 # Use this constant as you would use NMatrix[].
 # Examples:

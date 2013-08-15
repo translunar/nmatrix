@@ -428,7 +428,7 @@ void Init_nmatrix() {
 	///////////////////////
 
 	cNMatrix = rb_define_class("NMatrix", rb_cObject);
-	cNVector = rb_define_class("NVector", cNMatrix);
+	//cNVector = rb_define_class("NVector", cNMatrix);
 
 	// Special exceptions
 
@@ -490,7 +490,6 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "shape", (METHOD)nm_shape, 0);
 	rb_define_method(cNMatrix, "supershape", (METHOD)nm_supershape, -1);
 	rb_define_method(cNMatrix, "det_exact", (METHOD)nm_det_exact, 0);
-	//rb_define_method(cNMatrix, "transpose!", (METHOD)nm_transpose_self, 0);
 	rb_define_method(cNMatrix, "complex_conjugate!", (METHOD)nm_complex_conjugate_bang, 0);
 
 	rb_define_protected_method(cNMatrix, "__dense_each__", (METHOD)nm_dense_each, 0);
@@ -538,6 +537,7 @@ void Init_nmatrix() {
 	/////////////
 
 	rb_define_alias(cNMatrix, "dim", "dimensions");
+	rb_define_alias(cNMatrix, "effective_dim", "effective_dimensions");
 	rb_define_alias(cNMatrix, "equal?", "eql?");
 
 	///////////////////////
@@ -853,9 +853,11 @@ static VALUE nm_hermitian(VALUE self) {
   return is_symmetric(self, true);
 }
 
+
+
 /*
  * call-seq:
- * complex_conjugate -> NMatrix
+ *     complex_conjugate -> NMatrix
  *
  * Transform the matrix (in-place) to its complex conjugate. Only works on complex matrices.
  *
@@ -1390,8 +1392,6 @@ static VALUE nm_read(int argc, VALUE* argv, VALUE self) {
   size_t* shape = ALLOC_N(size_t, dim);
   read_padded_shape(f, dim, shape, itype);
 
-  VALUE klass = dim == 1 ? cNVector : cNMatrix;
-
   STORAGE* s;
   if (stype == nm::DENSE_STORE) {
     s = nm_dense_storage_create(dtype, shape, dim, NULL, 0);
@@ -1415,11 +1415,13 @@ static VALUE nm_read(int argc, VALUE* argv, VALUE self) {
   NMATRIX* nm = nm_create(stype, s);
 
   // Return the appropriate matrix object (Ruby VALUE)
+  // FIXME: This should probably return CLASS_OF(self) instead of cNMatrix, but I don't know how that works for
+  // FIXME: class methods.
   switch(stype) {
   case nm::DENSE_STORE:
-    return Data_Wrap_Struct(klass, nm_dense_storage_mark, nm_delete, nm);
+    return Data_Wrap_Struct(cNMatrix, nm_dense_storage_mark, nm_delete, nm);
   case nm::YALE_STORE:
-    return Data_Wrap_Struct(klass, nm_yale_storage_mark, nm_delete, nm);
+    return Data_Wrap_Struct(cNMatrix, nm_yale_storage_mark, nm_delete, nm);
   default:
     return Qnil;
   }
@@ -1565,19 +1567,15 @@ static VALUE nm_mset(int argc, VALUE* argv, VALUE self) {
 static VALUE nm_multiply(VALUE left_v, VALUE right_v) {
   NMATRIX *left, *right;
 
-  // left has to be of type NMatrix.
-  CheckNMatrixType(left_v);
-
   UnwrapNMatrix( left_v, left );
 
   if (NM_RUBYVAL_IS_NUMERIC(right_v))
     return matrix_multiply_scalar(left, right_v);
 
   else if (TYPE(right_v) == T_ARRAY)
-    rb_raise(rb_eNotImpError, "for matrix-vector multiplication, please use an NVector instead of an Array for now");
+    rb_raise(rb_eNotImpError, "please convert array to nx1 or 1xn NMatrix first");
 
-  //if (RDATA(right_v)->dfree != (RUBY_DATA_FUNC)nm_delete) {
-  else { // both are matrices
+  else { // both are matrices (probably)
     CheckNMatrixType(right_v);
     UnwrapNMatrix( right_v, right );
 
@@ -1604,8 +1602,7 @@ static VALUE nm_multiply(VALUE left_v, VALUE right_v) {
  * In other words, if you set your matrix to be 3x4, the dim is 2. If the
  * matrix was initialized as 3x4x3, the dim is 3.
  *
- * This function may lie slightly for NVectors, which are internally stored as
- * dim 2 (and have an orientation), but act as if they're dim 1.
+ * Use #effective_dim to get the dimension of an NMatrix which acts as a vector (e.g., a column or row).
  */
 static VALUE nm_dim(VALUE self) {
   return INT2FIX(NM_STORAGE(self)->dim);
@@ -1708,8 +1705,6 @@ static VALUE nm_effective_dim(VALUE self) {
 static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLICE*), void (*delete_func)(NMATRIX*), VALUE self) {
   VALUE result = Qnil;
   STORAGE* s = NM_STORAGE(self);
-
-  std::cerr << "xslice: argc=" << int(argc) << std::endl;
 
   if (NM_DIM(self) < (size_t)(argc)) {
     rb_raise(rb_eArgError, "wrong number of arguments (%d for %u)", argc, effective_dim(s));
@@ -2294,7 +2289,7 @@ VALUE rb_nmatrix_dense_create(nm::dtype_t dtype, size_t* shape, size_t dim, void
   size_t nm_dim;
   size_t* shape_copy;
 
-  // Do not allow a dim of 1; if dim == 1, this should probably be an NVector instead, but that still has dim 2.
+  // Do not allow a dim of 1. Treat it as a column or row matrix.
   if (dim == 1) {
     nm_dim				= 2;
     shape_copy		= ALLOC_N(size_t, nm_dim);
@@ -2323,9 +2318,8 @@ VALUE rb_nmatrix_dense_create(nm::dtype_t dtype, size_t* shape, size_t dim, void
  *
  * Basically just a convenience wrapper for rb_nmatrix_dense_create().
  *
- * Returns a properly-wrapped Ruby NVector object as a VALUE.
- *
- * TODO: Add a transpose option for setting the orientation of the vector?
+ * Returns a properly-wrapped Ruby NMatrix object as a VALUE. Included for backwards compatibility
+ * for when NMatrix had an NVector class.
  */
 VALUE rb_nvector_dense_create(nm::dtype_t dtype, void* elements, size_t length) {
   size_t dim = 1, shape = length;

@@ -442,7 +442,7 @@ template <typename DType,typename IType>
 void* ref(YALE_STORAGE* storage, SLICE* slice) {
   size_t* coords = slice->coords;
 
-  if (!slice->single) rb_raise(rb_eNotImpError, "This type slicing not supported yet.");
+  if (!slice->single) rb_raise(rb_eNotImpError, "this type of slicing not supported yet");
 
   DType* a = reinterpret_cast<DType*>(storage->a);
   IType* ija = reinterpret_cast<IType*>(storage->ija);
