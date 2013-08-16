@@ -333,13 +333,27 @@
   * Aliased NMatrix[] to function like N[] shortcut for matrix
     creation (by @agarie)
 
-  * Added #section and #each_section generics for #row/#column and
-    #each_row/#each_column respectively
+  * Added #layer for matrices with dimension greater than two
+    (corresponds to #row and #column)
+
+  * Added #rank and #each_rank generics for #row/#column/#layer and
+    #each_row/#each_column/#each_layer respectively (#each_rank
+    replaces #each_along_dim)
+
+  * Replaced #reduce_along_dim with #inject_rank
 
   * NMatrix#to_a now works for up to two dimensional matrices; and
     returns a flattened array for single-row matrices
 
   * NMatrix#to_flat_a now returns a flattened array of all entries
+
+  * Re-organized NMatrix Ruby sources into multiple files: math.rb
+    for instance methods which are mathematical in nature or are
+    essentially ATLAS/LAPACK/BLAS calls, enumerate.rb for methods
+    involving enumeration; and existing shortcuts.rb for convenience
+    functions and shortcut constructors, and nmatrix.rb for core
+    functionality (#inspect, #to_h, #to_a, #to_s, #pretty_print,
+    and so on)
 
 * 4 bug fixes:
 

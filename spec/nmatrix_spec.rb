@@ -406,7 +406,7 @@ describe NMatrix do
     end
 
     it "should raise an ArgumentError when any invalid dimension is provided" do
-      expect { @nm_1d.mean(3) }.to raise_exception(ArgumentError)
+      expect { @nm_1d.mean(3) }.to raise_exception(RangeError)
     end
 
     it "should convert to float if it contains only a single element" do

@@ -74,16 +74,19 @@ class NMatrix
 
       # First find the dimensions of the array.
       i = 0
-      dim = []
-      foo = params
-      while foo.is_a?(Array)
-        dim[i] = foo.length
-        foo = foo[0]
+      shape = []
+      row = params
+      while row.is_a?(Array)
+        shape[i] = row.length
+        row = row[0]
         i += 1
       end
 
+      # A row vector should be stored as 1xN, not N
+      #shape.unshift(1) if shape.size == 1
+
       # Then flatten the array.
-      NMatrix.new(dim, params.flatten, dtype)
+      NMatrix.new(shape, params.flatten, dtype)
     end
 
     #
@@ -146,6 +149,34 @@ class NMatrix
       dim = params.first
 
       NMatrix.new(dim, 1, dtype)
+    end
+
+    ##
+    # call-seq:
+    #   ones_like(nm) -> NMatrix
+    #
+    # Creates a new matrix of ones with the same dtype and shape as the
+    # provided matrix.
+    #
+    # @param [NMatrix] nm the nmatrix whose dtype and shape will be used
+    # @return [NMatrix] a new nmatrix filled with ones.
+    #
+    def ones_like(nm)
+      NMatrix.ones(nm.shape, nm.dtype)
+    end
+
+    ##
+    # call-seq:
+    #   zeros_like(nm) -> NMatrix
+    #
+    # Creates a new matrix of zeros with the same stype, dtype, and shape
+    # as the provided matrix.
+    #
+    # @param [NMatrix] nm the nmatrix whose stype, dtype, and shape will be used
+    # @return [NMatrix] a new nmatrix filled with zeros.
+    #
+    def zeros_like(nm)
+      NMatrix.zeros(nm.stype, nm.shape, nm.dtype)
     end
 
     #
@@ -373,66 +404,6 @@ as dimension."
       NMatrix.seq(size, :complex64)
     end
 
-  end
-
-  #
-  # call-seq:
-  #     section(dimension, row_or_column_number) -> NMatrix
-  #     section(dimension, row_or_column_number, :reference) -> NMatrix reference slice
-  #
-  # Returns the section (e.g., row or column) specified, using slicing by copy as default.
-  #
-  # See @row (dimension = 0), @column (dimension = 1)
-  def section(shape_idx, section_idx, meth = :copy)
-
-    params = Array.new(self.dim)
-    params.each.with_index do |v,d|
-      params[d] = d == shape_idx ? section_idx : 0...self.shape[d]
-    end
-
-    meth == :reference ? self[*params] : self.slice(*params)
-  end
-
-  #
-  # call-seq:
-  #     column(column_number) -> NMatrix
-  #     column(column_number, get_by) -> NMatrix
-  #
-  # Returns the column specified. Uses slicing by copy as default.
-  #
-  # * *Arguments* :
-  #   - +column_number+ -> Integer.
-  #   - +get_by+ -> Type of slicing to use, +:copy+ or +:reference+.
-  # * *Returns* :
-  #   - A NMatrix representing the requested column as a column vector.
-  #
-  # Examples:
-  #
-  #   m = NMatrix.new(2, [1, 4, 9, 14], :int32) # =>  1   4
-  #                                                   9  14
-  #
-  #   m.column(1) # =>   4
-  #                     14
-  #
-  def column(column_number, get_by = :copy)
-    section(1, column_number, get_by)
-  end
-
-  alias :col :column
-
-  #
-  # call-seq:
-  #     row(row_number) -> NMatrix
-  #     row(row_number, get_by) -> NMatrix
-  #
-  # * *Arguments* :
-  #   - +row_number+ -> Integer.
-  #   - +get_by+ -> Type of slicing to use, +:copy+ or +:reference+.
-  # * *Returns* :
-  #   - A NMatrix representing the requested row .
-  #
-  def row(row_number, get_by = :copy)
-    section(0, row_number, get_by)
   end
 end
 
