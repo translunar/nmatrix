@@ -151,11 +151,6 @@ describe NMatrix do
     m.dtype.should == :float64
   end
 
-  it "dense pretty_prints complex values" do
-    n = NMatrix.new([4,3], COMPLEX_MATRIX43A_ARRAY, :complex128)
-    n.pretty_print
-  end
-
 
   [:dense, :list, :yale].each do |storage_type|
     context storage_type do

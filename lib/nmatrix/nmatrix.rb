@@ -69,12 +69,28 @@ class NMatrix
 
   # TODO: Make this actually pretty.
   def pretty_print(q) #:nodoc:
-    q.group(0, "\n[\n", "]") do
-      self.each_row.with_index do |row,i|
-        q.group(1, "  [", "]") do
-          q.seplist(self.dim > 2 ? row.to_a[0] : row.to_a, lambda { q.text ", " }, :each) { |v| q.text v.to_s }
+    if self.dim > 3
+      self.to_a.pretty_print(q)
+    elsif self.dim == 3
+      q.group(0, "\n{ layers:", "}") do
+        self.each_layer.with_index do |layer,k|
+          q.group(0, "\n  [\n", "  ]\n") do
+            layer.each_row.with_index do |row,i|
+              q.group(0, "    [", "]\n") do
+                q.seplist(self[i,0...self.shape[1],k].to_flat_array, lambda { q.text ", "}, :each) { |v| q.text v.to_s }
+              end
+            end
+          end
         end
-        q.breakable
+      end
+    else
+      q.group(0, "\n[\n", "]") do
+        self.each_row.with_index do |row,i|
+          q.group(1, "  [", "]") do
+            q.seplist(self.dim > 2 ? row.to_a[0] : row.to_a, lambda { q.text ", " }, :each) { |v| q.text v.to_s }
+          end
+          q.breakable
+        end
       end
     end
   end
@@ -363,7 +379,7 @@ class NMatrix
   #   - A NMatrix representing the requested layer as a layer vector.
   #
   def layer(layer_number, get_by = :copy)
-    rank(2, row_number, get_by)
+    rank(2, layer_number, get_by)
   end
 
 
