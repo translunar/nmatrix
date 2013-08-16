@@ -69,7 +69,7 @@ class NMatrix
 
   # TODO: Make this actually pretty.
   def pretty_print(q) #:nodoc:
-    if self.dim > 3
+    if self.dim > 3 || self.dim == 1
       self.to_a.pretty_print(q)
     elsif self.dim == 3
       q.group(0, "\n{ layers:", "}") do
@@ -83,7 +83,7 @@ class NMatrix
           end
         end
       end
-    else
+    elsif self.dim == 2
       q.group(0, "\n[\n", "]") do
         self.each_row.with_index do |row,i|
           q.group(1, "  [", "]") do

@@ -304,7 +304,7 @@
   * #[] and #[]= calls no longer need index on those matrix shape
     elements which are equal to 1 (e.g., vectors)
 
-* 12 minor enhancements:
+* 16 minor enhancements:
 
   * Added user-friendly NMatrix::LAPACK::laswp method
 
@@ -354,6 +354,9 @@
     functions and shortcut constructors, and nmatrix.rb for core
     functionality (#inspect, #to_h, #to_a, #to_s, #pretty_print,
     and so on)
+
+  * Improved #pretty_print, which now also prints layers (the third
+    dimension in a 3D matrix)
 
 * 4 bug fixes:
 
