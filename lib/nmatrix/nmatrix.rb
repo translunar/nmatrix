@@ -71,25 +71,36 @@ class NMatrix
   def pretty_print(q) #:nodoc:
     if self.dim > 3 || self.dim == 1
       self.to_a.pretty_print(q)
-    elsif self.dim == 3
-      q.group(0, "\n{ layers:", "}") do
-        self.each_layer.with_index do |layer,k|
-          q.group(0, "\n  [\n", "  ]\n") do
-            layer.each_row.with_index do |row,i|
-              q.group(0, "    [", "]\n") do
-                q.seplist(self[i,0...self.shape[1],k].to_flat_array, lambda { q.text ", "}, :each) { |v| q.text v.to_s }
+    else
+      # iterate through the whole matrix and find the longest number
+      longest = Array.new(self.shape[1], 0)
+      self.each_column.with_index do |col, j|
+        col.each do |elem|
+          elem_len   = elem.to_s.size
+          longest[j] = elem_len if longest[j] < elem_len
+        end
+      end
+
+      if self.dim == 3
+        q.group(0, "\n{ layers:", "}") do
+          self.each_layer.with_index do |layer,k|
+            q.group(0, "\n  [\n", "  ]\n") do
+              layer.each_row.with_index do |row,i|
+                q.group(0, "    [", "]\n") do
+                  q.seplist(self[i,0...self.shape[1],k].to_flat_array, lambda { q.text ", "}, :each_with_index) { |v,j| q.text v.to_s.rjust(longest[j]) }
+                end
               end
             end
           end
         end
-      end
-    elsif self.dim == 2
-      q.group(0, "\n[\n", "]") do
-        self.each_row.with_index do |row,i|
-          q.group(1, "  [", "]") do
-            q.seplist(self.dim > 2 ? row.to_a[0] : row.to_a, lambda { q.text ", " }, :each) { |v| q.text v.to_s }
+      else # dim 2
+        q.group(0, "\n[\n", "]") do
+          self.each_row.with_index do |row,i|
+            q.group(1, "  [", "]") do
+              q.seplist(self.dim > 2 ? row.to_a[0] : row.to_a, lambda { q.text ", " }, :each_with_index) { |v,j| q.text v.to_s.rjust(longest[j]) }
+            end
+            q.breakable
           end
-          q.breakable
         end
       end
     end
