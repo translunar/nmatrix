@@ -55,7 +55,7 @@ describe NMatrix::BLAS do
     end
   end
 
-  [:rational32,:rational64,:rational128,:complex64,:complex128].each do |dtype|
+  [:rational32,:rational64,:rational128].each do |dtype|
     context dtype do
       it "exposes cblas rot"
     end
@@ -65,13 +65,13 @@ describe NMatrix::BLAS do
     end
   end
 
-  [:float32, :float64].each do |dtype|
+  [:float32, :float64, :complex64, :complex128, :object].each do |dtype|
     context dtype do
 
       it "exposes cblas rot" do
         x = NVector.new(5, [1,2,3,4,5], dtype)
         y = NVector.new(5, [-5,-4,-3,-2,-1], dtype)
-        x, y = NMatrix::BLAS::rot(x, y, 0.5, Math.sqrt(3)/2, -1)
+        x, y = NMatrix::BLAS::rot(x, y, 1.quo(2), Math.sqrt(3).quo(2), -1)
 
         x[0].should be_within(1e-4).of(-0.3660254037844386)
         x[1].should be_within(1e-4).of(-0.7320508075688772)
@@ -86,21 +86,28 @@ describe NMatrix::BLAS do
         y[4].should be_within(1e-4).of(-1.3660254037844386)
       end
 
-
-      it "exposes cblas rotg" do
-        ab = NVector.new(2, [6,-8], dtype)
-        c,s = NMatrix::BLAS::rotg(ab)
-        ab[0].should be_within(1e-6).of(-10)
-        ab[1].should be_within(1e-6).of(-5.quo(3))
-        c.should be_within(1e-6).of(-3.quo(5))
-        s.should be_within(1e-6).of(4.quo(5))
-      end
-
     end
   end
 
-  [:float32, :float64, :complex64, :complex128].each do |dtype|
+  [:float32, :float64, :complex64, :complex128, :object].each do |dtype|
     context dtype do
+
+      it "exposes cblas rotg" do
+        pending("broken for :object") if dtype == :object
+        ab = NVector.new(2, [6,-8], dtype)
+        c,s = NMatrix::BLAS::rotg(ab)
+
+        if [:float32, :float64].include?(dtype)
+          ab[0].should be_within(1e-6).of(-10)
+          ab[1].should be_within(1e-6).of(-5.quo(3))
+          c.should be_within(1e-6).of(-3.quo(5))
+        else
+          ab[0].should be_within(1e-6).of(10)
+          ab[1].should be_within(1e-6).of(5.quo(3))
+          c.should be_within(1e-6).of(3.quo(5))
+        end
+        s.should be_within(1e-6).of(4.quo(5))
+      end
 
       # Note: this exposes gemm, not cblas_gemm (which is the unfriendly CBLAS no-error-checking version)
       it "exposes gemm" do

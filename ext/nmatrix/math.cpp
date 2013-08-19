@@ -134,6 +134,8 @@
 #include "math/getri.h"
 #include "math/getrs.h"
 #include "math/potrs.h"
+#include "math/rot.h"
+#include "math/rotg.h"
 #include "math/math.h"
 #include "storage/dense.h"
 
@@ -474,7 +476,7 @@ static VALUE nm_cblas_rotg(VALUE self, VALUE ab) {
       nm::math::cblas_rotg<nm::Complex64>,
       nm::math::cblas_rotg<nm::Complex128>,
       NULL, NULL, NULL, // no rationals
-      nm::math::cblas_rotg<nm::RubyObject>
+      NULL //nm::math::cblas_rotg<nm::RubyObject>
   };
 
   nm::dtype_t dtype = NM_DTYPE(ab);
@@ -495,8 +497,14 @@ static VALUE nm_cblas_rotg(VALUE self, VALUE ab) {
     ttable[dtype](pA, pB, pC, pS);
 
     VALUE result = rb_ary_new2(2);
-    rb_ary_store(result, 0, rubyobj_from_cval(pC, dtype).rval);
-    rb_ary_store(result, 1, rubyobj_from_cval(pS, dtype).rval);
+
+    if (dtype == nm::RUBYOBJ) {
+      rb_ary_store(result, 0, *reinterpret_cast<VALUE*>(pC));
+      rb_ary_store(result, 1, *reinterpret_cast<VALUE*>(pS));
+    } else {
+      rb_ary_store(result, 0, rubyobj_from_cval(pC, dtype).rval);
+      rb_ary_store(result, 1, rubyobj_from_cval(pS, dtype).rval);
+    }
 
     return result;
   }
