@@ -294,10 +294,10 @@ void nm_list_storage_delete(STORAGE* s) {
     if (storage->count-- == 1) {
       list::del( storage->rows, storage->dim - 1 );
 
-      free(storage->shape);
-      free(storage->offset);
-      free(storage->default_val);
-      free(s);
+      xfree(storage->shape);
+      xfree(storage->offset);
+      xfree(storage->default_val);
+      xfree(s);
     }
   }
 }
@@ -310,9 +310,9 @@ void nm_list_storage_delete_ref(STORAGE* s) {
     LIST_STORAGE* storage = (LIST_STORAGE*)s;
 
     nm_list_storage_delete( reinterpret_cast<STORAGE*>(storage->src ) );
-    free(storage->shape);
-    free(storage->offset);
-    free(s);
+    xfree(storage->shape);
+    xfree(storage->offset);
+    xfree(s);
   }
 }
 
@@ -335,7 +335,7 @@ void nm_list_storage_mark(void* storage_base) {
 /*
  * Documentation goes here.
  */
-NODE* list_storage_get_single_node(LIST_STORAGE* s, SLICE* slice)
+static NODE* list_storage_get_single_node(LIST_STORAGE* s, SLICE* slice)
 {
   size_t r;
   LIST*  l = s->rows;
@@ -586,10 +586,9 @@ void* nm_list_storage_get(STORAGE* storage, SLICE* slice) {
   NODE* n;
 
   if (slice->single) {
-    n = list_storage_get_single_node(s, slice); 
+    n = list_storage_get_single_node(s, slice);
     return (n ? n->val : s->default_val);
-  } 
-  else {
+  } else {
     void *init_val = ALLOC_N(char, DTYPE_SIZES[s->dtype]);
     memcpy(init_val, s->default_val, DTYPE_SIZES[s->dtype]);
 
@@ -597,7 +596,7 @@ void* nm_list_storage_get(STORAGE* storage, SLICE* slice) {
     memcpy(shape, slice->lengths, sizeof(size_t) * s->dim);
 
     ns = nm_list_storage_create(s->dtype, shape, s->dim, init_val);
-    
+
     ns->rows = slice_copy(s, s->rows, slice->coords, slice->lengths, 0);
     return ns;
   }

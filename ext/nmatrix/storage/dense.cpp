@@ -165,12 +165,12 @@ void nm_dense_storage_delete(STORAGE* s) {
   if (s) {
     DENSE_STORAGE* storage = (DENSE_STORAGE*)s;
     if(storage->count-- == 1) {
-      free(storage->shape);
-      free(storage->offset);
-      free(storage->stride);
+      xfree(storage->shape);
+      xfree(storage->offset);
+      xfree(storage->stride);
       if (storage->elements != NULL) // happens with dummy objects
-        free(storage->elements);
-      free(storage);
+        xfree(storage->elements);
+      xfree(storage);
     }
   }
 }
@@ -183,9 +183,9 @@ void nm_dense_storage_delete_ref(STORAGE* s) {
   if (s) {
     DENSE_STORAGE* storage = (DENSE_STORAGE*)s;
     nm_dense_storage_delete( reinterpret_cast<STORAGE*>(storage->src) );
-    free(storage->shape);
-    free(storage->offset);
-    free(storage);
+    xfree(storage->shape);
+    xfree(storage->offset);
+    xfree(storage);
   }
 }
 
@@ -379,7 +379,7 @@ void* nm_dense_storage_get(STORAGE* storage, SLICE* slice) {
 
   if (slice->single)
     return (char*)(s->elements) + nm_dense_storage_pos(s, slice->coords) * DTYPE_SIZES[s->dtype];
-  else { // Make references
+  else {
     size_t *shape      = ALLOC_N(size_t, s->dim);
     for (size_t i = 0; i < s->dim; ++i) {
       shape[i]  = slice->lengths[i];
@@ -393,7 +393,7 @@ void* nm_dense_storage_get(STORAGE* storage, SLICE* slice) {
         0,
         nm_dense_storage_pos(s, slice->coords),
         0);
-    return ns;
+    return reinterpret_cast<STORAGE*>(ns);
   }
 }
 
@@ -560,9 +560,9 @@ static void slice_copy(DENSE_STORAGE *dest, const DENSE_STORAGE *src, size_t* le
   if (src->dim - n > 1) {
     for (size_t i = 0; i < lengths[n]; ++i) {
       slice_copy(dest, src, lengths,
-                                    pdest + dest->stride[n]*i,
-                                    psrc + src->stride[n]*i,
-                                    n + 1);
+                 pdest + dest->stride[n]*i,
+                 psrc + src->stride[n]*i,
+                 n + 1);
     }
   } else {
     memcpy((char*)dest->elements + pdest*DTYPE_SIZES[dest->dtype],

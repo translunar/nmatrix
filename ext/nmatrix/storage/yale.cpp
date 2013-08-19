@@ -332,29 +332,31 @@ size_t max_size(YALE_STORAGE* s) {
 
   return result;
 }
+
+
 ///////////////
 // Accessors //
 ///////////////
 
-/*
- * Returns a slice of YALE_STORAGE object by copy
- */
-template <typename DType,typename IType>
-void* get(YALE_STORAGE* storage, SLICE* slice) {
-  
-  size_t *offset = slice->coords;
-  // Copy shape for yale construction
-  size_t* shape = ALLOC_N(size_t, 2);
-  shape[0] = slice->lengths[0];
-  shape[1] = slice->lengths[1];
 
-  IType* src_ija = reinterpret_cast<IType*>(storage->ija);
-  DType* src_a   = reinterpret_cast<DType*>(storage->a);
+/*
+ * Copy some portion of a matrix into a new matrix.
+ */
+template <typename DType, typename IType>
+static YALE_STORAGE* slice_copy(YALE_STORAGE* s, size_t* offset, size_t* lengths) {
+
+  // Copy shape for yale construction
+  size_t* shape  = ALLOC_N(size_t, 2);
+  shape[0]       = lengths[0];
+  shape[1]       = lengths[1];
+
+  IType* src_ija = reinterpret_cast<IType*>(s->ija);
+  DType* src_a   = reinterpret_cast<DType*>(s->a);
 
   // Calc ndnz for the destination
   size_t ndnz  = 0;
-  size_t i,j; // indexes of destination matrix
-  size_t k,l; // indexes of source matrix
+  size_t i, j; // indexes of destination matrix
+  size_t k, l; // indexes of source matrix
   for (i = 0; i < shape[0]; i++) {
     k = i + offset[0];
     for (j = 0; j < shape[1]; j++) {
@@ -378,24 +380,24 @@ void* get(YALE_STORAGE* storage, SLICE* slice) {
 
   size_t request_capacity = shape[0] + ndnz + 1;
   //fprintf(stderr, "yale get copy: shape0=%d, shape1=%d, ndnz=%d, request_capacity=%d\n", shape[0], shape[1], ndnz, request_capacity);
-  YALE_STORAGE* ns = nm_yale_storage_create(storage->dtype, shape, 2, request_capacity, storage->itype);
+  YALE_STORAGE* ns = nm_yale_storage_create(s->dtype, shape, 2, request_capacity, s->itype);
 
   if (ns->capacity < request_capacity)
     rb_raise(nm_eStorageTypeError, "conversion failed; capacity of %ld requested, max allowable is %ld", request_capacity, ns->capacity);
 
    // Initialize the A and IJA arrays
-  init<DType,IType>(ns, default_value_ptr(storage));
+  init<DType,IType>(ns, default_value_ptr(s));
   IType* dst_ija = reinterpret_cast<IType*>(ns->ija);
   DType* dst_a   = reinterpret_cast<DType*>(ns->a);
- 
+
   size_t ija = shape[0] + 1;
-  DType val = src_a[storage->shape[0]]; // use 0 as the default for copy
+  DType val = src_a[s->shape[0]]; // use 0 as the default for copy
   for (i = 0; i < shape[0]; ++i) {
     k = i + offset[0];
     for (j = 0; j < shape[1]; ++j) {
       bool found = false;
       l = j + offset[1];
-    
+
       // Get value from source matrix
       if (k == l) { // source diagonal
         if (src_a[k] != 0) { // don't bother copying non-zero values from the diagonal
@@ -432,37 +434,80 @@ void* get(YALE_STORAGE* storage, SLICE* slice) {
 
   dst_ija[shape[0]] = ija; // indicate the end of the last row
   ns->ndnz = ndnz;
+
   return ns;
 }
+
+
+/*
+ * Returns a slice of YALE_STORAGE object by copy
+ */
+template <typename DType,typename IType>
+void* get(YALE_STORAGE* storage, SLICE* slice) {
+  YALE_STORAGE* ns = slice_copy<DType,IType>(storage, slice->coords, slice->lengths);
+
+  return ns;
+}
+
+
+
+template <typename DType, typename IType>
+static void* get_single(YALE_STORAGE* storage, SLICE* slice) {
+  DType* a   = reinterpret_cast<DType*>(storage->a);
+  IType* ija = reinterpret_cast<IType*>(storage->ija);
+
+  size_t coord0 = storage->offset[0] + slice->coords[0];
+  size_t coord1 = storage->offset[1] + slice->coords[1];
+
+  if (coord0 == coord1)
+    return &(a[ coord0 ]); // return diagonal entry
+
+  if (ija[coord0] == ija[coord0+1])
+    return &(a[ storage->src->shape[0] ]); // return zero pointer
+
+  // binary search for the column's location
+  int pos = binary_search<IType>(storage, ija[coord0], ija[coord0+1]-1, coord1);
+
+  if (pos != -1 && ija[pos] == coord1)
+    return &(a[pos]); // found exact value
+
+  return &(a[ storage->shape[0] ]); // return a pointer that happens to be zero
+}
+
+
 /*
  * Returns a pointer to the correct location in the A vector of a YALE_STORAGE object, given some set of coordinates
  * (the coordinates are stored in slice).
  */
 template <typename DType,typename IType>
-void* ref(YALE_STORAGE* storage, SLICE* slice) {
+void* ref(YALE_STORAGE* s, SLICE* slice) {
   size_t* coords = slice->coords;
 
-  if (!slice->single) rb_raise(rb_eNotImpError, "this type of slicing not supported yet");
+  if (slice->single) {
+    return get_single<DType,IType>(s, slice);
+  } else {
+    YALE_STORAGE* ns = ALLOC( YALE_STORAGE );
 
-  DType* a = reinterpret_cast<DType*>(storage->a);
-  IType* ija = reinterpret_cast<IType*>(storage->ija);
+    ns->dim     = s->dim;
+    ns->offset  = ALLOC_N(size_t, ns->dim);
+    ns->shape   = ALLOC_N(size_t, ns->dim);
 
-  if (coords[0] == coords[1])
-    return &(a[ coords[0] ]); // return diagonal entry
+    for (size_t i = 0; i < ns->dim; ++i) {
+      ns->offset[i]   = slice->coords[i] + s->offset[i];
+      ns->shape[i]    = slice->lengths[i];
+    }
 
-  if (ija[coords[0]] == ija[coords[0]+1])
-    return &(a[ storage->shape[0] ]); // return zero pointer
+    ns->dtype   = s->dtype;
+    ns->itype   = s->itype; // or should we go by shape?
 
-	// binary search for the column's location
-  int pos = binary_search<IType>(storage,
-                                          ija[coords[0]],
-                                          ija[coords[0]+1]-1,
-                                          coords[1]);
+    ns->src     = s->src;
+    ns->src->count++;
 
-  if (pos != -1 && ija[pos] == coords[1])
-    return &(a[pos]); // found exact value
+    ns->a       = s->a;
+    ns->ija     = s->ija;
 
-  return &(a[ storage->shape[0] ]); // return a pointer that happens to be zero
+    return ns;
+  }
 }
 
 /*
@@ -472,22 +517,23 @@ void* ref(YALE_STORAGE* storage, SLICE* slice) {
 template <typename DType, typename IType>
 char set(YALE_STORAGE* storage, SLICE* slice, void* value) {
   DType* v = reinterpret_cast<DType*>(value);
-  size_t* coords = slice->coords;
+  size_t coord0 = storage->offset[0] + slice->coords[0],
+         coord1 = storage->offset[1] + slice->coords[1];
 
   bool found = false;
   char ins_type;
 
-  if (coords[0] == coords[1]) {
-    reinterpret_cast<DType*>(storage->a)[coords[0]] = *v; // set diagonal
+  if (coord0 == coord1) {
+    reinterpret_cast<DType*>(storage->a)[coord0] = *v; // set diagonal
     return 'r';
   }
 
   // Get IJA positions of the beginning and end of the row
-  if (reinterpret_cast<IType*>(storage->ija)[coords[0]] == reinterpret_cast<IType*>(storage->ija)[coords[0]+1]) {
+  if (reinterpret_cast<IType*>(storage->ija)[coord0] == reinterpret_cast<IType*>(storage->ija)[coord0+1]) {
   	// empty row
-    ins_type = vector_insert<DType,IType>(storage, reinterpret_cast<IType*>(storage->ija)[coords[0]], &(coords[1]), v, 1, false);
-    increment_ia_after<IType>(storage, storage->shape[0], coords[0], 1);
-    storage->ndnz++;
+    ins_type = vector_insert<DType,IType>(storage, reinterpret_cast<IType*>(storage->ija)[coord0], &(coord1), v, 1, false);
+    increment_ia_after<IType>(storage, storage->shape[0], coord0, 1);
+    reinterpret_cast<YALE_STORAGE*>(storage->src)->ndnz++;
 
     return ins_type;
   }
@@ -498,19 +544,19 @@ char set(YALE_STORAGE* storage, SLICE* slice, void* value) {
 
   // Do a binary search for the column
   size_t pos = insert_search<IType>(storage,
-                                    reinterpret_cast<IType*>(storage->ija)[coords[0]],
-                                    reinterpret_cast<IType*>(storage->ija)[coords[0]+1]-1,
-                                    coords[1], &found);
+                                    reinterpret_cast<IType*>(storage->ija)[coord0],
+                                    reinterpret_cast<IType*>(storage->ija)[coord0+1]-1,
+                                    coord1, &found);
 
   if (found) { // replace
-    reinterpret_cast<IType*>(storage->ija)[pos] = coords[1];
+    reinterpret_cast<IType*>(storage->ija)[pos] = coord1;
     reinterpret_cast<DType*>(storage->a)[pos]   = *v;
   	return 'r';
   }
 
-  ins_type = vector_insert<DType,IType>(storage, pos, &(coords[1]), v, 1, false);
-  increment_ia_after<IType>(storage, storage->shape[0], coords[0], 1);
-  storage->ndnz++;
+  ins_type = vector_insert<DType,IType>(storage, pos, &(coord1), v, 1, false);
+  increment_ia_after<IType>(storage, storage->shape[0], coord0, 1);
+  reinterpret_cast<YALE_STORAGE*>(storage->src)->ndnz++;
 
   return ins_type;
 }
@@ -958,7 +1004,7 @@ static YALE_STORAGE* copy_alloc_struct(const YALE_STORAGE* rhs, const dtype_t ne
   lhs->shape        = ALLOC_N( size_t, lhs->dim );
   lhs->offset       = ALLOC_N( size_t, lhs->dim );
   memcpy(lhs->shape, rhs->shape, lhs->dim * sizeof(size_t));
-  memcpy(lhs->shape, rhs->shape, lhs->dim * sizeof(size_t));
+  memcpy(lhs->offset, rhs->offset, lhs->dim * sizeof(size_t));
   lhs->itype        = rhs->itype;
   lhs->capacity     = new_capacity;
   lhs->dtype        = new_dtype;
@@ -1607,17 +1653,22 @@ char nm_yale_storage_set(STORAGE* storage, SLICE* slice, void* v) {
 }
 
 /*
- * C accessor for yale_storage::get, which returns a slice of YALE_STORAGE object by coppy
+ * C accessor for yale_storage::get, which returns a slice of YALE_STORAGE object by copy
  *
  * Slicing-related.
  */
 void* nm_yale_storage_get(STORAGE* storage, SLICE* slice) {
-  NAMED_LI_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::get, void*, YALE_STORAGE* storage, SLICE* slice);
-  YALE_STORAGE* s = (YALE_STORAGE*)storage;
-
-
   YALE_STORAGE* casted_storage = (YALE_STORAGE*)storage;
-  return ttable[casted_storage->dtype][casted_storage->itype](casted_storage, slice);
+
+  if (slice->single) {
+    NAMED_LI_DTYPE_TEMPLATE_TABLE(elem_copy_table,  nm::yale_storage::get_single, void*, YALE_STORAGE*, SLICE*)
+
+    return elem_copy_table[casted_storage->dtype][casted_storage->itype](casted_storage, slice);
+  } else {
+    NAMED_LI_DTYPE_TEMPLATE_TABLE(slice_copy_table, nm::yale_storage::slice_copy, YALE_STORAGE*, YALE_STORAGE* storage, size_t*, size_t*)
+
+    return slice_copy_table[casted_storage->dtype][casted_storage->itype](casted_storage, slice->coords, slice->lengths);
+  }
 }
 
 /*
@@ -1816,11 +1867,26 @@ YALE_STORAGE* nm_yale_storage_create(nm::dtype_t dtype, size_t* shape, size_t di
 void nm_yale_storage_delete(STORAGE* s) {
   if (s) {
     YALE_STORAGE* storage = (YALE_STORAGE*)s;
+    if (storage->count-- == 1) {
+      xfree(storage->shape);
+      xfree(storage->offset);
+      xfree(storage->ija);
+      xfree(storage->a);
+      xfree(storage);
+    }
+  }
+}
+
+/*
+ * Destructor for the yale storage ref
+ */
+void nm_yale_storage_delete_ref(STORAGE* s) {
+  if (s) {
+    YALE_STORAGE* storage = (YALE_STORAGE*)s;
+    nm_yale_storage_delete( reinterpret_cast<STORAGE*>(storage->src) );
     xfree(storage->shape);
     xfree(storage->offset);
-    xfree(storage->ija);
-    xfree(storage->a);
-    xfree(storage);
+    xfree(s);
   }
 }
 
@@ -1849,6 +1915,7 @@ void nm_yale_storage_mark(void* storage_base) {
     }
   }
 }
+
 
 /*
  * Allocates and initializes the basic struct (but not the IJA or A vectors).

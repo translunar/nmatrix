@@ -570,13 +570,13 @@ namespace yale_storage { // FIXME: Move to yale.cpp
     // Copy contents 
     for (NODE* i_curr = rhs->rows->first; i_curr; i_curr = i_curr->next) {
 
-      // Shrink refernce
+      // Shrink reference
       int i = i_curr->key - rhs->offset[0];
       if (i < 0 || i >= (int)rhs->shape[0]) continue;
 
       for (NODE* j_curr = ((LIST*)(i_curr->val))->first; j_curr; j_curr = j_curr->next) {
         
-        // Shrink refernce
+        // Shrink reference
         int j = j_curr->key - rhs->offset[1];
         if (j < 0 || j >= (int)rhs->shape[1]) continue;
 

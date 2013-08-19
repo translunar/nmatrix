@@ -659,7 +659,7 @@ void nm_delete_ref(NMATRIX* mat) {
   static void (*ttable[nm::NUM_STYPES])(STORAGE*) = {
     nm_dense_storage_delete_ref,
     nm_list_storage_delete_ref,
-    nm_yale_storage_delete
+    nm_yale_storage_delete_ref
   };
   ttable[mat->stype](mat->storage);
 
