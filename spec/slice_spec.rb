@@ -27,10 +27,60 @@
 require File.dirname(__FILE__) + "/spec_helper.rb"
 
 describe "Slice operation" do
+
   [:dense, :list, :yale].each do |stype|
     context "for #{stype}" do
       before :each do
         @m = create_matrix(stype)
+      end
+
+      unless stype == :dense
+        it "should iterate across a row of stored indices" do
+
+          vs = []
+          is = []
+          js = []
+          @m[2,0..2].each_stored_with_indices do |v,i,j|
+            vs << v
+            is << i
+            js << j
+          end
+          vs.should == (stype == :yale ? [8,6,7] : [6,7,8])
+          is.should == [0,0,0]
+          js.should == (stype == :yale ? [2,0,1] : [0,1,2])
+        end
+
+        it "should iterate across a partial row of stored indices" do
+          vs = []
+          is = []
+          js = []
+          @m[2,1..2].each_stored_with_indices do |v,i,j|
+            vs << v
+            is << i
+            js << j
+          end
+
+          require 'pry'
+          binding.pry
+
+          vs.should == (stype == :yale ? [8,7] : [7,8])
+          is.should == [0,0]
+          js.should == (stype == :yale ? [2,1] : [1,2])
+        end
+
+        it "should iterate across a submatrix of stored indices" do
+          vs = []
+          is = []
+          js = []
+          @m[0..1,1..2].each_stored_with_indices do |v,i,j|
+            vs << v
+            is << i
+            js << j
+          end
+          vs.should == (stype == :yale ? [4,1,2,5] : [1,2,4,5])
+          is.should == (stype == :yale ? [1,0,0,1] : [0,0,1,1])
+          js.should == (stype == :yale ? [0,0,1,1] : [0,1,0,1])
+        end
       end
 
       it "should return correct shape and 1st-order supershape" do
@@ -283,9 +333,6 @@ describe "Slice operation" do
             # Non square
             nm_eql(@m[0..2, 1..2].cast(cast_type), @m[0..2,1..2]).should be_true
             nm_eql(@m[1..2, 0..2].cast(cast_type), @m[1..2,0..2]).should be_true
-
-            require 'pry'
-            binding.pry
 
             # Full
             nm_eql(@m[0..2, 0..2].cast(cast_type), @m).should be_true
