@@ -345,13 +345,16 @@ size_t max_size(YALE_STORAGE* s) {
 template <typename LDType, typename RDType, typename IType>
 static YALE_STORAGE* slice_copy(const YALE_STORAGE* s, size_t* offset, size_t* lengths, dtype_t new_dtype) {
 
+  std::cerr << "slice_copy offsets " << offset[0] << "," << offset[1] << std::endl;
+  std::cerr << "lengths: " << lengths[0] << "," << lengths[1] << std::endl;
+
   // Copy shape for yale construction
   size_t* shape  = ALLOC_N(size_t, 2);
   shape[0]       = lengths[0];
   shape[1]       = lengths[1];
 
   IType* src_ija = reinterpret_cast<IType*>(s->ija);
-  RDType* src_a   = reinterpret_cast<RDType*>(s->a);
+  RDType* src_a  = reinterpret_cast<RDType*>(s->a);
 
   // Calc ndnz for the destination
   size_t ndnz  = 0;
@@ -454,6 +457,8 @@ void* get(YALE_STORAGE* storage, SLICE* slice) {
 
 template <typename DType, typename IType>
 static void* get_single(YALE_STORAGE* storage, SLICE* slice) {
+  std::cerr << "yale get_single" << std::endl;
+
   DType* a   = reinterpret_cast<DType*>(storage->a);
   IType* ija = reinterpret_cast<IType*>(storage->ija);
 
@@ -490,31 +495,30 @@ static void* get_single(YALE_STORAGE* storage, SLICE* slice) {
  */
 template <typename DType,typename IType>
 void* ref(YALE_STORAGE* s, SLICE* slice) {
-  if (slice->single) {
-    return get_single<DType,IType>(s, slice);
-  } else {
-    YALE_STORAGE* ns = ALLOC( YALE_STORAGE );
 
-    ns->dim     = s->dim;
-    ns->offset  = ALLOC_N(size_t, ns->dim);
-    ns->shape   = ALLOC_N(size_t, ns->dim);
+  std::cerr << "yale ref ref" << std::endl;
+  YALE_STORAGE* ns = ALLOC( YALE_STORAGE );
 
-    for (size_t i = 0; i < ns->dim; ++i) {
-      ns->offset[i]   = slice->coords[i] + s->offset[i];
-      ns->shape[i]    = slice->lengths[i];
-    }
+  ns->dim     = s->dim;
+  ns->offset  = ALLOC_N(size_t, ns->dim);
+  ns->shape   = ALLOC_N(size_t, ns->dim);
 
-    ns->dtype   = s->dtype;
-    ns->itype   = s->itype; // or should we go by shape?
-
-    ns->src     = s->src;
-    s->src->count++;
-
-    ns->a       = s->a;
-    ns->ija     = s->ija;
-
-    return ns;
+  for (size_t i = 0; i < ns->dim; ++i) {
+    ns->offset[i]   = slice->coords[i] + s->offset[i];
+    ns->shape[i]    = slice->lengths[i];
   }
+
+  ns->dtype   = s->dtype;
+  ns->itype   = s->itype; // or should we go by shape?
+
+  ns->a       = s->a;
+  ns->ija     = s->ija;
+
+  ns->src     = s->src;
+  s->src->count++;
+
+  return ns;
+
 }
 
 /*
@@ -973,7 +977,7 @@ YALE_STORAGE* cast_copy(const YALE_STORAGE* rhs, dtype_t new_dtype) {
 
   if (rhs->src != rhs) { // copy the reference
     size_t* offset  = ALLOCA_N(size_t, rhs->dim);
-    memset(offset, 0, sizeof(size_t) * rhs->dim);
+    memcpy(offset, rhs->offset, rhs->dim * sizeof(size_t));
 
     lhs = slice_copy<LDType, RDType, IType>(rhs, offset, rhs->shape, new_dtype);
   } else { // regular copy
@@ -1440,21 +1444,24 @@ struct yale_iteration_helper {
     RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_yale_enumerator_length);
 
     // Iterate in two dimensions.
-    for (long i = 0; i < s->shape[0]; ++i) {
-      VALUE ii = LONG2NUM(i);
+    // s stands for src, r stands for ref (for ri, rj, si, sj)
+    for (long ri = 0; ri < s->shape[0]; ++ri) {
+      long si  = ri + s->offset[0];
+      VALUE ii = LONG2NUM(ri);
 
-      IType k = ija[i], k_next = ija[i+1];
+      IType k = ija[si], k_next = ija[si+1];
 
-      for (long j = 0; j < s->shape[1]; ++j) {
-        VALUE v, jj = LONG2NUM(j);
+      for (long rj = 0; rj < s->shape[1]; ++rj) {
+        long sj     = rj + s->offset[1];
+        VALUE v, jj = LONG2NUM(rj);
 
         // zero is stored in s->shape[0]
-        if (i == j) {
-          v = rubyobj_from_cval(&(a[i]), NM_DTYPE(nm)).rval;
+        if (si == sj) {
+          v = rubyobj_from_cval(&(a[si]), NM_DTYPE(nm)).rval;
         } else {
           // Walk through the row until we find the correct location.
-          while (ija[k] < j && k < k_next) ++k;
-          if (k < k_next && ija[k] == j) {
+          while (ija[k] < sj && k < k_next) ++k;
+          if (k < k_next && ija[k] == sj) {
             v = rubyobj_from_cval(&(a[k]), NM_DTYPE(nm)).rval;
             ++k;
           } else v = rubyobj_from_cval(&(a[s->shape[0]]), NM_DTYPE(nm)).rval;
@@ -1705,10 +1712,15 @@ static void nm_yale_storage_increment_ia_after(YALE_STORAGE* s, size_t ija_size,
  * for some set of coordinates.
  */
 void* nm_yale_storage_ref(STORAGE* storage, SLICE* slice) {
-  NAMED_LI_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::ref, void*, YALE_STORAGE* storage, SLICE* slice);
-
   YALE_STORAGE* casted_storage = (YALE_STORAGE*)storage;
-  return ttable[casted_storage->dtype][casted_storage->itype](casted_storage, slice);
+
+  if (slice->single) {
+    NAMED_LI_DTYPE_TEMPLATE_TABLE(elem_copy_table,  nm::yale_storage::get_single, void*, YALE_STORAGE*, SLICE*)
+    return elem_copy_table[casted_storage->dtype][casted_storage->itype](casted_storage, slice);
+  } else {
+    NAMED_LI_DTYPE_TEMPLATE_TABLE(ref_table, nm::yale_storage::ref, void*, YALE_STORAGE* storage, SLICE* slice)
+    return ref_table[casted_storage->dtype][casted_storage->itype](casted_storage, slice);
+  }
 }
 
 

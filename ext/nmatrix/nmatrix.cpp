@@ -1473,6 +1473,7 @@ static VALUE nm_is_ref(VALUE self) {
  *
  */
 static VALUE nm_mget(int argc, VALUE* argv, VALUE self) {
+  std::cerr << "mget" << std::endl;
   static void* (*ttable[nm::NUM_STYPES])(STORAGE*, SLICE*) = {
     nm_dense_storage_get,
     nm_list_storage_get,
@@ -1492,6 +1493,7 @@ static VALUE nm_mget(int argc, VALUE* argv, VALUE self) {
  *
  */
 static VALUE nm_mref(int argc, VALUE* argv, VALUE self) {
+  std::cerr << "mref" << std::endl;
   static void* (*ttable[nm::NUM_STYPES])(STORAGE*, SLICE*) = {
     nm_dense_storage_ref,
     nm_list_storage_ref,
@@ -1716,11 +1718,11 @@ static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLIC
     } else {
       STYPE_MARK_TABLE(mark_table);
 
-      NMATRIX* mat = ALLOC(NMATRIX);
-      mat->stype = NM_STYPE(self);
-      mat->storage = (STORAGE*)((*slice_func)( s, slice ));
+      NMATRIX* mat  = ALLOC(NMATRIX);
+      mat->stype    = NM_STYPE(self);
+      mat->storage  = (STORAGE*)((*slice_func)( s, slice ));
 
-      result = Data_Wrap_Struct(CLASS_OF(self), mark_table[mat->stype], delete_func, mat);
+      result        = Data_Wrap_Struct(CLASS_OF(self), mark_table[mat->stype], delete_func, mat);
     }
 
     free_slice(slice);
