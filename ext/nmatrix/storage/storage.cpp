@@ -150,19 +150,19 @@ DENSE_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype
   LDType LCAST_ZERO = rhs_a[rhs->shape[0]];
 
   // Walk through rows. For each entry we set in dense, increment pos.
-  for (RIType i = 0; i < rhs->shape[0]; ++i) {
+  for (RIType ri = rhs->offset[0]; ri < rhs->shape[0] + rhs->offset[0]; ++ri) {
 
     // Position in yale array
-    RIType ija = rhs_ija[i];
+    RIType ija = rhs_ija[ri];
 
-    if (ija == rhs_ija[i+1]) { // Check boundaries of row: is row empty?
+    if (ija == rhs_ija[ri+1]) { // Check boundaries of row: is row empty?
 
 			// Write zeros in each column.
-			for (RIType j = 0; j < rhs->shape[1]; ++j) { // Move to next dense position.
+			for (RIType rj = rhs->offset[1]; rj < rhs->shape[1] + rhs->offset[1]; ++rj) { // Move to next dense position.
 
         // Fill in zeros (except for diagonal)
-        if (i == j) lhs_elements[pos] = static_cast<LDType>(rhs_a[i]);
-				else        lhs_elements[pos] = LCAST_ZERO;
+        if (ri == rj) lhs_elements[pos] = static_cast<LDType>(rhs_a[ri]);
+				else          lhs_elements[pos] = LCAST_ZERO;
 
 				++pos;
       }
@@ -171,19 +171,19 @@ DENSE_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype
       // Row contains entries: write those in each column, interspersed with zeros.
       RIType jj = rhs_ija[ija];
 
-			for (size_t j = 0; j < rhs->shape[1]; ++j) {
-        if (i == j) {
-          lhs_elements[pos] = static_cast<LDType>(rhs_a[i]);
+			for (size_t rj = rhs->offset[1]; rj < rhs->shape[1] + rhs->offset[1]; ++rj) {
+        if (ri == rj) {
+          lhs_elements[pos] = static_cast<LDType>(rhs_a[ri]);
 
-        } else if (j == jj) {
+        } else if (rj == jj) {
           lhs_elements[pos] = static_cast<LDType>(rhs_a[ija]); // Copy from rhs.
 
           // Get next.
           ++ija;
 
           // Increment to next column ID (or go off the end).
-          if (ija < rhs_ija[i+1]) jj = rhs_ija[ija];
-          else               	    jj = rhs->shape[1];
+          if (ija < rhs_ija[ri+1]) jj = rhs_ija[ija];
+          else               	     jj = rhs->shape[1];
 
         } else { // j < jj
 
@@ -504,16 +504,15 @@ namespace yale_storage { // FIXME: Move to yale.cpp
 
     // Start just after the zero position.
     LIType ija = shape[0]+1;
-    LIType i;
     pos        = 0;
 
     // Copy contents
-    for (i = 0; i < rhs->shape[0]; ++i) {
+    for (LIType i = 0; i < rhs->shape[0]; ++i) {
       // indicate the beginning of a row in the IJA array
-      lhs_ija[i]= ija;
+      lhs_ija[i] = ija;
 
       for (LIType j = 0; j < rhs->shape[1];  ++j) {
-        pos = rhs->stride[0]*(i + rhs->offset[0]) + rhs->stride[1]*(j + rhs->offset[1]); // calc position with offsets
+        pos = rhs->stride[0] * (i + rhs->offset[0]) + rhs->stride[1] * (j + rhs->offset[1]); // calc position with offsets
 
         if (i == j) { // copy to diagonal
           lhs_a[i]     = static_cast<LDType>(rhs_elements[pos]);

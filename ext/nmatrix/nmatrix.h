@@ -303,8 +303,7 @@ NM_DEF_STRUCT_POST(NMATRIX);  // };
   #define NM_STORAGE_DENSE(val)       ((struct NM_DENSE_STORAGE*)(NM_STORAGE(val)))
 #endif
 
-#define NM_DENSE_SRC(val)       (NM_STORAGE_DENSE(val)->src)
-#define NM_LIST_SRC(val)        (NM_STORAGE_LIST(val)->src)
+#define NM_SRC(val)             (NM_STORAGE(val)->src)
 #define NM_DIM(val)             (NM_STORAGE(val)->dim)
 #define NM_DTYPE(val)           (NM_STORAGE(val)->dtype)
 #define NM_ITYPE(val)           (NM_STORAGE_YALE(val)->itype)

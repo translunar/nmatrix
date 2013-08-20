@@ -590,9 +590,9 @@ static SLICE* alloc_slice(size_t dim) {
  * Slice destructor.
  */
 static void free_slice(SLICE* slice) {
-  free(slice->coords);
-  free(slice->lengths);
-  free(slice);
+  xfree(slice->coords);
+  xfree(slice->lengths);
+  xfree(slice);
 }
 
 
@@ -649,7 +649,7 @@ void nm_delete(NMATRIX* mat) {
   };
   ttable[mat->stype](mat->storage);
 
-  free(mat);
+  xfree(mat);
 }
 
 /*
@@ -663,7 +663,7 @@ void nm_delete_ref(NMATRIX* mat) {
   };
   ttable[mat->stype](mat->storage);
 
-  free(mat);
+  xfree(mat);
 }
 
 /*
@@ -1458,16 +1458,8 @@ static VALUE nm_init_yale_from_old_yale(VALUE shape, VALUE dtype, VALUE ia, VALU
  * Check to determine whether matrix is a reference to another matrix.
  */
 static VALUE nm_is_ref(VALUE self) {
-	// Refs only allowed for dense and list matrices.
-  if (NM_STYPE(self) == nm::DENSE_STORE) {
-    return (NM_DENSE_SRC(self) == NM_STORAGE(self)) ? Qfalse : Qtrue;
-  }
-
-  if (NM_STYPE(self) == nm::LIST_STORE) {
-    return (NM_LIST_SRC(self) == NM_STORAGE(self)) ? Qfalse : Qtrue;
-  }
-
-  return Qfalse;
+  if (NM_SRC(self) == NM_STORAGE(self)) return Qfalse;
+  else                                  return Qtrue;
 }
 
 /*
@@ -1532,14 +1524,14 @@ static VALUE nm_mset(int argc, VALUE* argv, VALUE self) {
     switch(NM_STYPE(self)) {
     case nm::DENSE_STORE:
       nm_dense_storage_set(NM_STORAGE(self), slice, value);
-      free(value);
+      xfree(value);
       break;
     case nm::LIST_STORE:
       // Remove if it's a zero, insert otherwise
       if (!std::memcmp(value, NM_STORAGE_LIST(self)->default_val, DTYPE_SIZES[NM_DTYPE(self)])) {
-        free(value);
+        xfree(value);
         value = nm_list_storage_remove(NM_STORAGE(self), slice);
-        free(value);
+        xfree(value);
       } else {
         nm_list_storage_insert(NM_STORAGE(self), slice, value);
         // no need to free value here since it was inserted directly into the list.
@@ -1547,7 +1539,7 @@ static VALUE nm_mset(int argc, VALUE* argv, VALUE self) {
       break;
     case nm::YALE_STORE:
       nm_yale_storage_set(NM_STORAGE(self), slice, value);
-      free(value);
+      xfree(value);
       break;
     }
     free_slice(slice);
@@ -1813,12 +1805,7 @@ static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
  * Check to determine whether matrix is a reference to another matrix.
  */
 bool is_ref(const NMATRIX* matrix) {
-  // FIXME: Needs to work for other types
-  if (matrix->stype != nm::DENSE_STORE) {
-    return false;
-  }
-
-  return ((DENSE_STORAGE*)(matrix->storage))->src != matrix->storage;
+  return matrix->storage->src != matrix->storage;
 }
 
 /*

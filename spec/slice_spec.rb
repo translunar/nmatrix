@@ -49,23 +49,21 @@ describe "Slice operation" do
         z.supershape(1).should == [8,7]
       end
 
-      unless stype == :yale
-        it "should have #is_ref? method" do
-          a = @m[0..1, 0..1]
-          b = @m.slice(0..1, 0..1)
+      it "should have #is_ref? method" do
+        a = @m[0..1, 0..1]
+        b = @m.slice(0..1, 0..1)
 
 
-          @m.is_ref?.should be_false
-          a.is_ref?.should be_true
-          b.is_ref?.should be_false
-        end
+        @m.is_ref?.should be_false
+        a.is_ref?.should be_true
+        b.is_ref?.should be_false
+      end
 
-        it "reference should compare with non-reference" do
-          @m.slice(1..2,0..1).should == @m[1..2, 0..1]
-          @m[1..2,0..1].should == @m.slice(1..2, 0..1)
-          @m[1..2,0..1].should == @m[1..2, 0..1]
-        end
-      end # unless stype == :yale
+      it "reference should compare with non-reference" do
+        @m.slice(1..2,0..1).should == @m[1..2, 0..1]
+        @m[1..2,0..1].should == @m.slice(1..2, 0..1)
+        @m[1..2,0..1].should == @m[1..2, 0..1]
+      end
 
       context "with copying" do
         it 'should return an NMatrix' do
@@ -277,17 +275,20 @@ describe "Slice operation" do
 
         [:dense, :list, :yale].each do |cast_type|
           it "should cast from #{stype.upcase} to #{cast_type.upcase}" do
-            nm_eql(@m[1..2, 1..2].cast(cast_type, :int32), @m[1..2,1..2]).should be_true
-            nm_eql(@m[0..1, 1..2].cast(cast_type, :int32), @m[0..1,1..2]).should be_true
-            nm_eql(@m[1..2, 0..1].cast(cast_type, :int32), @m[1..2,0..1]).should be_true
-            nm_eql(@m[0..1, 0..1].cast(cast_type, :int32), @m[0..1,0..1]).should be_true
+            nm_eql(@m[1..2, 1..2].cast(cast_type), @m[1..2,1..2]).should be_true
+            nm_eql(@m[0..1, 1..2].cast(cast_type), @m[0..1,1..2]).should be_true
+            nm_eql(@m[1..2, 0..1].cast(cast_type), @m[1..2,0..1]).should be_true
+            nm_eql(@m[0..1, 0..1].cast(cast_type), @m[0..1,0..1]).should be_true
 
             # Non square
-            nm_eql(@m[0..2, 1..2].cast(cast_type, :int32), @m[0..2,1..2]).should be_true
-            nm_eql(@m[1..2, 0..2].cast(cast_type, :int32), @m[1..2,0..2]).should be_true
+            nm_eql(@m[0..2, 1..2].cast(cast_type), @m[0..2,1..2]).should be_true
+            nm_eql(@m[1..2, 0..2].cast(cast_type), @m[1..2,0..2]).should be_true
+
+            require 'pry'
+            binding.pry
 
             # Full
-            nm_eql(@m[0..2, 0..2].cast(cast_type, :int32), @m).should be_true
+            nm_eql(@m[0..2, 0..2].cast(cast_type), @m).should be_true
           end
         end
       end

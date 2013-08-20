@@ -617,23 +617,23 @@ void* nm_list_storage_ref(STORAGE* storage, SLICE* slice) {
     return (n ? n->val : s->default_val);
   } 
   else {
-    ns = ALLOC( LIST_STORAGE );
+    ns              = ALLOC( LIST_STORAGE );
     
-    ns->dim = s->dim;
-    ns->dtype = s->dtype;
-    ns->offset     = ALLOC_N(size_t, ns->dim);
-    ns->shape      = ALLOC_N(size_t, ns->dim);
+    ns->dim         = s->dim;
+    ns->dtype       = s->dtype;
+    ns->offset      = ALLOC_N(size_t, ns->dim);
+    ns->shape       = ALLOC_N(size_t, ns->dim);
 
     for (size_t i = 0; i < ns->dim; ++i) {
       ns->offset[i] = slice->coords[i] + s->offset[i];
       ns->shape[i]  = slice->lengths[i];
     }
 
-    ns->rows = s->rows;
+    ns->rows        = s->rows;
     ns->default_val = s->default_val;
     
     s->src->count++;
-    ns->src = s->src;
+    ns->src         = s->src;
     
     return ns;
   }

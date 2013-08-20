@@ -342,8 +342,8 @@ size_t max_size(YALE_STORAGE* s) {
 /*
  * Copy some portion of a matrix into a new matrix.
  */
-template <typename DType, typename IType>
-static YALE_STORAGE* slice_copy(YALE_STORAGE* s, size_t* offset, size_t* lengths) {
+template <typename LDType, typename RDType, typename IType>
+static YALE_STORAGE* slice_copy(const YALE_STORAGE* s, size_t* offset, size_t* lengths, dtype_t new_dtype) {
 
   // Copy shape for yale construction
   size_t* shape  = ALLOC_N(size_t, 2);
@@ -351,7 +351,7 @@ static YALE_STORAGE* slice_copy(YALE_STORAGE* s, size_t* offset, size_t* lengths
   shape[1]       = lengths[1];
 
   IType* src_ija = reinterpret_cast<IType*>(s->ija);
-  DType* src_a   = reinterpret_cast<DType*>(s->a);
+  RDType* src_a   = reinterpret_cast<RDType*>(s->a);
 
   // Calc ndnz for the destination
   size_t ndnz  = 0;
@@ -380,18 +380,19 @@ static YALE_STORAGE* slice_copy(YALE_STORAGE* s, size_t* offset, size_t* lengths
 
   size_t request_capacity = shape[0] + ndnz + 1;
   //fprintf(stderr, "yale get copy: shape0=%d, shape1=%d, ndnz=%d, request_capacity=%d\n", shape[0], shape[1], ndnz, request_capacity);
-  YALE_STORAGE* ns = nm_yale_storage_create(s->dtype, shape, 2, request_capacity, s->itype);
+  YALE_STORAGE* ns = nm_yale_storage_create(new_dtype, shape, 2, request_capacity, s->itype);
 
   if (ns->capacity < request_capacity)
     rb_raise(nm_eStorageTypeError, "conversion failed; capacity of %ld requested, max allowable is %ld", request_capacity, ns->capacity);
 
    // Initialize the A and IJA arrays
-  init<DType,IType>(ns, default_value_ptr(s));
-  IType* dst_ija = reinterpret_cast<IType*>(ns->ija);
-  DType* dst_a   = reinterpret_cast<DType*>(ns->a);
+  LDType val = *reinterpret_cast<RDType*>(default_value_ptr(s)); // need default value
+  init<LDType,IType>(ns, &val);
+  IType*  dst_ija = reinterpret_cast<IType*>(ns->ija);
+  LDType* dst_a   = reinterpret_cast<LDType*>(ns->a);
 
   size_t ija = shape[0] + 1;
-  DType val = src_a[s->shape[0]]; // use 0 as the default for copy
+
   for (i = 0; i < shape[0]; ++i) {
     k = i + offset[0];
     for (j = 0; j < shape[1]; ++j) {
@@ -444,7 +445,7 @@ static YALE_STORAGE* slice_copy(YALE_STORAGE* s, size_t* offset, size_t* lengths
  */
 template <typename DType,typename IType>
 void* get(YALE_STORAGE* storage, SLICE* slice) {
-  YALE_STORAGE* ns = slice_copy<DType,IType>(storage, slice->coords, slice->lengths);
+  YALE_STORAGE* ns = slice_copy<DType,DType,IType>(storage, slice->coords, slice->lengths, storage->dtype);
 
   return ns;
 }
@@ -459,11 +460,17 @@ static void* get_single(YALE_STORAGE* storage, SLICE* slice) {
   size_t coord0 = storage->offset[0] + slice->coords[0];
   size_t coord1 = storage->offset[1] + slice->coords[1];
 
+  std::cerr << "coords: " << coord0 << "," << coord1 << std::endl;
+
   if (coord0 == coord1)
     return &(a[ coord0 ]); // return diagonal entry
 
+  std::cerr << "not the diagonal" << std::endl;
+
   if (ija[coord0] == ija[coord0+1])
     return &(a[ storage->src->shape[0] ]); // return zero pointer
+
+  std::cerr << "not the zero pointer (" << storage->src->shape[0] << ")" << std::endl;
 
   // binary search for the column's location
   int pos = binary_search<IType>(storage, ija[coord0], ija[coord0+1]-1, coord1);
@@ -471,7 +478,9 @@ static void* get_single(YALE_STORAGE* storage, SLICE* slice) {
   if (pos != -1 && ija[pos] == coord1)
     return &(a[pos]); // found exact value
 
-  return &(a[ storage->shape[0] ]); // return a pointer that happens to be zero
+  std::cerr << "not the exact value" << std::endl;
+
+  return &(a[ storage->src->shape[0] ]); // return a pointer that happens to be zero
 }
 
 
@@ -481,8 +490,6 @@ static void* get_single(YALE_STORAGE* storage, SLICE* slice) {
  */
 template <typename DType,typename IType>
 void* ref(YALE_STORAGE* s, SLICE* slice) {
-  size_t* coords = slice->coords;
-
   if (slice->single) {
     return get_single<DType,IType>(s, slice);
   } else {
@@ -501,7 +508,7 @@ void* ref(YALE_STORAGE* s, SLICE* slice) {
     ns->itype   = s->itype; // or should we go by shape?
 
     ns->src     = s->src;
-    ns->src->count++;
+    s->src->count++;
 
     ns->a       = s->a;
     ns->ija     = s->ija;
@@ -962,15 +969,18 @@ static IType insert_search(YALE_STORAGE* s, IType left, IType right, IType key, 
 template <typename LDType, typename RDType, typename IType>
 YALE_STORAGE* cast_copy(const YALE_STORAGE* rhs, dtype_t new_dtype) {
 
-  // Allocate a new structure
-  size_t size = get_size<IType>(rhs);
-  YALE_STORAGE* lhs = copy_alloc_struct<IType>(rhs, new_dtype, rhs->capacity, size);
+  YALE_STORAGE* lhs;
 
-  if (rhs->dtype == new_dtype) {  // FIXME: Test if this condition is actually faster; second condition should work just as well.
+  if (rhs->src != rhs) { // copy the reference
+    size_t* offset  = ALLOCA_N(size_t, rhs->dim);
+    memset(offset, 0, sizeof(size_t) * rhs->dim);
 
-    memcpy(lhs->a, rhs->a, size * DTYPE_SIZES[new_dtype]);
+    lhs = slice_copy<LDType, RDType, IType>(rhs, offset, rhs->shape, new_dtype);
+  } else { // regular copy
 
-  } else {
+    // Allocate a new structure
+    size_t size = get_size<IType>(rhs);
+    lhs = copy_alloc_struct<IType>(rhs, new_dtype, rhs->capacity, size);
 
     LDType* la = reinterpret_cast<LDType*>(lhs->a);
     RDType* ra = reinterpret_cast<RDType*>(rhs->a);
@@ -978,7 +988,6 @@ YALE_STORAGE* cast_copy(const YALE_STORAGE* rhs, dtype_t new_dtype) {
     for (size_t index = 0; index < size; ++index) {
       la[index] = ra[index];
     }
-
   }
 
   return lhs;
@@ -1013,6 +1022,7 @@ static YALE_STORAGE* copy_alloc_struct(const YALE_STORAGE* rhs, const dtype_t ne
   lhs->ija          = ALLOC_N( IType, lhs->capacity );
   lhs->a            = ALLOC_N( char, DTYPE_SIZES[new_dtype] * lhs->capacity );
   lhs->src          = lhs;
+  lhs->count        = 1;
 
   // Now copy the contents -- but only within the boundaries set by the size. Leave
   // the rest uninitialized.
@@ -1665,9 +1675,9 @@ void* nm_yale_storage_get(STORAGE* storage, SLICE* slice) {
 
     return elem_copy_table[casted_storage->dtype][casted_storage->itype](casted_storage, slice);
   } else {
-    NAMED_LI_DTYPE_TEMPLATE_TABLE(slice_copy_table, nm::yale_storage::slice_copy, YALE_STORAGE*, YALE_STORAGE* storage, size_t*, size_t*)
+    NAMED_LRI_DTYPE_TEMPLATE_TABLE(slice_copy_table, nm::yale_storage::slice_copy, YALE_STORAGE*, const YALE_STORAGE* storage, size_t*, size_t*, nm::dtype_t)
 
-    return slice_copy_table[casted_storage->dtype][casted_storage->itype](casted_storage, slice->coords, slice->lengths);
+    return slice_copy_table[casted_storage->dtype][casted_storage->dtype][casted_storage->itype](casted_storage, slice->coords, slice->lengths, casted_storage->dtype);
   }
 }
 
@@ -1934,6 +1944,7 @@ static YALE_STORAGE* alloc(nm::dtype_t dtype, size_t* shape, size_t dim, nm::ity
   s->dim         = dim;
   s->itype       = nm_yale_storage_itype_by_shape(shape);
   s->src         = reinterpret_cast<STORAGE*>(s);
+  s->count       = 1;
 
   // See if a higher itype has been requested.
   if (static_cast<int8_t>(s->itype) < static_cast<int8_t>(min_itype))
