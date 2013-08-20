@@ -54,7 +54,7 @@ describe "Slice operation" do
           end
 
           vs.should == [3,4,5,6,7]
-          js.should == [3,4,6,8,9]
+          js.should == [2,3,5,7,8]
           is.should == [0,0,0,0,0]
         end
       elsif stype == :list
@@ -100,11 +100,6 @@ describe "Slice operation" do
             vs << v
             is << i
             js << j
-          end
-
-          if stype == :list
-            require 'pry'
-            binding.pry
           end
 
           vs.should == (stype == :yale ? [4,1,2,5] : [1,2,4,5])
