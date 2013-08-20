@@ -739,6 +739,31 @@ static bool ndrow_is_empty(const YALE_STORAGE* s, IType ija, const IType ija_nex
 // Utility //
 /////////////
 
+
+/*
+ * Binary search for finding the beginning of a slice. Returns the position of the first element which is larger than
+ * bound.
+ */
+template <typename IType>
+IType binary_search_left_boundary(YALE_STORAGE* s, IType left, IType right, IType bound) {
+  if (left > right) return -1;
+
+  IType* ija  = reinterpret_cast<IType*>(s->ija);
+
+  if (ija[left] >= bound) return left; // shortcut
+
+  IType mid   = (left + right) / 2;
+  IType mid_j = ija[mid];
+
+  if (mid_j == bound)
+    return mid;
+  else if (mid_j > bound) { // eligible! don't exclude it.
+    return binary_search_left_boundary<IType>(s, left, mid, bound);
+  } else // (mid_j < bound)
+    return binary_search_left_boundary<IType>(s, mid + 1, right, bound);
+}
+
+
 /*
  * Binary search for returning stored values. Returns a non-negative position, or -1 for not found.
  */
@@ -1436,12 +1461,21 @@ static VALUE each_stored_with_indices(VALUE nm) {
 
   // Iterate through non-diagonal elements, row by row
   for (long ri = 0; ri < s->shape[0]; ++ri) {
-    long si     = ri + s->offset[0],
-         p      = static_cast<long>( ija[si]   ),
-         next_p = static_cast<long>( ija[si+1] );
+    long si      = ri + s->offset[0];
+    IType p      = ija[si],
+          next_p = ija[si+1];
+
+    // if this is a reference to another matrix, we should find the left boundary of the slice
+    if (s != s->src && p < next_p) p = binary_search_left_boundary<IType>(s, p, next_p-1, s->offset[1]);
+
+    //std::cerr << "p=" << int(p) << ", next_p=" << int(next_p) << "\t" << (int)binary_search_left_boundary<IType>(NM_STORAGE_YALE(nm), p, next_p-1, s->offset[1]) << std::endl;
 
     for (; p < next_p; ++p) {
-      long rj = static_cast<long>(ija[p]) - s->offset[1];
+      long sj = static_cast<long>(ija[p]),
+           rj = sj - s->offset[1];
+      if (rj < 0) continue;
+      std::cerr << "src_j=" << sj << ", ref_j=" << rj << ", shape[1]=" << s->shape[1] << ", offset[1]=" << s->offset[1] << std::endl;
+
       if (rj >= s->shape[1]) break;
 
       rb_yield_values(3, obj_at(s, p), LONG2NUM(ri), LONG2NUM(rj));

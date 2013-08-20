@@ -343,6 +343,7 @@ static VALUE nm_default_value(VALUE self);
 static size_t effective_dim(STORAGE* s);
 static VALUE nm_effective_dim(VALUE self);
 static VALUE nm_dim(VALUE self);
+static VALUE nm_offset(VALUE self);
 static VALUE nm_shape(VALUE self);
 static VALUE nm_supershape(int argc, VALUE* argv, VALUE self);
 static VALUE nm_capacity(VALUE self);
@@ -489,6 +490,7 @@ void Init_nmatrix() {
 
 	rb_define_method(cNMatrix, "shape", (METHOD)nm_shape, 0);
 	rb_define_method(cNMatrix, "supershape", (METHOD)nm_supershape, -1);
+	rb_define_method(cNMatrix, "offset", (METHOD)nm_offset, 0);
 	rb_define_method(cNMatrix, "det_exact", (METHOD)nm_det_exact, 0);
 	rb_define_method(cNMatrix, "complex_conjugate!", (METHOD)nm_complex_conjugate_bang, 0);
 
@@ -1617,6 +1619,24 @@ static VALUE nm_shape(VALUE self) {
     shape[index] = INT2FIX(s->shape[index]);
 
   return rb_ary_new4(s->dim, shape);
+}
+
+
+/*
+ * call-seq:
+ *     offset -> Array
+ *
+ * Get the offset (slice position) of a matrix. Typically all zeros, unless you have a reference slice.
+ */
+static VALUE nm_offset(VALUE self) {
+  STORAGE* s   = NM_STORAGE(self);
+
+  // Copy elements into a VALUE array and then use those to create a Ruby array with rb_ary_new4.
+  VALUE* offset = ALLOCA_N(VALUE, s->dim);
+  for (size_t index = 0; index < s->dim; ++index)
+    offset[index] = INT2FIX(s->offset[index]);
+
+  return rb_ary_new4(s->dim, offset);
 }
 
 

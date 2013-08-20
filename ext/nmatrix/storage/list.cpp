@@ -84,7 +84,7 @@ public:
 
   size_t dim() const { return ref->dim; }
 
-  size_t shape(size_t rec) const {
+  size_t ref_shape(size_t rec) const {
     return shape_[ref->dim - rec - 1];
   }
 
@@ -144,7 +144,7 @@ static void map_empty_stored_r(RecurseData& result, RecurseData& s, LIST* x, con
 
   // For reference matrices, make sure we start in the correct place.
   size_t offset   = result.offset(rec);
-  size_t x_shape  = result.shape(rec);
+  size_t x_shape  = result.ref_shape(rec);
 
   while (curr && curr->key < offset) {  curr = curr->next;  }
   if (curr && curr->key - offset >= x_shape) curr = NULL;
@@ -189,8 +189,8 @@ static void map_merged_stored_r(RecurseData& result, RecurseData& left, RecurseD
   while (lcurr && lcurr->key < left.offset(rec))  {  lcurr = lcurr->next;  }
   while (rcurr && rcurr->key < right.offset(rec)) {  rcurr = rcurr->next;  }
 
-  if (rcurr && rcurr->key - right.offset(rec) >= result.shape(rec)) rcurr = NULL;
-  if (lcurr && lcurr->key - left.offset(rec) >= result.shape(rec))  lcurr = NULL;
+  if (rcurr && rcurr->key - right.offset(rec) >= result.ref_shape(rec)) rcurr = NULL;
+  if (lcurr && lcurr->key - left.offset(rec) >= result.ref_shape(rec))  lcurr = NULL;
 
   if (rec) {
     while (lcurr || rcurr) {
@@ -215,8 +215,8 @@ static void map_merged_stored_r(RecurseData& result, RecurseData& left, RecurseD
       if (!val->first) nm::list::del(val, 0); // empty list -- don't insert
       else xcurr = nm::list::insert_helper(x, xcurr, key, val);
 
-      if (rcurr && rcurr->key - right.offset(rec) >= result.shape(rec)) rcurr = NULL;
-      if (lcurr && lcurr->key - left.offset(rec) >= result.shape(rec)) lcurr = NULL;
+      if (rcurr && rcurr->key - right.offset(rec) >= result.ref_shape(rec)) rcurr = NULL;
+      if (lcurr && lcurr->key - left.offset(rec) >= result.ref_shape(rec)) lcurr = NULL;
     }
   } else {
     while (lcurr || rcurr) {
@@ -240,8 +240,8 @@ static void map_merged_stored_r(RecurseData& result, RecurseData& left, RecurseD
       if (rb_funcall(val, rb_intern("!="), 1, result.init_obj()) == Qtrue)
         xcurr = nm::list::insert_helper(x, xcurr, key, val);
 
-      if (rcurr && rcurr->key - right.offset(rec) >= result.shape(rec)) rcurr = NULL;
-      if (lcurr && lcurr->key - left.offset(rec) >= result.shape(rec)) lcurr = NULL;
+      if (rcurr && rcurr->key - right.offset(rec) >= result.ref_shape(rec)) rcurr = NULL;
+      if (lcurr && lcurr->key - left.offset(rec) >= result.ref_shape(rec)) lcurr = NULL;
     }
   }
 }
@@ -359,7 +359,7 @@ static void each_empty_with_indices_r(nm::list_storage::RecurseData& s, size_t r
   VALUE empty  = s.dtype() == nm::RUBYOBJ ? *reinterpret_cast<VALUE*>(s.init()) : s.init_obj();
 
   if (rec) {
-    for (long index = 0; index < s.shape(rec); ++index) {
+    for (long index = 0; index < s.ref_shape(rec); ++index) {
       // Don't do an unshift/shift here -- we'll let that be handled in the lowest-level iteration (recursions == 0)
       rb_ary_push(stack, LONG2NUM(index));
       each_empty_with_indices_r(s, rec-1, stack);
@@ -367,7 +367,7 @@ static void each_empty_with_indices_r(nm::list_storage::RecurseData& s, size_t r
     }
   } else {
     rb_ary_unshift(stack, empty);
-    for (long index = 0; index < s.shape(rec); ++index) {
+    for (long index = 0; index < s.ref_shape(rec); ++index) {
       rb_ary_push(stack, LONG2NUM(index));
       rb_yield_splat(stack);
       rb_ary_pop(stack);
@@ -383,18 +383,20 @@ static void each_with_indices_r(nm::list_storage::RecurseData& s, const LIST* l,
   NODE*  curr  = l->first;
 
   size_t offset = s.offset(rec);
-  size_t shape  = s.shape(rec);
+  size_t shape  = s.ref_shape(rec);
 
   while (curr && curr->key < offset) curr = curr->next;
-  if (curr && curr->key >= shape) curr = NULL;
+  if (curr && curr->key - offset >= shape) curr = NULL;
 
 
   if (rec) {
-    for (long index = 0; index < shape; ++index) {
+    for (long index = 0; index < shape; ++index) { // index in reference
       rb_ary_push(stack, LONG2NUM(index));
       if (!curr || index < curr->key - offset) {
+        std::cerr << rec << "\t" << index << "\teach_empty_with_indices_r" << std::endl;
         each_empty_with_indices_r(s, rec-1, stack);
-      } else {
+      } else { // index == curr->key - offset
+        std::cerr << rec << "\t" << index << "\teach_with_indices_r" << std::endl;
         each_with_indices_r(s, reinterpret_cast<const LIST*>(curr->val), rec-1, stack);
         curr = curr->next;
       }
@@ -406,9 +408,11 @@ static void each_with_indices_r(nm::list_storage::RecurseData& s, const LIST* l,
       rb_ary_push(stack, LONG2NUM(index));
 
       if (!curr || index < curr->key - offset) {
+        std::cerr << rec << "\t" << index << "\tdefault value" << std::endl;
         rb_ary_unshift(stack, s.dtype() == nm::RUBYOBJ ? *reinterpret_cast<VALUE*>(s.init()) : s.init_obj());
 
-      } else { // index == curr->key
+      } else { // index == curr->key - offset
+        std::cerr << rec << "\t" << index << "\tactual value" << std::endl;
         rb_ary_unshift(stack, s.dtype() == nm::RUBYOBJ ? *reinterpret_cast<VALUE*>(curr->val) : rubyobj_from_cval(curr->val, s.dtype()).rval);
 
         curr = curr->next;
@@ -430,7 +434,7 @@ static void each_stored_with_indices_r(nm::list_storage::RecurseData& s, const L
   NODE* curr = l->first;
 
   size_t offset = s.offset(rec);
-  size_t shape  = s.shape(rec);
+  size_t shape  = s.ref_shape(rec);
 
   while (curr && curr->key < offset) { curr = curr->next; }
   if (curr && curr->key - offset >= shape) curr = NULL;
@@ -461,7 +465,7 @@ static void each_stored_with_indices_r(nm::list_storage::RecurseData& s, const L
       rb_ary_pop(stack);
 
       curr = curr->next;
-      if (curr && curr->key >= shape) curr = NULL;
+      if (curr && curr->key - offset >= shape) curr = NULL;
     }
   }
 }
@@ -873,21 +877,21 @@ static bool eqeq_empty_r(RecurseData& s, const LIST* l, size_t rec, const TDType
 
   // For reference matrices, make sure we start in the correct place.
   while (curr && curr->key < s.offset(rec)) {  curr = curr->next;  }
-  if (curr && curr->key - s.offset(rec) >= s.shape(rec)) curr = NULL;
+  if (curr && curr->key - s.offset(rec) >= s.ref_shape(rec)) curr = NULL;
 
   if (rec) {
     while (curr) {
       if (!eqeq_empty_r<SDType,TDType>(s, reinterpret_cast<const LIST*>(curr->val), rec-1, t_init)) return false;
       curr = curr->next;
 
-      if (curr && curr->key - s.offset(rec) >= s.shape(rec)) curr = NULL;
+      if (curr && curr->key - s.offset(rec) >= s.ref_shape(rec)) curr = NULL;
     }
   } else {
     while (curr) {
       if (*reinterpret_cast<SDType*>(curr->val) != *t_init) return false;
       curr = curr->next;
 
-      if (curr && curr->key - s.offset(rec) >= s.shape(rec)) curr = NULL;
+      if (curr && curr->key - s.offset(rec) >= s.ref_shape(rec)) curr = NULL;
     }
   }
   return true;
@@ -908,8 +912,8 @@ static bool eqeq_r(RecurseData& left, RecurseData& right, const LIST* l, const L
   // For reference matrices, make sure we start in the correct place.
   while (lcurr && lcurr->key < left.offset(rec)) {  lcurr = lcurr->next;  }
   while (rcurr && rcurr->key < right.offset(rec)) {  rcurr = rcurr->next;  }
-  if (rcurr && rcurr->key - right.offset(rec) >= left.shape(rec)) rcurr = NULL;
-  if (lcurr && lcurr->key - left.offset(rec) >= left.shape(rec)) lcurr = NULL;
+  if (rcurr && rcurr->key - right.offset(rec) >= left.ref_shape(rec)) rcurr = NULL;
+  if (lcurr && lcurr->key - left.offset(rec) >= left.ref_shape(rec)) lcurr = NULL;
 
   bool compared = false;
 
@@ -928,15 +932,15 @@ static bool eqeq_r(RecurseData& left, RecurseData& right, const LIST* l, const L
         lcurr   = lcurr->next;
         rcurr   = rcurr->next;
       }
-      if (rcurr && rcurr->key - right.offset(rec) >= left.shape(rec)) rcurr = NULL;
-      if (lcurr && lcurr->key - left.offset(rec) >= left.shape(rec)) lcurr = NULL;
+      if (rcurr && rcurr->key - right.offset(rec) >= right.ref_shape(rec)) rcurr = NULL;
+      if (lcurr && lcurr->key - left.offset(rec)  >= left.ref_shape(rec)) lcurr = NULL;
       compared = true;
     }
   } else {
     while (lcurr || rcurr) {
 
-      if (rcurr && rcurr->key - right.offset(rec) >= left.shape(rec)) rcurr = NULL;
-      if (lcurr && lcurr->key - left.offset(rec) >= left.shape(rec)) lcurr = NULL;
+      if (rcurr && rcurr->key - right.offset(rec) >= left.ref_shape(rec)) rcurr = NULL;
+      if (lcurr && lcurr->key - left.offset(rec) >= left.ref_shape(rec)) lcurr = NULL;
 
       if (!rcurr || (lcurr && (lcurr->key - left.offset(rec) < rcurr->key - right.offset(rec)))) {
         if (*reinterpret_cast<LDType*>(lcurr->val) != *reinterpret_cast<const RDType*>(right.init())) return false;
@@ -949,8 +953,8 @@ static bool eqeq_r(RecurseData& left, RecurseData& right, const LIST* l, const L
         lcurr         = lcurr->next;
         rcurr         = rcurr->next;
       }
-      if (rcurr && rcurr->key - right.offset(rec) >= left.shape(rec)) rcurr = NULL;
-      if (lcurr && lcurr->key - left.offset(rec) >= left.shape(rec)) lcurr = NULL;
+      if (rcurr && rcurr->key - right.offset(rec) >= right.ref_shape(rec)) rcurr = NULL;
+      if (lcurr && lcurr->key - left.offset(rec)  >= left.ref_shape(rec)) lcurr = NULL;
       compared = true;
     }
   }

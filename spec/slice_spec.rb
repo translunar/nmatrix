@@ -34,6 +34,48 @@ describe "Slice operation" do
         @m = create_matrix(stype)
       end
 
+      if stype == :yale
+        it "should binary search for the left boundary of a partial row of stored indices correctly" do
+          n = NMatrix.new(:yale, 10, :int32)
+          n[3,0] = 1
+          #n[3,2] = 2
+          n[3,3] = 3
+          n[3,4] = 4
+          n[3,6] = 5
+          n[3,8] = 6
+          n[3,9] = 7
+          vs = []
+          is = []
+          js = []
+          n[3,1..9].each_stored_with_indices do |v,i,j|
+            vs << v
+            is << i
+            js << j
+          end
+
+          vs.should == [3,4,5,6,7]
+          js.should == [3,4,6,8,9]
+          is.should == [0,0,0,0,0]
+        end
+      elsif stype == :list
+        it "should iterate across a partial row of stored indices" do
+          vs = []
+          is = []
+          js = []
+
+          STDERR.puts("now") if stype == :yale
+          @m[2,1..2].each_stored_with_indices do |v,i,j|
+            vs << v
+            is << i
+            js << j
+          end
+
+          vs.should == [7,8]
+          is.should == [0,0]
+          js.should == [0,1]
+        end
+      end
+
       unless stype == :dense
         it "should iterate across a row of stored indices" do
 
@@ -50,24 +92,6 @@ describe "Slice operation" do
           js.should == (stype == :yale ? [2,0,1] : [0,1,2])
         end
 
-        it "should iterate across a partial row of stored indices" do
-          vs = []
-          is = []
-          js = []
-          @m[2,1..2].each_stored_with_indices do |v,i,j|
-            vs << v
-            is << i
-            js << j
-          end
-
-          require 'pry'
-          binding.pry
-
-          vs.should == (stype == :yale ? [8,7] : [7,8])
-          is.should == [0,0]
-          js.should == (stype == :yale ? [2,1] : [1,2])
-        end
-
         it "should iterate across a submatrix of stored indices" do
           vs = []
           is = []
@@ -77,6 +101,12 @@ describe "Slice operation" do
             is << i
             js << j
           end
+
+          if stype == :list
+            require 'pry'
+            binding.pry
+          end
+
           vs.should == (stype == :yale ? [4,1,2,5] : [1,2,4,5])
           is.should == (stype == :yale ? [1,0,0,1] : [0,0,1,1])
           js.should == (stype == :yale ? [0,0,1,1] : [0,1,0,1])
