@@ -361,7 +361,7 @@ describe "Slice operation" do
         [:dense, :list, :yale].each do |cast_type|
           it "should cast from #{stype.upcase} to #{cast_type.upcase}" do
             require 'pry'
-            binding.pry if stype == :yale
+            binding.pry if stype == :yale && cast_type == :list
 
             nm_eql(@m[1..2, 1..2].cast(cast_type), @m[1..2,1..2]).should be_true
             nm_eql(@m[0..1, 1..2].cast(cast_type), @m[0..1,1..2]).should be_true

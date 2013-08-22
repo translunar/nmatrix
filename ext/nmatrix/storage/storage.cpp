@@ -350,18 +350,20 @@ LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype)
   // Walk through rows and columns as if RHS were a dense matrix
   for (RIType i = 0; i < shape[0]; ++i) {
     RIType ri = i + rhs->offset[0];
+    std::cerr << "i = " << int(i) << ", ri = " << int(ri) << std::endl;
+
     NODE *last_added = NULL;
 
     // Get boundaries of beginning and end of row
     RIType ija      = rhs_ija[ri],
            ija_next = rhs_ija[ri+1];
-    ija = nm::yale_storage::binary_search_left_boundary<RIType>(rhs, ija, ija_next-1, rhs->offset[1]);
 
     // Are we going to need to add a diagonal for this row?
     bool add_diag = false;
-    if (rhs_a[ri] != R_ZERO) add_diag = true;
+    if (rhs_a[ri] != R_ZERO) add_diag = true; // non-zero and located within the bounds of the slice
 
     if (ija < ija_next || add_diag) {
+      ija = nm::yale_storage::binary_search_left_boundary<RIType>(rhs, ija, ija_next-1, rhs->offset[1]);
 
       LIST* curr_row = list::create();
 
@@ -372,23 +374,34 @@ LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype)
         RIType rj = rhs_ija[ija];
         RIType j  = rj - rhs->offset[1];
 
+        std::cerr << " j = " << int(j) << ", rj = " << int(rj) << std::endl;
+
         // Is there a nonzero diagonal item between the previously added item and the current one?
         if (rj > ri && add_diag) {
+          std::cerr << "  diag before j" << std::endl;
           // Allocate and copy insertion value
           insert_val  = ALLOC_N(LDType, 1);
           *insert_val = static_cast<LDType>(rhs_a[ri]);
+          std::cerr << "   val = " << int(*insert_val) << std::endl;
+          std::cerr << "   -> j=" << int(i) << std::endl;
 
-          // insert the item in the list at the appropriate location
-          if (last_added) 	last_added = list::insert_after(last_added, i, insert_val);
-          else            	last_added = list::insert(curr_row, false, i, insert_val);
+          // Insert the item in the list at the appropriate location.
+          // What is the appropriate key? Well, it's definitely right(i)==right(j), but the
+          // rj index has already been advanced past ri. So we should treat ri as the column and
+          // subtract offset[1].
+          if (last_added) 	last_added = list::insert_after(last_added, ri - rhs->offset[1], insert_val);
+          else            	last_added = list::insert(curr_row, false,  ri - rhs->offset[1], insert_val);
 
 					// don't add again!
           add_diag = false;
         }
 
+        std::cerr << "  nondiag at j" << std::endl;
+
         // now allocate and add the current item
         insert_val  = ALLOC_N(LDType, 1);
         *insert_val = static_cast<LDType>(rhs_a[ija]);
+        std::cerr << "   val = " << int(*insert_val) << std::endl;
 
         if (last_added)    	last_added = list::insert_after(last_added, j, insert_val);
         else              	last_added = list::insert(curr_row, false, j, insert_val);
@@ -397,13 +410,17 @@ LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype)
       }
 
       if (add_diag) {
+        std::cerr << "  diag at end of row" << std::endl;
+
       	// still haven't added the diagonal.
         insert_val         = ALLOC_N(LDType, 1);
         *insert_val        = static_cast<LDType>(rhs_a[ri]);
 
         // insert the item in the list at the appropriate location
-        if (last_added)    	last_added = list::insert_after(last_added, i, insert_val);
-        else              	last_added = list::insert(curr_row, false, i, insert_val);
+        if (last_added)    	last_added = list::insert_after(last_added, ri - rhs->offset[1], insert_val);
+        else              	last_added = list::insert(curr_row, false, ri - rhs->offset[1], insert_val);
+
+        // no need to set add_diag to false because it'll be reset automatically in next iteration.
       }
 
       // Now add the list at the appropriate location
