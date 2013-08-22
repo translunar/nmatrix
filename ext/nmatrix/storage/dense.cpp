@@ -75,6 +75,31 @@ namespace nm { namespace dense_storage {
   template <typename DType>
   bool is_symmetric(const DENSE_STORAGE* mat, int lda);
 
+
+  /*
+   * Recursive slicing for N-dimensional matrix.
+   */
+  template <typename LDType, typename RDType>
+  static void slice_copy(DENSE_STORAGE *dest, const DENSE_STORAGE *src, size_t* lengths, size_t pdest, size_t psrc, size_t n) {
+    std::cerr << "dense::slice_copy: " << src->offset[0] << ", " << src->offset[1] << std::endl;
+    if (src->dim - n > 1) {
+      for (size_t i = 0; i < lengths[n]; ++i) {
+        slice_copy<LDType,RDType>(dest, src, lengths,
+                   pdest + dest->stride[n]*i,
+                   psrc + src->stride[n]*i,
+                   n + 1);
+      }
+    } else {
+      for (size_t p = 0; p < dest->shape[n]; ++p) {
+        reinterpret_cast<LDType*>(dest->elements)[p+pdest] = reinterpret_cast<RDType*>(src->elements)[p+psrc];
+      }
+      /*memcpy((char*)dest->elements + pdest*DTYPE_SIZES[dest->dtype],
+          (char*)src->elements + psrc*DTYPE_SIZES[src->dtype],
+          dest->shape[n]*DTYPE_SIZES[dest->dtype]); */
+    }
+
+  }
+
 }} // end of namespace nm::dense_storage
 
 
@@ -370,6 +395,16 @@ VALUE nm_dense_each(VALUE nmatrix) {
 
 
 /*
+ * Non-templated version of nm::dense_storage::slice_copy
+ */
+static void slice_copy(DENSE_STORAGE *dest, const DENSE_STORAGE *src, size_t* lengths, size_t pdest, size_t psrc, size_t n) {
+  NAMED_LR_DTYPE_TEMPLATE_TABLE(slice_copy_table, nm::dense_storage::slice_copy, void, DENSE_STORAGE*, const DENSE_STORAGE*, size_t*, size_t, size_t, size_t)
+
+  slice_copy_table[dest->dtype][src->dtype](dest, src, lengths, pdest, psrc, n);
+}
+
+
+/*
  * Get a slice or one element, using copying.
  *
  * FIXME: Template the first condition.
@@ -393,7 +428,8 @@ void* nm_dense_storage_get(STORAGE* storage, SLICE* slice) {
         0,
         nm_dense_storage_pos(s, slice->coords),
         0);
-    return reinterpret_cast<STORAGE*>(ns);
+
+    return ns;
   }
 }
 
@@ -553,24 +589,6 @@ static size_t* stride(size_t* shape, size_t dim) {
   return stride;
 }
 
-/*
- * Recursive slicing for N-dimensional matrix.
- */
-static void slice_copy(DENSE_STORAGE *dest, const DENSE_STORAGE *src, size_t* lengths, size_t pdest, size_t psrc, size_t n) {
-  if (src->dim - n > 1) {
-    for (size_t i = 0; i < lengths[n]; ++i) {
-      slice_copy(dest, src, lengths,
-                 pdest + dest->stride[n]*i,
-                 psrc + src->stride[n]*i,
-                 n + 1);
-    }
-  } else {
-    memcpy((char*)dest->elements + pdest*DTYPE_SIZES[dest->dtype],
-        (char*)src->elements + psrc*DTYPE_SIZES[src->dtype],
-        dest->shape[n]*DTYPE_SIZES[dest->dtype]);
-  }
-
-}
 
 /////////////////////////
 // Copying and Casting //
@@ -695,22 +713,20 @@ DENSE_STORAGE* cast_copy(const DENSE_STORAGE* rhs, dtype_t new_dtype) {
 
   DENSE_STORAGE* lhs			= nm_dense_storage_create(new_dtype, shape, rhs->dim, NULL, 0);
 
-  RDType*	rhs_els         = reinterpret_cast<RDType*>(rhs->elements);
-  LDType* lhs_els	        = reinterpret_cast<LDType*>(lhs->elements);
-
 	// Ensure that allocation worked before copying.
   if (lhs && count) {
     if (rhs->src != rhs) { // Make a copy of a ref to a matrix.
+      size_t* offset      = ALLOCA_N(size_t, rhs->dim);
+      memset(offset, 0, sizeof(size_t) * rhs->dim);
 
-      DENSE_STORAGE* tmp = nm_dense_storage_copy(rhs);
-
-      RDType* tmp_els    = reinterpret_cast<RDType*>(tmp->elements);
-      while (count-- > 0)   {
-        lhs_els[count] = tmp_els[count];
-      }
-      nm_dense_storage_delete(tmp);
+      slice_copy(lhs, reinterpret_cast<const DENSE_STORAGE*>(rhs->src),
+                 rhs->shape, 0,
+                 nm_dense_storage_pos(rhs, offset), 0);
 
     } else {              // Make a regular copy.
+      RDType*	rhs_els         = reinterpret_cast<RDType*>(rhs->elements);
+      LDType* lhs_els	        = reinterpret_cast<LDType*>(lhs->elements);
+
     	while (count-- > 0)     		lhs_els[count] = rhs_els[count];
     }
   }
