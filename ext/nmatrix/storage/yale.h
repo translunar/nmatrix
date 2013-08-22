@@ -222,6 +222,9 @@ namespace nm { namespace yale_storage {
 
   template <typename IType>
   size_t  get_size(const YALE_STORAGE* storage);
+
+  template <typename IType>
+  IType binary_search_left_boundary(const YALE_STORAGE* s, IType left, IType right, IType bound);
 }} // end of namespace nm::yale_storage
 
 #endif // YALE_H

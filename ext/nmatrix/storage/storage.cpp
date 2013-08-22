@@ -158,24 +158,26 @@ DENSE_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype
 
     std::cerr << "i = " << i << ", ri = " << int(ri) << std::endl;
 
-    // Position in yale array of row i
-    RIType ija = rhs_ija[ri];
-
-    if (ija == rhs_ija[ri+1]) { // Check boundaries of row: is row empty?
+    if (rhs_ija[ri] == rhs_ija[ri+1]) { // Check boundaries of row: is row empty? (Yes.)
 
 			// Write zeros in each column.
 			for (size_t j = 0; j < shape[1]; ++j) { // Move to next dense position.
 
-        // Fill in zeros (except for diagonal)
+        // Fill in zeros and copy the diagonal entry for this empty row.
         if (ri == j + rhs->offset[1]) lhs_elements[pos] = static_cast<LDType>(rhs_a[ri]);
 				else                          lhs_elements[pos] = LCAST_ZERO;
 
 				++pos;
       }
 
-    } else {
-      // Row contains entries: write those in each column, interspersed with zeros.
-      RIType jj = rhs_ija[ija]; // column ID
+    } else {  // Row contains entries: write those in each column, interspersed with zeros.
+
+      // Get the first ija position of the row (as sliced)
+      RIType ija = nm::yale_storage::binary_search_left_boundary<RIType>(rhs, rhs_ija[ri], rhs_ija[ri+1]-1, rhs->offset[1]);
+
+      // What column is it?
+      RIType next_stored_rj = rhs_ija[ija];
+      std::cerr << " next_stored_rj = " << int(next_stored_rj) << std::endl;
 
 			for (size_t j = 0; j < shape[1]; ++j) {
 			  RIType rj = j + rhs->offset[1];
@@ -185,7 +187,7 @@ DENSE_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype
           std::cerr << "  diag" << std::endl;
           lhs_elements[pos] = static_cast<LDType>(rhs_a[ri]);
 
-        } else if (rj == jj) { // column ID was found in RHS
+        } else if (rj == next_stored_rj) { // column ID was found in RHS
           std::cerr << "  col" << std::endl;
           lhs_elements[pos] = static_cast<LDType>(rhs_a[ija]); // Copy from rhs.
 
@@ -193,10 +195,10 @@ DENSE_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype
           ++ija;
 
           // Increment to next column ID (or go off the end).
-          if (ija < rhs_ija[ri+1]) jj = rhs_ija[ija];
-          else               	     jj = rhs->src->shape[1];
+          if (ija < rhs_ija[ri+1]) next_stored_rj = rhs_ija[ija];
+          else               	     next_stored_rj = rhs->src->shape[1];
 
-        } else { // rj < jj
+        } else { // rj < next_stored_rj
           std::cerr << "  zero" << std::endl;
 
           // Insert zero.
@@ -353,6 +355,7 @@ LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype)
     // Get boundaries of beginning and end of row
     RIType ija      = rhs_ija[ri],
            ija_next = rhs_ija[ri+1];
+    ija = nm::yale_storage::binary_search_left_boundary<RIType>(rhs, ija, ija_next-1, rhs->offset[1]);
 
     // Are we going to need to add a diagonal for this row?
     bool add_diag = false;
@@ -365,7 +368,8 @@ LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype)
       LDType* insert_val;
 
       while (ija < ija_next) {
-        RIType rj = rhs_ija[ija]; // what column number is this?
+        // Find first column in slice
+        RIType rj = rhs_ija[ija];
         RIType j  = rj - rhs->offset[1];
 
         // Is there a nonzero diagonal item between the previously added item and the current one?

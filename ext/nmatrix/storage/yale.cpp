@@ -674,7 +674,7 @@ static bool ndrow_is_empty(const YALE_STORAGE* s, IType ija, const IType ija_nex
  * bound.
  */
 template <typename IType>
-IType binary_search_left_boundary(YALE_STORAGE* s, IType left, IType right, IType bound) {
+IType binary_search_left_boundary(const YALE_STORAGE* s, IType left, IType right, IType bound) {
   if (left > right) return -1;
 
   IType* ija  = reinterpret_cast<IType*>(s->ija);
