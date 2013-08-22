@@ -81,7 +81,6 @@ namespace nm { namespace dense_storage {
    */
   template <typename LDType, typename RDType>
   static void slice_copy(DENSE_STORAGE *dest, const DENSE_STORAGE *src, size_t* lengths, size_t pdest, size_t psrc, size_t n) {
-    std::cerr << "dense::slice_copy: " << src->offset[0] << ", " << src->offset[1] << std::endl;
     if (src->dim - n > 1) {
       for (size_t i = 0; i < lengths[n]; ++i) {
         slice_copy<LDType,RDType>(dest, src, lengths,

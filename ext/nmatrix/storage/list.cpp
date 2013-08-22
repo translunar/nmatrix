@@ -393,10 +393,8 @@ static void each_with_indices_r(nm::list_storage::RecurseData& s, const LIST* l,
     for (long index = 0; index < shape; ++index) { // index in reference
       rb_ary_push(stack, LONG2NUM(index));
       if (!curr || index < curr->key - offset) {
-        std::cerr << rec << "\t" << index << "\teach_empty_with_indices_r" << std::endl;
         each_empty_with_indices_r(s, rec-1, stack);
       } else { // index == curr->key - offset
-        std::cerr << rec << "\t" << index << "\teach_with_indices_r" << std::endl;
         each_with_indices_r(s, reinterpret_cast<const LIST*>(curr->val), rec-1, stack);
         curr = curr->next;
       }
@@ -408,11 +406,9 @@ static void each_with_indices_r(nm::list_storage::RecurseData& s, const LIST* l,
       rb_ary_push(stack, LONG2NUM(index));
 
       if (!curr || index < curr->key - offset) {
-        std::cerr << rec << "\t" << index << "\tdefault value" << std::endl;
         rb_ary_unshift(stack, s.dtype() == nm::RUBYOBJ ? *reinterpret_cast<VALUE*>(s.init()) : s.init_obj());
 
       } else { // index == curr->key - offset
-        std::cerr << rec << "\t" << index << "\tactual value" << std::endl;
         rb_ary_unshift(stack, s.dtype() == nm::RUBYOBJ ? *reinterpret_cast<VALUE*>(curr->val) : rubyobj_from_cval(curr->val, s.dtype()).rval);
 
         curr = curr->next;
@@ -549,7 +545,6 @@ VALUE nm_list_map_merged_stored(VALUE left, VALUE right, VALUE init) {
  * Copy a slice of a list matrix into a regular list matrix.
  */
 static LIST* slice_copy(const LIST_STORAGE *src, LIST *src_rows, size_t *coords, size_t *lengths, size_t n) {
-  std::cerr << "list::slice_copy: " << src->offset[0] << ", " << src->offset[1] << std::endl;
 
   NODE *src_node;
   LIST *dst_rows = NULL;

@@ -324,10 +324,6 @@ static size_t count_slice_copy_ndnz(const YALE_STORAGE* s, size_t* offset, size_
 template <typename LDType, typename RDType, typename IType>
 static void slice_copy(YALE_STORAGE* ns, const YALE_STORAGE* s, size_t* offset, size_t* lengths, dtype_t new_dtype) {
 
-  std::cerr << "slice_copy offsets " << offset[0] << "," << offset[1] << std::endl;
-  std::cerr << "lengths: " << lengths[0] << "," << lengths[1] << std::endl;
-
-
   IType* src_ija = reinterpret_cast<IType*>(s->ija);
   RDType* src_a  = reinterpret_cast<RDType*>(s->a);
 

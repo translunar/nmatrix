@@ -179,16 +179,6 @@ describe "Slice operation" do
 
         [:dense, :list, :yale].each do |cast_type|
           it "should cast from #{stype.upcase} to #{cast_type.upcase}" do
-            STDERR.puts("NOW") if stype == :yale
-            x = @m.slice(1..2,1..2).cast(cast_type)
-            #binding.pry if stype == :yale
-
-            STDERR.puts "DONE"
-            x[0,0].should == @m.slice(1..2,1..2)[0,0]
-            x[0,1].should == @m.slice(1..2,1..2)[0,1]
-            x[1,0].should == @m.slice(1..2,1..2)[1,0]
-            x[1,1].should == @m.slice(1..2,1..2)[1,1]
-
             nm_eql(@m.slice(1..2, 1..2).cast(cast_type, :int32), @m.slice(1..2,1..2)).should be_true
             nm_eql(@m.slice(0..1, 1..2).cast(cast_type, :int32), @m.slice(0..1,1..2)).should be_true
             nm_eql(@m.slice(1..2, 0..1).cast(cast_type, :int32), @m.slice(1..2,0..1)).should be_true
@@ -360,8 +350,6 @@ describe "Slice operation" do
 
         [:dense, :list, :yale].each do |cast_type|
           it "should cast from #{stype.upcase} to #{cast_type.upcase}" do
-            require 'pry'
-            binding.pry if stype == :yale && cast_type == :list
 
             nm_eql(@m[1..2, 1..2].cast(cast_type), @m[1..2,1..2]).should be_true
             nm_eql(@m[0..1, 1..2].cast(cast_type), @m[0..1,1..2]).should be_true
