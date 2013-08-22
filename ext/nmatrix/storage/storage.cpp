@@ -93,6 +93,7 @@ static void cast_copy_list_default(LDType* lhs, RDType* default_val, size_t& pos
  */
 template <typename LDType, typename RDType>
 DENSE_STORAGE* create_from_list_storage(const LIST_STORAGE* rhs, dtype_t l_dtype) {
+  std::cerr << "dense::create_from_list_storage: " << rhs->offset[0] << ", " << rhs->offset[1] << std::endl;
 
   // allocate and copy shape
   size_t* shape = ALLOC_N(size_t, rhs->dim);
@@ -132,6 +133,7 @@ DENSE_STORAGE* create_from_list_storage(const LIST_STORAGE* rhs, dtype_t l_dtype
  */
 template <typename LDType, typename RDType, typename RIType>
 DENSE_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype) {
+  std::cerr << "dense::create_from_yale_storage: " << rhs->offset[0] << ", " << rhs->offset[1] << std::endl;
 
   // Position in rhs->elements.
   RIType* rhs_ija = reinterpret_cast<RIType*>(rhs->ija);
@@ -139,7 +141,8 @@ DENSE_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype
 
   // Allocate and set shape.
   size_t* shape = ALLOC_N(size_t, rhs->dim);
-  memcpy(shape, rhs->shape, rhs->dim * sizeof(size_t));
+  shape[0] = rhs->shape[0];
+  shape[1] = rhs->shape[1];
 
   DENSE_STORAGE* lhs = nm_dense_storage_create(l_dtype, shape, rhs->dim, NULL, 0);
   LDType* lhs_elements = reinterpret_cast<LDType*>(lhs->elements);
@@ -147,35 +150,43 @@ DENSE_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype
   // Position in dense to write to.
   size_t pos = 0;
 
-  LDType LCAST_ZERO = rhs_a[rhs->shape[0]];
+  LDType LCAST_ZERO = rhs_a[rhs->src->shape[0]];
 
   // Walk through rows. For each entry we set in dense, increment pos.
-  for (RIType ri = rhs->offset[0]; ri < rhs->shape[0] + rhs->offset[0]; ++ri) {
+  for (size_t i = 0; i < shape[0]; ++i) {
+    RIType ri = i + rhs->offset[0];
 
-    // Position in yale array
+    std::cerr << "i = " << i << ", ri = " << int(ri) << std::endl;
+
+    // Position in yale array of row i
     RIType ija = rhs_ija[ri];
 
     if (ija == rhs_ija[ri+1]) { // Check boundaries of row: is row empty?
 
 			// Write zeros in each column.
-			for (RIType rj = rhs->offset[1]; rj < rhs->shape[1] + rhs->offset[1]; ++rj) { // Move to next dense position.
+			for (size_t j = 0; j < shape[1]; ++j) { // Move to next dense position.
 
         // Fill in zeros (except for diagonal)
-        if (ri == rj) lhs_elements[pos] = static_cast<LDType>(rhs_a[ri]);
-				else          lhs_elements[pos] = LCAST_ZERO;
+        if (ri == j + rhs->offset[1]) lhs_elements[pos] = static_cast<LDType>(rhs_a[ri]);
+				else                          lhs_elements[pos] = LCAST_ZERO;
 
 				++pos;
       }
 
     } else {
       // Row contains entries: write those in each column, interspersed with zeros.
-      RIType jj = rhs_ija[ija];
+      RIType jj = rhs_ija[ija]; // column ID
 
-			for (size_t rj = rhs->offset[1]; rj < rhs->shape[1] + rhs->offset[1]; ++rj) {
-        if (ri == rj) {
+			for (size_t j = 0; j < shape[1]; ++j) {
+			  RIType rj = j + rhs->offset[1];
+        std::cerr << " j = " << j << ", rj = " << int(rj) << std::endl;
+
+        if (rj == ri) { // at a diagonal in RHS
+          std::cerr << "  diag" << std::endl;
           lhs_elements[pos] = static_cast<LDType>(rhs_a[ri]);
 
-        } else if (rj == jj) {
+        } else if (rj == jj) { // column ID was found in RHS
+          std::cerr << "  col" << std::endl;
           lhs_elements[pos] = static_cast<LDType>(rhs_a[ija]); // Copy from rhs.
 
           // Get next.
@@ -183,9 +194,10 @@ DENSE_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype
 
           // Increment to next column ID (or go off the end).
           if (ija < rhs_ija[ri+1]) jj = rhs_ija[ija];
-          else               	     jj = rhs->shape[1];
+          else               	     jj = rhs->src->shape[1];
 
-        } else { // j < jj
+        } else { // rj < jj
+          std::cerr << "  zero" << std::endl;
 
           // Insert zero.
           lhs_elements[pos] = LCAST_ZERO;
@@ -314,12 +326,13 @@ LIST_STORAGE* create_from_dense_storage(const DENSE_STORAGE* rhs, dtype_t l_dtyp
  */
 template <typename LDType, typename RDType, typename RIType>
 LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype) {
+  std::cerr << "list::create_from_yale_storage: " << rhs->offset[0] << ", " << rhs->offset[1] << std::endl;
   // allocate and copy shape
   size_t *shape = ALLOC_N(size_t, rhs->dim);
   shape[0] = rhs->shape[0]; shape[1] = rhs->shape[1];
 
   RDType* rhs_a    = reinterpret_cast<RDType*>(rhs->a);
-  RDType R_ZERO    = rhs_a[ rhs->shape[0] ];
+  RDType R_ZERO    = rhs_a[ rhs->src->shape[0] ];
 
   // copy default value from the zero location in the Yale matrix
   LDType* default_val = ALLOC_N(LDType, 1);
@@ -333,16 +346,17 @@ LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype)
 
   NODE *last_row_added = NULL;
   // Walk through rows and columns as if RHS were a dense matrix
-  for (RIType i = 0; i < rhs->shape[0]; ++i) {
+  for (RIType i = 0; i < shape[0]; ++i) {
+    RIType ri = i + rhs->offset[0];
     NODE *last_added = NULL;
 
     // Get boundaries of beginning and end of row
-    RIType ija      = rhs_ija[i],
-           ija_next = rhs_ija[i+1];
+    RIType ija      = rhs_ija[ri],
+           ija_next = rhs_ija[ri+1];
 
     // Are we going to need to add a diagonal for this row?
     bool add_diag = false;
-    if (rhs_a[i] != R_ZERO) add_diag = true;
+    if (rhs_a[ri] != R_ZERO) add_diag = true;
 
     if (ija < ija_next || add_diag) {
 
@@ -351,13 +365,14 @@ LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype)
       LDType* insert_val;
 
       while (ija < ija_next) {
-        RIType jj = rhs_ija[ija]; // what column number is this?
+        RIType rj = rhs_ija[ija]; // what column number is this?
+        RIType j  = rj - rhs->offset[1];
 
         // Is there a nonzero diagonal item between the previously added item and the current one?
-        if (jj > i && add_diag) {
+        if (rj > ri && add_diag) {
           // Allocate and copy insertion value
           insert_val  = ALLOC_N(LDType, 1);
-          *insert_val = static_cast<LDType>(rhs_a[i]);
+          *insert_val = static_cast<LDType>(rhs_a[ri]);
 
           // insert the item in the list at the appropriate location
           if (last_added) 	last_added = list::insert_after(last_added, i, insert_val);
@@ -371,8 +386,8 @@ LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype)
         insert_val  = ALLOC_N(LDType, 1);
         *insert_val = static_cast<LDType>(rhs_a[ija]);
 
-        if (last_added)    	last_added = list::insert_after(last_added, jj, insert_val);
-        else              	last_added = list::insert(curr_row, false, jj, insert_val);
+        if (last_added)    	last_added = list::insert_after(last_added, j, insert_val);
+        else              	last_added = list::insert(curr_row, false, j, insert_val);
 
         ++ija; // move to next entry in Yale matrix
       }
@@ -380,7 +395,7 @@ LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype)
       if (add_diag) {
       	// still haven't added the diagonal.
         insert_val         = ALLOC_N(LDType, 1);
-        *insert_val        = static_cast<LDType>(rhs_a[i]);
+        *insert_val        = static_cast<LDType>(rhs_a[ri]);
 
         // insert the item in the list at the appropriate location
         if (last_added)    	last_added = list::insert_after(last_added, i, insert_val);
@@ -458,6 +473,8 @@ namespace yale_storage { // FIXME: Move to yale.cpp
    */
   template <typename LDType, typename RDType, typename LIType>
   YALE_STORAGE* create_from_dense_storage(const DENSE_STORAGE* rhs, dtype_t l_dtype, void* init) {
+    std::cerr << "yale::create_from_dense_storage: " << rhs->offset[0] << ", " << rhs->offset[1] << std::endl;
+
     if (rhs->dim != 2) rb_raise(nm_eStorageTypeError, "can only convert matrices of dim 2 to yale");
 
     LIType pos = 0;
@@ -536,6 +553,7 @@ namespace yale_storage { // FIXME: Move to yale.cpp
    */
   template <typename LDType, typename RDType, typename LIType>
   YALE_STORAGE* create_from_list_storage(const LIST_STORAGE* rhs, nm::dtype_t l_dtype) {
+    std::cerr << "yale::create_from_list_storage: " << rhs->offset[0] << ", " << rhs->offset[1] << std::endl;
     if (rhs->dim != 2) rb_raise(nm_eStorageTypeError, "can only convert matrices of dim 2 to yale");
 
     if (rhs->dtype == RUBYOBJ) {

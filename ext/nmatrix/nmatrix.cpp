@@ -616,13 +616,16 @@ static VALUE nm_alloc(VALUE klass) {
  * Find the capacity of an NMatrix. The capacity only differs from the size for
  * Yale matrices, which occasionally allocate more space than they need. For
  * list and dense, capacity gives the number of elements in the matrix.
+ *
+ * If you call this on a slice, it may behave unpredictably. Most likely it'll
+ * just return the original matrix's capacity.
  */
 static VALUE nm_capacity(VALUE self) {
   VALUE cap;
 
   switch(NM_STYPE(self)) {
   case nm::YALE_STORE:
-    cap = UINT2NUM(((YALE_STORAGE*)(NM_STORAGE(self)))->capacity);
+    cap = UINT2NUM(reinterpret_cast<YALE_STORAGE*>(NM_STORAGE_YALE(self)->src)->capacity);
     break;
 
   case nm::DENSE_STORE:
@@ -1475,7 +1478,6 @@ static VALUE nm_is_ref(VALUE self) {
  *
  */
 static VALUE nm_mget(int argc, VALUE* argv, VALUE self) {
-  std::cerr << "mget" << std::endl;
   static void* (*ttable[nm::NUM_STYPES])(STORAGE*, SLICE*) = {
     nm_dense_storage_get,
     nm_list_storage_get,
@@ -1495,7 +1497,6 @@ static VALUE nm_mget(int argc, VALUE* argv, VALUE self) {
  *
  */
 static VALUE nm_mref(int argc, VALUE* argv, VALUE self) {
-  std::cerr << "mref" << std::endl;
   static void* (*ttable[nm::NUM_STYPES])(STORAGE*, SLICE*) = {
     nm_dense_storage_ref,
     nm_list_storage_ref,

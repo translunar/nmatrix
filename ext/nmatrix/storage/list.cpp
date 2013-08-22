@@ -545,8 +545,12 @@ VALUE nm_list_map_merged_stored(VALUE left, VALUE right, VALUE init) {
 }
 
 
-
+/*
+ * Copy a slice of a list matrix into a regular list matrix.
+ */
 static LIST* slice_copy(const LIST_STORAGE *src, LIST *src_rows, size_t *coords, size_t *lengths, size_t n) {
+  std::cerr << "list::slice_copy: " << src->offset[0] << ", " << src->offset[1] << std::endl;
+
   NODE *src_node;
   LIST *dst_rows = NULL;
   void *val = NULL;

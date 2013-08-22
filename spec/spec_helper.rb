@@ -67,3 +67,21 @@ def create_vector(stype) #:nodoc:
 
   m
 end
+
+# Stupid but independent comparison for slice_spec
+def nm_eql(n, m) #:nodoc:
+  if n.shape != m.shape
+    false
+  else # NMatrix
+    n.shape[0].times do |i|
+      n.shape[1].times do |j|
+        if n[i,j] != m[i,j]
+          puts "n[#{i},#{j}] != m[#{i},#{j}] (#{n[i,j]} != #{m[i,j]})"
+          return false
+        end
+      end
+    end
+  end
+  true
+end
+
