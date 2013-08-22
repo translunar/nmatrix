@@ -258,6 +258,63 @@ describe NMatrix::LAPACK do
         s.transpose.should be_within(err).of(s_true.row(0))
 
       end
+
+
+      it "exposes geev" do
+        pending("needs rational implementation") if dtype.to_s =~ /rational/
+        ary = %w|-1.01 0.86 -4.60 3.31 -4.81
+                     3.98 0.53 -7.04 5.29 3.55
+                     3.30 8.26 -3.89 8.20 -1.51
+                     4.43 4.96 -7.66 -7.33 6.18
+                     7.31 -6.43 -6.16 2.47 5.58|
+        ary = dtype.to_s =~ /complex/ ? ary.map(&:to_c) : ary.map(&:to_f)
+
+        a   = NMatrix.new(:dense, 5, ary, dtype).transpose
+        lda = 5
+        n   = 5
+
+        wr  = NMatrix.new(:dense, [n,1], 0, dtype)
+        wi  = dtype.to_s =~ /complex/ ? nil : NMatrix.new(:dense, [n,1], 0, dtype)
+        vl  = NMatrix.new(:dense, n, 0, dtype)
+        vr  = NMatrix.new(:dense, n, 0, dtype)
+        ldvr = n
+        ldvl = n
+
+        info = NMatrix::LAPACK::lapack_geev(:left, :right, n, a.clone, lda, wr.clone, wi.nil? ? nil : wi.clone, vl.clone, ldvl, vr.clone, ldvr, -1)
+        info.should == 0
+
+        info = NMatrix::LAPACK::lapack_geev(:left, :right, n, a, lda, wr, wi, vl, ldvl, vr, ldvr, 2*n)
+
+        # Negate these and we get a correct result:
+        vr = N.zeros_like(vr) - vr.transpose
+        vl = N.zeros_like(vl) - vl.transpose
+
+        # Okay, also we need to switch them.
+        pending("Need complex example") if dtype.to_s =~ /complex/
+        vl_true = NMatrix.new(:dense, 5, [0.04,  0.29,  0.13,  0.33, -0.04,
+                                          0.62,  0.0,  -0.69,  0.0,  -0.56,
+                                         -0.04, -0.58,  0.39,  0.07,  0.13,
+                                          0.28,  0.01,  0.02,  0.19,  0.80,
+                                         -0.04,  0.34,  0.40, -0.22, -0.18 ], :float64)
+        vr.should be_within(1e-2).of(vl_true)
+
+        # Not checking vr_true.
+        # Example from:
+        # http://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/mkl_lapack_examples/lapacke_dgeev_row.c.htm
+        #
+        # This is what the result should look like:
+        # [
+        #  [0.10806497186422348,  0.16864821314811707,   0.7322341203689575,                  0.0, -0.46064677834510803]
+        #  [0.40631288290023804, -0.25900983810424805, -0.02646319754421711, -0.01694658398628235, -0.33770373463630676]
+        #  [0.10235744714736938,  -0.5088024139404297,  0.19164878129959106, -0.29256555438041687,  -0.3087439239025116]
+        #  [0.39863115549087524,  -0.0913335531949997, -0.07901126891374588, -0.07807594537734985,   0.7438457012176514]
+        #  [ 0.5395349860191345,                  0.0, -0.29160499572753906, -0.49310219287872314, -0.15852922201156616]
+        # ]
+        #
+
+        require 'pry'
+        binding.pry
+      end
     end
   end
 end

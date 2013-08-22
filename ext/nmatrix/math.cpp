@@ -118,6 +118,7 @@
 #include "data/data.h"
 #include "math/gesdd.h"
 #include "math/gesvd.h"
+#include "math/geev.h"
 #include "math/swap.h"
 #include "math/idamax.h"
 #include "math/scal.h"
@@ -178,8 +179,10 @@ extern "C" {
   static VALUE nm_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1, VALUE k2, VALUE ipiv, VALUE incx);
   static VALUE nm_clapack_scal(VALUE self, VALUE n, VALUE scale, VALUE vector, VALUE incx);
   static VALUE nm_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
+
   static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lworkspace_size);
   static VALUE nm_lapack_gesdd(VALUE self, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lworkspace_size);
+  static VALUE nm_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_right, VALUE n, VALUE a, VALUE lda, VALUE w, VALUE wi, VALUE vl, VALUE ldvl, VALUE vr, VALUE ldvr, VALUE lwork);
 } // end of extern "C" block
 
 ////////////////////
@@ -350,6 +353,7 @@ void nm_math_init_blas() {
   /* Non-ATLAS regular LAPACK Functions called via Fortran interface */
   rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesvd", (METHOD)nm_lapack_gesvd, 12);
   rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesdd", (METHOD)nm_lapack_gesdd, 11);
+  rb_define_singleton_method(cNMatrix_LAPACK, "lapack_geev",  (METHOD)nm_lapack_geev,  12);
 
   cNMatrix_BLAS = rb_define_module_under(cNMatrix, "BLAS");
 
@@ -369,15 +373,26 @@ void nm_math_init_blas() {
 /*
  * Interprets lapack jobu and jobvt arguments, for which LAPACK needs character values A, S, O, or N.
  *
- * Called by lapack_gesvd -- basically inline.
+ * Called by lapack_gesvd -- basically inline. svd stands for singular value decomposition.
  */
-static inline char lapack_job_sym(VALUE op) {
+static inline char lapack_svd_job_sym(VALUE op) {
   if (rb_to_id(op) == rb_intern("all") || rb_to_id(op) == rb_intern("a")) return 'A';
   else if (rb_to_id(op) == rb_intern("return") || rb_to_id(op) == rb_intern("s")) return 'S';
   else if (rb_to_id(op) == rb_intern("overwrite") || rb_to_id(op) == rb_intern("o")) return 'O';
   else if (rb_to_id(op) == rb_intern("none") || rb_to_id(op) == rb_intern("n")) return 'N';
   else rb_raise(rb_eArgError, "Expected :all, :return, :overwrite, :none (or :a, :s, :o, :n, respectively)");
   return 'a';
+}
+
+
+/*
+ * Interprets lapack jobvl and jobvr arguments, for which LAPACK needs character values N or V.
+ *
+ * Called by lapack_geev -- basically inline. evd stands for eigenvalue decomposition.
+ */
+static inline char lapack_evd_job_sym(VALUE op) {
+  if (op == Qfalse || op == Qnil || rb_to_id(op) == rb_intern("n")) return 'N';
+  else return 'V';
 }
 
 
@@ -962,8 +977,8 @@ static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE
     int min_mn  = NM_MIN(M,N);
     int max_mn  = NM_MAX(M,N);
 
-    char JOBU = lapack_job_sym(jobu),
-         JOBVT = lapack_job_sym(jobvt);
+    char JOBU = lapack_svd_job_sym(jobu),
+         JOBVT = lapack_svd_job_sym(jobvt);
 
     // only need rwork for complex matrices
     int rwork_size  = (dtype == nm::COMPLEX64 || dtype == nm::COMPLEX128) ? 5 * min_mn : 0;
@@ -1021,7 +1036,7 @@ static VALUE nm_lapack_gesdd(VALUE self, VALUE jobz, VALUE m, VALUE n, VALUE a, 
     int min_mn  = NM_MIN(M,N);
     int max_mn  = NM_MAX(M,N);
 
-    char JOBZ = lapack_job_sym(jobz);
+    char JOBZ = lapack_svd_job_sym(jobz);
 
     // only need rwork for complex matrices
     void* rwork = NULL;
@@ -1050,6 +1065,87 @@ static VALUE nm_lapack_gesdd(VALUE self, VALUE jobz, VALUE m, VALUE n, VALUE a, 
 }
 
 
+/*
+ * Function signature conversion for calling CBLAS' geev functions as directly as possible.
+ *
+ * GEEV computes for an N-by-N real nonsymmetric matrix A, the
+ * eigenvalues and, optionally, the left and/or right eigenvectors.
+ *
+ * The right eigenvector v(j) of A satisfies
+ *                    A * v(j) = lambda(j) * v(j)
+ * where lambda(j) is its eigenvalue.
+ *
+ * The left eigenvector u(j) of A satisfies
+ *                 u(j)**H * A = lambda(j) * u(j)**H
+ * where u(j)**H denotes the conjugate transpose of u(j).
+ *
+ * The computed eigenvectors are normalized to have Euclidean norm
+ * equal to 1 and largest component real.
+ */
+static VALUE nm_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_right, VALUE n, VALUE a, VALUE lda, VALUE w, VALUE wi, VALUE vl, VALUE ldvl, VALUE vr, VALUE ldvr, VALUE lwork) {
+  static int (*geev_table[nm::NUM_DTYPES])(char, char, int, void* a, int, void* w, void* wi, void* vl, int, void* vr, int, void* work, int, void* rwork) = {
+    NULL, NULL, NULL, NULL, NULL, // no integer ops
+    nm::math::lapack_geev<float,float>,
+    nm::math::lapack_geev<double,double>,
+    nm::math::lapack_geev<nm::Complex64,float>,
+    nm::math::lapack_geev<nm::Complex128,double>,
+    NULL, NULL, NULL, NULL // no rationals or Ruby objects
+  };
+
+  nm::dtype_t dtype = NM_DTYPE(a);
+
+
+  if (!geev_table[dtype]) {
+    rb_raise(rb_eNotImpError, "this operation not yet implemented for non-BLAS dtypes");
+    return Qfalse;
+  } else {
+    int N = FIX2INT(n);
+
+    char JOBVL = lapack_evd_job_sym(compute_left),
+         JOBVR = lapack_evd_job_sym(compute_right);
+
+    void* A  = NM_STORAGE_DENSE(a)->elements;
+    void* WR = NM_STORAGE_DENSE(w)->elements;
+    void* WI = wi == Qnil ? NULL : NM_STORAGE_DENSE(wi)->elements;
+    void* VL = NM_STORAGE_DENSE(vl)->elements;
+    void* VR = NM_STORAGE_DENSE(vr)->elements;
+
+    // only need rwork for complex matrices (wi == Qnil for complex)
+    int rwork_size  = dtype == nm::COMPLEX64 || dtype == nm::COMPLEX128 ? N * DTYPE_SIZES[dtype] : 0; // 2*N*floattype for complex only, otherwise 0
+    void* rwork     = rwork_size > 0 ? ALLOCA_N(char, rwork_size) : NULL;
+    int work_size   = FIX2INT(lwork);
+    void* work;
+
+    int info;
+
+    // if work size is 0 or -1, query.
+    if (work_size <= 0) {
+      work_size = -1;
+      work = ALLOC_N(char, DTYPE_SIZES[dtype]); //2*N * DTYPE_SIZES[dtype]);
+      info = geev_table[dtype](JOBVL, JOBVR, N, A, FIX2INT(lda), WR, WI, VL, FIX2INT(ldvl), VR, FIX2INT(ldvr), work, work_size, rwork);
+      work_size = (int)(dtype == nm::COMPLEX64 || dtype == nm::FLOAT32 ? reinterpret_cast<float*>(work)[0] : reinterpret_cast<double*>(work)[0]);
+      // line above is basically: work_size = (int)(work[0]); // now have new work_size
+      xfree(work);
+      if (info == 0)
+        rb_warn("geev: calculated optimal lwork of %d; to eliminate this message, use a positive value for lwork (at least 2*shape[i])", work_size);
+      else return INT2FIX(info); // error of some kind on query!
+    }
+
+    // if work size is < 2*N, just set it to 2*N
+    if (work_size < 2*N) work_size = 2*N;
+    if (work_size < 3*N && (dtype == nm::FLOAT32 || dtype == nm::FLOAT64)) {
+      work_size = JOBVL == 'V' || JOBVR == 'V' ? 4*N : 3*N;
+    }
+
+    // Allocate work array for actual run
+    work = ALLOCA_N(char, work_size * DTYPE_SIZES[dtype]);
+
+    // Perform the actual calculation.
+    info = geev_table[dtype](JOBVL, JOBVR, N, A, FIX2INT(lda), WR, WI, VL, FIX2INT(ldvl), VR, FIX2INT(ldvr), work, work_size, rwork);
+
+    return INT2FIX(info);
+  }
+}
 
 
 /*
