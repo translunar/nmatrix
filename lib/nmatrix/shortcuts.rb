@@ -34,6 +34,21 @@
 
 class NMatrix
 
+
+
+  #
+  # call-seq:
+  #     dense? -> true or false
+  #     list? -> true or false
+  #     yale? -> true or false
+  #
+  # Shortcut functions for quickly determining a matrix's stype.
+  #
+  def dense?; return stype == :dense; end
+  def yale?;  return stype == :yale;  end
+  def list?;  return stype == :list;  end
+
+
   class << self
     #
     # call-seq:

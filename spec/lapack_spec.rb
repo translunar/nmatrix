@@ -286,18 +286,17 @@ describe NMatrix::LAPACK do
         info = NMatrix::LAPACK::lapack_geev(:left, :right, n, a, lda, wr, wi, vl, ldvl, vr, ldvr, 2*n)
 
         # Negate these and we get a correct result:
-        vr = N.zeros_like(vr) - vr.transpose
-        vl = N.zeros_like(vl) - vl.transpose
+        vr = vr.transpose
+        vl = vl.transpose
 
-        # Okay, also we need to switch them.
         pending("Need complex example") if dtype.to_s =~ /complex/
         vl_true = NMatrix.new(:dense, 5, [0.04,  0.29,  0.13,  0.33, -0.04,
                                           0.62,  0.0,  -0.69,  0.0,  -0.56,
                                          -0.04, -0.58,  0.39,  0.07,  0.13,
                                           0.28,  0.01,  0.02,  0.19,  0.80,
                                          -0.04,  0.34,  0.40, -0.22, -0.18 ], :float64)
-        vr.should be_within(1e-2).of(vl_true)
 
+        vl.abs.should be_within(1e-2).of(vl_true.abs)
         # Not checking vr_true.
         # Example from:
         # http://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/mkl_lapack_examples/lapacke_dgeev_row.c.htm
@@ -312,8 +311,6 @@ describe NMatrix::LAPACK do
         # ]
         #
 
-        require 'pry'
-        binding.pry
       end
     end
   end

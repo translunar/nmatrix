@@ -79,17 +79,17 @@ Read the instructions in +CONTRIBUTING.md+ if you want to help NMatrix.
 
 == Features
 
-The following features exist in the current version of NMatrix (0.0.6):
+The following features exist in the current version of NMatrix (0.0.7):
 
 * Matrix and vector storage containers: dense, yale, list (more to come)
 * Data types: byte (uint8), int8, int16, int32, int64, float32, float64, complex64, complex128, rational64, rational128,
   Ruby object
-* Conversion between storage and data types (except from-complex, and from-float-to-rational)
+* Interconversion between storage and data types
 * Element-wise and right-hand-scalar operations and comparisons for all matrix types
 * Matrix-matrix multiplication for dense (with and without ATLAS) and yale
 * Matrix-vector multiplication for dense (with and without ATLAS)
-* Dense and list matrix slicing by copy and reference
-* Yale matrix slicing by copy
+* Lots of enumerators (each, each_with_indices, each_row, each_column, each_rank, map, etc.)
+* Matrix slicing by copy and reference (for dense, yale, and list)
 * Native reading and writing of dense and yale matrices
   * Optional compression for dense matrices with symmetry or triangularity: symmetric, skew, hermitian, upper, lower
 * Matlab .MAT v5 file input
@@ -106,6 +106,9 @@ The following features exist in the current version of NMatrix (0.0.6):
   * xGETRF
   * xLASWP, xSCAL
   * xLAUUM (no LAPACK needed, but BLAS dtypes only)
+* LAPACK (non-ATLAS) access:
+  * xGESVD, xGESDD (singular value decomposition)
+  * xGEEV (eigenvalue decomposition of a asymmetric square matrices)
 * LU decomposition
 * Matrix inversions (requires LAPACK; BLAS dtypes only)
 * Determinant calculation for BLAS dtypes
@@ -114,20 +117,17 @@ The following features exist in the current version of NMatrix (0.0.6):
 
 === Planned Features (Short-to-Medium Term)
 
-These are features planned for NMatrix 0.1.0, our first beta:
+We are nearly the release of NMatrix 0.1.0, our first beta.
 
-* Yale matrix slicing
-* calculation of determinant (LAPACK-free), trace, and eigenvalues (characteristic polynomial)
-* exponentials and square roots
-* matrix inversions (LAPACK-free)
-* matrix decomposition/factorization
-* calculation of additional norms
+These are features planned for NMatrix 0.2.0:
+
+* slice assignments (`x[1..3,0..4] = some_other_matrix`)
+* LAPACK-free calculation of determinant, trace, and eigenvalues (characteristic polynomial)
+* LAPACK-free matrix inversions
 * tensor products
 * principal component analysis (PCA)
 * improved file I/O
   * compression of yale symmetries in I/O
-* operation scheduling
-* parallelization of some types of operations
 * optimization of non-BLAS data types on BLAS-like operations (e.g., matrix multiplication for rational numbers)
 
 === Warning

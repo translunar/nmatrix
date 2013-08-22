@@ -281,9 +281,9 @@
 
   * Repaired list matrix element-wise functions
 
-=== 0.0.7 / 2013-08-??
+=== 0.0.7 / 2013-08-22
 
-* 5 major enhancements:
+* 6 major enhancements:
 
   * Eliminated NVector in favor of NMatrix objects with
     #effective_dim smaller than #dim; added NVector-like
@@ -304,7 +304,9 @@
   * #[] and #[]= calls no longer need index on those matrix shape
     elements which are equal to 1 (e.g., vectors)
 
-* 16 minor enhancements:
+  * Yale slicing-by-reference has been added
+
+* 18 minor enhancements:
 
   * Added user-friendly NMatrix::LAPACK::laswp method
 
@@ -358,7 +360,12 @@
   * Improved #pretty_print, which now also prints layers (the third
     dimension in a 3D matrix)
 
-* 4 bug fixes:
+  * Re-factored some of dense slicing to remove some redundant code
+
+  * Added shortcut functions #list?, #dense?, #yale? for quickly
+    testing matrix storage type
+
+* 5 bug fixes:
 
   * Fixed compilation problem involving <typeinfo> and <vector> STL
     headers
@@ -369,3 +376,5 @@
     Yale element-wise subtraction in spec
 
   * Fixed conversion from Ruby object to Complex and Rational
+
+  * Fixed memory leak in slicing
