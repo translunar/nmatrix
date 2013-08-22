@@ -949,10 +949,7 @@ YALE_STORAGE* cast_copy(const YALE_STORAGE* rhs, dtype_t new_dtype) {
     if (lhs->capacity < request_capacity)
       rb_raise(nm_eStorageTypeError, "conversion failed; capacity of %ld requested, max allowable is %ld", request_capacity, lhs->capacity);
 
-    size_t* offset  = ALLOCA_N(size_t, rhs->dim);
-    memset(offset, 0, sizeof(size_t) * 2);
-
-    slice_copy<LDType, RDType, IType>(lhs, rhs, offset, rhs->shape, new_dtype);
+    slice_copy<LDType, RDType, IType>(lhs, rhs, rhs->offset, rhs->shape, new_dtype);
   } else { // regular copy
 
     // Allocate a new structure

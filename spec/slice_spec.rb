@@ -126,8 +126,6 @@ describe "Slice operation" do
 
       it "should have #is_ref? method" do
         a = @m[0..1, 0..1]
-        require 'pry'
-        binding.pry
         b = @m.slice(0..1, 0..1)
 
 
@@ -362,8 +360,8 @@ describe "Slice operation" do
 
         [:dense, :list, :yale].each do |cast_type|
           it "should cast from #{stype.upcase} to #{cast_type.upcase}" do
-
-            #binding.pry if stype == :yale
+            require 'pry'
+            binding.pry if stype == :yale
 
             nm_eql(@m[1..2, 1..2].cast(cast_type), @m[1..2,1..2]).should be_true
             nm_eql(@m[0..1, 1..2].cast(cast_type), @m[0..1,1..2]).should be_true
