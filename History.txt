@@ -379,10 +379,13 @@
 
   * Fixed memory leak in slicing
 
-=== 0.0.8 / 2013-09-??
+=== 0.0.8 / 2013-08-23
 
-* 0 major enhancements:
+* 2 bug fixes:
 
-* 0 minor enhancements:
+  * Fixed Ubuntu compilation bug caused by math header file
+    refactoring
 
-* 0 bug fixes:
+  * Fixed pry version error which manifests on some systems but not
+    others
+

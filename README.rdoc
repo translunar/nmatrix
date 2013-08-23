@@ -79,7 +79,7 @@ Read the instructions in +CONTRIBUTING.md+ if you want to help NMatrix.
 
 == Features
 
-The following features exist in the current version of NMatrix (0.0.7):
+The following features exist in the current version of NMatrix (0.0.8):
 
 * Matrix and vector storage containers: dense, yale, list (more to come)
 * Data types: byte (uint8), int8, int16, int32, int64, float32, float64, complex64, complex128, rational64, rational128,
