@@ -37,7 +37,7 @@ If you want to obtain the latest (development) code, you should generally do:
     bundle install
     bundle exec rake compile
     bundle exec rake repackage
-    gem install pkg/nmatrix-0.0.8.gem
+    gem install pkg/nmatrix-0.0.9.gem
 
 Detailed instructions are available for {Mac}[https://github.com/SciRuby/nmatrix/wiki/Installation#mac-os-x] and {Linux}[https://github.com/SciRuby/nmatrix/wiki/Installation#linux].
 

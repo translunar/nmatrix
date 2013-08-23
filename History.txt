@@ -389,3 +389,11 @@
   * Fixed pry version error which manifests on some systems but not
     others
 
+=== 0.0.9 / 2013-09-??
+
+ * 0 major enhancements:
+
+ * 0 minor enhancements:
+
+ * 0 bug fixes:
+
