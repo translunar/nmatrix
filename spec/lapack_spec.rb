@@ -1,4 +1,3 @@
-        require 'pry'
 # = NMatrix
 #
 # A linear algebra library for scientific computation in Ruby.
@@ -126,7 +125,7 @@ describe NMatrix::LAPACK do
         end
       end
 
-      it "exposes gesdd" do
+      it "exposes lapack gesdd" do
         if [:float32, :float64].include? dtype
           a = NMatrix.new([5,6], %w|8.79 9.93 9.83 5.45 3.16
                                     6.11 6.91 5.04 -0.27 7.98
@@ -187,7 +186,7 @@ describe NMatrix::LAPACK do
       end
 
 
-      it "exposes gesvd" do
+      it "exposes lapack gesvd" do
         # http://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/mkl_lapack_examples/dgesvd_ex.c.htm
         if [:float32, :float64].include? dtype
           a = NMatrix.new([5,6], %w|8.79 9.93 9.83 5.45 3.16

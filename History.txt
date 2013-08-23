@@ -378,3 +378,11 @@
   * Fixed conversion from Ruby object to Complex and Rational
 
   * Fixed memory leak in slicing
+
+=== 0.0.8 / 2013-09-??
+
+* 0 major enhancements:
+
+* 0 minor enhancements:
+
+* 0 bug fixes:

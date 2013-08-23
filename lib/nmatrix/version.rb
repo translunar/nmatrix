@@ -26,6 +26,6 @@ class NMatrix
   # Note that the format of the VERSION string is needed for NMatrix
   # native IO. If you change the format, please make sure that native
   # IO can still understand NMatrix::VERSION.
-  VERSION = "0.0.7"
+  VERSION = "0.0.8"
 end
 

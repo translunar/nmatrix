@@ -82,7 +82,6 @@ extern "C" { // These need to be in an extern "C" block or you'll get all kinds 
 /*
  * Project Includes
  */
-#include "lapack.h"
 
 /*
  * Macros

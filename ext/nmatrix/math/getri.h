@@ -59,6 +59,7 @@
 #ifndef GETRI_H
 #define GETRI_H
 
+
 namespace nm { namespace math {
 
 template <typename DType>

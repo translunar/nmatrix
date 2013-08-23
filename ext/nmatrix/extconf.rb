@@ -147,14 +147,15 @@ end
 have_header("clapack.h")
 have_header("cblas.h")
 
-have_func("clapack_dgetrf", "clapack.h")
+have_func("clapack_dgetrf", ["cblas.h", "clapack.h"])
+have_func("clapack_dgetri", ["cblas.h", "clapack.h"])
 have_func("dgesvd_", "clapack.h")
+
+have_func("cblas_dgemm", "cblas.h")
 
 
 #find_library("cblas", "cblas_dgemm")
 #find_library("atlas", "ATL_dgemmNN")
-
-have_func("cblas_dgemm", "cblas.h")
 
 # Order matters here: ATLAS has to go after LAPACK: http://mail.scipy.org/pipermail/scipy-user/2007-January/010717.html
 $libs += " -llapack -lcblas -latlas "

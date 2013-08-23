@@ -54,7 +54,6 @@ ext/nmatrix/storage/yale.h
 ext/nmatrix/util/sl_list.cpp
 ext/nmatrix/util/sl_list.h
 ext/nmatrix/util/util.h
-ext/nmatrix/util/lapack.h
 ext/nmatrix/math.cpp
 ext/nmatrix/math/asum.h
 ext/nmatrix/math/geev.h
@@ -68,7 +67,6 @@ ext/nmatrix/math/getrf.h
 ext/nmatrix/math/getri.h
 ext/nmatrix/math/getrs.h
 ext/nmatrix/math/idamax.h
-ext/nmatrix/math/lapack.h
 ext/nmatrix/math/laswp.h
 ext/nmatrix/math/long_dtype.h
 ext/nmatrix/math/math.h

@@ -31,6 +31,7 @@
  * Standard Includes
  */
 
+#include <cblas.h>
 #ifdef HAVE_CLAPACK_H
 extern "C" {
   #include <clapack.h>
