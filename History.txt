@@ -391,7 +391,9 @@
 
 === 0.0.9 / 2013-09-??
 
- * 0 major enhancements:
+ * 1 major enhancements:
+
+   * Left-assignment of slices for single values now works for dense
 
  * 0 minor enhancements:
 

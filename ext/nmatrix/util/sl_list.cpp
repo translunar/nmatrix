@@ -77,18 +77,18 @@ void del(LIST* list, size_t recursions) {
 
     if (recursions == 0) {
       //fprintf(stderr, "    free_val: %p\n", curr->val);
-      free(curr->val);
+      xfree(curr->val);
       
     } else {
       //fprintf(stderr, "    free_list: %p\n", list);
       del((LIST*)curr->val, recursions - 1);
     }
 
-    free(curr);
+    xfree(curr);
     curr = next;
   }
   //fprintf(stderr, "    free_list: %p\n", list);
-  free(list);
+  xfree(list);
 }
 
 /*
@@ -156,11 +156,11 @@ NODE* insert(LIST* list, bool replace, size_t key, void* val) {
   if (ins->key == key) {
     // key already exists
     if (replace) {
-      free(ins->val);
+      xfree(ins->val);
       ins->val = val;
       
     } else {
-    	free(val);
+    	xfree(val);
     }
     
     return ins;
@@ -170,14 +170,14 @@ NODE* insert(LIST* list, bool replace, size_t key, void* val) {
   }
 }
 
+
+
 /*
  * Documentation goes here.
  */
 NODE* insert_after(NODE* node, size_t key, void* val) {
-  NODE* ins;
-
   //if (!(ins = malloc(sizeof(NODE)))) return NULL;
-  ins = ALLOC(NODE);
+  NODE* ins = ALLOC(NODE);
 
   // insert 'ins' between 'node' and 'node->next'
   ins->next  = node->next;
@@ -190,22 +190,69 @@ NODE* insert_after(NODE* node, size_t key, void* val) {
   return ins;
 }
 
+
 /*
- * Analog functions list_insert but this insert copy of value.
+ * Insert a new node immediately after +node+, or replace the existing one if its key is a match.
  */
-NODE* insert_with_copy(LIST *list, size_t key, void *val, size_t size) {
+NODE* replace_insert_after(NODE* node, size_t key, void* val, bool copy, size_t copy_size) {
+  if (node->next && node->next->key == key) {
+
+    // Should we copy into the current one or free and insert?
+    if (copy) memcpy(node->next->val, val, copy_size);
+    else {
+      xfree(node->next->val);
+      node->next->val = val;
+    }
+
+    return node->next;
+
+  } else { // no next node, or if there is one, it's greater than the current key
+
+    if (copy) {
+      void* val_copy = ALLOC_N(char, copy_size);
+      memcpy(val_copy, val, copy_size);
+      return insert_after(node, key, val_copy);
+    } else {
+      return insert_after(node, key, val);
+    }
+
+  }
+}
+
+
+
+/*
+ * Functions analogously to list::insert but this inserts a copy of the value instead of the original.
+ */
+NODE* insert_copy(LIST *list, bool replace, size_t key, void *val, size_t size) {
   void *copy_val = ALLOC_N(char, size);
   memcpy(copy_val, val, size);
 
-
-  return insert(list, false, key, copy_val);
+  return insert(list, replace, key, copy_val);
 }
+
+
+/*
+ * Returns the value pointer for some key. Doesn't free the memory for that value. Doesn't require a find operation,
+ * assumes finding has already been done. If rm is the first item in the list, prev should be NULL.
+ */
+void* remove_by_node(LIST* list, NODE* prev, NODE* rm) {
+  if (!prev)  list->first = rm->next;
+  else        prev->next  = rm->next;
+
+  void* val   = rm->val;
+  xfree(rm);
+
+  return val;
+}
+
+
 /*
  * Returns the value pointer (not the node) for some key. Note that it doesn't
  * free the memory for the value stored in the node -- that pointer gets
  * returned! Only the node is destroyed.
  */
-void* remove(LIST* list, size_t key) {
+void* remove_by_key(LIST* list, size_t key) {
   NODE *f, *rm;
   void* val;
 
@@ -218,12 +265,12 @@ void* remove(LIST* list, size_t key) {
     rm  = list->first;
     
     list->first = rm->next;
-    free(rm);
+    xfree(rm);
     
     return val;
   }
 
-  f = find_preceding_from(list->first, key);
+  f = find_preceding_from_node(list->first, key);
   if (!f || !f->next) { // not found, end of list
   	return NULL;
   }
@@ -235,12 +282,19 @@ void* remove(LIST* list, size_t key) {
 
     // get the value and free the memory for the node
     val = rm->val;
-    free(rm);
+    xfree(rm);
 
     return val;
   }
 
   return NULL; // not found, middle of list
+}
+
+
+bool node_is_within_slice(NODE* n, size_t coord, size_t len) {
+  if (!n) return false;
+  if (n->key >= coord && n->key < coord + len) return true;
+  else return false;
 }
 
 
@@ -250,23 +304,33 @@ void* remove(LIST* list, size_t key) {
  * FIXME: Could be made slightly faster by using a variety of find which also returns the previous node. This way,
  * FIXME: we can remove directly instead of calling remove() and doing the search over again.
  */
-bool remove_recursive(LIST* list, const size_t* coords, const size_t* offset, size_t r, const size_t& dim, void* rm) {
+bool remove_recursive(LIST* list, const size_t* coords, const size_t* offsets, const size_t* lengths, size_t r, const size_t& dim) {
 
   if (r < dim-1) { // nodes here are lists
     // find the current coordinates in the list
-    NODE* n = find(list, coords[r] + offset[r]);
+    NODE* prev = find_preceding_from_list(list, coords[r] + offsets[r]);
+    NODE* n    = prev && node_is_within_slice(prev->next, coords[r] + offsets[r], lengths[r]) ? prev->next : NULL;
 
-    if (n) {
+    while (n) {
       // from that sub-list, call remove_recursive.
-      bool remove_parent = remove_recursive(reinterpret_cast<LIST*>(n->val), coords, offset, r+1, dim, rm);
+      bool remove_parent = remove_recursive(reinterpret_cast<LIST*>(n->val), coords, offsets, lengths, r+1, dim);
 
       if (remove_parent) { // now empty -- so remove the sub-list
-        free(remove(list, coords[r] + offset[r]));
-      }
+        std::cerr << r << ": removing parent list at " << n->key << std::endl;
+        xfree(remove_by_node(list, prev, n));
+        n = node_is_within_slice(prev->next, coords[r] + offsets[r], lengths[r]) ? prev->next : NULL;
+      } else n = NULL;
     }
 
   } else { // nodes here are not lists, but actual values
-    rm = remove(list, coords[r] + offset[r]);
+    NODE* prev = find_preceding_from_list(list, coords[r] + offsets[r]);
+    NODE* n    = prev && node_is_within_slice(prev->next, coords[r] + offsets[r], lengths[r]) ? prev->next : NULL;
+
+    while (n) {
+      std::cerr << r << ": removing node at " << n->key << std::endl;
+      xfree(remove_by_node(list, prev, n));
+      n = node_is_within_slice(prev->next, coords[r] + offsets[r], lengths[r]) ? prev->next : NULL;
+    }
   }
 
   if (!list->first) return true; // if current list is now empty, signal its removal
@@ -303,19 +367,55 @@ NODE* find(LIST* list, size_t key) {
   return NULL;
 }
 
+
+
+/*
+ * Find some element in the list and return the node ptr for that key.
+ */
+NODE* find_with_preceding(LIST* list, size_t key, NODE*& prev) {
+  if (!prev) prev = list->first;
+  if (!prev) return NULL; // empty list, does not exist
+
+  if (prev->key == key) {
+    NODE* n = prev;
+    prev    = NULL;
+    return n;
+  }
+
+  while (prev->next && prev->next->key < key) {
+    prev = prev->next;
+  }
+
+  return prev->next;
+}
+
+
+
+
 /*
  * Finds the node that should go before whatever key we request, whether or not
  * that key is present.
  */
-NODE* find_preceding_from(NODE* prev, size_t key) {
+NODE* find_preceding_from_node(NODE* prev, size_t key) {
   NODE* curr = prev->next;
 
   if (!curr || key <= curr->key) {
   	return prev;
   	
   } else {
-  	return find_preceding_from(curr, key);
+  	return find_preceding_from_node(curr, key);
   }
+}
+
+
+/*
+ * Returns NULL if the key being sought is first in the list or *should* be first in the list but is absent. Otherwise
+ * returns the previous node to where that key is or should be.
+ */
+NODE* find_preceding_from_list(LIST* l, size_t key) {
+  NODE* n = l->first;
+  if (!n || n->key >= key)  return NULL;
+  else                      return find_preceding_from_node(n, key);
 }
 
 /*
@@ -336,7 +436,7 @@ NODE* find_nearest_from(NODE* prev, size_t key) {
   	return prev;
   }
 
-  f = find_preceding_from(prev, key);
+  f = find_preceding_from_node(prev, key);
 
   if (!f->next) { // key exceeds final node; return final node.
   	return f;

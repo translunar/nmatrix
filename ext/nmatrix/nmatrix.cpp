@@ -1523,27 +1523,27 @@ static VALUE nm_mset(int argc, VALUE* argv, VALUE self) {
   } else {
     SLICE* slice = get_slice(dim, argc-1, argv, NM_STORAGE(self)->shape);
 
-    void* value = rubyobj_to_cval(argv[argc-1], NM_DTYPE(self));
+    void* value;
 
     // FIXME: Can't use a function pointer table here currently because these functions have different
     // signatures (namely the return type).
     switch(NM_STYPE(self)) {
     case nm::DENSE_STORE:
-      nm_dense_storage_set(NM_STORAGE(self), slice, value);
-      xfree(value);
+      nm_dense_storage_set(self, slice, argv[argc-1]);
       break;
     case nm::LIST_STORE:
+      value = rubyobj_to_cval(argv[argc-1], NM_DTYPE(self));
       // Remove if it's a zero, insert otherwise
       if (!std::memcmp(value, NM_STORAGE_LIST(self)->default_val, DTYPE_SIZES[NM_DTYPE(self)])) {
         xfree(value);
-        value = nm_list_storage_remove(NM_STORAGE(self), slice);
-        xfree(value);
+        nm_list_storage_remove(NM_STORAGE(self), slice);
       } else {
         nm_list_storage_insert(NM_STORAGE(self), slice, value);
         // no need to free value here since it was inserted directly into the list.
       }
       break;
     case nm::YALE_STORE:
+      value = rubyobj_to_cval(argv[argc-1], NM_DTYPE(self));
       nm_yale_storage_set(NM_STORAGE(self), slice, value);
       xfree(value);
       break;

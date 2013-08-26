@@ -78,10 +78,11 @@ void	mark(LIST* list, size_t recursions);
 ///////////////
 
 NODE* insert(LIST* list, bool replace, size_t key, void* val);
-NODE* insert_with_copy(LIST *list, size_t key, void *val, size_t size);
+NODE* insert_copy(LIST *list, bool replace, size_t key, void *val, size_t size);
 NODE* insert_after(NODE* node, size_t key, void* val);
+NODE* replace_insert_after(NODE* node, size_t key, void* val, bool copy, size_t copy_size);
 void* remove(LIST* list, size_t key);
-bool remove_recursive(LIST* list, const size_t* coords, const size_t* offset, size_t r, const size_t& dim, void* rm);
+bool remove_recursive(LIST* list, const size_t* coords, const size_t* offset, const size_t* lengths, size_t r, const size_t& dim);
 
 template <typename Type>
 inline NODE* insert_helper(LIST* list, NODE* node, size_t key, Type val) {
@@ -116,7 +117,8 @@ inline NODE* insert_helper(LIST* list, NODE* node, size_t key, Type* ptr) {
 /////////////
 
 NODE* find(LIST* list, size_t key);
-NODE* find_preceding_from(NODE* prev, size_t key);
+NODE* find_preceding_from_node(NODE* prev, size_t key);
+NODE* find_preceding_from_list(LIST* l, size_t key);
 NODE* find_nearest(LIST* list, size_t key);
 NODE* find_nearest_from(NODE* prev, size_t key);
 

@@ -544,34 +544,29 @@ VALUE nm_list_map_merged_stored(VALUE left, VALUE right, VALUE init) {
 /*
  * Copy a slice of a list matrix into a regular list matrix.
  */
-static LIST* slice_copy(const LIST_STORAGE *src, LIST *src_rows, size_t *coords, size_t *lengths, size_t n) {
+static LIST* slice_copy(const LIST_STORAGE* src, LIST* src_rows, size_t* coords, size_t* lengths, size_t n) {
 
-  NODE *src_node;
-  LIST *dst_rows = NULL;
   void *val = NULL;
   int key;
   
-  dst_rows = list::create();
-  src_node = src_rows->first;
+  LIST* dst_rows = list::create();
+  NODE* src_node = src_rows->first;
 
   while (src_node) {
     key = src_node->key - (src->offset[n] + coords[n]);
     
     if (key >= 0 && (size_t)key < lengths[n]) {
       if (src->dim - n > 1) {
-        val = slice_copy(src,  
-          reinterpret_cast<LIST*>(src_node->val), 
-          coords,
-          lengths,
-          n + 1);  
+        val = slice_copy( src,
+                          reinterpret_cast<LIST*>(src_node->val),
+                          coords,
+                          lengths,
+                          n + 1    );
 
-        if (val) 
-          list::insert_with_copy(dst_rows, key, val, sizeof(LIST));          
-        
+        if (val) {  list::insert_copy(dst_rows, false, key, val, sizeof(LIST)); }
       }
-      else {
-        list::insert_with_copy(dst_rows, key, src_node->val, DTYPE_SIZES[src->dtype]);
-      }
+
+      else list::insert_copy(dst_rows, false, key, src_node->val, DTYPE_SIZES[src->dtype]);
     }
 
     src_node = src_node->next;
@@ -642,12 +637,84 @@ void* nm_list_storage_ref(STORAGE* storage, SLICE* slice) {
   }
 }
 
+
 /*
- * Documentation goes here.
+ * Recursive function, sets multiple values in a matrix from a single source value.
+ */
+static void slice_set_single(LIST_STORAGE* dest, LIST* l, void* val, size_t* coords, size_t* lengths, size_t n) {
+
+  // drill down into the structure
+  NODE* node = l->first;
+  if (dest->dim - n > 1) {
+    for (size_t i = 0; i < lengths[n]; ++i) {
+
+      size_t key = i + dest->offset[n] + coords[n];
+
+      if (!node) {
+        node = list::insert(l, false, key, list::create()); // try to insert list
+      } else if (!node->next || (node->next && node->next->key > key)) {
+        node = list::insert_after(node, key, list::create());
+      } else {
+        node = node->next; // correct rank already exists.
+      }
+
+      // cast it to a list and recurse
+      slice_set_single(dest, reinterpret_cast<LIST*>(node->val), val, coords, lengths, n + 1);
+    }
+  } else {
+    for (size_t i = 0; i < lengths[n]; ++i) {
+
+      size_t key = i + dest->offset[n] + coords[n];
+
+      if (!node)  {
+        node = list::insert_copy(l, true, key, val, DTYPE_SIZES[dest->dtype]);
+      } else {
+        node = list::replace_insert_after(node, key, val, true, DTYPE_SIZES[dest->dtype]);
+      }
+    }
+  }
+
+}
+
+
+/*
+ * Set a value or values in a list matrix.
+ */
+void nm_list_storage_set(VALUE left, SLICE* slice, VALUE right) {
+  LIST_STORAGE* s = NM_STORAGE_LIST(left);
+
+  if (TYPE(right) == T_DATA) {
+    if (RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete || RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete_ref) {
+      rb_raise(rb_eNotImpError, "this type of slicing not yet supported");
+    } else {
+      rb_raise(rb_eTypeError, "unrecognized type for slice assignment");
+    }
+  } else {
+    void* val = rubyobj_to_cval(right, s->dtype);
+
+    bool remove = !std::memcmp(val, s->default_val, s->dtype);
+
+    if (remove) {
+      xfree(val);
+      list::remove_recursive(s->rows, slice->coords, s->offset, slice->lengths, 0, s->dim);
+    } else if (slice->single) { // deprecated -- want to use slice_set_single
+      nm_list_storage_insert(s, slice, val);
+    } else { //
+      slice_set_single(s, s->rows, val, slice->coords, slice->lengths, 0);
+      xfree(val);
+    }
+  }
+}
+
+
+/*
+ * Insert an entry directly in a row (not using copy! don't free after).
+ *
+ * Returns a pointer to the insertion location.
  *
  * TODO: Allow this function to accept an entire row and not just one value -- for slicing
  */
-void* nm_list_storage_insert(STORAGE* storage, SLICE* slice, void* val) {
+NODE* nm_list_storage_insert(STORAGE* storage, SLICE* slice, void* val) {
   LIST_STORAGE* s = (LIST_STORAGE*)storage;
   // Pretend dims = 2
   // Then coords is going to be size 2
@@ -662,23 +729,19 @@ void* nm_list_storage_insert(STORAGE* storage, SLICE* slice, void* val) {
     l = reinterpret_cast<LIST*>(n->val);
   }
 
-  n = list::insert(l, true, s->offset[s->dim - r] + slice->coords[s->dim - r], val);
-  return n->val;
+  return list::insert(l, true, s->offset[s->dim - r] + slice->coords[s->dim - r], val);
 }
 
 /*
- * Remove an item from list storage.
+ * Remove an item or slice from list storage.
  */
-void* nm_list_storage_remove(STORAGE* storage, SLICE* slice) {
+void nm_list_storage_remove(STORAGE* storage, SLICE* slice) {
   LIST_STORAGE* s = (LIST_STORAGE*)storage;
-  void* rm = NULL;
 
   // This returns a boolean, which will indicate whether s->rows is empty.
   // We can safely ignore it, since we never want to delete s->rows until
   // it's time to destroy the LIST_STORAGE object.
-  list::remove_recursive(s->rows, slice->coords, s->offset, 0, s->dim, rm);
-
-  return rm;
+  list::remove_recursive(s->rows, slice->coords, s->offset, slice->lengths, 0, s->dim);
 }
 
 ///////////

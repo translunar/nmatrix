@@ -467,12 +467,45 @@ void* nm_dense_storage_ref(STORAGE* storage, SLICE* slice) {
 
 
 /*
- * Does not free passed-in value! Different from list_storage_insert.
+ * Recursive function, sets multiple values in a matrix from a single source value. Same basic pattern as slice_copy.
  */
-void nm_dense_storage_set(STORAGE* storage, SLICE* slice, void* val) {
-  DENSE_STORAGE* s = (DENSE_STORAGE*)storage;
-  memcpy((char*)(s->elements) + nm_dense_storage_pos(s, slice->coords) * DTYPE_SIZES[s->dtype], val, DTYPE_SIZES[s->dtype]);
+static void slice_set_single(DENSE_STORAGE* dest, void* src, size_t* lengths, size_t pdest, size_t n) {
+  if (dest->dim - n > 1) {
+    for (size_t i = 0; i < lengths[n]; ++i) {
+      slice_set_single(dest, src, lengths, pdest + dest->stride[n] * i, n + 1);
+    }
+  } else {
+    for (size_t p = 0; p < lengths[n]; ++p) {
+      memcpy((char*)(dest->elements) + (p + pdest) * DTYPE_SIZES[dest->dtype], src, DTYPE_SIZES[dest->dtype]);
+    }
+  }
 }
+
+
+/*
+ * Set a value or values in a dense matrix. Requires that right be either a single value or an NMatrix (ref or real).
+ */
+void nm_dense_storage_set(VALUE left, SLICE* slice, VALUE right) {
+  DENSE_STORAGE* s = NM_STORAGE_DENSE(left);
+
+  if (TYPE(right) == T_DATA) {
+    if (RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete || RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete_ref) {
+      rb_raise(rb_eNotImpError, "this type of slicing not yet supported");
+    } else {
+      rb_raise(rb_eTypeError, "unrecognized type for slice assignment");
+    }
+  } else {
+    void* val = rubyobj_to_cval(right, s->dtype);
+    if (slice->single)
+      memcpy((char*)(s->elements) + nm_dense_storage_pos(s, slice->coords) * DTYPE_SIZES[s->dtype], val, DTYPE_SIZES[s->dtype]);
+    else
+      slice_set_single(s, val, slice->lengths, nm_dense_storage_pos(s, slice->coords), 0);
+
+    xfree(val);
+  }
+
+}
+
 
 ///////////
 // Tests //
