@@ -393,7 +393,8 @@
 
  * 1 major enhancements:
 
-   * Left-assignment of slices for single values now works for dense
+   * Left-assignment of slices for single values now works for dense,
+     list matrices
 
  * 0 minor enhancements:
 

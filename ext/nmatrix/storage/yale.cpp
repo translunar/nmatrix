@@ -451,50 +451,66 @@ void* ref(YALE_STORAGE* s, SLICE* slice) {
  * copied into the storage object).
  */
 template <typename DType, typename IType>
-char set(YALE_STORAGE* storage, SLICE* slice, void* value) {
-  DType* v = reinterpret_cast<DType*>(value);
-  size_t coord0 = storage->offset[0] + slice->coords[0],
-         coord1 = storage->offset[1] + slice->coords[1];
+void set(VALUE left, SLICE* slice, VALUE right) {
+  YALE_STORAGE* storage = NM_STORAGE_YALE(left);
 
-  bool found = false;
-  char ins_type;
+  if (TYPE(right) == T_DATA) {
+    if (RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete || RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete_ref) {
+      rb_raise(rb_eNotImpError, "this type of slicing not yet supported");
+    } else {
+      rb_raise(rb_eTypeError, "unrecognized type for slice assignment");
+    }
 
-  if (coord0 == coord1) {
-    reinterpret_cast<DType*>(storage->a)[coord0] = *v; // set diagonal
-    return 'r';
-  }
+  } else {
 
-  // Get IJA positions of the beginning and end of the row
-  if (reinterpret_cast<IType*>(storage->ija)[coord0] == reinterpret_cast<IType*>(storage->ija)[coord0+1]) {
-  	// empty row
-    ins_type = vector_insert<DType,IType>(storage, reinterpret_cast<IType*>(storage->ija)[coord0], &(coord1), v, 1, false);
+    DType* v = reinterpret_cast<DType*>(rubyobj_to_cval(right, storage->dtype));
+
+    size_t coord0 = storage->offset[0] + slice->coords[0],
+           coord1 = storage->offset[1] + slice->coords[1];
+
+    bool found = false;
+
+    if (coord0 == coord1) {
+      reinterpret_cast<DType*>(storage->a)[coord0] = *v; // set diagonal
+      xfree(v);
+      return;
+    }
+
+    // Get IJA positions of the beginning and end of the row
+    if (reinterpret_cast<IType*>(storage->ija)[coord0] == reinterpret_cast<IType*>(storage->ija)[coord0+1]) {
+      // empty row
+      vector_insert<DType,IType>(storage, reinterpret_cast<IType*>(storage->ija)[coord0], &(coord1), v, 1, false);
+      increment_ia_after<IType>(storage, storage->shape[0], coord0, 1);
+      reinterpret_cast<YALE_STORAGE*>(storage->src)->ndnz++;
+
+      xfree(v);
+      return;
+    }
+
+    // non-empty row. search for coords[1] in the IJA array, between ija and ija_next
+    // (including ija, not including ija_next)
+    //ija_size = get_size<IType>(storage);
+
+    // Do a binary search for the column
+    size_t pos = insert_search<IType>(storage,
+                                      reinterpret_cast<IType*>(storage->ija)[coord0],
+                                      reinterpret_cast<IType*>(storage->ija)[coord0+1]-1,
+                                      coord1, &found);
+
+    if (found) { // replace
+      reinterpret_cast<IType*>(storage->ija)[pos] = coord1;
+      reinterpret_cast<DType*>(storage->a)[pos]   = *v;
+
+      xfree(v);
+      return;
+    }
+
+    vector_insert<DType,IType>(storage, pos, &(coord1), v, 1, false);
     increment_ia_after<IType>(storage, storage->shape[0], coord0, 1);
     reinterpret_cast<YALE_STORAGE*>(storage->src)->ndnz++;
 
-    return ins_type;
+    xfree(v);
   }
-
-  // non-empty row. search for coords[1] in the IJA array, between ija and ija_next
-  // (including ija, not including ija_next)
-  //ija_size = get_size<IType>(storage);
-
-  // Do a binary search for the column
-  size_t pos = insert_search<IType>(storage,
-                                    reinterpret_cast<IType*>(storage->ija)[coord0],
-                                    reinterpret_cast<IType*>(storage->ija)[coord0+1]-1,
-                                    coord1, &found);
-
-  if (found) { // replace
-    reinterpret_cast<IType*>(storage->ija)[pos] = coord1;
-    reinterpret_cast<DType*>(storage->a)[pos]   = *v;
-  	return 'r';
-  }
-
-  ins_type = vector_insert<DType,IType>(storage, pos, &(coord1), v, 1, false);
-  increment_ia_after<IType>(storage, storage->shape[0], coord0, 1);
-  reinterpret_cast<YALE_STORAGE*>(storage->src)->ndnz++;
-
-  return ins_type;
 }
 
 ///////////
@@ -1553,12 +1569,12 @@ VALUE nm_yale_each_stored_with_indices(VALUE nmatrix) {
 /*
  * C accessor for inserting some value in a matrix (or replacing an existing cell).
  */
-char nm_yale_storage_set(STORAGE* storage, SLICE* slice, void* v) {
-  NAMED_LI_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::set, char, YALE_STORAGE* storage, SLICE* slice, void* value);
+void nm_yale_storage_set(VALUE left, SLICE* slice, VALUE right) {
+  NAMED_LI_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::set, void, VALUE left, SLICE* slice, VALUE right);
 
-  YALE_STORAGE* casted_storage = (YALE_STORAGE*)storage;
+  YALE_STORAGE* storage = NM_STORAGE_YALE(left);
 
-  return ttable[casted_storage->dtype][casted_storage->itype](casted_storage, slice, v);
+  ttable[storage->dtype][storage->itype](left, slice, right);
 }
 
 
@@ -2229,7 +2245,7 @@ VALUE nm_vector_set(int argc, VALUE* argv, VALUE self) { //, VALUE i_, VALUE jv,
     rubyval_to_cval(rb_ary_entry(vv, idx), dtype, (char*)vals + idx * DTYPE_SIZES[dtype]);
   }
 
-  char ins_type = nm_yale_storage_vector_insert(s, pos, j, vals, len, false, dtype, itype);
+  nm_yale_storage_vector_insert(s, pos, j, vals, len, false, dtype, itype);
   nm_yale_storage_increment_ia_after(s, s->shape[0], i, len, itype);
   reinterpret_cast<YALE_STORAGE*>(s->src)->ndnz += len;
 

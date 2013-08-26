@@ -1523,23 +1523,14 @@ static VALUE nm_mset(int argc, VALUE* argv, VALUE self) {
   } else {
     SLICE* slice = get_slice(dim, argc-1, argv, NM_STORAGE(self)->shape);
 
-    void* value;
+    static void (*ttable[nm::NUM_STYPES])(VALUE, SLICE*, VALUE) = {
+      nm_dense_storage_set,
+      nm_list_storage_set,
+      nm_yale_storage_set
+    };
 
-    // FIXME: Can't use a function pointer table here currently because these functions have different
-    // signatures (namely the return type).
-    switch(NM_STYPE(self)) {
-    case nm::DENSE_STORE:
-      nm_dense_storage_set(self, slice, argv[argc-1]);
-      break;
-    case nm::LIST_STORE:
-      nm_list_storage_set(self, slice, argv[argc-1]);
-      break;
-    case nm::YALE_STORE:
-      value = rubyobj_to_cval(argv[argc-1], NM_DTYPE(self));
-      nm_yale_storage_set(NM_STORAGE(self), slice, value);
-      xfree(value);
-      break;
-    }
+    ttable[NM_STYPE(self)](self, slice, argv[argc-1]);
+
     free_slice(slice);
 
     return argv[argc-1];
