@@ -644,7 +644,7 @@ void* nm_list_storage_ref(STORAGE* storage, SLICE* slice) {
 static void slice_set_single(LIST_STORAGE* dest, LIST* l, void* val, size_t* coords, size_t* lengths, size_t n) {
 
   // drill down into the structure
-  NODE* node = l->first;
+  NODE* node = NULL;
   if (dest->dim - n > 1) {
     for (size_t i = 0; i < lengths[n]; ++i) {
 
@@ -695,11 +695,14 @@ void nm_list_storage_set(VALUE left, SLICE* slice, VALUE right) {
     bool remove = !std::memcmp(val, s->default_val, s->dtype);
 
     if (remove) {
+      std::cerr << "remove" << std::endl;
       xfree(val);
       list::remove_recursive(s->rows, slice->coords, s->offset, slice->lengths, 0, s->dim);
     } else if (slice->single) { // deprecated -- want to use slice_set_single
+      std::cerr << "slice->single" << std::endl;
       nm_list_storage_insert(s, slice, val);
     } else { //
+      std::cerr << "slice_set_single" << std::endl;
       slice_set_single(s, s->rows, val, slice->coords, slice->lengths, 0);
       xfree(val);
     }

@@ -1532,15 +1532,7 @@ static VALUE nm_mset(int argc, VALUE* argv, VALUE self) {
       nm_dense_storage_set(self, slice, argv[argc-1]);
       break;
     case nm::LIST_STORE:
-      value = rubyobj_to_cval(argv[argc-1], NM_DTYPE(self));
-      // Remove if it's a zero, insert otherwise
-      if (!std::memcmp(value, NM_STORAGE_LIST(self)->default_val, DTYPE_SIZES[NM_DTYPE(self)])) {
-        xfree(value);
-        nm_list_storage_remove(NM_STORAGE(self), slice);
-      } else {
-        nm_list_storage_insert(NM_STORAGE(self), slice, value);
-        // no need to free value here since it was inserted directly into the list.
-      }
+      nm_list_storage_set(self, slice, argv[argc-1]);
       break;
     case nm::YALE_STORE:
       value = rubyobj_to_cval(argv[argc-1], NM_DTYPE(self));

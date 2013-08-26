@@ -305,11 +305,14 @@ bool node_is_within_slice(NODE* n, size_t coord, size_t len) {
  * FIXME: we can remove directly instead of calling remove() and doing the search over again.
  */
 bool remove_recursive(LIST* list, const size_t* coords, const size_t* offsets, const size_t* lengths, size_t r, const size_t& dim) {
+  std::cerr << "remove_recursive: " << r << std::endl;
+  // find the current coordinates in the list
+  NODE* prev    = find_preceding_from_list(list, coords[r] + offsets[r]);
+  NODE* n;
+  if (prev) n  = prev->next && node_is_within_slice(prev->next, coords[r] + offsets[r], lengths[r]) ? prev->next : NULL;
+  else      n  = node_is_within_slice(list->first, coords[r] + offsets[r], lengths[r]) ? list->first : NULL;
 
   if (r < dim-1) { // nodes here are lists
-    // find the current coordinates in the list
-    NODE* prev = find_preceding_from_list(list, coords[r] + offsets[r]);
-    NODE* n    = prev && node_is_within_slice(prev->next, coords[r] + offsets[r], lengths[r]) ? prev->next : NULL;
 
     while (n) {
       // from that sub-list, call remove_recursive.
@@ -318,18 +321,28 @@ bool remove_recursive(LIST* list, const size_t* coords, const size_t* offsets, c
       if (remove_parent) { // now empty -- so remove the sub-list
         std::cerr << r << ": removing parent list at " << n->key << std::endl;
         xfree(remove_by_node(list, prev, n));
-        n = node_is_within_slice(prev->next, coords[r] + offsets[r], lengths[r]) ? prev->next : NULL;
-      } else n = NULL;
+
+        if (prev) n  = prev->next && node_is_within_slice(prev->next, coords[r] + offsets[r], lengths[r]) ? prev->next : NULL;
+        else      n  = node_is_within_slice(list->first, coords[r] + offsets[r], lengths[r]) ? list->first : NULL;
+      } else {
+        // Move forward to next node (list at n still exists)
+        prev         = n;
+        n            = prev->next && node_is_within_slice(prev->next, coords[r] + offsets[r], lengths[r]) ? prev->next : NULL;
+      }
+
+      // Iterate to next one.
+      if (prev) n  = prev->next && node_is_within_slice(prev->next, coords[r] + offsets[r], lengths[r]) ? prev->next : NULL;
+      else      n  = node_is_within_slice(list->first, coords[r] + offsets[r], lengths[r]) ? list->first : NULL;
     }
 
   } else { // nodes here are not lists, but actual values
-    NODE* prev = find_preceding_from_list(list, coords[r] + offsets[r]);
-    NODE* n    = prev && node_is_within_slice(prev->next, coords[r] + offsets[r], lengths[r]) ? prev->next : NULL;
 
     while (n) {
       std::cerr << r << ": removing node at " << n->key << std::endl;
       xfree(remove_by_node(list, prev, n));
-      n = node_is_within_slice(prev->next, coords[r] + offsets[r], lengths[r]) ? prev->next : NULL;
+
+      if (prev) n  = prev->next && node_is_within_slice(prev->next, coords[r] + offsets[r], lengths[r]) ? prev->next : NULL;
+      else      n  = node_is_within_slice(list->first, coords[r] + offsets[r], lengths[r]) ? list->first : NULL;
     }
   }
 

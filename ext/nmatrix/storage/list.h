@@ -82,6 +82,7 @@ extern "C" {
   void* nm_list_storage_ref(STORAGE* s, SLICE* slice);
   void* nm_list_storage_get(STORAGE* s, SLICE* slice);
   NODE* nm_list_storage_insert(STORAGE* s, SLICE* slice, void* val);
+  void nm_list_storage_set(VALUE left, SLICE* slice, VALUE right);
   void  nm_list_storage_remove(STORAGE* s, SLICE* slice);
 
   ///////////
