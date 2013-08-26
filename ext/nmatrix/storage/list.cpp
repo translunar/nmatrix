@@ -695,14 +695,9 @@ void nm_list_storage_set(VALUE left, SLICE* slice, VALUE right) {
     bool remove = !std::memcmp(val, s->default_val, s->dtype);
 
     if (remove) {
-      std::cerr << "remove" << std::endl;
       xfree(val);
       list::remove_recursive(s->rows, slice->coords, s->offset, slice->lengths, 0, s->dim);
-    } else if (slice->single) { // deprecated -- want to use slice_set_single
-      std::cerr << "slice->single" << std::endl;
-      nm_list_storage_insert(s, slice, val);
-    } else { //
-      std::cerr << "slice_set_single" << std::endl;
+    } else {
       slice_set_single(s, s->rows, val, slice->coords, slice->lengths, 0);
       xfree(val);
     }

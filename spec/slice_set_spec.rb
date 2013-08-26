@@ -42,8 +42,6 @@ describe "Set slice operation" do
           STDERR.puts "A"
           m = @m.clone
           m[0..1,0..1] = 100
-          require 'pry'
-          binding.pry
           m[0..1,0..1].should == slice_result_a
           m[2,0..1].should == @m[2,0..1]
           m[0..1,2].should == @m[0..1,2]
