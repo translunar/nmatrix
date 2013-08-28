@@ -134,8 +134,8 @@ template <typename LDType, typename RDType, typename RIType>
 DENSE_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype) {
 
   // Position in rhs->elements.
-  RIType* rhs_ija = reinterpret_cast<RIType*>(rhs->ija);
-  RDType* rhs_a   = reinterpret_cast<RDType*>(rhs->a);
+  RIType* rhs_ija = reinterpret_cast<RIType*>(reinterpret_cast<YALE_STORAGE*>(rhs->src)->ija);
+  RDType* rhs_a   = reinterpret_cast<RDType*>(reinterpret_cast<YALE_STORAGE*>(rhs->src)->a);
 
   // Allocate and set shape.
   size_t* shape = ALLOC_N(size_t, rhs->dim);
@@ -323,7 +323,7 @@ LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype)
   size_t *shape = ALLOC_N(size_t, rhs->dim);
   shape[0] = rhs->shape[0]; shape[1] = rhs->shape[1];
 
-  RDType* rhs_a    = reinterpret_cast<RDType*>(rhs->a);
+  RDType* rhs_a    = reinterpret_cast<RDType*>(reinterpret_cast<YALE_STORAGE*>(rhs->src)->a);
   RDType R_ZERO    = rhs_a[ rhs->src->shape[0] ];
 
   // copy default value from the zero location in the Yale matrix
@@ -334,7 +334,7 @@ LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype)
 
   if (rhs->dim != 2)    rb_raise(nm_eStorageTypeError, "Can only convert matrices of dim 2 from yale.");
 
-  RIType* rhs_ija  = reinterpret_cast<RIType*>(rhs->ija);
+  RIType* rhs_ija  = reinterpret_cast<RIType*>(reinterpret_cast<YALE_STORAGE*>(rhs->src)->ija);
 
   NODE *last_row_added = NULL;
   // Walk through rows and columns as if RHS were a dense matrix

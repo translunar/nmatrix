@@ -45,6 +45,8 @@
 #include <iostream>
 #include <array>
 #include <typeinfo>
+#include <tuple>
+#include <queue>
 
 #define RB_P(OBJ) \
 	rb_funcall(rb_stderr, rb_intern("print"), 1, rb_funcall(OBJ, rb_intern("object_id"), 0)); \
@@ -111,6 +113,7 @@ extern "C" {
 
 namespace nm { namespace yale_storage {
 
+
 template <typename DType, typename IType>
 static bool						ndrow_is_empty(const YALE_STORAGE* s, IType ija, const IType ija_next);
 
@@ -127,10 +130,10 @@ template <typename IType>
 static YALE_STORAGE*	copy_alloc_struct(const YALE_STORAGE* rhs, const dtype_t new_dtype, const size_t new_capacity, const size_t new_size);
 
 template <typename IType>
-static void						increment_ia_after(YALE_STORAGE* s, IType ija_size, IType i, IType n);
+static void						increment_ia_after(YALE_STORAGE* s, IType ija_size, IType i, long n);
 
 template <typename IType>
-static void           c_increment_ia_after(YALE_STORAGE* s, size_t ija_size, size_t i, size_t n) {
+static void           c_increment_ia_after(YALE_STORAGE* s, size_t ija_size, size_t i, long n) {
   increment_ia_after<IType>(s, ija_size, i, n);
 }
 
@@ -142,6 +145,29 @@ static char           vector_insert(YALE_STORAGE* s, size_t pos, size_t* j, void
 
 template <typename DType, typename IType>
 static char           vector_insert_resize(YALE_STORAGE* s, size_t current_size, size_t pos, size_t* j, size_t n, bool struct_only);
+
+template <typename DType, typename IType>
+static std::tuple<long,bool,std::queue<std::tuple<IType,IType,int> > > count_slice_set_ndnz_change(YALE_STORAGE* s, size_t* coords, size_t* lengths, DType* v, size_t v_size);
+
+template <typename IType>
+static inline IType* IJA(const YALE_STORAGE* s) {
+  return reinterpret_cast<IType*>(reinterpret_cast<YALE_STORAGE*>(s->src)->ija);
+}
+
+template <typename IType>
+static inline IType IJA_SET(const YALE_STORAGE* s, size_t loc, IType val) {
+  return IJA<IType>(s)[loc] = val;
+}
+
+template <typename DType>
+static inline DType* A(const YALE_STORAGE* s) {
+  return reinterpret_cast<DType*>(reinterpret_cast<YALE_STORAGE*>(s->src)->a);
+}
+
+template <typename DType>
+static inline DType A_SET(const YALE_STORAGE* s, size_t loc, DType val) {
+  return A<DType>(s)[loc] = val;
+}
 
 
 /*
@@ -389,9 +415,10 @@ static void slice_copy(YALE_STORAGE* ns, const YALE_STORAGE* s, size_t* offset, 
  */
 template <typename DType, typename IType>
 static void* get_single(YALE_STORAGE* storage, SLICE* slice) {
+  YALE_STORAGE* s = reinterpret_cast<YALE_STORAGE*>(storage->src);
 
-  DType* a   = reinterpret_cast<DType*>(storage->a);
-  IType* ija = reinterpret_cast<IType*>(storage->ija);
+  DType* a   = reinterpret_cast<DType*>(s->a);
+  IType* ija = reinterpret_cast<IType*>(s->ija);
 
   size_t coord0 = storage->offset[0] + slice->coords[0];
   size_t coord1 = storage->offset[1] + slice->coords[1];
@@ -400,15 +427,15 @@ static void* get_single(YALE_STORAGE* storage, SLICE* slice) {
     return &(a[ coord0 ]); // return diagonal entry
 
   if (ija[coord0] == ija[coord0+1])
-    return &(a[ storage->src->shape[0] ]); // return zero pointer
+    return &(a[ s->shape[0] ]); // return zero pointer
 
   // binary search for the column's location
-  int pos = binary_search<IType>(storage, ija[coord0], ija[coord0+1]-1, coord1);
+  int pos = binary_search<IType>(s, ija[coord0], ija[coord0+1]-1, coord1);
 
   if (pos != -1 && ija[pos] == coord1)
     return &(a[pos]); // found exact value
 
-  return &(a[ storage->src->shape[0] ]); // return a pointer that happens to be zero
+  return &(a[ s->shape[0] ]); // return a pointer that happens to be zero
 }
 
 
@@ -433,8 +460,8 @@ void* ref(YALE_STORAGE* s, SLICE* slice) {
   ns->dtype   = s->dtype;
   ns->itype   = s->itype; // or should we go by shape?
 
-  ns->a       = s->a;
-  ns->ija     = s->ija;
+  ns->a       = reinterpret_cast<YALE_STORAGE*>(s->src)->a;
+  ns->ija     = reinterpret_cast<YALE_STORAGE*>(s->src)->ija;
 
   ns->src     = s->src;
   s->src->count++;
@@ -447,13 +474,316 @@ void* ref(YALE_STORAGE* s, SLICE* slice) {
 }
 
 /*
- * Attempt to set some cell in a YALE_STORAGE object. Must supply coordinates and a pointer to a value (which will be
- * copied into the storage object).
+ * Copy a vector into a temporary location, changing certain entries.
+ *
+ * Note that s must not be a reference. Call this on s->src
+ */
+template <typename DType, typename IType>
+static void modify_partial_row(YALE_STORAGE* s, IType si, IType pos, IType end, int n, size_t j_off, size_t j_len, DType* v, size_t v_size, size_t& k) {
+  int new_len   = end - pos + n;
+  IType* tmp_ja = ALLOCA_N(IType, new_len);
+  DType* tmp_a  = ALLOCA_N(DType, new_len);
+
+  IType* s_ija  = reinterpret_cast<IType*>(s->ija);
+  DType* s_a    = reinterpret_cast<DType*>(s->a);
+
+  DType ZERO(*reinterpret_cast<DType*>(default_value_ptr(s)));
+
+  IType m = 0, p = pos;
+  for (IType j = 0; j < j_len; ++j, ++k) {
+    IType sj   = j + j_off;
+    IType x_sj = s_ija[p];
+
+    if (sj == si) {              // set diagonal in the real A
+      s_a[si] = v[k % v_size];
+    } else if (sj < x_sj) {
+      if (v[k % v_size] != ZERO) { // add non-zero
+        tmp_ja[m] = sj;
+        tmp_a[m]  = v[k % v_size];
+        ++m;
+      }
+    } else { // sj == x_sj
+      if (v[k % v_size] != ZERO) {
+        tmp_ja[m] = sj;
+        tmp_a[m]  = v[k % v_size];
+        ++m;
+      }
+      ++p;
+      x_sj = p < end ? s_ija[p] : (IType)(s->shape[1]);
+    }
+  }
+
+  // Now write into the original A and IJA.
+  for (IType m = 0; m < new_len; ++m) {
+    s_a[pos + m]   = tmp_a[m];
+    s_ija[pos + m] = tmp_ja[m];
+  }
+
+  // Update IA array
+  increment_ia_after<IType>(s, s->shape[0], si, s_ija[pos+1] - s_ija[pos] + n);
+}
+
+
+/*
+ * Return as a pair:
+ *    - The total ndnz change of some slice-set operation;
+ *    - Whether the vector should be resized regardless (which may simply be because the total size of partial copies
+ *      that would have to be done to accomplish the slice-set conventionally exceeds the copy size for simply rewriting
+ *      the vectors; and by conventionally, I mean moving parts of A[x...] and IJA[x...] as we add new rows).
+ *
+ * By default, v is a single element of type DType. We iterate through it repeatedly, using v[k] as the element to which
+ * we want to set the current element of s. Each time we reach the end of v, we go back to the beginning.
+ *
+ * FIXME: There is one obvious potential improvement here: that changes within a row do not necessarily need a copy/resize if
+ * FIXME: they are balanced out by changes in a different row, especially one which is located very nearby. But this is
+ * FIXME: an edge case, and very complicated to implement, so I have elected not to address it.
+ *
+ * FIXME: I just came up with another improvement. The first part of the IA vector has to be rewritten following the
+ * FIXME: first row i whose size gets changed. This should be taken into account.
+ */
+template <typename DType, typename IType>
+static std::tuple<long,bool,std::queue<std::tuple<IType,IType,int> > > count_slice_set_ndnz_change(YALE_STORAGE* s, size_t* coords, size_t* lengths, DType* v, size_t v_size) {
+  long change = 0;
+  std::queue<std::tuple<IType,IType,int> > row_plan_q;
+  unsigned long partial_copies = 0;
+  bool resize = false;
+
+  IType* ija  = IJA<IType>(s);
+  DType* a    = A<DType>(s);
+
+  DType ZERO(*reinterpret_cast<DType*>(default_value_ptr(s)));
+  IType last_ija = get_size<IType>(s);
+
+  size_t k = 0; // index in v (actually, use k % v_size for simplicity, so we don't have to keep resetting to 0)
+
+  for (IType i = 0; i < lengths[0]; ++i) {
+    IType si = coords[0] + s->offset[0] + i;
+
+    IType row_start      = ija[si];
+    IType past_row_end   = ija[si+1];
+    int   row_change     = 0;
+
+    if (row_start == ija[si+1]) { // empty row
+
+      for (IType j = 0; j < lengths[1]; ++j, ++k) {
+        IType sj = coords[1] + s->offset[1] + i;
+
+        if (sj == si) continue; // don't need to count diagonals
+
+        // If the thing we want to add is non-zero, we need to update.
+        if (v[k % v_size] != ZERO) row_change++;
+      }
+
+    } else { // non-empty row.
+      IType p      = binary_search_left_boundary<IType>(s, row_start, past_row_end-1, s->offset[1]);
+      row_start    = p;
+      IType x_sj   = p < past_row_end ? ija[p] : (IType)(s->shape[1]); // next existent sj if it exists (otherwise, use one past end)
+
+      for (IType j = 0; j < lengths[1]; ++j, ++k) {
+        IType sj      = j + s->offset[1] + coords[1];
+
+        if (sj != si) { // don't need to count diagonals
+          if (sj < x_sj) { // anything we find in this condition is an add
+            if (v[k % v_size] != ZERO) row_change++;
+          } else if (sj == x_sj) { // could be a change (don't count it) or a remove (count it)
+            if (v[k % v_size] == ZERO) row_change--;
+            ++p;  // need to step to the next x_sj
+            x_sj   = p < past_row_end ? ija[p] : (IType)(s->shape[1]); // next existent sj if it exists (otherwise, use one past end)
+          }
+        }
+      }
+      past_row_end  = p;
+    }
+
+    // We need to copy from the next row (s->ija[si+1]) to the end (last_ija) as well as changing the row entries.
+    if (row_change != 0) {
+      partial_copies += last_ija - ija[si+1] + row_change;
+      change += row_change;
+
+      // There's no reason to do it conventionally if partial_copies is more than the max_size
+      if (partial_copies >= last_ija) resize = true;
+    }
+
+    row_plan_q.push(std::make_tuple(row_start, past_row_end, row_change));
+  }
+
+  return make_tuple(change, resize, row_plan_q);
+}
+
+
+
+/*
+ * Attempt to set multiple cells in a YALE_STORAGE object.
+ */
+template <typename DType, typename IType>
+static void set_multiple_cells(YALE_STORAGE* s, size_t* coords, size_t* lengths, DType* v, size_t v_size) {
+  typedef std::tuple<IType,IType,int>               RowPlan;
+  typedef std::queue<std::tuple<IType,IType,int> >  PlanQ;
+  typedef std::tuple<bool,long,PlanQ>               Plan;
+
+  IType size                = get_size<IType>(s);
+  // First count the number of entries that we expect will be added or removed and determine if a resize would be
+  // more efficient.
+  long delta_size;
+  bool copy;
+  PlanQ row_plans;
+  Plan plan = count_slice_set_ndnz_change<DType, IType>(s, coords, lengths, v, v_size);
+  std::tie(delta_size, copy, row_plans) = plan;
+
+  IType* ija = IJA<IType>(s);
+  DType* a   = A<DType>(s);
+
+  // We don't *have* to shrink, but we might as well.
+  if (!copy && delta_size < 0 && size + delta_size < s->capacity / GROWTH_CONSTANT)
+    copy = true;
+
+  if (!copy) {
+    size_t k  = 0;
+    long accum = 0; // counts the accumulated error in row_start (the first element of row_plan_q's pair) as we modify.
+    IType si   = s->offset[0] + coords[0]; // use as row counter
+
+    while (!row_plans.empty()) { // for each row
+      IType pos, end;
+      int n;
+      std::tie(pos, end, n) = row_plans.front(); row_plans.pop();
+      pos += accum; end += accum;
+
+      if (n > 0) { // size increase: copy later rows first, then modify contents of this row.
+        for (IType m = 0; m < size - end; ++m) { // copy/resize
+          ija[size+n-1-m] = ija[size-1-m];
+          a[size+n-1-m]   = a[size-1-m];
+        }
+
+        modify_partial_row<DType,IType>((YALE_STORAGE*)(s->src), si, pos, end, n, s->offset[1] + coords[1], lengths[1], v, v_size, k);
+      } else if (n < 0) { // size decrease: modify contents of row, then copy later rows
+        modify_partial_row<DType,IType>((YALE_STORAGE*)(s->src), si, pos, end, n, s->offset[1] + coords[1], lengths[1], v, v_size, k);
+
+        for (IType m = 0; m < size - end; ++m) {
+          ija[size+n-1-m] = ija[size-1-m];
+          a[size+n-1-m]   = a[size-1-m];
+        }
+      }
+
+      accum     += n;
+      ++si;
+    }
+  } else {  // allowed to make a copy.
+    size_t new_capacity = NM_MAX(s->capacity * GROWTH_CONSTANT, s->capacity + delta_size);
+    size_t max_capacity = max_size(s);
+    if (new_capacity > max_capacity) {
+      new_capacity = max_capacity;
+
+      if (s->capacity + delta_size > max_capacity)
+        rb_raise(rb_eNoMemError, "insertion size exceeded maximum yale matrix size");
+    }
+
+    // Allocate new vectors. (ija and a local variables have the old ones)
+    reinterpret_cast<YALE_STORAGE*>(s->src)->ija = ALLOC_N(IType, new_capacity);
+    reinterpret_cast<YALE_STORAGE*>(s->src)->a   = ALLOC_N(DType, new_capacity);
+
+    size_t k  = 0;
+    long accum = 0; // counts the accumulated error in row_start (the first element of row_plan_q's pair) as we modify.
+    IType si   = s->offset[0] + coords[0]; // use as row counter
+    IType last_end = 0;
+    int n = 0;
+    IType pos, end;
+
+    while (!row_plans.empty()) { // for each row
+      std::tie(pos, end, n) = row_plans.front(); row_plans.pop();
+      pos += accum;
+      end += accum;
+
+      accum += n;
+
+      // Copy all values prior to the insertion site to the new IJA and new A.
+      for (size_t m = 0; m < pos; ++m) {
+        IJA_SET(s, m, ija[m]);
+        A_SET(  s, m, a[m]);
+      }
+
+      // Fill in between pos and end
+      modify_partial_row<DType,IType>((YALE_STORAGE*)(s->src), si, pos, end, n, s->offset[1] + coords[1], lengths[1], v, v_size, k);
+
+      last_end = end;
+    }
+
+    // Copy values subsequent to insertion site
+    for (size_t m = last_end; m < size; ++m) {
+      IJA_SET(s, m+n, ija[m]);
+      A_SET(  s, m+n, a[m]);
+    }
+
+    reinterpret_cast<YALE_STORAGE*>(s->src)->capacity = new_capacity;
+
+    // Delete
+    xfree(ija);
+    xfree(a);
+  }
+
+  reinterpret_cast<YALE_STORAGE*>(s->src)->ndnz += delta_size;
+
+}
+
+
+/*
+ * Attempt to set a single cell in a YALE_STORAGE object.
+ */
+template <typename DType, typename IType>
+static void set_single_cell(YALE_STORAGE* storage, size_t* coords, DType& v) {
+  YALE_STORAGE* s = reinterpret_cast<YALE_STORAGE*>(storage->src);
+
+  size_t coord0 = storage->offset[0] + coords[0],
+         coord1 = storage->offset[1] + coords[1];
+
+  bool found = false;
+
+  if (coord0 == coord1) {
+    reinterpret_cast<DType*>(s->a)[coord0] = v; // set diagonal
+    return;
+  }
+
+  // Get IJA positions of the beginning and end of the row
+  if (reinterpret_cast<IType*>(storage->ija)[coord0] == reinterpret_cast<IType*>(storage->ija)[coord0+1]) {
+    // empty row
+    vector_insert<DType,IType>(s, reinterpret_cast<IType*>(s->ija)[coord0], &(coord1), &v, 1, false);
+    increment_ia_after<IType>(s, s->shape[0], coord0, 1);
+    s->ndnz++;
+
+    return;
+  }
+
+  // non-empty row. search for coords[1] in the IJA array, between ija and ija_next
+  // (including ija, not including ija_next)
+  //ija_size = get_size<IType>(storage);
+
+  // Do a binary search for the column
+  size_t pos = insert_search<IType>(s,
+                                    reinterpret_cast<IType*>(s->ija)[coord0],
+                                    reinterpret_cast<IType*>(s->ija)[coord0+1]-1,
+                                    coord1, &found);
+
+  if (found) { // replace
+    reinterpret_cast<IType*>(s->ija)[pos] = coord1;
+    reinterpret_cast<DType*>(s->a)[pos]   = v;
+
+    return;
+  }
+
+  vector_insert<DType,IType>(s, pos, &(coord1), &v, 1, false);
+  increment_ia_after<IType>(s, s->shape[0], coord0, 1);
+  s->ndnz++;
+
+}
+
+
+/*
+ * Attempt to set a cell or cells in a Yale matrix.
  */
 template <typename DType, typename IType>
 void set(VALUE left, SLICE* slice, VALUE right) {
   YALE_STORAGE* storage = NM_STORAGE_YALE(left);
 
+  // TODO: Easily modified to accept pass dense storage elements in instead of v (below). Won't work with slices.
   if (TYPE(right) == T_DATA) {
     if (RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete || RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete_ref) {
       rb_raise(rb_eNotImpError, "this type of slicing not yet supported");
@@ -463,51 +793,23 @@ void set(VALUE left, SLICE* slice, VALUE right) {
 
   } else {
 
-    DType* v = reinterpret_cast<DType*>(rubyobj_to_cval(right, storage->dtype));
-
-    size_t coord0 = storage->offset[0] + slice->coords[0],
-           coord1 = storage->offset[1] + slice->coords[1];
-
-    bool found = false;
-
-    if (coord0 == coord1) {
-      reinterpret_cast<DType*>(storage->a)[coord0] = *v; // set diagonal
-      xfree(v);
-      return;
+    DType* v;
+    size_t v_size = 1;
+    if (TYPE(right) == T_ARRAY) {  // Allow the user to pass in an array
+      v_size = RARRAY_LEN(right);
+      v      = ALLOC_N(DType, v_size);
+      for (size_t m = 0; m < RARRAY_LEN(right); ++m) {
+        rubyval_to_cval(rb_ary_entry(right, m), storage->dtype, &(v[m]));
+      }
+    } else {
+      v = reinterpret_cast<DType*>(rubyobj_to_cval(right, storage->dtype));
     }
 
-    // Get IJA positions of the beginning and end of the row
-    if (reinterpret_cast<IType*>(storage->ija)[coord0] == reinterpret_cast<IType*>(storage->ija)[coord0+1]) {
-      // empty row
-      vector_insert<DType,IType>(storage, reinterpret_cast<IType*>(storage->ija)[coord0], &(coord1), v, 1, false);
-      increment_ia_after<IType>(storage, storage->shape[0], coord0, 1);
-      reinterpret_cast<YALE_STORAGE*>(storage->src)->ndnz++;
-
-      xfree(v);
-      return;
+    if (slice->single) { // set a single cell
+      set_single_cell<DType,IType>(storage, slice->coords, *v);
+    } else {
+      set_multiple_cells<DType,IType>(storage, slice->coords, slice->lengths, v, v_size);
     }
-
-    // non-empty row. search for coords[1] in the IJA array, between ija and ija_next
-    // (including ija, not including ija_next)
-    //ija_size = get_size<IType>(storage);
-
-    // Do a binary search for the column
-    size_t pos = insert_search<IType>(storage,
-                                      reinterpret_cast<IType*>(storage->ija)[coord0],
-                                      reinterpret_cast<IType*>(storage->ija)[coord0+1]-1,
-                                      coord1, &found);
-
-    if (found) { // replace
-      reinterpret_cast<IType*>(storage->ija)[pos] = coord1;
-      reinterpret_cast<DType*>(storage->a)[pos]   = *v;
-
-      xfree(v);
-      return;
-    }
-
-    vector_insert<DType,IType>(storage, pos, &(coord1), v, 1, false);
-    increment_ia_after<IType>(storage, storage->shape[0], coord0, 1);
-    reinterpret_cast<YALE_STORAGE*>(storage->src)->ndnz++;
 
     xfree(v);
   }
@@ -658,7 +960,7 @@ template <typename DType, typename IType>
 static bool ndrow_is_empty(const YALE_STORAGE* s, IType ija, const IType ija_next) {
   if (ija == ija_next) return true;
 
-  DType* a = reinterpret_cast<DType*>(s->a);
+  DType* a = reinterpret_cast<DType*>(reinterpret_cast<YALE_STORAGE*>(s->src)->a);
 
 	// do all the entries = zero?
   for (; ija < ija_next; ++ija) {
@@ -689,7 +991,7 @@ template <typename IType>
 IType binary_search_left_boundary(const YALE_STORAGE* s, IType left, IType right, IType bound) {
   if (left > right) return -1;
 
-  IType* ija  = reinterpret_cast<IType*>(s->ija);
+  IType* ija  = IJA<IType>(s);
 
   if (ija[left] >= bound) return left; // shortcut
 
@@ -710,6 +1012,7 @@ IType binary_search_left_boundary(const YALE_STORAGE* s, IType left, IType right
  */
 template <typename IType>
 int binary_search(YALE_STORAGE* s, IType left, IType right, IType key) {
+  if (s->src != s) throw; // need to fix this quickly
 
   if (left > right) return -1;
 
@@ -733,7 +1036,9 @@ int binary_search(YALE_STORAGE* s, IType left, IType right, IType key) {
  * Resize yale storage vectors A and IJA, copying values.
  */
 static void vector_grow(YALE_STORAGE* s) {
-  if (s->src != s) throw; // need to correct this quickly.
+  if (s != s->src) {
+    throw; // need to correct this quickly.
+  }
 
   size_t new_capacity = s->capacity * GROWTH_CONSTANT;
   size_t max_capacity = max_size(s);
@@ -741,10 +1046,7 @@ static void vector_grow(YALE_STORAGE* s) {
   if (new_capacity > max_capacity) new_capacity = max_capacity;
 
   void* new_ija       = ALLOC_N(char, ITYPE_SIZES[s->itype] * new_capacity);
-  NM_CHECK_ALLOC(new_ija);
-
   void* new_a         = ALLOC_N(char, DTYPE_SIZES[s->dtype] * new_capacity);
-  NM_CHECK_ALLOC(new_a);
 
   void* old_ija       = s->ija;
   void* old_a         = s->a;
@@ -757,8 +1059,8 @@ static void vector_grow(YALE_STORAGE* s) {
   xfree(old_ija);
   xfree(old_a);
 
-  s->ija              = new_ija;
-  s->a                = new_a;
+  s->ija         = new_ija;
+  s->a           = new_a;
 }
 
 
@@ -838,6 +1140,7 @@ static char vector_insert_resize(YALE_STORAGE* s, size_t current_size, size_t po
  */
 template <typename DType, typename IType>
 static char vector_insert(YALE_STORAGE* s, size_t pos, size_t* j, void* val_, size_t n, bool struct_only) {
+
   if (pos < s->shape[0]) {
     rb_raise(rb_eArgError, "vector insert pos (%d) is before beginning of ja (%d); this should not happen", pos, s->shape[0]);
   }
@@ -897,7 +1200,7 @@ static char vector_insert(YALE_STORAGE* s, size_t pos, size_t* j, void* val_, si
  * If we add n items to row i, we need to increment ija[i+1] and onward.
  */
 template <typename IType>
-static void increment_ia_after(YALE_STORAGE* s, IType ija_size, IType i, IType n) {
+static void increment_ia_after(YALE_STORAGE* s, IType ija_size, IType i, long n) {
   IType* ija = reinterpret_cast<IType*>(s->ija);
 
   ++i;
@@ -969,7 +1272,7 @@ YALE_STORAGE* cast_copy(const YALE_STORAGE* rhs, dtype_t new_dtype) {
     lhs = copy_alloc_struct<IType>(rhs, new_dtype, rhs->capacity, size);
 
     LDType* la = reinterpret_cast<LDType*>(lhs->a);
-    RDType* ra = reinterpret_cast<RDType*>(rhs->a);
+    RDType* ra = A<RDType>(rhs);
 
     for (size_t index = 0; index < size; ++index) {
       la[index] = ra[index];
@@ -1101,12 +1404,12 @@ protected:
 public:
   IType* ija;
 
-  IJAManager(YALE_STORAGE* s, itype_t temp_itype) : needs_free(false), ija(reinterpret_cast<IType*>(s->ija)) {
+  IJAManager(YALE_STORAGE* s, itype_t temp_itype) : needs_free(false), ija(IJA<IType>(s)) {
     if (s->itype != temp_itype) {
       size_t len  = nm_yale_storage_get_size(s);
       needs_free  = true;
       ija         = ALLOC_N(IType, len);
-      copy_recast_itype_vector(s->ija, s->itype, reinterpret_cast<void*>(ija), temp_itype, len);
+      copy_recast_itype_vector(IJA<IType>(s), s->itype, reinterpret_cast<void*>(ija), temp_itype, len);
     }
   }
 
@@ -1130,7 +1433,7 @@ public:
   RowIterator(YALE_STORAGE* s_, IType* ija_, IType i_, size_t j_shape_, size_t j_offset_ = 0)
     : s(s_),
       ija(ija_),
-      a(s->a),
+      a(reinterpret_cast<YALE_STORAGE*>(s->src)->a),
       i(i_),
       k(ija[i]),
       k_end(ija[i+1]),
@@ -1143,8 +1446,8 @@ public:
 
   RowIterator(YALE_STORAGE* s_, IType i_, size_t j_shape_, size_t j_offset_ = 0)
     : s(s_),
-      ija(reinterpret_cast<IType*>(s->ija)),
-      a(s->a),
+      ija(IJA<IType>(s)),
+      a(reinterpret_cast<YALE_STORAGE*>(s->src)->a),
       i(i_),
       k(ija[i]),
       k_end(ija[i+1]),
@@ -1164,7 +1467,7 @@ public:
   template <typename T>
   T cobj() const {
     if (typeid(T) == typeid(RubyObject)) return obj();
-    return diag ? reinterpret_cast<T*>(s->a)[i] : reinterpret_cast<T*>(s->a)[k];
+    return A<T>(s)[diag ? i : k];
   }
 
   inline IType proper_j() const {
@@ -1185,8 +1488,8 @@ public:
       if (rb_funcall(v, rb_intern("!="), 1, init) == Qtrue) {
         if (k >= s->capacity) {
           vector_grow(s);
-          ija = reinterpret_cast<IType*>(s->ija);
-          a   = s->a;
+          ija = IJA<IType>(s);
+          a   = reinterpret_cast<YALE_STORAGE*>(s->src)->a;
         }
         reinterpret_cast<VALUE*>(a)[k] = v;
         ija[k] = j;
@@ -1310,8 +1613,8 @@ static bool eqeq_different_defaults(const YALE_STORAGE* s, const LDType& s_init,
                         t_offsets = get_offsets(const_cast<YALE_STORAGE*>(t));
 
   for (IType ri = 0; ri < s->shape[0]; ++ri) {
-    RowIterator<IType> sit(const_cast<YALE_STORAGE*>(s), reinterpret_cast<IType*>(s->ija), ri + s_offsets[0], s->shape[1], s_offsets[1]);
-    RowIterator<IType> tit(const_cast<YALE_STORAGE*>(t), reinterpret_cast<IType*>(t->ija), ri + t_offsets[0], s->shape[1], t_offsets[1]);
+    RowIterator<IType> sit(const_cast<YALE_STORAGE*>(s), IJA<IType>(s), ri + s_offsets[0], s->shape[1], s_offsets[1]);
+    RowIterator<IType> tit(const_cast<YALE_STORAGE*>(t), IJA<IType>(t), ri + t_offsets[0], s->shape[1], t_offsets[1]);
 
     while (!sit.end() || !tit.end()) {
 
@@ -1418,8 +1721,8 @@ static VALUE map_merged_stored(VALUE left, VALUE right, VALUE init, nm::itype_t 
 template <typename DType, typename IType>
 static VALUE each_stored_with_indices(VALUE nm) {
   YALE_STORAGE* s = NM_STORAGE_YALE(nm);
-  DType* a        = reinterpret_cast<DType*>(s->a);
-  IType* ija      = reinterpret_cast<IType*>(s->ija);
+  DType* a        = A<DType>(s);
+  IType* ija      = IJA<IType>(s);
 
   // If we don't have a block, return an enumerator.
   RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_yale_stored_enumerator_length);
@@ -1459,8 +1762,8 @@ static VALUE each_stored_with_indices(VALUE nm) {
 template <typename DType, typename IType>
 static VALUE each_with_indices(VALUE nm) {
   YALE_STORAGE* s = NM_STORAGE_YALE(nm);
-  DType* a        = reinterpret_cast<DType*>(s->a);
-  IType* ija      = reinterpret_cast<IType*>(s->ija);
+  DType* a        = A<DType>(s);
+  IType* ija      = IJA<IType>(s);
 
   // If we don't have a block, return an enumerator.
   RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_yale_enumerator_length);
@@ -1638,8 +1941,8 @@ static char nm_yale_storage_vector_insert(YALE_STORAGE* s, size_t pos, size_t* j
 /*
  * C accessor for yale_storage::increment_ia_after, typically called after ::vector_insert
  */
-static void nm_yale_storage_increment_ia_after(YALE_STORAGE* s, size_t ija_size, size_t i, size_t n, nm::itype_t itype) {
-  NAMED_ITYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::c_increment_ia_after, void, YALE_STORAGE*, size_t, size_t, size_t);
+static void nm_yale_storage_increment_ia_after(YALE_STORAGE* s, size_t ija_size, size_t i, long n, nm::itype_t itype) {
+  NAMED_ITYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::c_increment_ia_after, void, YALE_STORAGE*, size_t, size_t, long);
 
   ttable[itype](s, ija_size, i, n);
 }
@@ -1701,15 +2004,15 @@ size_t nm_yale_storage_get_size(const YALE_STORAGE* storage) {
  * Return a void pointer to the matrix's default value entry.
  */
 static void* default_value_ptr(const YALE_STORAGE* s) {
-  return reinterpret_cast<void*>(reinterpret_cast<char*>(s->a) + (s->src->shape[0] * DTYPE_SIZES[s->dtype]));
+  return reinterpret_cast<void*>(reinterpret_cast<char*>(((YALE_STORAGE*)(s->src))->a) + (((YALE_STORAGE*)(s->src))->shape[0] * DTYPE_SIZES[s->dtype]));
 }
 
 /*
  * Return the Ruby object at a given location in storage.
  */
 static VALUE obj_at(YALE_STORAGE* s, size_t k) {
-  if (s->dtype == nm::RUBYOBJ)  return reinterpret_cast<VALUE*>(s->a)[k];
-  else  return rubyobj_from_cval(reinterpret_cast<void*>(reinterpret_cast<char*>(s->a) + k * DTYPE_SIZES[s->dtype]), s->dtype).rval;
+  if (s->dtype == nm::RUBYOBJ)  return reinterpret_cast<VALUE*>(((YALE_STORAGE*)(s->src))->a)[k];
+  else  return rubyobj_from_cval(reinterpret_cast<void*>(reinterpret_cast<char*>(((YALE_STORAGE*)(s->src))->a) + k * DTYPE_SIZES[s->dtype]), s->dtype).rval;
 }
 
 
@@ -1744,6 +2047,9 @@ static YALE_STORAGE* nm_copy_alloc_struct(const YALE_STORAGE* rhs, const nm::dty
  */
 STORAGE* nm_yale_storage_copy_transposed(const STORAGE* rhs_base) {
   YALE_STORAGE* rhs = (YALE_STORAGE*)rhs_base;
+
+  if (rhs->src != rhs)
+    rb_raise(rb_eNotImpError, "must be called on a real matrix and not a slice");
 
   size_t* shape = ALLOC_N(size_t, 2);
   shape[0] = rhs->shape[1];
@@ -1938,7 +2244,7 @@ YALE_STORAGE* nm_yale_storage_create_from_old_yale(nm::dtype_t dtype, size_t* sh
  * For capacity (the maximum number of elements that can be stored without a resize), use capacity instead.
  */
 static VALUE nm_size(VALUE self) {
-  YALE_STORAGE* s = (YALE_STORAGE*)NM_STORAGE(self);
+  YALE_STORAGE* s = (YALE_STORAGE*)(NM_SRC(self));
 
   return rubyobj_from_cval_by_itype((char*)(s->ija) + ITYPE_SIZES[s->itype]*(s->shape[0]), s->itype).rval;
 }
@@ -1955,7 +2261,7 @@ static VALUE nm_a(int argc, VALUE* argv, VALUE self) {
   VALUE idx;
   rb_scan_args(argc, argv, "01", &idx);
 
-  YALE_STORAGE* s = NM_STORAGE_YALE(self);
+  YALE_STORAGE* s = reinterpret_cast<YALE_STORAGE*>(NM_SRC(self));
   size_t size = nm_yale_storage_get_size(s);
 
   if (idx == Qnil) {
@@ -1972,7 +2278,7 @@ static VALUE nm_a(int argc, VALUE* argv, VALUE self) {
     }
     VALUE ary = rb_ary_new4(size, vals);
 
-    for (size_t i = size; i < reinterpret_cast<YALE_STORAGE*>(s->src)->capacity; ++i)
+    for (size_t i = size; i < s->capacity; ++i)
       rb_ary_push(ary, Qnil);
 
     return ary;
@@ -1996,7 +2302,7 @@ static VALUE nm_d(int argc, VALUE* argv, VALUE self) {
   VALUE idx;
   rb_scan_args(argc, argv, "01", &idx);
 
-  YALE_STORAGE* s = NM_STORAGE_YALE(self);
+  YALE_STORAGE* s = reinterpret_cast<YALE_STORAGE*>(NM_SRC(self));
 
   if (idx == Qnil) {
     VALUE* vals = ALLOCA_N(VALUE, s->shape[0]);
@@ -2027,7 +2333,7 @@ static VALUE nm_d(int argc, VALUE* argv, VALUE self) {
  * Get the non-diagonal ("LU") portion of the A array of a Yale matrix.
  */
 static VALUE nm_lu(VALUE self) {
-  YALE_STORAGE* s = NM_STORAGE_YALE(self);
+  YALE_STORAGE* s = reinterpret_cast<YALE_STORAGE*>(NM_SRC(self));
 
   size_t size = nm_yale_storage_get_size(s);
 
@@ -2045,7 +2351,7 @@ static VALUE nm_lu(VALUE self) {
 
   VALUE ary = rb_ary_new4(size - s->shape[0] - 1, vals);
 
-  for (size_t i = size; i < reinterpret_cast<YALE_STORAGE*>(s->src)->capacity; ++i)
+  for (size_t i = size; i < s->capacity; ++i)
     rb_ary_push(ary, Qnil);
 
   return ary;
@@ -2059,7 +2365,7 @@ static VALUE nm_lu(VALUE self) {
  * JA and LU portions of the IJA and A arrays, respectively.
  */
 static VALUE nm_ia(VALUE self) {
-  YALE_STORAGE* s = NM_STORAGE_YALE(self);
+  YALE_STORAGE* s = reinterpret_cast<YALE_STORAGE*>(NM_SRC(self));
 
   VALUE* vals = ALLOCA_N(VALUE, s->shape[0] + 1);
 
@@ -2078,7 +2384,7 @@ static VALUE nm_ia(VALUE self) {
  * positions in the LU portion of the A array.
  */
 static VALUE nm_ja(VALUE self) {
-  YALE_STORAGE* s = NM_STORAGE_YALE(self);
+  YALE_STORAGE* s = reinterpret_cast<YALE_STORAGE*>(NM_SRC(self));
 
   size_t size = nm_yale_storage_get_size(s);
 
@@ -2090,7 +2396,7 @@ static VALUE nm_ja(VALUE self) {
 
   VALUE ary = rb_ary_new4(size - s->shape[0] - 1, vals);
 
-  for (size_t i = size; i < reinterpret_cast<YALE_STORAGE*>(s->src)->capacity; ++i)
+  for (size_t i = size; i < s->capacity; ++i)
     rb_ary_push(ary, Qnil);
 
   return ary;
@@ -2107,7 +2413,7 @@ static VALUE nm_ija(int argc, VALUE* argv, VALUE self) {
   VALUE idx;
   rb_scan_args(argc, argv, "01", &idx);
 
-  YALE_STORAGE* s = NM_STORAGE_YALE(self);
+  YALE_STORAGE* s = reinterpret_cast<YALE_STORAGE*>(NM_SRC(self));
   size_t size = nm_yale_storage_get_size(s);
 
   if (idx == Qnil) {
@@ -2120,7 +2426,7 @@ static VALUE nm_ija(int argc, VALUE* argv, VALUE self) {
 
    VALUE ary = rb_ary_new4(size, vals);
 
-    for (size_t i = size; i < reinterpret_cast<YALE_STORAGE*>(s->src)->capacity; ++i)
+    for (size_t i = size; i < s->capacity; ++i)
       rb_ary_push(ary, Qnil);
 
     return ary;
@@ -2146,6 +2452,9 @@ static VALUE nm_ija(int argc, VALUE* argv, VALUE self) {
  * range.
  */
 static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self) {
+  if (NM_SRC(self) != NM_STORAGE(self))
+    rb_raise(rb_eNotImpError, "must be called on a real matrix and not a slice");
+
   VALUE i_, as;
   rb_scan_args(argc, argv, "11", &i_, &as);
 
@@ -2215,12 +2524,16 @@ static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self) {
  */
 VALUE nm_vector_set(int argc, VALUE* argv, VALUE self) { //, VALUE i_, VALUE jv, VALUE vv, VALUE pos_) {
 
+  if (NM_SRC(self) != NM_STORAGE(self))
+    rb_raise(rb_eNotImpError, "must be called on a real matrix and not a slice");
+
   // i, jv, vv are mandatory; pos is optional; thus "31"
   VALUE i_, jv, vv, pos_;
   rb_scan_args(argc, argv, "31", &i_, &jv, &vv, &pos_);
 
   size_t len   = RARRAY_LEN(jv); // need length in order to read the arrays in
   size_t vvlen = RARRAY_LEN(vv);
+
   if (len != vvlen)
     rb_raise(rb_eArgError, "lengths must match between j array (%d) and value array (%d)", len, vvlen);
 
@@ -2247,7 +2560,7 @@ VALUE nm_vector_set(int argc, VALUE* argv, VALUE self) { //, VALUE i_, VALUE jv,
 
   nm_yale_storage_vector_insert(s, pos, j, vals, len, false, dtype, itype);
   nm_yale_storage_increment_ia_after(s, s->shape[0], i, len, itype);
-  reinterpret_cast<YALE_STORAGE*>(s->src)->ndnz += len;
+  s->ndnz += len;
 
   // Return the updated position
   pos += len;
