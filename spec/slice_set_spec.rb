@@ -36,7 +36,7 @@ describe "Set slice operation" do
 
       if stype == :list || stype == :yale
         it "should correctly set and unset a range of entries" do
-          pending("yale needed") if stype == :yale
+          #pending("yale needed") if stype == :yale
           slice_result_a = NMatrix.new(:dense, 2, 100, @m.dtype).cast(stype)
           slice_result_b = NMatrix.new(:dense, 2, 0,   @m.dtype).cast(stype)
           STDERR.puts "A"
@@ -109,7 +109,7 @@ describe "Set slice operation" do
       end
 
       it "should correctly set a single entry" do
-        pending if stype == :yale
+        #pending if stype == :yale
         n = @m.clone
         old_val = @m[0,0]
         @m[0,0] = 100

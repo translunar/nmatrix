@@ -630,12 +630,17 @@ static void set_multiple_cells(YALE_STORAGE* s, size_t* coords, size_t* lengths,
   Plan plan = count_slice_set_ndnz_change<DType, IType>(s, coords, lengths, v, v_size);
   std::tie(delta_size, copy, row_plans) = plan;
 
+  std::cerr << "copy = " << int(copy) << ", delta_size = " << int(delta_size) << ", row_plans size = " << row_plans.size() << std::endl;
+
+
   IType* ija = IJA<IType>(s);
   DType* a   = A<DType>(s);
 
   // We don't *have* to shrink, but we might as well.
   if (!copy && delta_size < 0 && size + delta_size < s->capacity / GROWTH_CONSTANT)
     copy = true;
+
+  std::cerr << "copy = " << int(copy) << std::endl;
 
   if (!copy) {
     size_t k  = 0;
@@ -647,6 +652,8 @@ static void set_multiple_cells(YALE_STORAGE* s, size_t* coords, size_t* lengths,
       int n;
       std::tie(pos, end, n) = row_plans.front(); row_plans.pop();
       pos += accum; end += accum;
+
+      std::cerr << "row " << int(si) << "\tpos=" << int(pos) << "\tend=" << int(end) << "\tn=" << n << std::endl;
 
       if (n > 0) { // size increase: copy later rows first, then modify contents of this row.
         for (IType m = 0; m < size - end; ++m) { // copy/resize
@@ -662,6 +669,9 @@ static void set_multiple_cells(YALE_STORAGE* s, size_t* coords, size_t* lengths,
           ija[size+n-1-m] = ija[size-1-m];
           a[size+n-1-m]   = a[size-1-m];
         }
+      } else if (n == 0) { // just overwrite the row, no copy needed
+        // FIXME: This can be done in-place.
+        modify_partial_row<DType,IType>((YALE_STORAGE*)(s->src), si, pos, end, n, s->offset[1] + coords[1], lengths[1], v, v_size, k);
       }
 
       accum     += n;
@@ -805,7 +815,7 @@ void set(VALUE left, SLICE* slice, VALUE right) {
       v = reinterpret_cast<DType*>(rubyobj_to_cval(right, storage->dtype));
     }
 
-    if (slice->single) { // set a single cell
+    if (slice->single || (slice->lengths[0] == 1 && slice->lengths[1] == 1)) { // set a single cell
       set_single_cell<DType,IType>(storage, slice->coords, *v);
     } else {
       set_multiple_cells<DType,IType>(storage, slice->coords, slice->lengths, v, v_size);
