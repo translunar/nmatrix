@@ -125,7 +125,7 @@ static YALE_STORAGE*	copy_alloc_struct(const YALE_STORAGE* rhs, const dtype_t ne
 
 static void						increment_ia_after(YALE_STORAGE* s, IType ija_size, IType i, long n);
 
-static IType				  insert_search(YALE_STORAGE* s, IType left, IType right, IType key, bool* found);
+static IType				  insert_search(YALE_STORAGE* s, IType left, IType right, IType key, bool& found);
 
 template <typename DType>
 static char           vector_insert(YALE_STORAGE* s, size_t pos, size_t* j, void* val_, size_t n, bool struct_only);
@@ -751,9 +751,11 @@ static void set_single_cell(YALE_STORAGE* storage, size_t* coords, DType& v) {
   // Get IJA positions of the beginning and end of the row
   if (storage->ija[coord0] == storage->ija[coord0+1]) {
     // empty row
-    vector_insert<DType>(s, s->ija[coord0], &(coord1), &v, 1, false);
-    increment_ia_after(s, s->shape[0], coord0, 1);
-    s->ndnz++;
+    if (v != *reinterpret_cast<DType*>(default_value_ptr(s))) {
+      vector_insert<DType>(s, s->ija[coord0], &(coord1), &v, 1, false);
+      increment_ia_after(s, s->shape[0], coord0, 1);
+      s->ndnz++;
+    }
 
     return;
   }
@@ -763,7 +765,7 @@ static void set_single_cell(YALE_STORAGE* storage, size_t* coords, DType& v) {
   //ija_size = get_size<IType>(storage);
 
   // Do a binary search for the column
-  size_t pos = insert_search(s, s->ija[coord0], s->ija[coord0+1]-1, coord1, &found);
+  size_t pos = insert_search(s, s->ija[coord0], s->ija[coord0+1]-1, coord1, found);
 
   if (found) { // replace
     s->ija[pos] = coord1;
@@ -772,9 +774,12 @@ static void set_single_cell(YALE_STORAGE* storage, size_t* coords, DType& v) {
     return;
   }
 
-  vector_insert<DType>(s, pos, &(coord1), &v, 1, false);
-  increment_ia_after(s, s->shape[0], coord0, 1);
-  s->ndnz++;
+  // Don't insert a 0 value
+  if (v != *reinterpret_cast<DType*>(default_value_ptr(s))) {
+    vector_insert<DType>(s, pos, &(coord1), &v, 1, false);
+    increment_ia_after(s, s->shape[0], coord0, 1);
+    s->ndnz++;
+  }
 
 }
 
@@ -1212,10 +1217,10 @@ static void increment_ia_after(YALE_STORAGE* s, IType ija_size, IType i, long n)
 /*
  * Binary search for returning insertion points.
  */
-static IType insert_search(YALE_STORAGE* s, IType left, IType right, IType key, bool* found) {
+static IType insert_search(YALE_STORAGE* s, IType left, IType right, IType key, bool& found) {
 
   if (left > right) {
-    *found = false;
+    found = false;
     return left;
   }
 
@@ -1224,7 +1229,7 @@ static IType insert_search(YALE_STORAGE* s, IType left, IType right, IType key, 
   IType mid_j = ija[mid];
 
   if (mid_j == key) {
-    *found = true;
+    found = true;
     return mid;
 
   } else if (mid_j > key) {

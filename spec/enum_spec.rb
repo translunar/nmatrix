@@ -27,25 +27,44 @@
 
 require File.dirname(__FILE__) + "/spec_helper.rb"
 
-describe "NMatrix enumeration" do
+describe "NMatrix enumeration for" do
   [:dense, :yale, :list].each do |stype|
     context stype do
 
-      it "should visit each cell in the matrix as if dense, making indices available" do
-        n = create_rectangular_matrix(stype)
+      before :each do
+        @n = create_rectangular_matrix(stype)
+      end
 
+      it "should visit each cell in the matrix as if dense, making indices available" do
         vv = []
         ii = []
         jj = []
-        n.each_with_indices do |v,i,j|
+        @n.each_with_indices do |v,i,j|
           vv << v
           ii << i
           jj << j
         end
 
-        vv.should == [1,2,3,4,0,5,6,7,0,8,9,10,0,11,12]
-        ii.should == [0,0,0,0,0,1,1,1,1,1,2,2,2,2,2]
-        jj.should == [0,1,2,3,4,0,1,2,3,4,0,1,2,3,4]
+        vv.should == [1,2,3,4,5,0,6,7,8,9,0,10,11,12,13,0,14,15,0,0,0,0,0,0,16,0,17,18,19,20]
+        ii.should == [[0]*6, [1]*6, [2]*6, [3]*6, [4]*6].flatten
+        jj.should == [0,1,2,3,4,5]*5
+
+
+      end
+      it "should visit each cell in the slice as if dense, making indices available" do
+        m = @n[1..4,1..3]
+        vv = []
+        ii = []
+        jj = []
+        m.each_with_indices do |v,i,j|
+          vv << v
+          ii << i
+          jj << j
+        end
+        jj.should == [0,1,2]*4
+        ii.should == [[0]*3, [1]*3, [2]*3, [3]*3].flatten
+        vv.should == [7,8,9,12,13,0,0,0,0,0,17,18]
+
       end
 
 

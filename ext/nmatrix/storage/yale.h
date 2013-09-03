@@ -243,8 +243,8 @@ public:
   long real_find_pos(long left, long right, size_t real_j) {
     if (left > right) return -1;
 
-    I mid   = (left + right) / 2;
-    I mid_j = ija(mid);
+    size_t mid   = (left + right) / 2;
+    size_t mid_j = ija(mid);
 
     if (mid_j == real_j)      return mid;
     else if (mid_j > real_j)  return real_find_pos(left, mid - 1, real_j);
@@ -253,29 +253,29 @@ public:
 
   // Binary search between left and right in IJA for column ID real_j. Essentially finds where the slice should begin,
   // with no guarantee that there's anything in there.
-  long real_find_left_boundary_pos(long left, long right, size_t real_j) {
+  long real_find_left_boundary_pos(size_t left, size_t right, size_t real_j) {
     if (left > right) return right;
     if (ija(left) >= real_j) return left;
 
-    I mid   = (left + right) / 2;
-    I mid_j = ija(mid);
+    size_t mid   = (left + right) / 2;
+    size_t mid_j = ija(mid);
 
     if (mid_j == real_j)      return mid;
-    else if (mid_j > real_j)  return real_find_pos(left, mid, real_j);
-    else                      return real_find_pos(mid + 1, right, real_j);
+    else if (mid_j > real_j)  return real_find_left_boundary_pos(left, mid, real_j);
+    else                      return real_find_left_boundary_pos(mid + 1, right, real_j);
   }
 
   // Binary search for coordinates i,j in the slice. If not found, return -1.
   long find_pos(size_t i, size_t j) {
-    I left   = ija(i + slice_offset[0]);
-    I right  = ija(i + slice_offset[0] + 1) - 1;
+    size_t left   = ija(i + slice_offset[0]);
+    size_t right  = ija(i + slice_offset[0] + 1) - 1;
     return real_find_pos(left, right, j + slice_offset[1]);
   }
 
   // Binary search for coordinates i,j in the slice, and return the first position >= j in row i.
-  I find_pos_for_insertion(size_t i, size_t j) {
-    I left   = ija(i + slice_offset[0]);
-    I right  = ija(i + slice_offset[0] + 1) - 1;
+  size_t find_pos_for_insertion(size_t i, size_t j) {
+    size_t left   = ija(i + slice_offset[0]);
+    size_t right  = ija(i + slice_offset[0] + 1) - 1;
     return real_find_left_boundary_pos(left, right, j + slice_offset[1]);
   }
 
@@ -293,8 +293,8 @@ public:
     inline size_t offset(size_t d) const { return y->offset(d); }
     inline size_t shape(size_t d) const { return y->shape(d); }
     inline size_t real_shape(size_t d) const { return y->real_shape(d); }
-    inline I ija(long pp) const { return y->ija(pp); }
-    inline I& ija(long pp) { return y->ija(pp); }
+    inline I ija(size_t pp) const { return y->ija(pp); }
+    inline I& ija(size_t pp) { return y->ija(pp); }
 
     virtual bool diag() const {
       return p < std::min(y->real_shape(0), y->real_shape(1));
@@ -307,7 +307,7 @@ public:
     }
 
   public:
-    basic_iterator(YaleStorage<D>* obj, size_t ii = 0, I pp = 0) : y(obj), i_(ii + y->offset(0)), p(pp) { }
+    basic_iterator(YaleStorage<D>* obj, size_t ii = 0, I pp = 0) : y(obj), i_(ii), p(pp) { }
 
     virtual inline size_t i() const { return i_; }
     virtual size_t j() const = 0;
@@ -553,13 +553,9 @@ public:
   protected:
     size_t j_; // These are relative to the slice.
 
-    // Is this a diagonal entry in the source storage?
-    bool diag() const {
-      return offset(0) + i_ == offset(1) + j_;
-    }
   public:
     // Create an iterator. May select the row since this is O(1).
-    iterator(YaleStorage<D>* obj, size_t ii = 0) : basic_iterator(obj, ii, obj->ija(ii)), j_(0) { }
+    iterator(YaleStorage<D>* obj, size_t ii = 0) : basic_iterator(obj, ii, obj->ija(ii + obj->offset(0))), j_(0) { }
 
     // Prefix ++
     iterator& operator++() {
@@ -569,10 +565,11 @@ public:
         ++i_;
 
         // Do a binary search to find the beginning of the slice
-        p = offset(0) > 0 ? y->find_pos_for_insertion(i_,j_) : ija(i_ + offset(0));
+        p = offset(0) > 0 ? y->find_pos_for_insertion(i_,j_) : ija(i_);
       } else {
         // If the last j was actually stored in this row of the matrix, need to advance p.
-        if (!y->real_row_empty(i_ + offset(0)) && ija(p) == prev_j) ++p;  // this test is the same as real_ndnz_exists
+
+        if (!y->real_row_empty(i_ + offset(0)) && ija(p) <= prev_j + offset(1)) ++p;  // this test is the same as real_ndnz_exists
       }
 
       return *this;
@@ -603,14 +600,16 @@ public:
       return j_ > rhs.j_;
     }
 
+    virtual bool real_diag() const { return i_ + offset(0) == j_ + offset(1); }
+
     // De-reference
     virtual D operator*() const {
-      if (i_ + offset(0) == j_ + offset(1))                                     return y->a( i_ + offset(0) );
+      if (real_diag())                                                          return y->a( i_ + offset(0) );
+      else if (p >= ija(i_+offset(0)+1))                                        return y->const_default_obj();
       else if (!y->real_row_empty(i_ + offset(0)) && ija(p) == j_ + offset(1))  return y->a( p );
       else                                                                      return y->const_default_obj();
     }
 
-    virtual bool real_diag() const { return i_ + offset(0) == j_ + offset(1); }
     virtual size_t j() const { return j_; }
   };
 

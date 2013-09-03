@@ -208,6 +208,7 @@ describe NMatrix do
               n[2,3] = 4
               n[2,0] = 3
             end
+
             ary = []
             n.each do |x|
               ary << x
