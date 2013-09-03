@@ -51,6 +51,28 @@ def create_matrix(stype) #:nodoc:
   m
 end
 
+def create_rectangular_matrix(stype) #:nodoc:
+  m = stype == :yale ? NMatrix.new(stype, [3,5], :int32) : NMatrix.new(stype, [3,5], 0, :int32)
+
+  m[0,0] = 1
+  m[0,1] = 2
+  m[0,2] = 3
+  m[0,3] = 4
+  m[0,4] = 0
+  m[1,0] = 5
+  m[1,1] = 6
+  m[1,2] = 7
+  m[1,3] = 0
+  m[1,4] = 8
+  m[2,0] = 9
+  m[2,1] = 10
+  m[2,2] = 0
+  m[2,3] = 11
+  m[2,4] = 12
+
+  m
+end
+
 def create_vector(stype) #:nodoc:
   m = stype == :yale ? NVector.new(stype, 10, :int32) : NVector.new(stype, 10, 0, :int32)
 

@@ -1738,37 +1738,14 @@ static VALUE each_stored_with_indices(VALUE nm) {
 template <typename DType>
 static VALUE each_with_indices(VALUE nm) {
   YALE_STORAGE* s = NM_STORAGE_YALE(nm);
-  DType* a        = A<DType>(s);
-  IType* ija      = IJA(s);
+  YaleStorage<DType> y(s);
 
   // If we don't have a block, return an enumerator.
   RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_yale_enumerator_length);
 
-  // Iterate in two dimensions.
-  // s stands for src, r stands for ref (for ri, rj, si, sj)
-  for (long ri = 0; ri < s->shape[0]; ++ri) {
-    long si  = ri + s->offset[0];
-    VALUE ii = LONG2NUM(ri + s->offset[0]);
-
-    IType k = ija[si], k_next = ija[si+1];
-
-    for (long rj = 0; rj < s->shape[1]; ++rj) {
-      long sj     = rj + s->offset[1];
-      VALUE v, jj = LONG2NUM(rj);
-
-      // zero is stored in s->shape[0]
-      if (si == sj) {
-        v = obj_at(s, si);
-      } else {
-        // Walk through the row until we find the correct location.
-        while (ija[k] < sj && k < k_next) ++k;
-        if (k < k_next && ija[k] == sj) {
-          v = obj_at(s, k);
-          ++k;
-        } else v = default_value(s); // rubyobj_from_cval(&(a[s->shape[0]]), NM_DTYPE(nm)).rval;
-      }
-      rb_yield_values(3, v, ii, jj);
-    }
+  for (typename YaleStorage<DType>::iterator iter = y.begin(); iter != y.end(); ++iter) {
+    VALUE ii = iter.rb_i(), jj = iter.rb_j(), v = ~iter;
+    rb_yield_values(3, ~iter, iter.rb_i(), iter.rb_j());
   }
 
   return nm;
@@ -1815,7 +1792,7 @@ void nm_init_yale_functions() {
 
   rb_define_const(cNMatrix_YaleFunctions, "YALE_GROWTH_CONSTANT", rb_float_new(nm::yale_storage::GROWTH_CONSTANT));
 
-  // We need to know what size_t (IType) is so we can convert indices properly when using IO.
+  // This is so the user can easily check the IType size, mostly for debugging.
   size_t itype_size        = sizeof(IType);
   VALUE itype_dtype;
   if (itype_size == sizeof(uint64_t)) {
@@ -1825,7 +1802,7 @@ void nm_init_yale_functions() {
   } else if (itype_size == sizeof(uint16_t)) {
     itype_dtype = ID2SYM(rb_intern("int16"));
   } else {
-    rb_raise(rb_eStandardError, "unhandled length for sizeof(IType): %u; note that IType is probably defined as size_t)", sizeof(IType));
+    rb_raise(rb_eStandardError, "unhandled length for sizeof(IType): %u; note that IType is probably defined as size_t", sizeof(IType));
   }
   rb_define_const(cNMatrix, "INDEX_DTYPE", itype_dtype);
 }

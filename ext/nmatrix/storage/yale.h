@@ -222,6 +222,7 @@ public:
   inline D* default_obj_ptr() { return &(a(s->shape[0])); }
   inline D& default_obj() { return a(s->shape[0]); }
   inline D default_obj() const { return a(s->shape[0]); }
+  inline D const_default_obj() const { return a(s->shape[0]); }
 
   inline I* ija_p()     const { return reinterpret_cast<I*>(s->ija); }
   inline I  ija(long p) const { return ija_p()[p]; }
@@ -309,19 +310,21 @@ public:
     basic_iterator(YaleStorage<D>* obj, size_t ii = 0, I pp = 0) : y(obj), i_(ii + y->offset(0)), p(pp) { }
 
     virtual inline size_t i() const { return i_; }
-    virtual inline size_t j() const = 0;
+    virtual size_t j() const = 0;
+
+    virtual inline VALUE rb_i() const { return LONG2NUM(i()); }
+    virtual inline VALUE rb_j() const { return LONG2NUM(j()); }
 
     virtual size_t real_i() const { return offset(0) + i(); }
     virtual size_t real_j() const { return offset(1) + j(); }
     virtual bool real_ndnz_exists() const { return !y->real_row_empty(real_i()) && ija(p) == real_j(); }
 
+    virtual D operator*() const = 0;
 
-    virtual basic_iterator& operator++() = 0;
-
-    // Postfix ++
-    virtual basic_iterator operator++(int dummy) const {
-      basic_iterator iter(*this);
-      return ++iter;
+    // Ruby VALUE de-reference
+    virtual VALUE operator~() const {
+      if (typeid(D) == typeid(RubyObject)) return *(*this);
+      else return RubyObject(*(*this)).rval;
     }
   };
 
@@ -350,6 +353,11 @@ public:
     stored_diagonal_iterator& operator++() {
       i_ = ++p - offset(0);
       return *this;
+    }
+
+    stored_diagonal_iterator operator++(int dummy) const {
+      stored_diagonal_iterator iter(*this);
+      return ++iter;
     }
 
     virtual inline size_t j() const {
@@ -433,6 +441,11 @@ public:
       return *this;
     }
 
+    stored_nondiagonal_iterator operator++(int dummy) const {
+      stored_nondiagonal_iterator iter(*this);
+      return ++iter;
+    }
+
     virtual inline size_t j() const {
       return ija(p) - offset(1);
     }
@@ -505,6 +518,11 @@ public:
       return *this;
     }
 
+    stored_iterator operator++(int dummy) const {
+      stored_iterator iter(*this);
+      return ++iter;
+    }
+
     virtual bool operator==(const stored_iterator& rhs) const {
       return *this == *(rhs->iter);
     }
@@ -560,6 +578,11 @@ public:
       return *this;
     }
 
+    iterator operator++(int dummy) const {
+      iterator iter(*this);
+      return ++iter;
+    }
+
     virtual bool operator!=(const iterator& rhs) const {
       return (i_ != rhs.i_ || j_ != rhs.j_);
     }
@@ -584,7 +607,7 @@ public:
     virtual D operator*() const {
       if (i_ + offset(0) == j_ + offset(1))                                     return y->a( i_ + offset(0) );
       else if (!y->real_row_empty(i_ + offset(0)) && ija(p) == j_ + offset(1))  return y->a( p );
-      else                                                                      return y->default_obj();
+      else                                                                      return y->const_default_obj();
     }
 
     virtual bool real_diag() const { return i_ + offset(0) == j_ + offset(1); }
@@ -626,11 +649,16 @@ public:
     virtual size_t real_j() const { return d ? d_iter->real_j() : nd_iter->real_j(); }
     virtual size_t real_i() const { return d ? d_iter->real_i() : nd_iter->real_i(); }
 
-    virtual ordered_iterator& operator++() {
+    ordered_iterator& operator++() {
       if (d)    ++(*d_iter);
       else      ++(*nd_iter);
       d = *d_iter < *nd_iter;
       return *this;
+    }
+
+    ordered_iterator operator++(int dummy) const {
+      ordered_iterator iter(*this);
+      return ++iter;
     }
 
     virtual bool operator==(const ordered_iterator& rhs) const {
@@ -653,19 +681,19 @@ public:
   };
 
   // Variety of iterator begin and end functions.
-  iterator begin(size_t row = 0) const                {      return iterator(this, row);               }
-  iterator row_end(size_t row) const                  {      return begin(row+1);                      }
-  iterator end() const                                {      return iterator(this, shape(0));          }
-  stored_diagonal_iterator sdbegin(size_t d = 0) const{      return stored_diagonal_iterator(this, d); }
-  stored_diagonal_iterator sdend() const              {      return stored_diagonal_iterator(this, std::min(real_shape(0), real_shape(1))); }
-  stored_nondiagonal_iterator sndbegin(size_t row = 0) const{return stored_nondiagonal_iterator(this, false, row); }
-  stored_nondiagonal_iterator sndrow_end(size_t row) const { return sndbegin(row+1);                   }
-  stored_nondiagonal_iterator sndend() const          {      return stored_nondiagonal_iterator(this, true); }
-  stored_iterator sbegin() const                      {      return stored_iterator(this, true);       }
-  stored_iterator send() const                        {      return stored_iterator(this, false);      }
-  ordered_iterator obegin(size_t row = 0) const       {      return ordered_iterator(this, row);       }
-  ordered_iterator oend() const                       {      return ordered_iterator(this, shape(0));  }
-  ordered_iterator orow_end(size_t row) const         {      return obegin(row+1);                     }
+  iterator begin(size_t row = 0)                      {      return iterator(this, row);               }
+  iterator row_end(size_t row)                        {      return begin(row+1);                      }
+  iterator end()                                      {      return iterator(this, shape(0));          }
+  stored_diagonal_iterator sdbegin(size_t d = 0)      {      return stored_diagonal_iterator(this, d); }
+  stored_diagonal_iterator sdend()                    {      return stored_diagonal_iterator(this, std::min(real_shape(0), real_shape(1))); }
+  stored_nondiagonal_iterator sndbegin(size_t row = 0){      return stored_nondiagonal_iterator(this, false, row); }
+  stored_nondiagonal_iterator sndrow_end(size_t row)  {      return sndbegin(row+1);                   }
+  stored_nondiagonal_iterator sndend()                {      return stored_nondiagonal_iterator(this, true); }
+  stored_iterator sbegin()                            {      return stored_iterator(this, true);       }
+  stored_iterator send()                              {      return stored_iterator(this, false);      }
+  ordered_iterator obegin(size_t row = 0)             {      return ordered_iterator(this, row);       }
+  ordered_iterator oend()                             {      return ordered_iterator(this, shape(0));  }
+  ordered_iterator orow_end(size_t row)               {      return obegin(row+1);                     }
 
 protected:
   YALE_STORAGE* s;
