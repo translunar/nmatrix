@@ -134,13 +134,6 @@ const char* const DTYPE_NAMES[nm::NUM_DTYPES] = {
 	"object"
 };
 
-const char* const ITYPE_NAMES[nm::NUM_ITYPES] = {
-	"uint8",
-	"uint16",
-	"uint32",
-	"uint64"
-};
-
 
 const size_t DTYPE_SIZES[nm::NUM_DTYPES] = {
 	sizeof(uint8_t),
@@ -158,12 +151,6 @@ const size_t DTYPE_SIZES[nm::NUM_DTYPES] = {
 	sizeof(nm::RubyObject)
 };
 
-const size_t ITYPE_SIZES[nm::NUM_ITYPES] = {
-	sizeof(uint8_t),
-	sizeof(uint16_t),
-	sizeof(uint32_t),
-	sizeof(uint64_t),
-};
 
 const nm::dtype_t Upcast[nm::NUM_DTYPES][nm::NUM_DTYPES] = {
   { nm::BYTE, nm::INT16, nm::INT16, nm::INT32, nm::INT64, nm::FLOAT32, nm::FLOAT64, nm::COMPLEX64, nm::COMPLEX128, nm::RATIONAL32, nm::RATIONAL64, nm::RATIONAL128, nm::RUBYOBJ},
@@ -305,30 +292,6 @@ nm::RubyObject rubyobj_from_cval(void* val, nm::dtype_t dtype) {
 	return Qnil;
 }
 
-
-/*
- * Convert from itype instead of dtype
- */
-nm::RubyObject rubyobj_from_cval_by_itype(void* val, nm::itype_t itype) {
-  using namespace nm;
-	switch (itype) {
-		case UINT8:
-			return RubyObject(*reinterpret_cast<uint8_t*>(val));
-
-		case UINT16:
-			return RubyObject((int16_t)(*reinterpret_cast<uint16_t*>(val)));
-
-		case UINT32:
-			return RubyObject((int32_t)(*reinterpret_cast<uint32_t*>(val)));
-
-		case UINT64:
-			return RubyObject((int64_t)(*reinterpret_cast<uint64_t*>(val)));
-
-	  default:
-	    rb_raise(nm_eDataTypeError, "Conversion to RubyObject requested from unknown data type");
-	}
-	return Qnil;
-}
 
 
 /*

@@ -74,8 +74,8 @@ namespace nm { namespace io {
 template <typename DType, typename MDType>
 char* matlab_cstring_to_dtype_string(size_t& result_len, const char* str, size_t bytes) {
 
-  result_len   = bytes / sizeof(DType);
-  char* result = ALLOC_N(char, bytes / sizeof(DType));
+  result_len   = sizeof(DType) * bytes / sizeof(MDType);
+  char* result = ALLOC_N(char, result_len);
 
   if (bytes % sizeof(MDType) != 0) {
     rb_raise(rb_eArgError, "the given string does not divide evenly for the given MATLAB dtype");
@@ -109,7 +109,7 @@ nm::dtype_t nm_dtype_from_rbstring(VALUE str) {
   	}
   }
 
-  rb_raise(rb_eArgError, "Invalid data type string specified.");
+  rb_raise(rb_eArgError, "invalid data type string (%s) specified", RSTRING_PTR(str));
 }
 
 
@@ -117,30 +117,18 @@ nm::dtype_t nm_dtype_from_rbstring(VALUE str) {
  * Converts a symbol to a data type.
  */
 nm::dtype_t nm_dtype_from_rbsymbol(VALUE sym) {
+  ID sym_id = SYM2ID(sym);
 
   for (size_t index = 0; index < NM_NUM_DTYPES; ++index) {
-    if (SYM2ID(sym) == rb_intern(DTYPE_NAMES[index])) {
+    if (sym_id == rb_intern(DTYPE_NAMES[index])) {
     	return static_cast<nm::dtype_t>(index);
     }
   }
 
-  rb_raise(rb_eArgError, "Invalid data type symbol specified.");
+  VALUE str = rb_any_to_s(sym);
+  rb_raise(rb_eArgError, "invalid data type symbol (:%s) specified", RSTRING_PTR(str));
 }
 
-
-/*
- * Converts a symbol to an index type.
- */
-nm::itype_t nm_itype_from_rbsymbol(VALUE sym) {
-
-  for (size_t index = 0; index < NM_NUM_ITYPES; ++index) {
-    if (SYM2ID(sym) == rb_intern(ITYPE_NAMES[index])) {
-    	return static_cast<nm::itype_t>(index);
-    }
-  }
-
-  rb_raise(rb_eArgError, "Invalid index type specified.");
-}
 
 /*
  * Converts a string to a storage type. Only looks at the first three
@@ -197,35 +185,28 @@ static nm::io::matlab_dtype_t matlab_dtype_from_rbsymbol(VALUE sym) {
  * Arguments:
  * * str        :: the data
  * * from       :: symbol representing MATLAB data type (e.g., :miINT8)
- * * options    :: hash, give either :itype => some_itype or :dtype => some_dtype, tells function
- *                 what to give as output.
+ * * type       :: either :itype or some dtype symbol (:byte, :uint32, etc)
  */
-static VALUE nm_rbstring_matlab_repack(VALUE self, VALUE str, VALUE from, VALUE options) {
+static VALUE nm_rbstring_matlab_repack(VALUE self, VALUE str, VALUE from, VALUE type) {
   nm::io::matlab_dtype_t from_type = matlab_dtype_from_rbsymbol(from);
   uint8_t to_type;
 
-  if (TYPE(options) != T_HASH) {
-    rb_raise(rb_eArgError, "third argument to repack must be an options hash");
-  }
-
-  if (RB_HASH_HAS_SYMBOL_KEY(options, "dtype")) { // Hash#has_key?(:dtype)
-
-    nm::dtype_t to_dtype  = nm_dtype_from_rbsymbol(rb_hash_aref(options, ID2SYM(rb_intern("dtype"))));
-    to_type               = static_cast<int8_t>(to_dtype);
-
-  } else if (RB_HASH_HAS_SYMBOL_KEY(options, "itype")) {
-
-    nm::itype_t to_itype  = nm_itype_from_rbsymbol(rb_hash_aref(options, ID2SYM(rb_intern("itype"))));
-
-    // we're going to cheat and use the DTYPE template table. To do this, we just act like uint8_t
-    // is a dtype (both are 0, itype and dtype), or we add 1 to the other itypes and treat them as
-    // signed.
-    to_type           = static_cast<uint8_t>(to_itype);
-    if (to_itype != nm::UINT8) to_type += 1;
-
-
+  if (SYMBOL_P(type)) {
+    if (rb_to_id(type) == rb_intern("itype")) {
+      if (sizeof(size_t) == sizeof(int64_t)) {
+        to_type = static_cast<int8_t>(nm::INT64);
+      } else if (sizeof(size_t) == sizeof(int32_t)) {
+        to_type = static_cast<int8_t>(nm::INT32);
+      } else if (sizeof(size_t) == sizeof(int16_t)) {
+        to_type = static_cast<int8_t>(nm::INT16);
+      } else {
+        rb_raise(rb_eStandardError, "unhandled size_t definition");
+      }
+    } else {
+      to_type = static_cast<uint8_t>(nm_dtype_from_rbsymbol(type));
+    }
   } else {
-    rb_raise(rb_eArgError, "third argument must have either :itype or :dtype as a key");
+    rb_raise(rb_eArgError, "expected symbol for third argument");
   }
 
   // For next few lines, see explanation above NM_MATLAB_DTYPE_TEMPLATE_TABLE definition in io.h.
@@ -241,7 +222,7 @@ static VALUE nm_rbstring_matlab_repack(VALUE self, VALUE str, VALUE from, VALUE 
 
   // Encode as 8-bit ASCII with a length -- don't want to hiccup on \0
   VALUE result = rb_str_new(repacked_data, repacked_data_length);
-  free(repacked_data); // Don't forget to free what we allocated!
+  xfree(repacked_data); // Don't forget to free what we allocated!
 
   return result;
 }

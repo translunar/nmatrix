@@ -198,7 +198,6 @@
  */
 
 #define NM_NUM_DTYPES 13  // data/data.h
-#define NM_NUM_ITYPES 4   // data/data.h
 #define NM_NUM_STYPES 3   // storage/storage.h
 
 //#ifdef __cplusplus
@@ -225,12 +224,6 @@ NM_DEF_ENUM(dtype_t,	BYTE				=  0,  // unsigned char
                     	RATIONAL128	= 11,  // Rational128 class
                     	RUBYOBJ			= 12);  // Ruby VALUE type
 
-/* Index Type for Yale Matrices */
-NM_DEF_ENUM(itype_t,  UINT8  = 0,
-                      UINT16 = 1,
-                      UINT32 = 2,
-                      UINT64 = 3);
-
 NM_DEF_ENUM(symm_t,   NONSYMM   = 0,
                       SYMM      = 1,
                       SKEW      = 2,
@@ -253,11 +246,10 @@ NM_DEF_STORAGE_STRUCT_POST(DENSE_STORAGE);     // };
 
 /* Yale Storage */
 NM_DEF_STORAGE_CHILD_STRUCT_PRE(YALE_STORAGE);
-	void* a;      // should go first
-	size_t ndnz; // Strictly non-diagonal non-zero count!
+	void*   a;      // should go first
+	size_t  ndnz; // Strictly non-diagonal non-zero count!
 	size_t	capacity;
-	NM_DECL_ENUM(itype_t, itype);
-	void*		ija;
+	size_t* ija;
 NM_DEF_STORAGE_STRUCT_POST(YALE_STORAGE);
 
 // FIXME: NODE and LIST should be put in some kind of namespace or something, at least in C++.
@@ -306,7 +298,6 @@ NM_DEF_STRUCT_POST(NMATRIX);  // };
 #define NM_SRC(val)             (NM_STORAGE(val)->src)
 #define NM_DIM(val)             (NM_STORAGE(val)->dim)
 #define NM_DTYPE(val)           (NM_STORAGE(val)->dtype)
-#define NM_ITYPE(val)           (NM_STORAGE_YALE(val)->itype)
 #define NM_STYPE(val)           (NM_STRUCT(val)->stype)
 #define NM_SHAPE(val,i)         (NM_STORAGE(val)->shape[(i)])
 #define NM_SHAPE0(val)          (NM_STORAGE(val)->shape[0])

@@ -83,8 +83,8 @@ extern "C" {
   // Lifecycle //
   ///////////////
 
-  YALE_STORAGE* nm_yale_storage_create(nm::dtype_t dtype, size_t* shape, size_t dim, size_t init_capacity, nm::itype_t itype);
-  YALE_STORAGE* nm_yale_storage_create_from_old_yale(nm::dtype_t dtype, size_t* shape, void* ia, void* ja, void* a, nm::dtype_t from_dtype);
+  YALE_STORAGE* nm_yale_storage_create(nm::dtype_t dtype, size_t* shape, size_t dim, size_t init_capacity);
+  YALE_STORAGE* nm_yale_storage_create_from_old_yale(nm::dtype_t dtype, size_t* shape, char* ia, char* ja, char* a, nm::dtype_t from_dtype);
   YALE_STORAGE*	nm_yale_storage_create_merged(const YALE_STORAGE* merge_template, const YALE_STORAGE* other);
   void          nm_yale_storage_delete(STORAGE* s);
   void          nm_yale_storage_delete_ref(STORAGE* s);
@@ -125,39 +125,6 @@ extern "C" {
   // Utility //
   /////////////
 
-  /*
-   * Calculates the itype a YALE_STORAGE object would need without actually needing
-   * to see the YALE_STORAGE object. Does this just by looking at the shape.
-   *
-   * Useful for creating Yale Storage by other means than NMatrix.new(:yale, ...),
-   * e.g., from a MATLAB v5 .mat file.
-   */
-  inline nm::itype_t nm_yale_storage_itype_by_shape(const size_t* shape) {
-    uint64_t yale_max_size = shape[0] * (shape[1]+1);
-
-    if (yale_max_size < static_cast<uint64_t>(std::numeric_limits<uint8_t>::max()) - 2) {
-      return nm::UINT8;
-
-    } else if (yale_max_size < static_cast<uint64_t>(std::numeric_limits<uint16_t>::max()) - 2) {
-      return nm::UINT16;
-
-    } else if (yale_max_size < std::numeric_limits<uint32_t>::max() - 2) {
-      return nm::UINT32;
-
-    } else {
-      return nm::UINT64;
-    }
-  }
-
-  /*
-   * Determine the index dtype (which will be used for the ija vector). This is
-   * determined by matrix shape, not IJA/A vector capacity. Note that it's MAX-2
-   * because UINTX_MAX and UINTX_MAX-1 are both reserved for sparse matrix
-   * multiplication.
-   */
-  inline nm::itype_t nm_yale_storage_default_itype(const YALE_STORAGE* s) {
-    return nm_yale_storage_itype_by_shape(s->shape);
-  }
 
 
   /////////////////////////
@@ -177,6 +144,7 @@ extern "C" {
 } // end of extern "C" block
 
 namespace nm { namespace yale_storage {
+  typedef size_t IType;
 
   /*
    * Constants
@@ -188,7 +156,6 @@ namespace nm { namespace yale_storage {
    * Templated Functions
    */
 
-  template <typename IType>
   int binary_search(YALE_STORAGE* s, IType left, IType right, IType key);
 
   /*
@@ -214,14 +181,499 @@ namespace nm { namespace yale_storage {
     }
   }
 
-  template <typename DType, typename IType>
+  template <typename DType>
   void init(YALE_STORAGE* s, void* init_val);
 
-  template <typename IType>
   size_t  get_size(const YALE_STORAGE* storage);
 
-  template <typename IType>
   IType binary_search_left_boundary(const YALE_STORAGE* s, IType left, IType right, IType bound);
-}} // end of namespace nm::yale_storage
+
+} // end of namespace yale_storage
+
+// namespace nm
+
+/*
+ * This class is basically an intermediary for YALE_STORAGE objects which enables us to treat it like a C++ object. It
+ * keeps the src pointer as its s, along with other relevant slice information.
+ *
+ * It's useful for creating iterators and such. It isn't responsible for allocating or freeing its YALE_STORAGE* pointers.
+ */
+template <typename D>
+class YaleStorage {
+  typedef size_t I;
+public:
+  YaleStorage(const YALE_STORAGE* storage)
+   : s(reinterpret_cast<YALE_STORAGE*>(storage->src)),
+     slice(storage != storage->src),
+     slice_shape(storage->shape),
+     slice_offset(storage->offset)
+  { }
+
+  YaleStorage(const STORAGE* storage)
+   : s(reinterpret_cast<YALE_STORAGE*>(storage->src)),
+     slice(storage != storage->src),
+     slice_shape(storage->shape),
+     slice_offset(storage->offset)
+  { }
+
+
+  bool is_ref() const { return slice; }
+
+  inline D* default_obj_ptr() { return &(a(s->shape[0])); }
+  inline D& default_obj() { return a(s->shape[0]); }
+  inline D default_obj() const { return a(s->shape[0]); }
+
+  inline I* ija_p()     const { return reinterpret_cast<I*>(s->ija); }
+  inline I  ija(long p) const { return ija_p()[p]; }
+  inline I& ija(long p)       { return ija_p()[p]; }
+  inline D* a_p()       const { return reinterpret_cast<D*>(s->a); }
+  inline D  a(long p)   const { return a_p()[p]; }
+
+  bool real_row_empty(size_t i) const { return ija(i+1) - ija(i) == 0 ? true : false; }
+
+  inline size_t* shape_p()        const { return slice_shape;      }
+  inline size_t  shape(uint8_t d) const { return slice_shape[d];   }
+  inline size_t* real_shape_p() const { return s->shape;           }
+  inline size_t  real_shape(uint8_t d) const { return s->shape[d]; }
+  inline size_t* offset_p()     const { return slice_offset;       }
+  inline size_t  offset(uint8_t d) const { return slice_offset[d]; }
+
+  // Binary search between left and right in IJA for column ID real_j. Returns left if not found.
+  long real_find_pos(long left, long right, size_t real_j) {
+    if (left > right) return -1;
+
+    I mid   = (left + right) / 2;
+    I mid_j = ija(mid);
+
+    if (mid_j == real_j)      return mid;
+    else if (mid_j > real_j)  return real_find_pos(left, mid - 1, real_j);
+    else                      return real_find_pos(mid + 1, right, real_j);
+  }
+
+  // Binary search between left and right in IJA for column ID real_j. Essentially finds where the slice should begin,
+  // with no guarantee that there's anything in there.
+  long real_find_left_boundary_pos(long left, long right, size_t real_j) {
+    if (left > right) return right;
+    if (ija(left) >= real_j) return left;
+
+    I mid   = (left + right) / 2;
+    I mid_j = ija(mid);
+
+    if (mid_j == real_j)      return mid;
+    else if (mid_j > real_j)  return real_find_pos(left, mid, real_j);
+    else                      return real_find_pos(mid + 1, right, real_j);
+  }
+
+  // Binary search for coordinates i,j in the slice. If not found, return -1.
+  long find_pos(size_t i, size_t j) {
+    I left   = ija(i + slice_offset[0]);
+    I right  = ija(i + slice_offset[0] + 1) - 1;
+    return real_find_pos(left, right, j + slice_offset[1]);
+  }
+
+  // Binary search for coordinates i,j in the slice, and return the first position >= j in row i.
+  I find_pos_for_insertion(size_t i, size_t j) {
+    I left   = ija(i + slice_offset[0]);
+    I right  = ija(i + slice_offset[0] + 1) - 1;
+    return real_find_left_boundary_pos(left, right, j + slice_offset[1]);
+  }
+
+
+  /*
+   * Iterator base class (pure virtual).
+   */
+  class basic_iterator {
+    friend class YaleStorage<D>;
+  protected:
+    YaleStorage<D>* y;
+    size_t i_;
+    I p;
+
+    inline size_t offset(size_t d) const { return y->offset(d); }
+    inline size_t shape(size_t d) const { return y->shape(d); }
+    inline size_t real_shape(size_t d) const { return y->real_shape(d); }
+    inline I ija(long pp) const { return y->ija(pp); }
+    inline I& ija(long pp) { return y->ija(pp); }
+
+    virtual bool diag() const {
+      return p < std::min(y->real_shape(0), y->real_shape(1));
+    }
+    virtual bool done_with_diag() const {
+      return p == std::min(y->real_shape(0), y->real_shape(1));
+    }
+    virtual bool nondiag() const {
+      return p > std::min(y->real_shape(0), y->real_shape(1));
+    }
+
+  public:
+    basic_iterator(YaleStorage<D>* obj, size_t ii = 0, I pp = 0) : y(obj), i_(ii + y->offset(0)), p(pp) { }
+
+    virtual inline size_t i() const { return i_; }
+    virtual inline size_t j() const = 0;
+
+    virtual size_t real_i() const { return offset(0) + i(); }
+    virtual size_t real_j() const { return offset(1) + j(); }
+    virtual bool real_ndnz_exists() const { return !y->real_row_empty(real_i()) && ija(p) == real_j(); }
+
+
+    virtual basic_iterator& operator++() = 0;
+
+    // Postfix ++
+    virtual basic_iterator operator++(int dummy) const {
+      basic_iterator iter(*this);
+      return ++iter;
+    }
+  };
+
+
+  /*
+   * Iterate across the stored diagonal.
+   */
+  class stored_diagonal_iterator : public basic_iterator {
+    using basic_iterator::i_;
+    using basic_iterator::p;
+    friend class YaleStorage<D>;
+  public:
+    stored_diagonal_iterator(YaleStorage<D>* obj, size_t d = 0)
+    : basic_iterator(obj,                // y
+                     std::max(obj->offset(0), obj->offset(1)) + d - obj->offset(0), // i_
+                     std::max(obj->offset(0), obj->offset(1)) + d) // p
+    {
+      // p can range from max(y->offset(0), y->offset(1)) to min(y->real_shape(0), y->real_shape(1))
+    }
+
+
+    inline size_t d() const {
+      return p - std::max(offset(0), offset(1));
+    }
+
+    stored_diagonal_iterator& operator++() {
+      i_ = ++p - offset(0);
+      return *this;
+    }
+
+    virtual inline size_t j() const {
+      return i_ + offset(0) - offset(1);
+    }
+
+
+    virtual bool operator!=(const stored_diagonal_iterator& rhs) const { return d() != rhs.d(); }
+    virtual bool operator==(const stored_diagonal_iterator& rhs) const { return !(*this != rhs); }
+    virtual bool operator<(const stored_diagonal_iterator& rhs) const {  return d() < rhs.d(); }
+
+    virtual bool operator<=(const stored_diagonal_iterator& rhs) const {
+      return d() <= rhs.d();
+    }
+
+    virtual bool operator>(const stored_diagonal_iterator& rhs) const {
+      return d() > rhs.d();
+    }
+
+    virtual bool operator>=(const stored_diagonal_iterator& rhs) const {
+      return d() >= rhs.d();
+    }
+  };
+
+  /*
+   * Iterate across the stored non-diagonals.
+   */
+  class stored_nondiagonal_iterator : public basic_iterator {
+    using basic_iterator::i_;
+    using basic_iterator::p;
+    friend class YaleStorage<D>;
+  protected:
+
+    virtual bool in_valid_nonempty_real_row() const {
+      return i_ < shape(0) && ija(i_ + offset(0)) < ija(i_ + offset(0)+1);
+    }
+
+    virtual bool in_valid_empty_real_row() const {
+      return i_ < shape(0) && ija(i_ + offset(0)) == ija(i_ + offset(0)+1);
+    }
+
+    // Key loop for forward row iteration in the non-diagonal portion of the matrix. Called during construction and by
+    // the ++ operators.
+    void advance_next_nonempty_row() {
+      if (in_valid_nonempty_real_row())
+        p = this->y->find_pos_for_insertion(i_, 0);
+
+      while (in_valid_empty_real_row() || j() >= shape(1)) {
+        ++i_;
+
+        if (in_valid_nonempty_real_row()) {
+          p = this->y->find_pos_for_insertion(i_, 0); // find the beginning of this row
+        } else if (i_ >= shape(0)) {
+          p = ija(real_shape(0));         // find the end of the matrix
+          break;
+        }
+      }
+    }
+
+    // Key loop for forward column iteration in the non-diagonal portion of the matrix. Called by the ++operator.
+    bool advance_next_column() {
+      if (i_ >= shape(0) || in_valid_empty_real_row())    return false;
+      if (p < ija(i_ + offset(0)+1)-1) ++p; // advance to next column
+      if (j() < shape(1)) return true;         // see if we found a valid column
+      return false;                               // nope.
+    }
+
+  public:
+    stored_nondiagonal_iterator(YaleStorage<D>* obj, bool end, size_t ii = 0)
+    : basic_iterator(obj,
+                     end ? obj->real_shape(0) : ii,
+                     end ? obj->ija(ii + obj->offset(0) + 1) : std::max(obj->offset(0), obj->offset(1)))
+    {
+      if (begin) advance_next_nonempty_row();
+    }
+
+    stored_nondiagonal_iterator& operator++() {
+      while (i_ < shape(0) && !advance_next_column()) { // if advancing to the next column fails,
+        advance_next_nonempty_row();                       // then go to the next row.
+      }
+      return *this;
+    }
+
+    virtual inline size_t j() const {
+      return ija(p) - offset(1);
+    }
+
+  };
+
+
+
+  /*
+   * Iterate across a matrix in storage order.
+   *
+   * Note: It is not recommended that this iterator be compared to an iterator from another matrix, as storage order
+   * determines iteration -- and storage order will differ for slices which are positioned differently relative to the
+   * original matrix.
+   */
+  class stored_iterator : public basic_iterator {
+    friend class YaleStorage<D>;
+    using basic_iterator::i_;
+    using basic_iterator::p;
+    using basic_iterator::y;
+  protected:
+    virtual bool diag() const { return iter->diag(); }
+    virtual bool nondiag() const { return iter->nondiag(); }
+
+    basic_iterator* iter;
+
+  public:
+    stored_iterator(YaleStorage<D>* obj, bool begin = true) : basic_iterator(obj, 0, 0) {
+      if (begin) {
+        iter = new stored_diagonal_iterator(obj);
+
+        // if we're past the diagonal already, delete it and create a nondiagonal iterator
+        if (!iter.diag()) {
+          delete iter;
+          iter = new stored_nondiagonal_iterator(obj, true);
+        }
+      } else {
+        iter = new stored_nondiagonal_iterator(obj, false);
+      }
+    }
+
+    ~stored_iterator() {
+      delete iter;
+    }
+
+    stored_iterator(const stored_iterator& rhs) {
+      y = rhs.y;
+      if (rhs.diag()) {
+        iter = new stored_diagonal_iterator(*(stored_diagonal_iterator*)iter);
+      } else {
+        iter = new stored_nondiagonal_iterator(*(stored_nondiagonal_iterator*)iter);
+      }
+    }
+
+    virtual size_t j() const { return iter->j(); }
+    virtual size_t i() const { return iter->i(); }
+    virtual size_t real_j() const { return iter->real_j(); }
+    virtual size_t real_i() const { return iter->real_i(); }
+
+    stored_iterator& operator++() {
+      if (diag()) {
+        ++(*iter);
+        if (!iter.diag()) {
+          delete iter;
+          iter = new stored_nondiagonal_iterator(y);
+        }
+      } else {
+        ++(*iter);
+      }
+      return *this;
+    }
+
+    virtual bool operator==(const stored_iterator& rhs) const {
+      return *this == *(rhs->iter);
+    }
+
+    virtual bool operator!=(const stored_iterator& rhs) const {
+      return *this != *(rhs->iter);
+    }
+
+
+    // De-reference the iterator
+    virtual D& operator*() {
+      return &(**iter);
+    }
+
+    virtual D operator*() const {
+      return **iter;
+    }
+  };
+
+  /*
+   * Iterator for traversing matrix class as if it were dense (visits each entry in order).
+   */
+  class iterator : public basic_iterator {
+    friend class YaleStorage<D>;
+    using basic_iterator::i_;
+    using basic_iterator::p;
+    using basic_iterator::y;
+  protected:
+    size_t j_; // These are relative to the slice.
+
+    // Is this a diagonal entry in the source storage?
+    bool diag() const {
+      return offset(0) + i_ == offset(1) + j_;
+    }
+  public:
+    // Create an iterator. May select the row since this is O(1).
+    iterator(YaleStorage<D>* obj, size_t ii = 0) : basic_iterator(obj, ii, obj->ija(ii)), j_(0) { }
+
+    // Prefix ++
+    iterator& operator++() {
+      size_t prev_j = j_++;
+      if (j_ >= y->shape(1)) {
+        j_ = 0;
+        ++i_;
+
+        // Do a binary search to find the beginning of the slice
+        p = offset(0) > 0 ? y->find_pos_for_insertion(i_,j_) : ija(i_ + offset(0));
+      } else {
+        // If the last j was actually stored in this row of the matrix, need to advance p.
+        if (!y->real_row_empty(i_ + offset(0)) && ija(p) == prev_j) ++p;  // this test is the same as real_ndnz_exists
+      }
+
+      return *this;
+    }
+
+    virtual bool operator!=(const iterator& rhs) const {
+      return (i_ != rhs.i_ || j_ != rhs.j_);
+    }
+
+    virtual bool operator==(const iterator& rhs) const {
+      return !(*this != rhs);
+    }
+
+    bool operator<(const iterator& rhs) const {
+      if (i_ > rhs.i_) return false;
+      if (i_ < rhs.i_) return true;
+      return j_ < rhs.j_;
+    }
+
+    bool operator>(const iterator& rhs) const {
+      if (i_ < rhs.i_) return false;
+      if (i_ > rhs.i_) return true;
+      return j_ > rhs.j_;
+    }
+
+    // De-reference
+    virtual D operator*() const {
+      if (i_ + offset(0) == j_ + offset(1))                                     return y->a( i_ + offset(0) );
+      else if (!y->real_row_empty(i_ + offset(0)) && ija(p) == j_ + offset(1))  return y->a( p );
+      else                                                                      return y->default_obj();
+    }
+
+    virtual bool real_diag() const { return i_ + offset(0) == j_ + offset(1); }
+    virtual size_t j() const { return j_; }
+  };
+
+
+  /*
+   * The trickiest of all the iterators for Yale. We only want to visit the stored indices, but we want to visit them
+   * in matrix order.
+   */
+  class ordered_iterator : public basic_iterator {
+    friend class YaleStorage<D>;
+  protected:
+    bool d; // which iterator is the currently valid one
+    stored_diagonal_iterator*     d_iter;
+    stored_nondiagonal_iterator* nd_iter;
+
+  public:
+    ordered_iterator(YaleStorage<D>* obj, size_t ii = 0) : basic_iterator(obj, ii) {
+      d_iter  = new stored_diagonal_iterator(obj);
+      nd_iter = new stored_nondiagonal_iterator(obj, false, ii);
+      d = *d_iter < *nd_iter;
+    }
+
+    ordered_iterator(const ordered_iterator& rhs) {
+      d_iter  = new stored_diagonal_iterator(*d_iter);
+      nd_iter = new stored_nondiagonal_iterator(*nd_iter);
+      d       = rhs.d;
+    }
+
+    ~ordered_iterator() {
+      delete  d_iter;
+      delete nd_iter;
+    }
+
+    virtual size_t j() const { return d ? d_iter->j() : nd_iter->j(); }
+    virtual size_t i() const { return d ? d_iter->i() : nd_iter->i(); }
+    virtual size_t real_j() const { return d ? d_iter->real_j() : nd_iter->real_j(); }
+    virtual size_t real_i() const { return d ? d_iter->real_i() : nd_iter->real_i(); }
+
+    virtual ordered_iterator& operator++() {
+      if (d)    ++(*d_iter);
+      else      ++(*nd_iter);
+      d = *d_iter < *nd_iter;
+      return *this;
+    }
+
+    virtual bool operator==(const ordered_iterator& rhs) const {
+      return d ? rhs == *d_iter : rhs == *nd_iter;
+    }
+
+    virtual bool operator!=(const stored_iterator& rhs) const {
+      return d ? rhs != *d_iter : rhs != *nd_iter;
+    }
+
+
+    // De-reference the iterator
+    virtual D& operator*() {
+      return d ? &(**d_iter) : &(**nd_iter);
+    }
+
+    virtual D operator*() const {
+      return d ? **d_iter : **nd_iter;
+    }
+  };
+
+  // Variety of iterator begin and end functions.
+  iterator begin(size_t row = 0) const                {      return iterator(this, row);               }
+  iterator row_end(size_t row) const                  {      return begin(row+1);                      }
+  iterator end() const                                {      return iterator(this, shape(0));          }
+  stored_diagonal_iterator sdbegin(size_t d = 0) const{      return stored_diagonal_iterator(this, d); }
+  stored_diagonal_iterator sdend() const              {      return stored_diagonal_iterator(this, std::min(real_shape(0), real_shape(1))); }
+  stored_nondiagonal_iterator sndbegin(size_t row = 0) const{return stored_nondiagonal_iterator(this, false, row); }
+  stored_nondiagonal_iterator sndrow_end(size_t row) const { return sndbegin(row+1);                   }
+  stored_nondiagonal_iterator sndend() const          {      return stored_nondiagonal_iterator(this, true); }
+  stored_iterator sbegin() const                      {      return stored_iterator(this, true);       }
+  stored_iterator send() const                        {      return stored_iterator(this, false);      }
+  ordered_iterator obegin(size_t row = 0) const       {      return ordered_iterator(this, row);       }
+  ordered_iterator oend() const                       {      return ordered_iterator(this, shape(0));  }
+  ordered_iterator orow_end(size_t row) const         {      return obegin(row+1);                     }
+
+protected:
+  YALE_STORAGE* s;
+  bool          slice;
+  size_t*       slice_shape;
+  size_t*       slice_offset;
+};
+
+} // end of namespace nm
 
 #endif // YALE_H

@@ -63,6 +63,7 @@ extern "C" {
  */
 
 
+
 /*
  * Global Variables
  */
@@ -74,7 +75,6 @@ namespace nm {
    *
    * shape should already be allocated before calling this.
    */
-  template <typename IType>
   void read_padded_shape(std::ifstream& f, size_t dim, size_t* shape) {
     size_t bytes_read = 0;
 
@@ -91,7 +91,6 @@ namespace nm {
     f.ignore(bytes_read % 8);
   }
 
-  template <typename IType>
   void write_padded_shape(std::ofstream& f, size_t dim, size_t* shape) {
     size_t bytes_written = 0;
 
@@ -246,7 +245,7 @@ namespace nm {
     if (bytes_read % 8) f.ignore(bytes_read % 8);
   }
 
-  template <typename DType, typename IType>
+  template <typename DType>
   void write_padded_yale_elements(std::ofstream& f, YALE_STORAGE* storage, size_t length, nm::symm_t symm) {
     if (symm != nm::NONSYMM) rb_raise(rb_eNotImpError, "Yale matrices can only be read/written in full form");
 
@@ -268,7 +267,7 @@ namespace nm {
   }
 
 
-  template <typename DType, typename IType>
+  template <typename DType>
   void read_padded_yale_elements(std::ifstream& f, YALE_STORAGE* storage, size_t length, nm::symm_t symm) {
     if (symm != NONSYMM) rb_raise(rb_eNotImpError, "Yale matrices can only be read/written in full form");
 
@@ -338,7 +337,6 @@ static VALUE nm_write(int argc, VALUE* argv, VALUE self);
 static VALUE nm_init_yale_from_old_yale(VALUE shape, VALUE dtype, VALUE ia, VALUE ja, VALUE a, VALUE from_dtype, VALUE nm);
 static VALUE nm_alloc(VALUE klass);
 static VALUE nm_dtype(VALUE self);
-static VALUE nm_itype(VALUE self);
 static VALUE nm_stype(VALUE self);
 static VALUE nm_default_value(VALUE self);
 static size_t effective_dim(STORAGE* s);
@@ -410,7 +408,6 @@ static size_t*	interpret_shape(VALUE arg, size_t* dim);
 static nm::stype_t	interpret_stype(VALUE arg);
 
 /* Singleton methods */
-static VALUE nm_itype_by_shape(VALUE self, VALUE shape_arg);
 static VALUE nm_upcast(VALUE self, VALUE t1, VALUE t2);
 
 
@@ -455,7 +452,6 @@ void Init_nmatrix() {
   ///////////////////////
 
 	rb_define_singleton_method(cNMatrix, "upcast", (METHOD)nm_upcast, 2);
-	rb_define_singleton_method(cNMatrix, "itype_by_shape", (METHOD)nm_itype_by_shape, 1);
 	rb_define_singleton_method(cNMatrix, "guess_dtype", (METHOD)nm_guess_dtype, 1);
 	rb_define_singleton_method(cNMatrix, "min_dtype", (METHOD)nm_min_dtype, 1);
 
@@ -473,7 +469,6 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "transpose", (METHOD)nm_init_transposed, 0);
 
 	rb_define_method(cNMatrix, "dtype", (METHOD)nm_dtype, 0);
-	rb_define_method(cNMatrix, "itype", (METHOD)nm_itype, 0);
 	rb_define_method(cNMatrix, "stype", (METHOD)nm_stype, 0);
 	rb_define_method(cNMatrix, "cast_full",  (METHOD)nm_cast, 3);
 	rb_define_method(cNMatrix, "default_value", (METHOD)nm_default_value, 0);
@@ -685,33 +680,6 @@ static VALUE nm_dtype(VALUE self) {
   return ID2SYM(dtype);
 }
 
-/*
- * call-seq:
- *     itype -> Symbol or nil
- *
- * Get the index data type (dtype) of a matrix. Defined only for yale; others return nil.
- */
-static VALUE nm_itype(VALUE self) {
-  if (NM_STYPE(self) == nm::YALE_STORE) {
-    ID itype = rb_intern(ITYPE_NAMES[NM_ITYPE(self)]);
-    return ID2SYM(itype);
-  }
-  return Qnil;
-}
-
-/*
- * Get the index data type (dtype) of a matrix. Defined only for yale; others return nil.
- */
-static VALUE nm_itype_by_shape(VALUE self, VALUE shape_arg) {
-
-  size_t dim;
-  size_t* shape = interpret_shape(shape_arg, &dim);
-
-  nm::itype_t itype = nm_yale_storage_itype_by_shape(shape);
-  ID itype_id       = rb_intern(ITYPE_NAMES[itype]);
-
-  return ID2SYM(itype_id);
-}
 
 /*
  * call-seq:
@@ -1069,7 +1037,7 @@ static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
   		break;
 
   	case nm::YALE_STORE:
-  		nmatrix->storage = (STORAGE*)nm_yale_storage_create(dtype, shape, dim, init_cap, nm::UINT8);
+  		nmatrix->storage = (STORAGE*)nm_yale_storage_create(dtype, shape, dim, init_cap);
   		nm_yale_storage_init((YALE_STORAGE*)(nmatrix->storage), NULL);
   		break;
   }
@@ -1194,31 +1162,27 @@ static nm::symm_t interpret_symm(VALUE symm) {
 
 
 
-void read_padded_shape(std::ifstream& f, size_t dim, size_t* shape, nm::itype_t itype) {
-  NAMED_ITYPE_TEMPLATE_TABLE(ttable, nm::read_padded_shape, void, std::ifstream&, size_t, size_t*)
-
-  ttable[itype](f, dim, shape);
+void read_padded_shape(std::ifstream& f, size_t dim, size_t* shape) {
+  nm::read_padded_shape(f, dim, shape);
 }
 
 
-void write_padded_shape(std::ofstream& f, size_t dim, size_t* shape, nm::itype_t itype) {
-  NAMED_ITYPE_TEMPLATE_TABLE(ttable, nm::write_padded_shape, void, std::ofstream&, size_t, size_t*)
-
-  ttable[itype](f, dim, shape);
+void write_padded_shape(std::ofstream& f, size_t dim, size_t* shape) {
+  nm::write_padded_shape(f, dim, shape);
 }
 
 
-void read_padded_yale_elements(std::ifstream& f, YALE_STORAGE* storage, size_t length, nm::symm_t symm, nm::dtype_t dtype, nm::itype_t itype) {
-  NAMED_LI_DTYPE_TEMPLATE_TABLE_NO_ROBJ(ttable, nm::read_padded_yale_elements, void, std::ifstream&, YALE_STORAGE*, size_t, nm::symm_t)
+void read_padded_yale_elements(std::ifstream& f, YALE_STORAGE* storage, size_t length, nm::symm_t symm, nm::dtype_t dtype) {
+  NAMED_DTYPE_TEMPLATE_TABLE_NO_ROBJ(ttable, nm::read_padded_yale_elements, void, std::ifstream&, YALE_STORAGE*, size_t, nm::symm_t)
 
-  ttable[dtype][itype](f, storage, length, symm);
+  ttable[dtype](f, storage, length, symm);
 }
 
 
-void write_padded_yale_elements(std::ofstream& f, YALE_STORAGE* storage, size_t length, nm::symm_t symm, nm::dtype_t dtype, nm::itype_t itype) {
-  NAMED_LI_DTYPE_TEMPLATE_TABLE_NO_ROBJ(ttable, nm::write_padded_yale_elements, void, std::ofstream& f, YALE_STORAGE*, size_t, nm::symm_t)
+void write_padded_yale_elements(std::ofstream& f, YALE_STORAGE* storage, size_t length, nm::symm_t symm, nm::dtype_t dtype) {
+  NAMED_DTYPE_TEMPLATE_TABLE_NO_ROBJ(ttable, nm::write_padded_yale_elements, void, std::ofstream& f, YALE_STORAGE*, size_t, nm::symm_t)
 
-  ttable[dtype][itype](f, storage, length, symm);
+  ttable[dtype](f, storage, length, symm);
 }
 
 
@@ -1267,7 +1231,6 @@ static VALUE nm_write(int argc, VALUE* argv, VALUE self) {
   UnwrapNMatrix( self, nmatrix );
 
   nm::symm_t symm_ = interpret_symm(symm);
-  nm::itype_t itype = (nmatrix->stype == nm::YALE_STORE) ? reinterpret_cast<YALE_STORAGE*>(nmatrix->storage)->itype : nm::UINT32;
 
   if (nmatrix->storage->dtype == nm::RUBYOBJ) {
     rb_raise(rb_eNotImpError, "Ruby Object writing is not implemented yet");
@@ -1276,9 +1239,10 @@ static VALUE nm_write(int argc, VALUE* argv, VALUE self) {
   // Get the dtype, stype, itype, and symm and ensure they're the correct number of bytes.
   uint8_t st = static_cast<uint8_t>(nmatrix->stype),
           dt = static_cast<uint8_t>(nmatrix->storage->dtype),
-          sm = static_cast<uint8_t>(symm_),
-          it = static_cast<uint8_t>(itype);
+          sm = static_cast<uint8_t>(symm_);
   uint16_t dim = nmatrix->storage->dim;
+
+  //FIXME: Cast the matrix to the smallest possible index type. Write that in the place of IType.
 
   // Check arguments before starting to write.
   if (nmatrix->stype == nm::LIST_STORE) rb_raise(nm_eStorageTypeError, "cannot save list matrix; cast to yale or dense first");
@@ -1303,16 +1267,17 @@ static VALUE nm_write(int argc, VALUE* argv, VALUE self) {
   f.write(reinterpret_cast<const char*>(&release), sizeof(uint16_t));
   f.write(reinterpret_cast<const char*>(&null16),  sizeof(uint16_t));
 
+  uint8_t ZERO = 0;
   // WRITE SECOND 64-BIT BLOCK
   f.write(reinterpret_cast<const char*>(&dt), sizeof(uint8_t));
   f.write(reinterpret_cast<const char*>(&st), sizeof(uint8_t));
-  f.write(reinterpret_cast<const char*>(&it), sizeof(uint8_t));
+  f.write(reinterpret_cast<const char*>(&ZERO),sizeof(uint8_t));
   f.write(reinterpret_cast<const char*>(&sm), sizeof(uint8_t));
   f.write(reinterpret_cast<const char*>(&null16), sizeof(uint16_t));
   f.write(reinterpret_cast<const char*>(&dim), sizeof(uint16_t));
 
   // Write shape (in 64-bit blocks)
-  write_padded_shape(f, nmatrix->storage->dim, nmatrix->storage->shape, itype);
+  write_padded_shape(f, nmatrix->storage->dim, nmatrix->storage->shape);
 
   if (nmatrix->stype == nm::DENSE_STORE) {
     write_padded_dense_elements(f, reinterpret_cast<DENSE_STORAGE*>(nmatrix->storage), symm_, nmatrix->storage->dtype);
@@ -1323,7 +1288,7 @@ static VALUE nm_write(int argc, VALUE* argv, VALUE self) {
     f.write(reinterpret_cast<const char*>(&ndnz),   sizeof(uint32_t));
     f.write(reinterpret_cast<const char*>(&length), sizeof(uint32_t));
 
-    write_padded_yale_elements(f, s, length, symm_, s->dtype, itype);
+    write_padded_yale_elements(f, s, length, symm_, s->dtype);
   }
 
   f.close();
@@ -1383,7 +1348,7 @@ static VALUE nm_read(int argc, VALUE* argv, VALUE self) {
   // READ SECOND 64-BIT BLOCK
   f.read(reinterpret_cast<char*>(&dt), sizeof(uint8_t));
   f.read(reinterpret_cast<char*>(&st), sizeof(uint8_t));
-  f.read(reinterpret_cast<char*>(&it), sizeof(uint8_t));
+  f.read(reinterpret_cast<char*>(&it), sizeof(uint8_t)); // FIXME: should tell how few bytes indices are stored as
   f.read(reinterpret_cast<char*>(&sm), sizeof(uint8_t));
   f.read(reinterpret_cast<char*>(&null16), sizeof(uint16_t));
   f.read(reinterpret_cast<char*>(&dim), sizeof(uint16_t));
@@ -1392,11 +1357,11 @@ static VALUE nm_read(int argc, VALUE* argv, VALUE self) {
   nm::stype_t stype = static_cast<nm::stype_t>(st);
   nm::dtype_t dtype = static_cast<nm::dtype_t>(dt);
   nm::symm_t  symm  = static_cast<nm::symm_t>(sm);
-  nm::itype_t itype = static_cast<nm::itype_t>(it);
+  //nm::itype_t itype = static_cast<nm::itype_t>(it);
 
   // READ NEXT FEW 64-BIT BLOCKS
   size_t* shape = ALLOC_N(size_t, dim);
-  read_padded_shape(f, dim, shape, itype);
+  read_padded_shape(f, dim, shape);
 
   STORAGE* s;
   if (stype == nm::DENSE_STORE) {
@@ -1411,9 +1376,9 @@ static VALUE nm_read(int argc, VALUE* argv, VALUE self) {
     f.read(reinterpret_cast<char*>(&ndnz),     sizeof(uint32_t));
     f.read(reinterpret_cast<char*>(&length),   sizeof(uint32_t));
 
-    s = nm_yale_storage_create(dtype, shape, dim, length, itype); // set length as init capacity
+    s = nm_yale_storage_create(dtype, shape, dim, length); // set length as init capacity
 
-    read_padded_yale_elements(f, reinterpret_cast<YALE_STORAGE*>(s), length, symm, dtype, itype);
+    read_padded_yale_elements(f, reinterpret_cast<YALE_STORAGE*>(s), length, symm, dtype);
   } else {
     rb_raise(nm_eStorageTypeError, "please convert to yale or dense before saving");
   }

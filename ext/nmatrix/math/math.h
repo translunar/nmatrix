@@ -205,7 +205,7 @@ inline void trmm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const
 
 
 // Yale: numeric matrix multiply c=a*b
-template <typename DType, typename IType>
+template <typename DType>
 inline void numbmm(const unsigned int n, const unsigned int m, const unsigned int l, const IType* ia, const IType* ja, const DType* a, const bool diaga,
             const IType* ib, const IType* jb, const DType* b, const bool diagb, IType* ic, IType* jc, DType* c, const bool diagc) {
   const unsigned int max_lmn = std::max(std::max(m, n), l);
@@ -323,7 +323,6 @@ inline void new_yale_matrix_multiply(const unsigned int m, const IType* ija, con
 */
 
 // Yale: Symbolic matrix multiply c=a*b
-template <typename IType>
 inline size_t symbmm(const unsigned int n, const unsigned int m, const unsigned int l, const IType* ia, const IType* ja, const bool diaga,
             const IType* ib, const IType* jb, const bool diagb, IType* ic, const bool diagc) {
   unsigned int max_lmn = std::max(std::max(m,n), l);
@@ -378,7 +377,7 @@ inline size_t symbmm(const unsigned int n, const unsigned int m, const unsigned 
 namespace smmp_sort {
   const size_t THRESHOLD = 4;  // switch to insertion sort for 4 elements or fewer
 
-  template <typename DType, typename IType>
+  template <typename DType>
   void print_array(DType* vals, IType* array, IType left, IType right) {
     for (IType i = left; i <= right; ++i) {
       std::cerr << array[i] << ":" << vals[i] << "  ";
@@ -386,7 +385,7 @@ namespace smmp_sort {
     std::cerr << std::endl;
   }
 
-  template <typename DType, typename IType>
+  template <typename DType>
   IType partition(DType* vals, IType* array, IType left, IType right, IType pivot) {
     IType pivotJ = array[pivot];
     DType pivotV = vals[pivot];
@@ -414,8 +413,8 @@ namespace smmp_sort {
   }
 
   // Recommended to use the median of left, right, and mid for the pivot.
-  template <typename IType>
-  IType median(IType a, IType b, IType c) {
+  template <typename I>
+  inline I median(I a, I b, I c) {
     if (a < b) {
       if (b < c) return b; // a b c
       if (a < c) return c; // a c b
@@ -430,7 +429,7 @@ namespace smmp_sort {
 
 
   // Insertion sort is more efficient than quicksort for small N
-  template <typename DType, typename IType>
+  template <typename DType>
   void insertion_sort(DType* vals, IType* array, IType left, IType right) {
     for (IType idx = left; idx <= right; ++idx) {
       IType col_to_insert = array[idx];
@@ -448,7 +447,7 @@ namespace smmp_sort {
   }
 
 
-  template <typename DType, typename IType>
+  template <typename DType>
   void quicksort(DType* vals, IType* array, IType left, IType right) {
 
     if (left < right) {
@@ -456,14 +455,14 @@ namespace smmp_sort {
         insertion_sort(vals, array, left, right);
       } else {
         // choose any pivot such that left < pivot < right
-        IType pivot = median(left, right, (IType)(((unsigned long)left + (unsigned long)right) / 2));
+        IType pivot = median<IType>(left, right, (IType)(((unsigned long)left + (unsigned long)right) / 2));
         pivot = partition(vals, array, left, right, pivot);
 
         // recursively sort elements smaller than the pivot
-        quicksort<DType,IType>(vals, array, left, pivot-1);
+        quicksort<DType>(vals, array, left, pivot-1);
 
         // recursively sort elements at least as big as the pivot
-        quicksort<DType,IType>(vals, array, pivot+1, right);
+        quicksort<DType>(vals, array, pivot+1, right);
       }
     }
   }
@@ -483,14 +482,14 @@ namespace smmp_sort {
  * ordering. If someone is doing a lot of Yale matrix multiplication, it might benefit them to consider even insertion
  * sort.
  */
-template <typename DType, typename IType>
+template <typename DType>
 inline void smmp_sort_columns(const size_t n, const IType* ia, IType* ja, DType* a) {
   for (size_t i = 0; i < n; ++i) {
     if (ia[i+1] - ia[i] < 2) continue; // no need to sort rows containing only one or two elements.
     else if (ia[i+1] - ia[i] <= smmp_sort::THRESHOLD) {
-      smmp_sort::insertion_sort<DType, IType>(a, ja, ia[i], ia[i+1]-1); // faster for small rows
+      smmp_sort::insertion_sort<DType>(a, ja, ia[i], ia[i+1]-1); // faster for small rows
     } else {
-      smmp_sort::quicksort<DType, IType>(a, ja, ia[i], ia[i+1]-1);      // faster for large rows (and may call insertion_sort as well)
+      smmp_sort::quicksort<DType>(a, ja, ia[i], ia[i+1]-1);      // faster for large rows (and may call insertion_sort as well)
     }
   }
 }
@@ -505,16 +504,11 @@ inline void smmp_sort_columns(const size_t n, const IType* ia, IType* ja, DType*
  * This is not named in the same way as most yale_storage functions because it does not act on a YALE_STORAGE
  * object.
  */
-template <typename DType, typename IType>
-void transpose_yale(const size_t n, const size_t m, const void* ia_, const void* ja_, const void* a_,
-                             const bool diaga, void* ib_, void* jb_, void* b_, const bool move)
+template <typename DType>
+void transpose_yale(const size_t n, const size_t m, const IType* ia, const IType* ja, const void* a_,
+                             const bool diaga, IType* ib, IType* jb, void* b_, const bool move)
 {
-  const IType *ia = reinterpret_cast<const IType*>(ia_),
-              *ja = reinterpret_cast<const IType*>(ja_);
   const DType *a  = reinterpret_cast<const DType*>(a_);
-
-  IType *ib = reinterpret_cast<IType*>(ib_),
-        *jb = reinterpret_cast<IType*>(jb_);
   DType *b  = reinterpret_cast<DType*>(b_);
 
 

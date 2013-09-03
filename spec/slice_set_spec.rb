@@ -34,79 +34,67 @@ describe "Set slice operation" do
         @m = create_matrix(stype)
       end
 
-      if stype == :list || stype == :yale
-        it "should correctly set and unset a range of entries" do
-          #pending("yale needed") if stype == :yale
-          slice_result_a = NMatrix.new(:dense, 2, 100, @m.dtype).cast(stype)
-          slice_result_b = NMatrix.new(:dense, 2, 0,   @m.dtype).cast(stype)
-          STDERR.puts "A"
-          m = @m.clone
-          m[0..1,0..1] = 100
-          m[0..1,0..1].should == slice_result_a
-          m[2,0..1].should == @m[2,0..1]
-          m[0..1,2].should == @m[0..1,2]
-          m[0..1,0..1] = 0
-          m[0..1,0..1].should == slice_result_b
+      it "should correctly set and unset a range of entries" do
+        require 'pry'
 
-          STDERR.puts "B"
-          m = @m.clone
-          m[1..2,0..1] = 100
-          m[1..2,0..1].should == slice_result_a
-          m[0,0..1].should == @m[0,0..1]
-          m[1..2,2].should == @m[1..2,2]
-          m[1..2,0..1] = 0
-          m[1..2,0..1].should == slice_result_b
-
-          STDERR.puts "C"
-          m = @m.clone
-          m[1..2,1..2] = 100
-          m[1..2,1..2].should == slice_result_a
-          m[0,1..2].should == @m[0,1..2]
-          m[1..2,0].should == @m[1..2,0]
-          m[1..2,1..2] = 0
-          m[1..2,1..2].should == slice_result_b
-
-          STDERR.puts "D"
-          m = @m.clone
-          m[0..1,1..2] = 100
-          m[0..1,1..2].should == slice_result_a
-          m[2,1..2].should == @m[2,1..2]
-          m[0..1,0].should == @m[0..1,0]
-          m[0..1,1..2] = 0
-          m[0..1,1..2].should == slice_result_b
+        if stype == :yale
+          @m.extend NMatrix::YaleFunctions
+          @m.yale_ija.should == [4,6,8,10,1,2,0,2,0,1]
+          @m.yale_a.should   == [0,4,8,0, 1,2,3,5,6,7]
         end
-      else
-        it "should correctly set a range of entries to a single value" do
-          slice_result = NMatrix.new(:dense, 2, 100, @m.dtype).cast(stype)
-          STDERR.puts "A"
-          m = @m.clone
-          m[0..1,0..1] = 100
-          m[0..1,0..1].should == slice_result
-          m[2,0..1].should == @m[2,0..1]
-          m[0..1,2].should == @m[0..1,2]
 
-          STDERR.puts "B"
-          m = @m.clone
-          m[1..2,0..1] = 100
-          m[1..2,0..1].should == slice_result
-          m[0,0..1].should == @m[0,0..1]
-          m[1..2,2].should == @m[1..2,2]
-
-          STDERR.puts "C"
-          m = @m.clone
-          m[1..2,1..2] = 100
-          m[1..2,1..2].should == slice_result
-          m[0,1..2].should == @m[0,1..2]
-          m[1..2,0].should == @m[1..2,0]
-
-          STDERR.puts "D"
-          m = @m.clone
-          m[0..1,1..2] = 100
-          m[0..1,1..2].should == slice_result
-          m[2,1..2].should == @m[2,1..2]
-          m[0..1,0].should == @m[0..1,0]
+        slice_result_a = NMatrix.new(:dense, 2, 100, @m.dtype).cast(stype)
+        slice_result_b = NMatrix.new(:dense, 2, 0,   @m.dtype).cast(stype)
+        STDERR.puts "A"
+        m = @m.clone
+        m[0..1,0..1] = 100
+        if stype == :yale
+          m.yale_ija.should == [4,   6,   8,   10,   1,   2,   0,   2,  0,  1]
+          m.yale_a.should   == [100, 100, 8,   0,   100,  2, 100,   5,  6,  7]
         end
+        m[0..1,0..1].should == slice_result_a
+        m[2,0..1].should == @m[2,0..1]
+        binding.pry if stype == :yale
+        m[0..1,2].should == @m[0..1,2]
+
+        m[0..1,0..1] = 0
+        if stype == :yale
+          # Both of these are acceptable depending upon whether removal leads to a move
+          [[4,6,8,10,1,2,0,2,0,1],[4,5,6,8,2,2,0,1,nil,nil]].should include(m.yale_ija)
+          [[0,0,8,0,0,2,0,5,6,7],[0,0,8,0,2,5,6,7,nil,nil]].should  include(m.yale_a)
+        end
+
+        m[0..1,0..1].should == slice_result_b
+
+        STDERR.puts "B"
+        m = @m.clone
+        m[1..2,0..1] = 100
+        m[1..2,0..1].should == slice_result_a
+        m[0,0..1].should == @m[0,0..1]
+        m[1..2,2].should == @m[1..2,2]
+        m[1..2,0..1] = 0
+        m[1..2,0..1].should == slice_result_b
+
+        STDERR.puts "C"
+        m = @m.clone
+        m[1..2,1..2] = 100
+        binding.pry if stype == :yale
+        m[1..2,1..2].should == slice_result_a
+        m[0,1..2].should == @m[0,1..2]
+        m[1..2,0].should == @m[1..2,0]
+        m[1..2,1..2] = 0
+        m[1..2,1..2].should == slice_result_b
+
+        STDERR.puts "D"
+        m = @m.clone
+        m[0..1,1..2] = 100
+        m[0..1,1..2].should == slice_result_a
+        m[2,1..2].should == @m[2,1..2]
+        m[0..1,0].should == @m[0..1,0]
+        m[0..1,1..2] = 0
+        m[0..1,1..2].should == slice_result_b
       end
+
 
       it "should correctly set a single entry" do
         #pending if stype == :yale
