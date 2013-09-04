@@ -227,22 +227,25 @@ describe NMatrix do
             n = storage_type == :yale ? NMatrix.new(storage_type, [3,3], dtype) : NMatrix.new(storage_type, [3,3], 0, dtype)
             n[0,0] = 1
             n[0,1] = 2
-            n[2,2] = 3
+            n[2,0] = 5 if storage_type == :yale
             n[2,1] = 4
+            n[2,2] = 3
 
             values = []
             is = []
             js = []
+
             n.each_stored_with_indices do |v,i,j|
               values << v
               is << i
               js << j
             end
 
+
             if storage_type == :yale
-              values.should == [1,0,3,2,4]
-              is.should     == [0,1,2,0,2]
-              js.should     == [0,1,2,1,1]
+              is.should     == [0,1,2,0,2,2]
+              js.should     == [0,1,2,1,0,1]
+              values.should == [1,0,3,2,5,4]
             elsif storage_type == :list
               values.should == [1,2,4,3]
               is.should     == [0,0,2,2]

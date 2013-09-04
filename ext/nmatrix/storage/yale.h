@@ -221,14 +221,15 @@ public:
 
   inline D* default_obj_ptr() { return &(a(s->shape[0])); }
   inline D& default_obj() { return a(s->shape[0]); }
-  inline D default_obj() const { return a(s->shape[0]); }
-  inline D const_default_obj() const { return a(s->shape[0]); }
+  inline const D& default_obj() const { return a(s->shape[0]); }
+  inline const D& const_default_obj() const { return a(s->shape[0]); }
 
-  inline I* ija_p()     const { return reinterpret_cast<I*>(s->ija); }
-  inline I  ija(long p) const { return ija_p()[p]; }
-  inline I& ija(long p)       { return ija_p()[p]; }
-  inline D* a_p()       const { return reinterpret_cast<D*>(s->a); }
-  inline D  a(long p)   const { return a_p()[p]; }
+  inline I* ija_p()       const       { return reinterpret_cast<I*>(s->ija); }
+  inline const I& ija(size_t p) const { return ija_p()[p]; }
+  inline I& ija(size_t p)             { return ija_p()[p]; }
+  inline D* a_p()         const       { return reinterpret_cast<D*>(s->a); }
+  inline const D& a(size_t p) const   { return a_p()[p]; }
+  inline D& a(size_t p)               { return a_p()[p]; }
 
   bool real_row_empty(size_t i) const { return ija(i+1) - ija(i) == 0 ? true : false; }
 
@@ -238,22 +239,40 @@ public:
   inline size_t  real_shape(uint8_t d) const { return s->shape[d]; }
   inline size_t* offset_p()     const { return slice_offset;       }
   inline size_t  offset(uint8_t d) const { return slice_offset[d]; }
+  inline size_t  capacity() const { return s->capacity;            }
+  inline size_t  size() const { return ija(real_shape(0));         }
+
+  /*
+   * This is the guaranteed maximum size of the IJA/A arrays of the matrix given its shape.
+   */
+  inline size_t real_max_size() const {
+    size_t result = real_shape(0) * real_shape(1) + 1;
+    if (real_shape(0) > real_shape(1))
+      result += real_shape(0) - real_shape(1);
+
+    return result;
+  }
 
   // Binary search between left and right in IJA for column ID real_j. Returns left if not found.
-  long real_find_pos(long left, long right, size_t real_j) {
-    if (left > right) return -1;
+  size_t real_find_pos(long left, long right, size_t real_j, bool& found) const {
+    if (left > right) {
+      found = false;
+      return left;
+    }
 
     size_t mid   = (left + right) / 2;
     size_t mid_j = ija(mid);
 
-    if (mid_j == real_j)      return mid;
-    else if (mid_j > real_j)  return real_find_pos(left, mid - 1, real_j);
-    else                      return real_find_pos(mid + 1, right, real_j);
+    if (mid_j == real_j) {
+      found = true;
+      return mid;
+    } else if (mid_j > real_j)  return real_find_pos(left, mid - 1, real_j, found);
+    else                        return real_find_pos(mid + 1, right, real_j, found);
   }
 
   // Binary search between left and right in IJA for column ID real_j. Essentially finds where the slice should begin,
   // with no guarantee that there's anything in there.
-  long real_find_left_boundary_pos(size_t left, size_t right, size_t real_j) {
+  size_t real_find_left_boundary_pos(size_t left, size_t right, size_t real_j) const {
     if (left > right) return right;
     if (ija(left) >= real_j) return left;
 
@@ -266,17 +285,20 @@ public:
   }
 
   // Binary search for coordinates i,j in the slice. If not found, return -1.
-  long find_pos(size_t i, size_t j) {
-    size_t left   = ija(i + slice_offset[0]);
-    size_t right  = ija(i + slice_offset[0] + 1) - 1;
-    return real_find_pos(left, right, j + slice_offset[1]);
+  std::pair<size_t,bool> find_pos(const std::pair<size_t,size_t>& ij) const {
+    size_t left   = ija(ij.first + offset(0));
+    size_t right  = ija(ij.first + offset(0) + 1) - 1;
+
+    std::pair<size_t, bool> result;
+    result.first = real_find_pos(left, right, ij.second + offset(1), result.second);
+    return result;
   }
 
   // Binary search for coordinates i,j in the slice, and return the first position >= j in row i.
-  size_t find_pos_for_insertion(size_t i, size_t j) {
-    size_t left   = ija(i + slice_offset[0]);
-    size_t right  = ija(i + slice_offset[0] + 1) - 1;
-    return real_find_left_boundary_pos(left, right, j + slice_offset[1]);
+  size_t find_pos_for_insertion(size_t i, size_t j) const {
+    size_t left   = ija(i + offset(0));
+    size_t right  = ija(i + offset(0) + 1) - 1;
+    return real_find_left_boundary_pos(left, right, j + offset(1));
   }
 
 
@@ -288,7 +310,7 @@ public:
   protected:
     YaleStorage<D>* y;
     size_t i_;
-    I p;
+    I p_;
 
     inline size_t offset(size_t d) const { return y->offset(d); }
     inline size_t shape(size_t d) const { return y->shape(d); }
@@ -297,17 +319,17 @@ public:
     inline I& ija(size_t pp) { return y->ija(pp); }
 
     virtual bool diag() const {
-      return p < std::min(y->real_shape(0), y->real_shape(1));
+      return p_ < std::min(y->real_shape(0), y->real_shape(1));
     }
     virtual bool done_with_diag() const {
-      return p == std::min(y->real_shape(0), y->real_shape(1));
+      return p_ == std::min(y->real_shape(0), y->real_shape(1));
     }
     virtual bool nondiag() const {
-      return p > std::min(y->real_shape(0), y->real_shape(1));
+      return p_ > std::min(y->real_shape(0), y->real_shape(1));
     }
 
   public:
-    basic_iterator(YaleStorage<D>* obj, size_t ii = 0, I pp = 0) : y(obj), i_(ii), p(pp) { }
+    basic_iterator(YaleStorage<D>* obj, size_t ii = 0, I pp = 0) : y(obj), i_(ii), p_(pp) { }
 
     virtual inline size_t i() const { return i_; }
     virtual size_t j() const = 0;
@@ -317,14 +339,28 @@ public:
 
     virtual size_t real_i() const { return offset(0) + i(); }
     virtual size_t real_j() const { return offset(1) + j(); }
-    virtual bool real_ndnz_exists() const { return !y->real_row_empty(real_i()) && ija(p) == real_j(); }
+    virtual size_t p() const { return p_; }
+    virtual bool real_ndnz_exists() const { return !y->real_row_empty(real_i()) && ija(p_) == real_j(); }
 
-    virtual D operator*() const = 0;
+    virtual const D& operator*() const = 0;
+
 
     // Ruby VALUE de-reference
     virtual VALUE operator~() const {
-      if (typeid(D) == typeid(RubyObject)) return *(*this);
+      if (typeid(D) == typeid(RubyObject)) return (**this); // FIXME: return rval instead, faster;
       else return RubyObject(*(*this)).rval;
+    }
+
+    virtual bool operator==(const std::pair<size_t,size_t>& ij) {
+      if (p() >= ija(real_shape(0))) return false;
+      else return i() == ij.first && j() == ij.second;
+    }
+
+    virtual bool operator==(const basic_iterator& rhs) const {
+      return i() == rhs.i() && j() == rhs.j();
+    }
+    virtual bool operator!=(const basic_iterator& rhs) const {
+      return i() != rhs.i() || j() != rhs.j();
     }
   };
 
@@ -333,25 +369,26 @@ public:
    * Iterate across the stored diagonal.
    */
   class stored_diagonal_iterator : public basic_iterator {
-    using basic_iterator::i_;
-    using basic_iterator::p;
+    using basic_iterator::p_;
+    using basic_iterator::y;
     friend class YaleStorage<D>;
   public:
     stored_diagonal_iterator(YaleStorage<D>* obj, size_t d = 0)
     : basic_iterator(obj,                // y
                      std::max(obj->offset(0), obj->offset(1)) + d - obj->offset(0), // i_
-                     std::max(obj->offset(0), obj->offset(1)) + d) // p
+                     std::max(obj->offset(0), obj->offset(1)) + d) // p_
     {
-      // p can range from max(y->offset(0), y->offset(1)) to min(y->real_shape(0), y->real_shape(1))
+//      std::cerr << "sdbegin: d=" << d << ", p_=" << p_ << ", i()=" << i() << ", j()=" << j() << std::endl;
+      // p_ can range from max(y->offset(0), y->offset(1)) to min(y->real_shape(0), y->real_shape(1))
     }
 
 
     inline size_t d() const {
-      return p - std::max(offset(0), offset(1));
+      return p_ - std::max(offset(0), offset(1));
     }
 
     stored_diagonal_iterator& operator++() {
-      i_ = ++p - offset(0);
+      ++p_;
       return *this;
     }
 
@@ -360,8 +397,12 @@ public:
       return ++iter;
     }
 
+    virtual inline size_t i() const {
+      return p_ - offset(0);
+    }
+
     virtual inline size_t j() const {
-      return i_ + offset(0) - offset(1);
+      return p_ - offset(1);
     }
 
 
@@ -380,6 +421,14 @@ public:
     virtual bool operator>=(const stored_diagonal_iterator& rhs) const {
       return d() >= rhs.d();
     }
+
+    D& operator*() {
+      return y->a(p_);
+    }
+
+    const D& operator*() const {
+      return y->a(p_);
+    }
   };
 
   /*
@@ -387,57 +436,104 @@ public:
    */
   class stored_nondiagonal_iterator : public basic_iterator {
     using basic_iterator::i_;
-    using basic_iterator::p;
+    using basic_iterator::p_;
+    using basic_iterator::y;
     friend class YaleStorage<D>;
   protected:
 
-    virtual bool in_valid_nonempty_real_row() const {
+    virtual bool is_valid_nonempty_real_row() const {
       return i_ < shape(0) && ija(i_ + offset(0)) < ija(i_ + offset(0)+1);
     }
 
-    virtual bool in_valid_empty_real_row() const {
+    virtual bool is_valid_empty_real_row() const {
       return i_ < shape(0) && ija(i_ + offset(0)) == ija(i_ + offset(0)+1);
     }
 
     // Key loop for forward row iteration in the non-diagonal portion of the matrix. Called during construction and by
     // the ++ operators.
-    void advance_next_nonempty_row() {
-      if (in_valid_nonempty_real_row())
-        p = this->y->find_pos_for_insertion(i_, 0);
+    void advance_to_first_valid_entry() {
+      // p is already set to the initial position for row i_ (may be outside the slice)
+      // try to put it inside the slice. If we can't, we'll want to loop and increase i_
+      if (is_valid_nonempty_real_row() && ija(p_) < offset(1)) {
+        p_ = y->find_pos_for_insertion(i_, 0);
+        //std::cerr << "A: " << p_ << std::endl;
+      }
 
-      while (in_valid_empty_real_row() || j() >= shape(1)) {
+      // If the row is entirely empty, we know we need to go to the next row.
+      // Even if the row isn't empty, an invalid p needs to be advanced.
+      while (is_valid_empty_real_row() || ija(p_) < offset(1) || ija(p_) - offset(1) >= shape(1)) {
         ++i_;
 
-        if (in_valid_nonempty_real_row()) {
-          p = this->y->find_pos_for_insertion(i_, 0); // find the beginning of this row
-        } else if (i_ >= shape(0)) {
-          p = ija(real_shape(0));         // find the end of the matrix
+        // If we're in a valid row, we can try looking for p again.
+        if (is_valid_nonempty_real_row()) {
+          p_ = y->find_pos_for_insertion(i_, 0);
+          //std::cerr << "B1: " << p_ << std::endl;
+        } else {
+          p_ = ija(i_ + offset(0) + 1); // beginning of next valid row
+          //std::cerr << "B2: " << p_ << std::endl;
+        }
+
+        if (p_ >= y->size()) { // abort -- empty matrix
+          p_ = y->size();
+          i_ = y->shape(0);
           break;
         }
       }
+
+      //std::cerr << "advance: i = " << i_ << ", p_ = " << p_ << std::endl;
     }
 
-    // Key loop for forward column iteration in the non-diagonal portion of the matrix. Called by the ++operator.
-    bool advance_next_column() {
-      if (i_ >= shape(0) || in_valid_empty_real_row())    return false;
-      if (p < ija(i_ + offset(0)+1)-1) ++p; // advance to next column
-      if (j() < shape(1)) return true;         // see if we found a valid column
-      return false;                               // nope.
-    }
 
   public:
-    stored_nondiagonal_iterator(YaleStorage<D>* obj, bool end, size_t ii = 0)
-    : basic_iterator(obj,
-                     end ? obj->real_shape(0) : ii,
-                     end ? obj->ija(ii + obj->offset(0) + 1) : std::max(obj->offset(0), obj->offset(1)))
+    stored_nondiagonal_iterator(YaleStorage<D>* obj, size_t ii = 0)
+    : basic_iterator(obj, ii, obj->ija(ii + obj->offset(0)))
     {
-      if (begin) advance_next_nonempty_row();
+      if (ii < shape(0))
+        advance_to_first_valid_entry();
     }
 
+
+    stored_nondiagonal_iterator(YaleStorage<D>* obj, size_t ii, size_t pp) : basic_iterator(obj, ii, pp) { }
+
+
+    // Pre-condition: p >= real_row_begin
+    bool find_valid_p_for_row() {
+      size_t real_row_begin = ija(i_ + offset(0)),
+             real_row_end   = ija(i_ + offset(0) + 1);
+      // if (p_ < real_row_begin) return false; // This is a pre-condition
+      if (real_row_begin == real_row_end) return false;
+      if (p_ >= real_row_end) return false;
+
+      if (ija(p_) < offset(1)) {
+        size_t next_p = y->find_pos_for_insertion(i_, 0);
+        if (p_ == next_p) return false;
+        else p_ = next_p;
+
+        if (p_ >= real_row_end) return false;
+        if (ija(p_) < offset(1)) return false;
+        if (j() < shape(1)) return true; // binary search worked!
+        return false; // out of range. not in row.
+      } else if (j() < shape(1)) return true; // within the necessary range.
+      else
+        return false; // out of range. not in row.
+    }
+
+
     stored_nondiagonal_iterator& operator++() {
-      while (i_ < shape(0) && !advance_next_column()) { // if advancing to the next column fails,
-        advance_next_nonempty_row();                       // then go to the next row.
+
+      size_t real_row_begin = ija(i_ + offset(0)),
+             real_row_end   = ija(i_ + offset(0) + 1);
+      ++p_;
+
+      if (p_ >= y->size()) {
+        i_ = shape(0);
+        return *this;
       }
+
+      while (i_ < shape(0) && !find_valid_p_for_row()) { // skip forward
+        ++i_;
+      }
+
       return *this;
     }
 
@@ -446,8 +542,36 @@ public:
       return ++iter;
     }
 
+    virtual bool operator==(const stored_nondiagonal_iterator& rhs) const {
+      if (i_ != rhs.i_) return false;
+      if (i_ > shape(0) && rhs.i_ > rhs.shape(0)) return true;   // handles sndend()
+      else return j() == rhs.j();
+    }
+
+    virtual bool operator!=(const stored_nondiagonal_iterator& rhs) const {
+      if (i_ > shape(0)) {
+        if (rhs.i_ > rhs.shape(0)) return false;  // all sndend iterators are ==
+        else                        return true;   // one is sndend and one isn't
+      } else if (rhs.i_ > rhs.shape(0)) return true;
+
+      return (i_ != rhs.i_ || j() != rhs.j());
+    }
+
     virtual inline size_t j() const {
-      return ija(p) - offset(1);
+      return ija(p_) - offset(1);
+    }
+
+
+    virtual inline size_t p() const {
+      return p_;
+    }
+
+    D& operator*() {
+      return y->a(p_);
+    }
+
+    const D& operator*() const {
+      return y->a(p_);
     }
 
   };
@@ -464,7 +588,7 @@ public:
   class stored_iterator : public basic_iterator {
     friend class YaleStorage<D>;
     using basic_iterator::i_;
-    using basic_iterator::p;
+    using basic_iterator::p_;
     using basic_iterator::y;
   protected:
     virtual bool diag() const { return iter->diag(); }
@@ -478,7 +602,7 @@ public:
         iter = new stored_diagonal_iterator(obj);
 
         // if we're past the diagonal already, delete it and create a nondiagonal iterator
-        if (!iter.diag()) {
+        if (!diag()) {
           delete iter;
           iter = new stored_nondiagonal_iterator(obj, true);
         }
@@ -502,6 +626,7 @@ public:
 
     virtual size_t j() const { return iter->j(); }
     virtual size_t i() const { return iter->i(); }
+    virtual size_t p() const { return iter->p(); }
     virtual size_t real_j() const { return iter->real_j(); }
     virtual size_t real_i() const { return iter->real_i(); }
 
@@ -515,6 +640,7 @@ public:
       } else {
         ++(*iter);
       }
+      // Need to keep these up to date for easier copy construction.
       return *this;
     }
 
@@ -537,7 +663,7 @@ public:
       return &(**iter);
     }
 
-    virtual D operator*() const {
+    virtual const D& operator*() const {
       return **iter;
     }
   };
@@ -548,7 +674,7 @@ public:
   class iterator : public basic_iterator {
     friend class YaleStorage<D>;
     using basic_iterator::i_;
-    using basic_iterator::p;
+    using basic_iterator::p_;
     using basic_iterator::y;
   protected:
     size_t j_; // These are relative to the slice.
@@ -565,11 +691,11 @@ public:
         ++i_;
 
         // Do a binary search to find the beginning of the slice
-        p = offset(0) > 0 ? y->find_pos_for_insertion(i_,j_) : ija(i_);
+        p_ = offset(0) > 0 ? y->find_pos_for_insertion(i_,j_) : ija(i_);
       } else {
         // If the last j was actually stored in this row of the matrix, need to advance p.
 
-        if (!y->real_row_empty(i_ + offset(0)) && ija(p) <= prev_j + offset(1)) ++p;  // this test is the same as real_ndnz_exists
+        if (!y->real_row_empty(i_ + offset(0)) && ija(p_) <= prev_j + offset(1)) ++p_;  // this test is the same as real_ndnz_exists
       }
 
       return *this;
@@ -600,14 +726,14 @@ public:
       return j_ > rhs.j_;
     }
 
-    virtual bool real_diag() const { return i_ + offset(0) == j_ + offset(1); }
+    virtual bool diag() const { return i_ + offset(0) == j_ + offset(1); }
 
     // De-reference
-    virtual D operator*() const {
-      if (real_diag())                                                          return y->a( i_ + offset(0) );
-      else if (p >= ija(i_+offset(0)+1))                                        return y->const_default_obj();
-      else if (!y->real_row_empty(i_ + offset(0)) && ija(p) == j_ + offset(1))  return y->a( p );
-      else                                                                      return y->const_default_obj();
+    virtual const D& operator*() const {
+      if (diag())                                                                return y->a( i_ + offset(0) );
+      else if (p_ >= ija(i_+offset(0)+1))                                        return y->const_default_obj();
+      else if (!y->real_row_empty(i_ + offset(0)) && ija(p_) == j_ + offset(1))  return y->a( p_ );
+      else                                                                       return y->const_default_obj();
     }
 
     virtual size_t j() const { return j_; }
@@ -674,7 +800,7 @@ public:
       return d ? &(**d_iter) : &(**nd_iter);
     }
 
-    virtual D operator*() const {
+    virtual const D& operator*() const {
       return d ? **d_iter : **nd_iter;
     }
   };
@@ -684,17 +810,216 @@ public:
   iterator row_end(size_t row)                        {      return begin(row+1);                      }
   iterator end()                                      {      return iterator(this, shape(0));          }
   stored_diagonal_iterator sdbegin(size_t d = 0)      {      return stored_diagonal_iterator(this, d); }
-  stored_diagonal_iterator sdend()                    {      return stored_diagonal_iterator(this, std::min(real_shape(0), real_shape(1))); }
-  stored_nondiagonal_iterator sndbegin(size_t row = 0){      return stored_nondiagonal_iterator(this, false, row); }
+  stored_diagonal_iterator sdend()                    {
+    return stored_diagonal_iterator(this, std::min( shape(0) + offset(0), shape(1) + offset(1) ) - std::max(offset(0), offset(1)) );
+  }
+  stored_nondiagonal_iterator sndbegin(size_t row = 0){      return stored_nondiagonal_iterator(this, row); }
   stored_nondiagonal_iterator sndrow_end(size_t row)  {      return sndbegin(row+1);                   }
-  stored_nondiagonal_iterator sndend()                {      return stored_nondiagonal_iterator(this, true); }
+  stored_nondiagonal_iterator sndend()                {      return stored_nondiagonal_iterator(this, shape(0)); }
   stored_iterator sbegin()                            {      return stored_iterator(this, true);       }
   stored_iterator send()                              {      return stored_iterator(this, false);      }
   ordered_iterator obegin(size_t row = 0)             {      return ordered_iterator(this, row);       }
   ordered_iterator oend()                             {      return ordered_iterator(this, shape(0));  }
   ordered_iterator orow_end(size_t row)               {      return obegin(row+1);                     }
 
+
+  /*
+   * Returns the iterator for i,j or snd_end() if not found.
+   */
+  stored_nondiagonal_iterator find(const std::pair<size_t,size_t>& ij) {
+    std::pair<size_t,bool> find_pos_result = find_pos(ij);
+    if (!find_pos_result.second) return sndend();
+    else return stored_nondiagonal_iterator(this, ij.first, find_pos_result.first);
+  }
+
+  /*
+   * Returns a stored_nondiagonal_iterator pointing to the location where some coords i,j should go, or returns their
+   * location if present.
+   */
+  stored_nondiagonal_iterator lower_bound(const std::pair<size_t,size_t>& ij) {
+    return stored_nondiagonal_iterator(this, ij.first, find_pos_for_insertion(ij.first, ij.second));
+  }
+
+  /*
+   * Insert an element in column j, using position's p() as the location to insert the new column. i and j will be the
+   * coordinates. This also does a replace if column j is already present.
+   *
+   * Returns true if a new entry was added and false if an entry was replaced.
+   *
+   * Pre-conditions:
+   *   - position.p() must be between ija(real_i) and ija(real_i+1), inclusive, where real_i = i + offset(0)
+   *   - real_i and real_j must not be equal
+   */
+  bool insert(stored_nondiagonal_iterator position, size_t i, size_t j, const D& val) {
+    return insert(position, std::make_pair(i,j), val);
+  }
+
+  /*
+   * See the above insert.
+   */
+  bool insert(stored_nondiagonal_iterator position, const std::pair<size_t,size_t>& ij, const D& val) {
+    size_t  i = ij.first,
+            j = ij.second,
+           sz = size();
+
+    if (position != ij) {
+      *position = val; // replace
+      return false;
+    } else if (sz + 1 > capacity()) {
+      update_resize_move(position, ij.first+offset(0), 1);
+    } else {
+      move_right(position, 1);
+      update_real_row_sizes_from(ij.first+offset(0), 1);
+    }
+    ija(position.p()) = j + offset(1); // set the column ID
+    a(position.p())   = val;           // set the value
+    return true;
+  }
+
+  /*
+   * Insert n elements v in columns j, using position as a guide. i gives the starting row. If at any time a value in j
+   * decreases,
+   */
+  /*bool insert(stored_iterator position, size_t n, size_t i, size_t* j, DType* v) {
+
+  } */
+
+  /*
+   * A pseudo-insert operation, since the diagonal portion of the A array is constant size.
+   */
+  stored_diagonal_iterator insert(stored_diagonal_iterator position, const D& val) {
+    *position = val;
+    return position;
+  }
+
+  iterator insert(iterator position, size_t j, const D& val) {
+    if (position.real_i() == position.real_j()) {
+      s->a(position.real_i()) = val;
+      return position;
+    } else {
+      return insert(stored_nondiagonal_iterator(position), position.i(), j, val);
+    }
+  }
+
+  // Simple insertion/getting of an element -- happens when [] is called.
+  inline D& operator[](const std::pair<size_t,size_t>& ij) {
+    if (ij.first > shape(0) || ij.second > shape(1)) rb_raise(rb_eRangeError, "element access out of range at %u, %u", ij.first, ij.second);
+    if (ij.first + offset(0) == ij.second + offset(1)) return a(ij.first + offset(0));
+    stored_nondiagonal_iterator iter = lower_bound(ij);
+    if (iter != ij) { // if not found, insert the default
+      insert(iter, ij, const_default_obj());
+    }
+    // we can now safely return a reference
+    return *iter;
+  }
+
+  /*
+   * Attempt to return a reference to some location i,j. Not Ruby-safe; will throw out_of_range if not found.
+   */
+  inline D& at(const std::pair<size_t,size_t>& ij) {
+    if (ij.first > shape(0) || ij.second > shape(1)) throw std::out_of_range("i,j out of bounds");
+    if (ij.first + offset(0) == ij.second + offset(1)) return a(ij.first + offset(0));
+    stored_nondiagonal_iterator iter = find(ij);
+    if (iter != ij) throw std::out_of_range("i,j not found in matrix");
+    return *iter;
+  }
+
+  // See above.
+  inline const D& at(const std::pair<size_t,size_t>& ij) const {
+    if (ij.first > shape(0) || ij.second > shape(1)) throw std::out_of_range("i,j out of bounds");
+    if (ij.first + offset(0) == ij.second + offset(1)) return a(ij.first + offset(0));
+    stored_nondiagonal_iterator iter = find(ij);
+    if (iter != ij) throw std::out_of_range("i,j not found in matrix");
+    return *iter;
+  }
+
 protected:
+  /*
+   * Update row sizes starting with row i
+   */
+  void update_real_row_sizes_from(size_t real_i, int change) {
+    for (; real_i <= real_shape(0); ++real_i) {
+      ija(real_i) += change;
+    }
+  }
+
+  /*
+   * Move elements in the IJA and A arrays by n (to the right).
+   * Does not update row sizes.
+   */
+  void move_right(stored_nondiagonal_iterator position, size_t n) {
+    size_t sz = size();
+    for (size_t m = 0; m < sz - position.p(); ++m) {
+      ija(sz+n-1-m) = ija(sz-1-m);
+      a(sz+n-1-m)   = a(sz-1-m);
+    }
+  }
+
+  /*
+   * Like move_right, but also involving a resize. This updates row sizes as well.
+   */
+  void update_resize_move(stored_nondiagonal_iterator position, size_t real_i, int n) {
+    size_t sz      = size(); // current size of the storage vectors
+    size_t new_cap = capacity() * nm::yale_storage::GROWTH_CONSTANT;
+    size_t max_cap = real_max_size();
+
+    if (new_cap > max_cap) {
+      new_cap = max_cap;
+      if (sz + n > max_cap)
+        rb_raise(rb_eStandardError, "insertion size exceeded maximum yale matrix size");
+
+    }
+
+    if (new_cap < sz + n) new_cap = sz + n;
+
+    IType* new_ija      = ALLOC_N( I,     new_cap );
+    D* new_a            = ALLOC_N( D,     new_cap );
+
+    // Copy unchanged row pointers first.
+    for (size_t m = 0; m <= real_i; ++m) {
+      new_ija[m]        = ija(m);
+      new_a[m]          = a(m);
+    }
+
+    // Now update row pointers following the changed row as we copy the additional values.
+    for (size_t m = real_i + 1; m < real_shape(0); ++m) {
+      new_ija[m]        = ija(m) + n;
+      new_a[m]          = a(m);
+    }
+
+    // Copy all remaining prior to insertion/removal site
+    for (size_t m = real_shape(0); m < position.p(); ++m) {
+      new_ija[m]        = ija(m);
+      new_a[m]          = a(m);
+    }
+
+    // Copy all subsequent to insertion/removal site
+    for (size_t m = position.p(); m < sz; ++m) {
+      new_ija[m+n]      = ija(m);
+      new_a[m+n]        = a(m);
+    }
+
+    s->capacity = new_cap;
+
+    xfree(s->ija);
+    xfree(s->a);
+
+    s->ija      = new_ija;
+    s->a        = reinterpret_cast<void*>(new_a);
+  }
+
+  /*
+   * Move elements in the IJA and A arrays by n (to the left). Here position gives
+   * the location to move to, and they should come from n to the right.
+   */
+  void move_left(stored_nondiagonal_iterator position, size_t n) {
+    size_t sz = size();
+    for (size_t m = sz; m > position.p() + n; --m) {   // work backwards
+      ija(m-n)      = ija(m);
+      a(m-n)        = a(m);
+    }
+  }
+
   YALE_STORAGE* s;
   bool          slice;
   size_t*       slice_shape;

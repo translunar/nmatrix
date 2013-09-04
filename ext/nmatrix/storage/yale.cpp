@@ -1702,39 +1702,17 @@ static VALUE map_merged_stored(VALUE left, VALUE right, VALUE init) {
 template <typename DType>
 static VALUE each_stored_with_indices(VALUE nm) {
   YALE_STORAGE* s = NM_STORAGE_YALE(nm);
-  DType* a        = A<DType>(s);
-  IType* ija      = IJA(s);
+  YaleStorage<DType> y(s);
 
   // If we don't have a block, return an enumerator.
   RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_yale_stored_enumerator_length);
 
-  // Iterate along diagonal
-  for (size_t sk = NM_MAX(s->offset[0], s->offset[1]); sk < NM_MIN(s->shape[0] + s->offset[0], s->shape[1] + s->offset[1]); ++sk) {
-    VALUE ii = LONG2NUM(sk - s->offset[0]),
-          jj = LONG2NUM(sk - s->offset[1]);
-
-    rb_yield_values(3, obj_at(s, sk), ii, jj);
+  for (typename YaleStorage<DType>::stored_diagonal_iterator d = y.sdbegin(); d != y.sdend(); ++d) {
+    rb_yield_values(3, ~d, d.rb_i(), d.rb_j());
   }
 
-  // Iterate through non-diagonal elements, row by row
-  for (long ri = 0; ri < s->shape[0]; ++ri) {
-    long si      = ri + s->offset[0];
-    IType p      = ija[si],
-          next_p = ija[si+1];
-
-    // if this is a reference to another matrix, we should find the left boundary of the slice
-    if (s != s->src && p < next_p)
-      p = binary_search_left_boundary(s, p, next_p-1, s->offset[1]);
-
-    for (; p < next_p; ++p) {
-      long sj = static_cast<long>(ija[p]),
-           rj = sj - s->offset[1];
-      if (rj < 0) continue;
-
-      if (rj >= s->shape[1]) break;
-
-      rb_yield_values(3, obj_at(s, p), LONG2NUM(ri), LONG2NUM(rj));
-    }
+  for (typename YaleStorage<DType>::stored_nondiagonal_iterator nd = y.sndbegin(); nd != y.sndend(); ++nd) {
+    rb_yield_values(3, ~nd, nd.rb_i(), nd.rb_j());
   }
 
   return nm;
