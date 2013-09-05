@@ -118,6 +118,7 @@ public:
   // Binary search between left and right in IJA for column ID real_j. Essentially finds where the slice should begin,
   // with no guarantee that there's anything in there.
   size_t real_find_left_boundary_pos(size_t left, size_t right, size_t real_j) const {
+    std::cerr << "rflbp: left=" << left << "\tright=" << right << "\treal_j=" << real_j << std::endl;
     if (left > right) return right;
     if (ija(left) >= real_j) return left;
 

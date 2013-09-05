@@ -1577,6 +1577,44 @@ static VALUE each_stored_with_indices(VALUE nm) {
 
 
 /*
+ * Iterate over the stored diagonal entries in Yale.
+ */
+template <typename DType>
+static VALUE stored_diagonal_each_with_indices(VALUE nm) {
+  YALE_STORAGE* s = NM_STORAGE_YALE(nm);
+  YaleStorage<DType> y(s);
+
+  // If we don't have a block, return an enumerator.
+  RETURN_SIZED_ENUMERATOR(nm, 0, 0, 0); // FIXME: need diagonal length
+
+  for (typename YaleStorage<DType>::const_stored_diagonal_iterator d = y.csdbegin(); d != y.csdend(); ++d) {
+    rb_yield_values(3, ~d, d.rb_i(), d.rb_j());
+  }
+
+  return nm;
+}
+
+
+/*
+ * Iterate over the stored diagonal entries in Yale.
+ */
+template <typename DType>
+static VALUE stored_nondiagonal_each_with_indices(VALUE nm) {
+  YALE_STORAGE* s = NM_STORAGE_YALE(nm);
+  YaleStorage<DType> y(s);
+
+  // If we don't have a block, return an enumerator.
+  RETURN_SIZED_ENUMERATOR(nm, 0, 0, 0); // FIXME: need diagonal length
+
+  for (typename YaleStorage<DType>::const_stored_nondiagonal_iterator nd = y.csndbegin(); nd != y.csndend(); ++nd) {
+    rb_yield_values(3, ~nd, nd.rb_i(), nd.rb_j());
+  }
+
+  return nm;
+}
+
+
+/*
  * Iterate over the stored entries in Yale in order of i,j. Visits every diagonal entry, even if it's the default.
  */
 template <typename DType>
@@ -1683,6 +1721,21 @@ VALUE nm_yale_each_with_indices(VALUE nmatrix) {
 /* C interface for NMatrix#each_stored_with_indices (Yale) */
 VALUE nm_yale_each_stored_with_indices(VALUE nmatrix) {
   NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::each_stored_with_indices, VALUE, VALUE)
+
+  return ttable[ NM_DTYPE(nmatrix) ](nmatrix);
+}
+
+
+/* Iterate along stored diagonal (not actual diagonal!) */
+VALUE nm_yale_stored_diagonal_each_with_indices(VALUE nmatrix) {
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::stored_diagonal_each_with_indices, VALUE, VALUE)
+
+  return ttable[ NM_DTYPE(nmatrix) ](nmatrix);
+}
+
+/* Iterate through stored nondiagonal (not actual diagonal!) */
+VALUE nm_yale_stored_nondiagonal_each_with_indices(VALUE nmatrix) {
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::stored_nondiagonal_each_with_indices, VALUE, VALUE)
 
   return ttable[ NM_DTYPE(nmatrix) ](nmatrix);
 }

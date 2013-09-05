@@ -33,9 +33,68 @@ describe "NMatrix enumeration for" do
 
       before :each do
         @n = create_rectangular_matrix(stype)
+        @m = @n[1..4,1..3]
       end
 
       if stype == :yale
+        it "should iterate along diagonal portion of A array" do
+          vv = []
+          ii = []
+          jj = []
+          @n.send :__yale_stored_diagonal_each_with_indices__ do |v,i,j|
+            vv << v
+            ii << i
+            jj << j
+          end
+          vv.should == [1,7,13,0,19]
+          ii.should == [0,1,2,3,4]
+          jj.should == ii
+        end
+
+        it "should iterate along non-diagonal portion of A array" do
+          vv = []
+          ii = []
+          jj = []
+          @n.send :__yale_stored_nondiagonal_each_with_indices__ do |v,i,j|
+            vv << v
+            ii << i
+            jj << j
+          end
+          vv.should == [2,3,4,5,  6,8,9,10,  11,12,14,15,  16,17,18,20]
+          ii.should == [[0]*4, [1]*4, [2]*4, [4]*4].flatten
+          jj.should == [1,2,3,4,  0,2,3,5,   0,1,4,5,      0,2,3,5]
+        end
+
+        it "should iterate along a sliced diagonal portion of an A array" do
+          @m = @n[0..3,1..3]
+          vv = []
+          ii = []
+          jj = []
+          @m.send :__yale_stored_diagonal_each_with_indices__ do |v,i,j|
+            vv << v
+            ii << i
+            jj << j
+          end
+          vv.should == [7,13,0]
+          ii.should == [1,2,3]
+          jj.should == [0,1,2]
+        end
+
+        it "should iterate along a sliced non-diagonal portion of a sliced A array" do
+          vv = []
+          ii = []
+          jj = []
+          @n.extend NMatrix::YaleFunctions
+          @m.send :__yale_stored_nondiagonal_each_with_indices__ do |v,i,j|
+            vv << v
+            ii << i
+            jj << j
+          end
+          ii.should == [0,0, 1,   3,3 ]
+          jj.should == [1,2, 0,   1,2 ]
+          vv.should == [8,9, 12, 17,18]
+        end
+
         it "should visit each stored element of the matrix in order by indices" do
           vv = []
           ii = []
@@ -49,6 +108,24 @@ describe "NMatrix enumeration for" do
           vv.should == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0, 16, 17, 18, 19, 20]
           ii.should == [[0]*5, [1]*5, [2]*5, [3]*1, [4]*5].flatten
           jj.should == [0,1,2,3,4,  0,1,2,3,5,  0,1,2,4,5,  3,  0,2,3,4,5]
+        end
+
+        it "should visit each stored element of the slice in order by indices" do
+
+          vv = []
+          ii = []
+          jj = []
+          @m.each_ordered_stored_with_indices do |v,i,j|
+            vv << v
+            ii << i
+            jj << j
+          end
+          require 'pry'
+          binding.pry
+
+          ii.should == [0,0,0, 1,1,   2,  3,3,3  ]
+          jj.should == [0,1,2, 0,1,   2,  1,2,3  ]
+          vv.should == [7,8,9, 12,13, 0, 17,18,19]
         end
       end
 
@@ -68,11 +145,10 @@ describe "NMatrix enumeration for" do
       end
 
       it "should visit each cell in the slice as if dense, making indices available" do
-        m = @n[1..4,1..3]
         vv = []
         ii = []
         jj = []
-        m.each_with_indices do |v,i,j|
+        @m.each_with_indices do |v,i,j|
           vv << v
           ii << i
           jj << j

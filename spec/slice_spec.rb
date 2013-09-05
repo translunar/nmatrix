@@ -135,8 +135,8 @@ describe "Slice operation" do
       end
 
       it "reference should compare with non-reference" do
-        require 'pry'
-        binding.pry
+        #require 'pry'
+        #binding.pry
         @m.slice(1..2,0..1).should == @m[1..2, 0..1]
         @m[1..2,0..1].should == @m.slice(1..2, 0..1)
         @m[1..2,0..1].should == @m[1..2, 0..1]

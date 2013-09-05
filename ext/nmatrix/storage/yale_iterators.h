@@ -30,6 +30,7 @@
 # define YALE_ITERATORS_H
 
 #include <type_traits>
+#include <typeinfo> // typeid()
 
 namespace nm {
 
@@ -226,7 +227,7 @@ protected:
     // try to put it inside the slice. If we can't, we'll want to loop and increase i_
     if (is_valid_nonempty_real_row() && ija(p_) < offset(1)) {
       p_ = y.find_pos_for_insertion(i_, 0);
-      //std::cerr << "A: " << p_ << std::endl;
+      std::cerr << "A: " << p_ << std::endl;
     }
 
     // If the row is entirely empty, we know we need to go to the next row.
@@ -237,10 +238,10 @@ protected:
       // If we're in a valid row, we can try looking for p again.
       if (is_valid_nonempty_real_row()) {
         p_ = y.find_pos_for_insertion(i_, 0);
-        //std::cerr << "B1: " << p_ << std::endl;
+        std::cerr << "B1: " << p_ << std::endl;
       } else {
         p_ = ija(i_ + offset(0) + 1); // beginning of next valid row
-        //std::cerr << "B2: " << p_ << std::endl;
+        std::cerr << "B2: " << p_ << std::endl;
       }
 
       if (p_ >= y.size()) { // abort -- empty matrix
@@ -250,7 +251,7 @@ protected:
       }
     }
 
-    //std::cerr << "advance: i = " << i_ << ", p_ = " << p_ << std::endl;
+    std::cerr << "advance: i = " << i_ << ", p_ = " << p_ << std::endl;
   }
 
 
@@ -258,8 +259,11 @@ public:
   stored_nondiagonal_iterator_T(YaleRef& obj, size_t ii = 0)
   : basic_iterator_T<D,RefType,YaleRef>(obj, ii, obj.ija(ii + obj.offset(0)))
   {
-    if (ii < shape(0))
+    if (ii < shape(0)) {
       advance_to_first_valid_entry();
+
+      std::cerr << "initial: p=" << p_ << ", i=" << i_ << std::endl;
+    }
   }
 
 
@@ -275,13 +279,29 @@ public:
     if (p_ >= real_row_end) return false;
 
     if (ija(p_) < offset(1)) {
+      std::cerr << "p=" << p_ << " is pre-slice" << std::endl;
       size_t next_p = y.find_pos_for_insertion(i_, 0);
-      if (p_ == next_p) return false;
+      if (p_ == next_p) {
+        std::cerr << "    find_pos_for_insertion returned current p (returning false)" << std::endl;
+        return false;
+      }
       else p_ = next_p;
 
-      if (p_ >= real_row_end) return false;
-      if (ija(p_) < offset(1)) return false;
-      if (j() < shape(1)) return true; // binary search worked!
+      std::cerr << "    p <- next_p. Now: " << p_ << std::endl;
+
+      if (p_ >= real_row_end) {
+        std::cerr << "    p is past the end of the row (returning false)" << std::endl;
+        return false;
+      }
+      if (ija(p_) < offset(1)) {
+        std::cerr << "    p is still pre-slice (returning false)" << std::endl;
+        return false;
+      }
+      if (j() < shape(1)) {
+        std::cerr << "    j()=" << j() << " is positive and less than shape (returning TRUE)" << std::endl;
+        return true; // binary search worked!
+      }
+      std::cerr << "    j()=" << j() << " is post-slice (returning false)" << std::endl;
       return false; // out of range. not in row.
     } else if (j() < shape(1)) return true; // within the necessary range.
     else
@@ -295,6 +315,8 @@ public:
            real_row_end   = ija(i_ + offset(0) + 1);
     ++p_;
 
+    std::cerr << "new p=" << p_ << std::endl;
+
     if (p_ >= y.size()) {
       i_ = shape(0);
       return *this;
@@ -302,6 +324,9 @@ public:
 
     while (i_ < shape(0) && !find_valid_p_for_row()) { // skip forward
       ++i_;
+      p_ = ija(i_ + offset(0)); // update p to row beginning.
+      std::cerr << "  new i=" << i_ << std::endl;
+      std::cerr << " new p=" << p_ << std::endl;
     }
 
     return *this;
@@ -564,10 +589,11 @@ public:
     nd_iter(obj, ii),
     d(nd_iter > d_iter)
   {
-/*      std::cerr << "d:  " << d_iter.i() << ", " << d_iter.j() << std::endl;
-    std::cerr << "nd: " << nd_iter.i() << ", " << nd_iter.j() << std::endl;
-    std::cerr << "dominant: " << (d ? "d" : "nd") << std::endl; */
-
+    if (ii == 0) {
+      std::cerr << "d:  " << d_iter.i() << ", " << d_iter.j() << std::endl;
+      std::cerr << "nd: " << nd_iter.i() << ", " << nd_iter.j() << std::endl;
+      std::cerr << "dominant: " << (d ? "d" : "nd") << std::endl;
+    }
   }
 
   virtual size_t j() const { return d ? d_iter.j() : nd_iter.j(); }
@@ -583,7 +609,11 @@ public:
     } else {
       ++nd_iter;
     }
-    d = nd_iter > d_iter;
+    if (d)
+    std::cerr << "nd_iter i=" << nd_iter.i() << ", j=" << nd_iter.j() << '\t';
+    std::cerr << " d_iter i=" <<  d_iter.i() << ", j=" <<  d_iter.j() << '\t';
+    d = nd_iter > d_iter; // || nd_iter.i() >= shape(0);
+    std::cerr << "new dominant: " << (d ? "d" : "nd") << std::endl;
 
     return *this;
   }
