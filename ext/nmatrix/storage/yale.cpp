@@ -1696,8 +1696,7 @@ static VALUE map_merged_stored(VALUE left, VALUE right, VALUE init) {
 
 
 /*
- * This function and the two helper structs enable us to use partial template specialization.
- * See also: http://stackoverflow.com/questions/6623375/c-template-specialization-on-functions
+ * Iterate over the stored entries in Yale (diagonal and non-diagonal non-zeros)
  */
 template <typename DType>
 static VALUE each_stored_with_indices(VALUE nm) {
@@ -1717,6 +1716,26 @@ static VALUE each_stored_with_indices(VALUE nm) {
 
   return nm;
 }
+
+
+/*
+ * Iterate over the stored entries in Yale in order of i,j. Visits every diagonal entry, even if it's the default.
+ */
+template <typename DType>
+static VALUE each_ordered_stored_with_indices(VALUE nm) {
+  YALE_STORAGE* s = NM_STORAGE_YALE(nm);
+  YaleStorage<DType> y(s);
+
+  // If we don't have a block, return an enumerator.
+  RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_yale_stored_enumerator_length);
+
+  for (typename YaleStorage<DType>::ordered_iterator iter = y.obegin(); iter != y.oend(); ++iter) {
+    rb_yield_values(3, ~iter, iter.rb_i(), iter.rb_j());
+  }
+
+  return nm;
+}
+
 
 template <typename DType>
 static VALUE each_with_indices(VALUE nm) {
@@ -1807,6 +1826,14 @@ VALUE nm_yale_each_with_indices(VALUE nmatrix) {
 /* C interface for NMatrix#each_stored_with_indices (Yale) */
 VALUE nm_yale_each_stored_with_indices(VALUE nmatrix) {
   NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::each_stored_with_indices, VALUE, VALUE)
+
+  return ttable[ NM_DTYPE(nmatrix) ](nmatrix);
+}
+
+
+/* C interface for NMatrix#each_ordered_stored_with_indices (Yale) */
+VALUE nm_yale_each_ordered_stored_with_indices(VALUE nmatrix) {
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::each_ordered_stored_with_indices, VALUE, VALUE)
 
   return ttable[ NM_DTYPE(nmatrix) ](nmatrix);
 }

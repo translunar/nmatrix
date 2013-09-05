@@ -43,6 +43,7 @@
  */
 
 #include <limits> // for std::numeric_limits<T>::max()
+#include <stdexcept>
 
 /*
  * Project Includes
@@ -97,6 +98,7 @@ extern "C" {
 
   VALUE nm_yale_each_with_indices(VALUE nmatrix);
   VALUE nm_yale_each_stored_with_indices(VALUE nmatrix);
+  VALUE nm_yale_each_ordered_stored_with_indices(VALUE nmatrix);
   void* nm_yale_storage_get(STORAGE* s, SLICE* slice);
   void*	nm_yale_storage_ref(STORAGE* s, SLICE* slice);
   void  nm_yale_storage_set(VALUE left, SLICE* slice, VALUE right);
@@ -557,6 +559,19 @@ public:
       return (i_ != rhs.i_ || j() != rhs.j());
     }
 
+    virtual bool operator<(const stored_diagonal_iterator& rhs) const {
+      if (i_ < rhs.i()) return true;
+      else if (i_ == rhs.i()) return j() < rhs.j();
+      else return false;
+    }
+
+    virtual bool operator>(const stored_diagonal_iterator& rhs) const {
+      if (i_ > rhs.i()) return true;
+      else if (i_ == rhs.i()) return j() > rhs.j();
+      else return false;
+    }
+
+
     virtual inline size_t j() const {
       return ija(p_) - offset(1);
     }
@@ -747,22 +762,22 @@ public:
   class ordered_iterator : public basic_iterator {
     friend class YaleStorage<D>;
   protected:
-    bool d; // which iterator is the currently valid one
     stored_diagonal_iterator*     d_iter;
     stored_nondiagonal_iterator* nd_iter;
+    bool d; // which iterator is the currently valid one
 
   public:
-    ordered_iterator(YaleStorage<D>* obj, size_t ii = 0) : basic_iterator(obj, ii) {
-      d_iter  = new stored_diagonal_iterator(obj);
-      nd_iter = new stored_nondiagonal_iterator(obj, false, ii);
-      d = *d_iter < *nd_iter;
-    }
+    ordered_iterator(YaleStorage<D>* obj, size_t ii = 0)
+    : basic_iterator(obj, ii),
+      d_iter(new stored_diagonal_iterator(obj)),
+      nd_iter(new stored_nondiagonal_iterator(obj, ii)),
+      d(*nd_iter > *d_iter) { }
 
-    ordered_iterator(const ordered_iterator& rhs) {
-      d_iter  = new stored_diagonal_iterator(*d_iter);
-      nd_iter = new stored_nondiagonal_iterator(*nd_iter);
-      d       = rhs.d;
-    }
+    ordered_iterator(const ordered_iterator& rhs)
+    : basic_iterator(rhs.y, rhs.i()),
+      d_iter(new stored_diagonal_iterator(*(rhs.d_iter))),
+      nd_iter(new stored_nondiagonal_iterator(*(rhs.nd_iter))),
+      d(rhs.d) { }
 
     ~ordered_iterator() {
       delete  d_iter;
@@ -777,7 +792,7 @@ public:
     ordered_iterator& operator++() {
       if (d)    ++(*d_iter);
       else      ++(*nd_iter);
-      d = *d_iter < *nd_iter;
+      d = *nd_iter > *d_iter;
       return *this;
     }
 
@@ -790,14 +805,30 @@ public:
       return d ? rhs == *d_iter : rhs == *nd_iter;
     }
 
-    virtual bool operator!=(const stored_iterator& rhs) const {
+    virtual bool operator==(const stored_diagonal_iterator& rhs) const {
+      return i() == rhs.i() && j() == rhs.j();
+    }
+
+    virtual bool operator==(const stored_nondiagonal_iterator& rhs) const {
+      return i() == rhs.i() && j() == rhs.j();
+    }
+
+    virtual bool operator!=(const ordered_iterator& rhs) const {
       return d ? rhs != *d_iter : rhs != *nd_iter;
+    }
+
+    virtual bool operator!=(const stored_diagonal_iterator& rhs) const {
+      return i() != rhs.i() || j() != rhs.j();
+    }
+
+    virtual bool operator!=(const stored_nondiagonal_iterator& rhs) const {
+      return i() != rhs.i() || j() != rhs.j();
     }
 
 
     // De-reference the iterator
     virtual D& operator*() {
-      return d ? &(**d_iter) : &(**nd_iter);
+      return d ? **d_iter : **nd_iter;
     }
 
     virtual const D& operator*() const {

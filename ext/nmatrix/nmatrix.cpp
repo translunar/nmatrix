@@ -348,6 +348,7 @@ static VALUE nm_supershape(int argc, VALUE* argv, VALUE self);
 static VALUE nm_capacity(VALUE self);
 static VALUE nm_each_with_indices(VALUE nmatrix);
 static VALUE nm_each_stored_with_indices(VALUE nmatrix);
+static VALUE nm_each_ordered_stored_with_indices(VALUE nmatrix);
 
 static SLICE* get_slice(size_t dim, int argc, VALUE* arg, size_t* shape);
 static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLICE*), void (*delete_func)(NMATRIX*), VALUE self);
@@ -495,6 +496,7 @@ void Init_nmatrix() {
 	rb_define_protected_method(cNMatrix, "__dense_map_pair__", (METHOD)nm_dense_map_pair, 1);
 	rb_define_method(cNMatrix, "each_with_indices", (METHOD)nm_each_with_indices, 0);
 	rb_define_method(cNMatrix, "each_stored_with_indices", (METHOD)nm_each_stored_with_indices, 0);
+	rb_define_method(cNMatrix, "each_ordered_stored_with_indices", (METHOD)nm_each_ordered_stored_with_indices, 0);
 	rb_define_protected_method(cNMatrix, "__list_map_merged_stored__", (METHOD)nm_list_map_merged_stored, 2);
 	rb_define_protected_method(cNMatrix, "__yale_map_merged_stored__", (METHOD)nm_yale_map_merged_stored, 2);
 	rb_define_protected_method(cNMatrix, "__yale_map_stored__", (METHOD)nm_yale_map_stored, 0);
@@ -753,6 +755,29 @@ static VALUE nm_each_stored_with_indices(VALUE nmatrix) {
   switch(NM_STYPE(nm)) {
   case nm::YALE_STORE:
     return nm_yale_each_stored_with_indices(nm);
+  case nm::DENSE_STORE:
+    return nm_dense_each_with_indices(nm);
+  case nm::LIST_STORE:
+    return nm_list_each_with_indices(nm, true);
+  default:
+    rb_raise(nm_eDataTypeError, "Not a proper storage type");
+  }
+}
+
+
+/*
+ * call-seq:
+ *     each_ordered_stored_with_indices -> Enumerator
+ *
+ * Very similar to #each_stored_with_indices. The key difference is that it enforces matrix ordering rather
+ * than storage ordering, which only matters if your matrix is Yale.
+ */
+static VALUE nm_each_ordered_stored_with_indices(VALUE nmatrix) {
+  volatile VALUE nm = nmatrix;
+
+  switch(NM_STYPE(nm)) {
+  case nm::YALE_STORE:
+    return nm_yale_each_ordered_stored_with_indices(nm);
   case nm::DENSE_STORE:
     return nm_dense_each_with_indices(nm);
   case nm::LIST_STORE:
