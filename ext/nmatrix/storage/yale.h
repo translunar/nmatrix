@@ -762,37 +762,35 @@ public:
   class ordered_iterator : public basic_iterator {
     friend class YaleStorage<D>;
   protected:
-    stored_diagonal_iterator*     d_iter;
-    stored_nondiagonal_iterator* nd_iter;
+    stored_diagonal_iterator     d_iter;
+    stored_nondiagonal_iterator nd_iter;
     bool d; // which iterator is the currently valid one
 
   public:
     ordered_iterator(YaleStorage<D>* obj, size_t ii = 0)
     : basic_iterator(obj, ii),
-      d_iter(new stored_diagonal_iterator(obj)),
-      nd_iter(new stored_nondiagonal_iterator(obj, ii)),
-      d(*nd_iter > *d_iter) { }
+      d_iter(obj, ii),
+      nd_iter(obj, ii),
+      d(nd_iter > d_iter)
+    {
+/*      std::cerr << "d:  " << d_iter.i() << ", " << d_iter.j() << std::endl;
+      std::cerr << "nd: " << nd_iter.i() << ", " << nd_iter.j() << std::endl;
+      std::cerr << "dominant: " << (d ? "d" : "nd") << std::endl; */
 
-    ordered_iterator(const ordered_iterator& rhs)
-    : basic_iterator(rhs.y, rhs.i()),
-      d_iter(new stored_diagonal_iterator(*(rhs.d_iter))),
-      nd_iter(new stored_nondiagonal_iterator(*(rhs.nd_iter))),
-      d(rhs.d) { }
-
-    ~ordered_iterator() {
-      delete  d_iter;
-      delete nd_iter;
     }
 
-    virtual size_t j() const { return d ? d_iter->j() : nd_iter->j(); }
-    virtual size_t i() const { return d ? d_iter->i() : nd_iter->i(); }
-    virtual size_t real_j() const { return d ? d_iter->real_j() : nd_iter->real_j(); }
-    virtual size_t real_i() const { return d ? d_iter->real_i() : nd_iter->real_i(); }
+    virtual size_t j() const { return d ? d_iter.j() : nd_iter.j(); }
+    virtual size_t i() const { return d ? d_iter.i() : nd_iter.i(); }
+    virtual size_t real_j() const { return d ? d_iter.real_j() : nd_iter.real_j(); }
+    virtual size_t real_i() const { return d ? d_iter.real_i() : nd_iter.real_i(); }
 
     ordered_iterator& operator++() {
-      if (d)    ++(*d_iter);
-      else      ++(*nd_iter);
-      d = *nd_iter > *d_iter;
+      // FIXME: This can be sped up by only checking when necessary for nd_iter > d_iter. I believe
+      // it only needs to be done once per row, and maybe never depending upon slice shape. Right?
+      //std::cerr << "++" << std::endl;
+      if (d)    ++d_iter;
+      else      ++nd_iter;
+      d = nd_iter > d_iter;
       return *this;
     }
 
@@ -802,7 +800,7 @@ public:
     }
 
     virtual bool operator==(const ordered_iterator& rhs) const {
-      return d ? rhs == *d_iter : rhs == *nd_iter;
+      return d ? rhs == d_iter : rhs == nd_iter;
     }
 
     virtual bool operator==(const stored_diagonal_iterator& rhs) const {
@@ -814,7 +812,7 @@ public:
     }
 
     virtual bool operator!=(const ordered_iterator& rhs) const {
-      return d ? rhs != *d_iter : rhs != *nd_iter;
+      return d ? rhs != d_iter : rhs != nd_iter;
     }
 
     virtual bool operator!=(const stored_diagonal_iterator& rhs) const {
@@ -828,11 +826,11 @@ public:
 
     // De-reference the iterator
     virtual D& operator*() {
-      return d ? **d_iter : **nd_iter;
+      return d ? *d_iter : *nd_iter;
     }
 
     virtual const D& operator*() const {
-      return d ? **d_iter : **nd_iter;
+      return d ? *d_iter : *nd_iter;
     }
   };
 
