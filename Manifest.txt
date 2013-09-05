@@ -51,6 +51,8 @@ ext/nmatrix/storage/storage.cpp
 ext/nmatrix/storage/storage.h
 ext/nmatrix/storage/yale.cpp
 ext/nmatrix/storage/yale.h
+ext/nmatrix/storage/yale_iterators.h
+ext/nmatrix/storage/yale_storage.h
 ext/nmatrix/util/sl_list.cpp
 ext/nmatrix/util/sl_list.h
 ext/nmatrix/util/util.h

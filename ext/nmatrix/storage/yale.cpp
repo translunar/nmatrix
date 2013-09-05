@@ -832,151 +832,9 @@ void set(VALUE left, SLICE* slice, VALUE right) {
  */
 template <typename LDType, typename RDType>
 static bool eqeq(const YALE_STORAGE* left, const YALE_STORAGE* right) {
-  LDType l_init = *reinterpret_cast<LDType*>(default_value_ptr(left));
-  RDType r_init = *reinterpret_cast<RDType*>(default_value_ptr(right));
-
-  // If the defaults are different between the two matrices, or if slicing is involved, use this other function instead:
-  if (l_init != r_init || left->src != left || right->src != right)
-    return eqeq_different_defaults<LDType,RDType>(left, l_init, right, r_init);
-
-  LDType* la = reinterpret_cast<LDType*>(left->a);
-  RDType* ra = reinterpret_cast<RDType*>(right->a);
-
-  // Compare the diagonals first.
-  for (size_t index = 0; index < left->shape[0]; ++index) {
-    if (la[index] != ra[index]) return false;
-  }
-
-  IType* lij = reinterpret_cast<IType*>(left->ija);
-  IType* rij = reinterpret_cast<IType*>(right->ija);
-
-  for (IType i = 0; i < left->shape[0]; ++i) {
-
-  // Get start and end positions of row
-    IType l_ija = lij[i],
-          l_ija_next = lij[i+1],
-          r_ija = rij[i],
-          r_ija_next = rij[i+1];
-
-    // Check to see if one row is empty and the other isn't.
-    if (ndrow_is_empty<LDType>(left, l_ija, l_ija_next)) {
-      if (!ndrow_is_empty<RDType>(right, r_ija, r_ija_next)) {
-      	return false;
-      }
-
-    } else if (ndrow_is_empty<RDType>(right, r_ija, r_ija_next)) {
-    	// one is empty but the other isn't
-      return false;
-
-    } else if (!ndrow_eqeq_ndrow<LDType,RDType>(left, right, l_ija, l_ija_next, r_ija, r_ija_next)) {
-    	// Neither row is empty. Must compare the rows directly.
-      return false;
-    }
-
-  }
-
-  return true;
+  return YaleStorage<LDType>(left) == YaleStorage<RDType>(right);
 }
 
-
-
-/*
- * Are two non-diagonal rows the same? We already know.
- */
-template <typename LDType, typename RDType>
-static bool ndrow_eqeq_ndrow(const YALE_STORAGE* l, const YALE_STORAGE* r, IType l_ija, const IType l_ija_next, IType r_ija, const IType r_ija_next) {
-  bool l_no_more = false, r_no_more = false;
-
-  IType *lij = l->ija,
-        *rij = r->ija;
-
-  LDType* la = reinterpret_cast<LDType*>(l->a);
-  RDType* ra = reinterpret_cast<RDType*>(r->a);
-
-  IType l_ja = lij[l_ija],
-        r_ja = rij[r_ija];
-        
-  IType ja = std::min(l_ja, r_ja);
-
-  LDType LZERO = la[l->shape[0]];
-  RDType RZERO = ra[r->shape[0]];
-
-  while (!(l_no_more && r_no_more)) {
-    if (l_ja == r_ja) {
-
-      if (ra[r_ija] != la[l_ija]) return false; // Direct comparison
-
-      ++l_ija;
-      ++r_ija;
-
-      if (l_ija < l_ija_next) {
-      	l_ja = lij[l_ija];
-
-      } else {
-      	l_no_more = true;
-      }
-
-      if (r_ija < r_ija_next) {
-      	r_ja = rij[r_ija];
-
-      } else {
-      	r_no_more = true;
-      }
-
-      ja = std::min(l_ja, r_ja);
-
-    } else if (l_no_more || ja < l_ja) {
-
-      if (ra[r_ija] != RZERO) return false;
-
-      ++r_ija;
-      if (r_ija < r_ija_next) {
-      	// get next column
-      	r_ja = rij[r_ija];
-        ja = std::min(l_ja, r_ja);
-
-      } else {
-      	l_no_more = true;
-      }
-
-    } else if (r_no_more || ja < r_ja) {
-
-      if (la[l_ija] != LZERO) return false;
-
-      ++l_ija;
-      if (l_ija < l_ija_next) {
-      	// get next column
-        l_ja = lij[l_ija];
-        ja = std::min(l_ja, r_ja);
-      } else {
-      	l_no_more = true;
-      }
-
-    } else {
-      std::fprintf(stderr, "Unhandled in eqeq: l_ja=%d, r_ja=%d\n", (int)l_ja, (int)r_ja);
-    }
-  }
-
-	// every item matched
-  return true;
-}
-
-/*
- * Is the non-diagonal portion of the row empty?
- */
-template <typename DType>
-static bool ndrow_is_empty(const YALE_STORAGE* s, IType ija, const IType ija_next) {
-  if (ija == ija_next) return true;
-
-  DType* a = reinterpret_cast<DType*>(reinterpret_cast<YALE_STORAGE*>(s->src)->a);
-
-	// do all the entries = zero?
-  for (; ija < ija_next; ++ija) {
-    if (a[ija] != 0) return false;
-  }
-
-  return true;
-}
 
 //////////
 // Math //
@@ -1706,11 +1564,11 @@ static VALUE each_stored_with_indices(VALUE nm) {
   // If we don't have a block, return an enumerator.
   RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_yale_stored_enumerator_length);
 
-  for (typename YaleStorage<DType>::stored_diagonal_iterator d = y.sdbegin(); d != y.sdend(); ++d) {
+  for (typename YaleStorage<DType>::const_stored_diagonal_iterator d = y.csdbegin(); d != y.csdend(); ++d) {
     rb_yield_values(3, ~d, d.rb_i(), d.rb_j());
   }
 
-  for (typename YaleStorage<DType>::stored_nondiagonal_iterator nd = y.sndbegin(); nd != y.sndend(); ++nd) {
+  for (typename YaleStorage<DType>::const_stored_nondiagonal_iterator nd = y.csndbegin(); nd != y.csndend(); ++nd) {
     rb_yield_values(3, ~nd, nd.rb_i(), nd.rb_j());
   }
 
@@ -1729,7 +1587,7 @@ static VALUE each_ordered_stored_with_indices(VALUE nm) {
   // If we don't have a block, return an enumerator.
   RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_yale_stored_enumerator_length);
 
-  for (typename YaleStorage<DType>::ordered_iterator iter = y.obegin(); iter != y.oend(); ++iter) {
+  for (typename YaleStorage<DType>::const_ordered_iterator iter = y.cobegin(); iter != y.coend(); ++iter) {
     rb_yield_values(3, ~iter, iter.rb_i(), iter.rb_j());
   }
 
@@ -1745,8 +1603,7 @@ static VALUE each_with_indices(VALUE nm) {
   // If we don't have a block, return an enumerator.
   RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_yale_enumerator_length);
 
-  for (typename YaleStorage<DType>::iterator iter = y.begin(); iter != y.end(); ++iter) {
-    VALUE ii = iter.rb_i(), jj = iter.rb_j(), v = ~iter;
+  for (typename YaleStorage<DType>::const_iterator iter = y.cbegin(); iter != y.cend(); ++iter) {
     rb_yield_values(3, ~iter, iter.rb_i(), iter.rb_j());
   }
 
