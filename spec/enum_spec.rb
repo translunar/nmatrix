@@ -49,6 +49,9 @@ describe "NMatrix enumeration for" do
             end
           end
 
+          require 'pry'
+          binding.pry
+
           vv.should == [7,8,9, 12,13,0, 0,0,0, 0,17,18]
           ii.should == [0]*12
           jj.should == [0,1,2]*4

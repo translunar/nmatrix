@@ -34,6 +34,13 @@ describe "Slice operation" do
         @m = create_matrix(stype)
       end
 
+      it "should correctly return a row of a reference-slice" do
+        @n = create_rectangular_matrix(stype)
+        @m = @n[1..4,1..3]
+        @m.row(1, :copy).should == @m.row(1, :reference)
+        @m.row(1, :copy).to_flat_array.should == [12,13,0]
+      end
+
       if stype == :yale
         it "should binary search for the left boundary of a partial row of stored indices correctly" do
           n = NMatrix.new(:yale, 10, :int32)
