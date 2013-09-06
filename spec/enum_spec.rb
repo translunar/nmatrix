@@ -37,6 +37,23 @@ describe "NMatrix enumeration for" do
       end
 
       if stype == :yale
+        it "should iterate properly along each row of a slice" do
+          vv = []
+          ii = []
+          jj = []
+          @m.each_row do |row|
+            row.each_with_indices do |v,i,j|
+              vv << v
+              ii << i
+              jj << j
+            end
+          end
+
+          vv.should == [7,8,9, 12,13,0, 0,0,0, 0,17,18]
+          ii.should == [0]*12
+          jj.should == [0,1,2]*4
+        end
+
         it "should iterate along diagonal portion of A array" do
           vv = []
           ii = []
