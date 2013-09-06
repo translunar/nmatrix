@@ -127,6 +127,7 @@ class stored_diagonal_iterator_T : public basic_iterator_T<D,RefType,YaleRef> {
   using basic_iterator_T<D,RefType,YaleRef>::p_;
   using basic_iterator_T<D,RefType,YaleRef>::y;
   using basic_iterator_T<D,RefType,YaleRef>::offset;
+  using basic_iterator_T<D,RefType,YaleRef>::shape;
 public:
   stored_diagonal_iterator_T(YaleRef& obj, size_t d = 0)
   : basic_iterator_T<D,RefType,YaleRef>(obj,                // y
@@ -152,12 +153,18 @@ public:
     return ++iter;
   }
 
+  // Indicates if we're at the end of the iteration.
+  bool end() const {
+    return p_ >= std::min( shape(0) + offset(0), shape(1) + offset(1) );
+  }
+
+  // i() and j() are how we know if we're past-the-end. i will be shape(0) and j will be 0.
   size_t i() const {
-    return p_ - offset(0);
+    return end() ? shape(0) : p_ - offset(0);
   }
 
   size_t j() const {
-    return p_ - offset(1);
+    return end() ? 0 : p_ - offset(1);
   }
 
 
@@ -609,11 +616,11 @@ public:
     } else {
       ++nd_iter;
     }
-    if (d)
     std::cerr << "nd_iter i=" << nd_iter.i() << ", j=" << nd_iter.j() << '\t';
     std::cerr << " d_iter i=" <<  d_iter.i() << ", j=" <<  d_iter.j() << '\t';
     d = nd_iter > d_iter; // || nd_iter.i() >= shape(0);
     std::cerr << "new dominant: " << (d ? "d" : "nd") << std::endl;
+    std::cerr << "i=" << i() << ", j=" << j() << std::endl;
 
     return *this;
   }

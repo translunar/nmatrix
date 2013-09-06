@@ -120,12 +120,9 @@ describe "NMatrix enumeration for" do
             ii << i
             jj << j
           end
-          require 'pry'
-          binding.pry
-
-          ii.should == [0,0,0, 1,1,   2,  3,3,3  ]
-          jj.should == [0,1,2, 0,1,   2,  1,2,3  ]
-          vv.should == [7,8,9, 12,13, 0, 17,18,19]
+          ii.should == [0,0,0, 1,1,   2,  3,3  ]
+          jj.should == [0,1,2, 0,1,   2,  1,2  ]
+          vv.should == [7,8,9, 12,13, 0, 17,18 ]
         end
       end
 
