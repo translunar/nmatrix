@@ -55,11 +55,11 @@ const char* const STYPE_NAMES[nm::NUM_STYPES] = {
 	"yale"
 };
 
-void (* const STYPE_MARK[nm::NUM_STYPES])(void*) = {
-	nm_dense_storage_mark,
-	nm_list_storage_mark,
-	nm_yale_storage_mark
-};
+// void (* const STYPE_MARK[nm::NUM_STYPES])(void*) = {
+// 	nm_dense_storage_mark,
+// 	nm_list_storage_mark,
+// 	nm_yale_storage_mark
+// };
 
 } // end extern "C" block
 

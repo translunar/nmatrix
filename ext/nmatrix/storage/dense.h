@@ -72,7 +72,7 @@ extern "C" {
 DENSE_STORAGE*	nm_dense_storage_create(nm::dtype_t dtype, size_t* shape, size_t dim, void* elements, size_t elements_length);
 void						nm_dense_storage_delete(STORAGE* s);
 void						nm_dense_storage_delete_ref(STORAGE* s);
-void						nm_dense_storage_mark(void*);
+void						nm_dense_storage_mark(STORAGE*);
 
 ///////////////
 // Accessors //

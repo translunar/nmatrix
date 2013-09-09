@@ -319,9 +319,8 @@ void nm_list_storage_delete_ref(STORAGE* s) {
 /*
  * Documentation goes here.
  */
-void nm_list_storage_mark(void* storage_base) {
-  NMATRIX* mat = (NMATRIX*) storage_base;
-  LIST_STORAGE* storage = (LIST_STORAGE*) mat->storage;
+void nm_list_storage_mark(STORAGE* storage_base) {
+  LIST_STORAGE* storage = (LIST_STORAGE*) storage_base;
 
   if (storage && storage->dtype == RUBYOBJ) {
     rb_gc_mark(*((VALUE*)(storage->default_val)));
@@ -538,7 +537,7 @@ VALUE nm_list_map_merged_stored(VALUE left, VALUE right, VALUE init) {
   // If we are working with a scalar operation
   if (scalar) nm_list_storage_delete(t);
 
-  return Data_Wrap_Struct(CLASS_OF(left), nm_list_storage_mark, nm_delete, result);
+  return Data_Wrap_Struct(CLASS_OF(left), nm_mark, nm_delete, result);
 }
 
 

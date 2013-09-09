@@ -1609,7 +1609,7 @@ static VALUE map_stored(VALUE self) {
   }
 
   NMATRIX* m = nm_create(nm::YALE_STORE, reinterpret_cast<STORAGE*>(r));
-  return Data_Wrap_Struct(CLASS_OF(self), nm_yale_storage_mark, nm_delete, m);
+  return Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, m);
 }
 
 
@@ -1720,7 +1720,7 @@ static VALUE map_merged_stored(VALUE left, VALUE right, VALUE init, nm::itype_t 
   }
 
   NMATRIX* m = nm_create(nm::YALE_STORE, reinterpret_cast<STORAGE*>(r));
-  return Data_Wrap_Struct(CLASS_OF(left), nm_yale_storage_mark, nm_delete, m);
+  return Data_Wrap_Struct(CLASS_OF(left), nm_mark, nm_delete, m);
 }
 
 
@@ -2190,9 +2190,8 @@ void nm_yale_storage_init(YALE_STORAGE* s, void* init_val) {
 /*
  * Ruby GC mark function for YALE_STORAGE. C accessible.
  */
-void nm_yale_storage_mark(void* storage_base) {
-  NMATRIX* mat = (NMATRIX*) storage_base;
-  YALE_STORAGE* storage = (YALE_STORAGE*) mat->storage;
+void nm_yale_storage_mark(STORAGE* storage_base) {
+  YALE_STORAGE* storage = (YALE_STORAGE*) storage_base;
   size_t i;
 
   if (storage && storage->dtype == nm::RUBYOBJ) {

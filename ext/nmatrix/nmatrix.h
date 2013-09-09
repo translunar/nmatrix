@@ -361,6 +361,7 @@ extern "C" {
 	NMATRIX* nm_create(nm::stype_t stype, STORAGE* storage);
 	void     nm_delete(NMATRIX* mat);
 	void     nm_delete_ref(NMATRIX* mat);
+  void     nm_mark(NMATRIX* mat);
 
 #ifdef __cplusplus
 }
