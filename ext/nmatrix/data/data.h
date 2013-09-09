@@ -76,6 +76,7 @@ namespace nm {
   extern const char* const  EWOP_OPS[nm::NUM_EWOPS];
   extern const std::string  EWOP_NAMES[nm::NUM_EWOPS];
 
+
 } // end of namespace nm
 
 /*
@@ -117,6 +118,23 @@ namespace nm {
 		fun<nm::Rational64>,																\
 		fun<nm::Rational128>, 															\
 		fun<nm::RubyObject>                                 \
+	};
+
+#define DTYPE_OBJECT_STATIC_TABLE(obj, fun, ret, ...)     \
+	static ret (*(ttable)[nm::NUM_DTYPES])(__VA_ARGS__) =	{ \
+		obj<uint8_t>::fun,																	\
+		obj<int8_t>::fun,																		\
+		obj<int16_t>::fun,																  \
+		obj<int32_t>::fun,																	\
+		obj<int64_t>::fun,																	\
+		obj<float32_t>::fun,																\
+		obj<float64_t>::fun,																\
+		obj<nm::Complex64>::fun,													  \
+		obj<nm::Complex128>::fun,														\
+		obj<nm::Rational32>::fun,														\
+		obj<nm::Rational64>::fun,														\
+		obj<nm::Rational128>::fun, 													\
+		obj<nm::RubyObject>::fun                            \
 	};
 
 #define NAMED_DTYPE_TEMPLATE_TABLE_NO_ROBJ(name, fun, ret, ...) \

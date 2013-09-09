@@ -47,7 +47,7 @@
 #include "common.h"
 #include "dense.h"
 #include "list.h"
-#include "yale.h"
+#include "yale/yale.h"
 
 /*
  * Macros

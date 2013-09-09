@@ -21,21 +21,23 @@
 //
 // * https://github.com/SciRuby/sciruby/wiki/Contributor-Agreement
 //
-// == yale_storage.h
+// == class.h
 //
 // Object-oriented interface for Yale.
 //
 
-#ifndef YALE_STORAGE_H
-# define YALE_STORAGE_H
+#ifndef YALE_CLASS_H
+# define YALE_CLASS_H
 
 namespace nm {
+
 
 namespace yale_storage {
   /*
    * Constants
    */
   const float GROWTH_CONSTANT = 1.5;
+
 }
 /*
  * This class is basically an intermediary for YALE_STORAGE objects which enables us to treat it like a C++ object. It
@@ -60,6 +62,11 @@ public:
      slice_shape(storage->shape),
      slice_offset(storage->offset)
   { }
+
+  /* Allows us to do YaleStorage<uint8>::dtype() to get an nm::dtype_t */
+  static nm::dtype_t dtype() {
+    return nm::ctype_to_dtype_enum<D>::value_type;
+  }
 
 
   bool is_ref() const { return slice; }
@@ -87,15 +94,30 @@ public:
   inline size_t  capacity() const { return s->capacity;            }
   inline size_t  size() const { return ija(real_shape(0));         }
 
+
+  /*
+   * Given a size-2 array of size_t, representing the shape, determine
+   * the maximum size of YaleStorage arrays.
+   */
+  static size_t max_size(const size_t* shape) {
+    size_t result = shape[0] * shape[1] + 1;
+    if (shape[0] > shape[1])
+      result += shape[0] - shape[1];
+    return result;
+  }
+
+  /*
+   * Minimum size of Yale Storage arrays given some shape.
+   */
+  static size_t min_size(const size_t* shape) {
+    return shape[0]*2 + 1;
+  }
+
   /*
    * This is the guaranteed maximum size of the IJA/A arrays of the matrix given its shape.
    */
   inline size_t real_max_size() const {
-    size_t result = real_shape(0) * real_shape(1) + 1;
-    if (real_shape(0) > real_shape(1))
-      result += real_shape(0) - real_shape(1);
-
-    return result;
+    return YaleStorage<D>::max_size(real_shape_p());
   }
 
   // Binary search between left and right in IJA for column ID real_j. Returns left if not found.
@@ -144,7 +166,16 @@ public:
   size_t find_pos_for_insertion(size_t i, size_t j) const {
     size_t left   = ija(i + offset(0));
     size_t right  = ija(i + offset(0) + 1) - 1;
-    return real_find_left_boundary_pos(left, right, j + offset(1));
+    std::cerr << "fpfi: i=" << i << "\tleft=" << left << "\tright=" << right << "\treal_j=" << j + offset(1) << std::endl;
+
+    // Check that the right search point is valid. rflbp will check to make sure the left is valid relative to left.
+    if (right > ija(real_shape(0))) {
+      std::cerr << "\tright now set to real_shape(0) = " << real_shape(0) << std::endl;
+      right = ija(real_shape(0));
+    }
+    size_t result = real_find_left_boundary_pos(left, right, j + offset(1));
+    std::cerr << "\t" << result << std::endl;
+    return result;
   }
 
   typedef yale_storage::basic_iterator_T<D,D,YaleStorage<D> >              basic_iterator;
@@ -202,6 +233,17 @@ public:
   const_ordered_iterator corow_end(size_t row) const  {      return cobegin(row+1);                    }
   const_ordered_iterator coend() const                {      return const_ordered_iterator(*this, shape(0)); }
 
+  /*
+   * Get a count of the ndnz in the slice as if it were its own matrix.
+   */
+  size_t count_copy_ndnz() const {
+    if (!slice) return s->ndnz; // easy way -- not a slice.
+    size_t count = 0;
+    for (const_stored_nondiagonal_iterator iter = csndbegin(); iter != csndend(); ++iter) {
+      if (iter.i() != iter.j() && *iter == const_default_obj()) ++count;
+    }
+    return count;
+  }
 
   /*
    * Returns the iterator for i,j or snd_end() if not found.
@@ -313,12 +355,284 @@ public:
     return *iter;
   }
 
+
+  /*
+   * Returns a pointer to the location of some entry in the matrix.
+   *
+   * This is needed for backwards compatibility. We don't really want anyone
+   * to modify the contents of that pointer, because it might be the ZERO location.
+   *
+   * TODO: Change all storage_get functions to return a VALUE once we've put list and
+   * dense in OO mode. ???
+   */
+  inline D* get_single_p(SLICE* slice) {
+    size_t real_i = offset(0) + slice->coords[0],
+           real_j = offset(1) + slice->coords[1];
+
+    if (real_i == real_j)
+      return &(a(real_i));
+
+    if (ija(real_i) == ija(real_i+1))
+      return default_obj_ptr(); // zero pointer
+
+    // binary search for a column's location
+    std::pair<size_t,bool> p = find_pos(std::make_pair(slice->coords[0], slice->coords[1]));
+    if (p.second)
+      return &(a(p.first));
+                       // not found: return default
+    return default_obj_ptr(); // zero pointer
+  }
+
+
+  /*
+   * Allocate a reference pointing to s. Note that even if +this+ is a reference,
+   * we can create a reference within it.
+   *
+   * Note: Make sure you xfree() the result of this call. You can't just cast it
+   * directly into a YaleStorage<D> class.
+   */
+  YALE_STORAGE* alloc_ref(SLICE* slice) {
+    YALE_STORAGE* ns  = ALLOC( YALE_STORAGE );
+
+    ns->dim           = s->dim;
+    ns->offset        = ALLOC_N(size_t, ns->dim);
+    ns->shape         = ALLOC_N(size_t, ns->dim);
+
+    for (size_t d = 0; d < ns->dim; ++d) {
+      ns->offset[d]   = slice->coords[d]  + offset(d);
+      ns->shape[d]    = slice->lengths[d];
+    }
+
+    ns->dtype         = s->dtype;
+    ns->a             = a_p();
+    ns->ija           = ija_p();
+
+    ns->src           = s;
+    s->count++;
+
+    ns->ndnz          = 0;
+    ns->capacity      = 0;
+
+    return ns;
+  }
+
+
+  /*
+   * Allocates and initializes the basic struct (but not IJA or A vectors).
+   */
+  static YALE_STORAGE* alloc(size_t* shape, size_t dim = 2) {
+    YALE_STORAGE* s = ALLOC( YALE_STORAGE );
+
+    s->ndnz         = 0;
+    s->dtype        = dtype();
+    s->shape        = shape;
+    s->offset       = ALLOC_N(size_t, dim);
+    for (size_t d = 0; d < dim; ++d)
+      s->offset[d]  = 0;
+    s->dim          = dim;
+    s->src          = reinterpret_cast<STORAGE*>(s);
+    s->count        = 1;
+
+    return s;
+  }
+
+
+  static YALE_STORAGE* create(size_t* shape, size_t dim, size_t reserve) {
+    if (dim != 2) {
+      rb_raise(rb_eNotImpError, "yale can only support 2D matrices");
+    }
+
+    YALE_STORAGE* s = alloc( shape, dim );
+    size_t max_sz   = YaleStorage<D>::max_size(shape),
+           min_sz   = YaleStorage<D>::min_size(shape);
+
+    if (reserve < min_sz) {
+      s->capacity = min_sz;
+    } else if (reserve > max_sz) {
+      s->capacity = max_sz;
+    } else {
+      s->capacity = reserve;
+    }
+
+    s->ija = ALLOC_N( size_t, s->capacity );
+    s->a   = ALLOC_N( D,      s->capacity );
+
+    return s;
+  }
+
+
+  /*
+   * Clear out the D portion of the A vector (clearing the diagonal and setting
+   * the zero value).
+   */
+  static void clear_diagonal_and_zero(YALE_STORAGE& s, D* init_val = NULL) {
+    D* a  = reinterpret_cast<D*>(s.a);
+
+    // Clear out the diagonal + one extra entry
+    if (init_val) {
+      for (size_t i = 0; i <= s.shape[0]; ++i)
+        a[i] = *init_val;
+    } else {
+      for (size_t i = 0; i <= s.shape[0]; ++i)
+        a[i] = 0;
+    }
+  }
+
+
+  /*
+   * Empty the matrix by initializing the IJA vector and setting the diagonal to 0.
+   *
+   * Called when most YALE_STORAGE objects are created.
+   *
+   * Can't go inside of class YaleStorage because YaleStorage creation requires that
+   * IJA already be initialized.
+   */
+  static void init(YALE_STORAGE& s, D* init_val) {
+    size_t IA_INIT = s.shape[0] + 1;
+    for (size_t m = 0; m < IA_INIT; ++m) {
+      s.ija[m] = IA_INIT;
+    }
+
+    clear_diagonal_and_zero(s, init_val);
+  }
+
+
+  /*
+   * Make a full matrix structure copy (entries remain uninitialized). Remember to xfree()!
+   */
+  template <typename E>
+  YALE_STORAGE* alloc_struct_copy(size_t new_capacity) const {
+    nm::dtype_t new_dtype = nm::ctype_to_dtype_enum<E>::value_type;
+    YALE_STORAGE* lhs     = ALLOC( YALE_STORAGE );
+    lhs->dim              = s->dim;
+    lhs->shape            = ALLOC_N( size_t, lhs->dim );
+    lhs->offset           = ALLOC_N( size_t, lhs->dim );
+    memcpy(lhs->shape, shape_p(), lhs->dim * sizeof(size_t));
+    lhs->offset[0]        = 0;
+    lhs->offset[1]        = 0;
+
+    lhs->capacity         = new_capacity;
+    lhs->dtype            = new_dtype;
+    lhs->ndnz             = count_copy_ndnz();
+    lhs->ija              = ALLOC_N( size_t, new_capacity );
+    lhs->a                = ALLOC_N( E,      new_capacity );
+    lhs->src              = lhs;
+    lhs->count            = 1;
+
+    // Now copy the IJA contents
+    if (slice) {
+      rb_raise(rb_eNotImpError, "cannot copy struct due to different offsets");
+    } else {
+      for (size_t m = 0; m < size(); ++m) {
+        lhs->ija[m] = ija(m); // copy indices
+      }
+    }
+    return lhs;
+  }
+
+
+  /*
+   * Copy this slice (or the full matrix if it isn't a slice) into a new matrix which is already allocated, ns.
+   */
+  template <typename E>
+  void copy(YALE_STORAGE& ns) const {
+    nm::dtype_t new_dtype = nm::ctype_to_dtype_enum<E>::value_type;
+    // get the default value for initialization (we'll re-use val for other copies after this)
+    E val = static_cast<E>(default_obj());
+
+    // initialize the matrix structure and clear the diagonal so we don't have to
+    // keep track of unwritten entries.
+    YaleStorage<E>::init(ns, &val);
+
+    E* ns_a    = reinterpret_cast<E*>(ns.a);
+    size_t sz  = shape(0) + 1; // current used size of ns
+
+    // FIXME: Set this up so if THIS and NS have a shared diagonal, we use stored_diagonal and stored_nondiagonal instead. Faster.
+    for (size_t i = 0; i < shape(0); ++i) {
+      std::cerr << "copy row i = " << i << std::endl;
+
+      const_ordered_iterator iter = cobegin(i);
+      const_ordered_iterator next = cobegin(i+1);
+      std::cerr << std::endl;
+      std::cerr << "\titer.i,j=" << iter.i() << "," << iter.j() << "\tdenseloc=" << iter.dense_location() << std::endl;
+      std::cerr << "\tnext.i,j=" << next.i() << "," << next.j() << "\tdenseloc=" << next.dense_location() << std::endl;
+      std::cerr << std::boolalpha << "\titer < next ? " << (iter < next) << std::endl;
+
+      for (const_ordered_iterator iter = cobegin(i); iter.i() == i && iter < next; ++iter) {
+        std::cerr << "\t****\t\t\tcopy: iter != next_iter" << std::endl;
+        std::cerr  << "\t\t\t\t\t\ti,j=" << iter.i() << "," << iter.j();
+        std::cerr << "   i,j=" << next.i() << "," << next.j() << std::endl;
+
+        if (i == iter.j()) {  // set diagonal in ns
+          std::cerr << "\t\t****\t\t\tcopy: diag i=" << i << std::endl;
+          ns_a[i]       = static_cast<E>(*iter);
+        } else {
+          std::cerr << "\t\t****\t\t\tcopy: nd   i=" << i << ", j=" << iter.j() << std::endl;
+          ns.ija[sz]    = iter.j();
+          ns_a[sz]      = static_cast<E>(*iter);
+
+          ++sz;
+        }
+      }
+
+      ns.ija[i+1] = sz;
+    }
+
+    //ns.ija[shape(0)] = sz;                // indicate end of last row
+    ns.ndnz          = sz - shape(0) - 1; // update ndnz count
+  }
+
+
+  /*
+   * Allocate a casted copy of this matrix/reference. Remember to xfree() the result!
+   */
+  template <typename E>
+  YALE_STORAGE* alloc_copy() const {
+    nm::dtype_t new_dtype = nm::ctype_to_dtype_enum<E>::value_type;
+
+    YALE_STORAGE* lhs;
+    if (slice) {
+      size_t* shape     = ALLOC_N(size_t, 2);
+      shape[0]          = this->shape(0);
+      shape[1]          = this->shape(1);
+      size_t ndnz       = count_copy_ndnz();
+      size_t reserve    = this->shape(0) + ndnz + 1;
+
+      std::cerr << "reserve = " << reserve << std::endl;
+
+      lhs               = YaleStorage<E>::create(shape, 2, reserve);
+
+      if (lhs->capacity < reserve)
+        rb_raise(nm_eStorageTypeError, "conversion failed; capacity of %ld requested, max allowable is %ld", reserve, lhs->capacity);
+
+      // Fill lhs with what's in our current matrix.
+      copy<E>(*lhs);
+    } else {
+      // Copy the structure and setup the IJA structure.
+      lhs               = alloc_struct_copy<E>(s->capacity);
+
+      E* la = reinterpret_cast<E*>(lhs->a);
+      for (size_t m = 0; m < size(); ++m) {
+        la[m] = static_cast<E>(a(m));
+      }
+
+    }
+
+    return lhs;
+
+  }
+
   template <typename E>
   bool operator==(const YaleStorage<E>& rhs) const {
+
     typename YaleStorage<D>::const_ordered_iterator l = cobegin();
     typename YaleStorage<E>::const_ordered_iterator r = rhs.cobegin();
 
     while (l != coend() || r != rhs.coend()) {
+      std::cerr << "looping:\t";
+      if (l != coend()) std::cerr << "l != coend() (l ij=" << l.i() << "," << l.j() << ")\t";
+      if (r != rhs.coend()) std::cerr << "r != coend() (r ij=" << r.i() << "," << r.j() << ")\t";
+      std::cerr << "coend() ij=" << coend().i() << "," << coend().j() << std::endl;
 
       if (r == rhs.coend() || (l != coend() && r > l)) {
         if (*l != rhs.const_default_obj()) return false;
@@ -431,4 +745,4 @@ protected:
 
 } // end of nm namespace
 
-#endif
+#endif // YALE_CLASS_H

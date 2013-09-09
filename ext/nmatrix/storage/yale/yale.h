@@ -49,21 +49,16 @@
  * Project Includes
  */
 
-#include "types.h"
-#include "data/data.h"
-#include "common.h"
-#include "nmatrix.h"
-
-#include "yale_iterators.h"
-#include "yale_storage.h"
+#include "../../types.h"
+#include "../../data/data.h"
+#include "../common.h"
+#include "../../nmatrix.h"
 
 extern "C" {
 
   /*
    * Macros
    */
-
-  #define NM_YALE_MINIMUM(sptr)               (((YALE_STORAGE*)(sptr))->shape[0]*2 + 1) // arbitrarily defined
 
   #ifndef NM_CHECK_ALLOC
    #define NM_CHECK_ALLOC(x) if (!x) rb_raise(rb_eNoMemError, "insufficient memory");
@@ -104,8 +99,8 @@ extern "C" {
   VALUE nm_yale_stored_diagonal_each_with_indices(VALUE nmatrix);
   VALUE nm_yale_stored_nondiagonal_each_with_indices(VALUE nmatrix);
   VALUE nm_yale_each_ordered_stored_with_indices(VALUE nmatrix);
-  void* nm_yale_storage_get(STORAGE* s, SLICE* slice);
-  void*	nm_yale_storage_ref(STORAGE* s, SLICE* slice);
+  void* nm_yale_storage_get(const STORAGE* s, SLICE* slice);
+  void*	nm_yale_storage_ref(const STORAGE* s, SLICE* slice);
   void  nm_yale_storage_set(VALUE left, SLICE* slice, VALUE right);
 
   //char  nm_yale_storage_vector_insert(YALE_STORAGE* s, size_t pos, size_t* js, void* vals, size_t n, bool struct_only, nm::dtype_t dtype, nm::itype_t itype);

@@ -54,7 +54,6 @@ describe "Set slice operation" do
         end
         m[0..1,0..1].should == slice_result_a
         m[2,0..1].should == @m[2,0..1]
-        binding.pry if stype == :yale
         m[0..1,2].should == @m[0..1,2]
 
         m[0..1,0..1] = 0
@@ -78,7 +77,7 @@ describe "Set slice operation" do
         STDERR.puts "C"
         m = @m.clone
         m[1..2,1..2] = 100
-        binding.pry if stype == :yale
+        #binding.pry if stype == :yale
         m[1..2,1..2].should == slice_result_a
         m[0,1..2].should == @m[0,1..2]
         m[1..2,0].should == @m[1..2,0]

@@ -408,7 +408,7 @@ static void slice_copy(DENSE_STORAGE *dest, const DENSE_STORAGE *src, size_t* le
  *
  * FIXME: Template the first condition.
  */
-void* nm_dense_storage_get(STORAGE* storage, SLICE* slice) {
+void* nm_dense_storage_get(const STORAGE* storage, SLICE* slice) {
   DENSE_STORAGE* s = (DENSE_STORAGE*)storage;
 
   if (slice->single)
@@ -437,7 +437,7 @@ void* nm_dense_storage_get(STORAGE* storage, SLICE* slice) {
  *
  * FIXME: Template the first condition.
  */
-void* nm_dense_storage_ref(STORAGE* storage, SLICE* slice) {
+void* nm_dense_storage_ref(const STORAGE* storage, SLICE* slice) {
   DENSE_STORAGE* s = (DENSE_STORAGE*)storage;
 
   if (slice->single)

@@ -57,14 +57,23 @@
  */
 
 // #include "types.h"
-#include "data/data.h"
-#include "math/math.h"
+#include "../../data/data.h"
+#include "../../math/math.h"
 
-#include "common.h"
+#include "../common.h"
+
+#include "../../nmatrix.h"
+#include "../../data/meta.h"
+
+#include "iterators/base.h"
+#include "iterators/stored_diagonal.h"
+#include "iterators/stored_nondiagonal.h"
+#include "iterators/stored.h"
+#include "iterators/ordered.h"
+#include "iterators/iterator.h"
+#include "class.h"
 #include "yale.h"
-
-#include "nmatrix.h"
-#include "ruby_constants.h"
+#include "../../ruby_constants.h"
 
 /*
  * Macros
@@ -80,7 +89,6 @@
  */
 
 extern "C" {
-  static YALE_STORAGE*  nm_copy_alloc_struct(const YALE_STORAGE* rhs, const nm::dtype_t new_dtype, const size_t new_capacity, const size_t new_size);
   static YALE_STORAGE*	alloc(nm::dtype_t dtype, size_t* shape, size_t dim);
 
   static size_t yale_count_slice_copy_ndnz(const YALE_STORAGE* s, size_t*, size_t*);
@@ -120,8 +128,6 @@ static bool           eqeq(const YALE_STORAGE* left, const YALE_STORAGE* right);
 
 template <typename LDType, typename RDType>
 static bool eqeq_different_defaults(const YALE_STORAGE* s, const LDType& s_init, const YALE_STORAGE* t, const RDType& t_init);
-
-static YALE_STORAGE*	copy_alloc_struct(const YALE_STORAGE* rhs, const dtype_t new_dtype, const size_t new_capacity, const size_t new_size);
 
 static void						increment_ia_after(YALE_STORAGE* s, IType ija_size, IType i, long n);
 
@@ -256,6 +262,9 @@ YALE_STORAGE* create_from_old_yale(dtype_t dtype, size_t* shape, char* r_ia, cha
  * Empty the matrix by initializing the IJA vector and setting the diagonal to 0.
  *
  * Called when most YALE_STORAGE objects are created.
+ *
+ * Can't go inside of class YaleStorage because YaleStorage creation requires that
+ * IJA already be initialized.
  */
 template <typename DType>
 void init(YALE_STORAGE* s, void* init_val) {
@@ -270,12 +279,13 @@ void init(YALE_STORAGE* s, void* init_val) {
   clear_diagonal_and_zero<DType>(s, init_val);
 }
 
-size_t max_size(YALE_STORAGE* s) {
-  size_t result = s->shape[0]*s->shape[1] + 1;
-  if (s->shape[0] > s->shape[1])
-    result += s->shape[0] - s->shape[1];
 
-  return result;
+template <typename LDType, typename RDType>
+static YALE_STORAGE* slice_copy(YALE_STORAGE* s) {
+  YaleStorage<RDType> y(s);
+  YALE_STORAGE* ns = y.template alloc_copy<LDType>();
+  y.template copy<LDType>(*ns);
+  return ns;
 }
 
 
@@ -394,61 +404,17 @@ static void slice_copy(YALE_STORAGE* ns, const YALE_STORAGE* s, size_t* offset, 
  */
 template <typename DType>
 static void* get_single(YALE_STORAGE* storage, SLICE* slice) {
-  YALE_STORAGE* s = reinterpret_cast<YALE_STORAGE*>(storage->src);
-
-  DType* a   = reinterpret_cast<DType*>(s->a);
-  IType* ija = s->ija;
-
-  size_t coord0 = storage->offset[0] + slice->coords[0];
-  size_t coord1 = storage->offset[1] + slice->coords[1];
-
-  if (coord0 == coord1)
-    return &(a[ coord0 ]); // return diagonal entry
-
-  if (ija[coord0] == ija[coord0+1])
-    return &(a[ s->shape[0] ]); // return zero pointer
-
-  // binary search for the column's location
-  int pos = binary_search(s, ija[coord0], ija[coord0+1]-1, coord1);
-
-  if (pos != -1 && ija[pos] == coord1)
-    return &(a[pos]); // found exact value
-
-  return &(a[ s->shape[0] ]); // return a pointer that happens to be zero
+  YaleStorage<DType> y(storage);
+  return reinterpret_cast<void*>(y.get_single_p(slice));
 }
 
 
 /*
- * Returns a pointer to the correct location in the A vector of a YALE_STORAGE object, given some set of coordinates
- * (the coordinates are stored in slice).
+ * Returns a reference-slice of a matrix.
  */
 template <typename DType>
-void* ref(YALE_STORAGE* s, SLICE* slice) {
-
-  YALE_STORAGE* ns = ALLOC( YALE_STORAGE );
-
-  ns->dim     = s->dim;
-  ns->offset  = ALLOC_N(size_t, ns->dim);
-  ns->shape   = ALLOC_N(size_t, ns->dim);
-
-  for (size_t i = 0; i < ns->dim; ++i) {
-    ns->offset[i]   = slice->coords[i] + s->offset[i];
-    ns->shape[i]    = slice->lengths[i];
-  }
-
-  ns->dtype   = s->dtype;
-
-  ns->a       = reinterpret_cast<YALE_STORAGE*>(s->src)->a;
-  ns->ija     = reinterpret_cast<YALE_STORAGE*>(s->src)->ija;
-
-  ns->src     = s->src;
-  s->src->count++;
-
-  ns->ndnz    = 0;
-  ns->capacity= 0;
-
-  return ns;
-
+YALE_STORAGE* ref(YALE_STORAGE* s, SLICE* slice) {
+  return YaleStorage<DType>(s).alloc_ref(slice);
 }
 
 /*
@@ -675,7 +641,7 @@ static void set_multiple_cells(YALE_STORAGE* s, size_t* coords, size_t* lengths,
     }
   } else {  // allowed to make a copy.
     size_t new_capacity = s->capacity + delta_size;
-    size_t max_capacity = max_size(s);
+    size_t max_capacity = YaleStorage<DType>::max_size(s->shape);
     if (new_capacity > max_capacity) {
       new_capacity = max_capacity;
 
@@ -905,7 +871,7 @@ static void vector_grow(YALE_STORAGE* s) {
   }
 
   size_t new_capacity = s->capacity * GROWTH_CONSTANT;
-  size_t max_capacity = max_size(s);
+  size_t max_capacity = YaleStorage<uint8_t>::max_size(s->shape);
 
   if (new_capacity > max_capacity) new_capacity = max_capacity;
 
@@ -937,7 +903,7 @@ static char vector_insert_resize(YALE_STORAGE* s, size_t current_size, size_t po
 
   // Determine the new capacity for the IJA and A vectors.
   size_t new_capacity = s->capacity * GROWTH_CONSTANT;
-  size_t max_capacity = max_size(s);
+  size_t max_capacity = YaleStorage<DType>::max_size(s->shape);
 
   if (new_capacity > max_capacity) {
     new_capacity = max_capacity;
@@ -1105,43 +1071,10 @@ static IType insert_search(YALE_STORAGE* s, IType left, IType right, IType key, 
 /*
  * Templated copy constructor for changing dtypes.
  */
-template <typename LDType, typename RDType>
-YALE_STORAGE* cast_copy(const YALE_STORAGE* rhs, dtype_t new_dtype) {
-
-  YALE_STORAGE* lhs;
-
-  if (rhs->src != rhs) { // copy the reference
-    // Copy shape for yale construction
-    size_t* shape           = ALLOC_N(size_t, 2);
-    shape[0]                = rhs->shape[0];
-    shape[1]                = rhs->shape[1];
-    size_t ndnz             = src_ndnz(rhs);
-    if (shape[0] != rhs->src->shape[0] || shape[1] != rhs->src->shape[1])
-      ndnz                  = count_slice_copy_ndnz<RDType>(rhs, rhs->offset, rhs->shape); // expensive, avoid if possible
-    size_t request_capacity = shape[0] + ndnz + 1;
-    // FIXME: Should we use a different itype? Or same?
-    lhs                     = nm_yale_storage_create(new_dtype, shape, 2, request_capacity);
-
-    // This check probably isn't necessary.
-    if (lhs->capacity < request_capacity)
-      rb_raise(nm_eStorageTypeError, "conversion failed; capacity of %ld requested, max allowable is %ld", request_capacity, lhs->capacity);
-
-    slice_copy<LDType, RDType>(lhs, rhs, rhs->offset, rhs->shape, new_dtype);
-  } else { // regular copy
-
-    // Allocate a new structure
-    size_t size = rhs->ija[rhs->shape[0]];
-    lhs = copy_alloc_struct(rhs, new_dtype, rhs->capacity, size);
-
-    LDType* la = reinterpret_cast<LDType*>(lhs->a);
-    RDType* ra = A<RDType>(rhs);
-
-    for (size_t index = 0; index < size; ++index) {
-      la[index] = ra[index];
-    }
-  }
-
-  return lhs;
+template <typename L, typename R>
+YALE_STORAGE* cast_copy(const YALE_STORAGE* rhs) {
+  YaleStorage<R> y(rhs);
+  return y.template alloc_copy<L>();
 }
 
 /*
@@ -1151,40 +1084,6 @@ size_t get_size(const YALE_STORAGE* storage) {
   return storage->ija[ storage->shape[0] ];
 }
 
-
-/*
- * Allocate for a copy or copy-cast operation, and copy the IJA portion of the
- * matrix (the structure).
- */
-static YALE_STORAGE* copy_alloc_struct(const YALE_STORAGE* rhs, const dtype_t new_dtype, const size_t new_capacity, const size_t new_size) {
-  YALE_STORAGE* lhs = ALLOC( YALE_STORAGE );
-  lhs->dim          = rhs->dim;
-  lhs->shape        = ALLOC_N( size_t, lhs->dim );
-  lhs->offset       = ALLOC_N( size_t, lhs->dim );
-  memcpy(lhs->shape, rhs->shape, lhs->dim * sizeof(size_t));
-  //memcpy(lhs->offset, rhs->offset, lhs->dim * sizeof(size_t));
-  lhs->offset[0]    = 0;
-  lhs->offset[1]    = 0;
-
-  lhs->capacity     = new_capacity;
-  lhs->dtype        = new_dtype;
-  lhs->ndnz         = rhs->ndnz;
-
-  lhs->ija          = ALLOC_N( IType, lhs->capacity );
-  lhs->a            = ALLOC_N( char, DTYPE_SIZES[new_dtype] * lhs->capacity );
-  lhs->src          = lhs;
-  lhs->count        = 1;
-
-  // Now copy the contents -- but only within the boundaries set by the size. Leave
-  // the rest uninitialized.
-  if (!rhs->offset[0] && !rhs->offset[1]) {
-    for (size_t i = 0; i < rhs->ija[rhs->shape[0]]; ++i)
-      reinterpret_cast<IType*>(lhs->ija)[i] = reinterpret_cast<IType*>(rhs->ija)[i]; // copy indices
-  } else {
-    rb_raise(rb_eNotImpError, "cannot copy struct due to different offsets");
-  }
-  return lhs;
-}
 
 template <typename DType>
 static STORAGE* matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resulting_shape, bool vector) {
@@ -1775,7 +1674,7 @@ static size_t yale_count_slice_copy_ndnz(const YALE_STORAGE* s, size_t* offset, 
  *
  * Slicing-related.
  */
-void* nm_yale_storage_get(STORAGE* storage, SLICE* slice) {
+void* nm_yale_storage_get(const STORAGE* storage, SLICE* slice) {
   YALE_STORAGE* casted_storage = (YALE_STORAGE*)storage;
 
   if (slice->single) {
@@ -1783,26 +1682,17 @@ void* nm_yale_storage_get(STORAGE* storage, SLICE* slice) {
 
     return elem_copy_table[casted_storage->dtype](casted_storage, slice);
   } else {
-    // Copy shape for yale construction
-    size_t* shape           = ALLOC_N(size_t, 2);
-    shape[0]                = slice->lengths[0];
-    shape[1]                = slice->lengths[1];
 
-    // only count ndnz if our slice is smaller, otherwise use the given value
-    size_t ndnz             = src_ndnz(casted_storage);
-    if (shape[0] != casted_storage->shape[0] || shape[1] != casted_storage->shape[1])
-      ndnz = yale_count_slice_copy_ndnz(casted_storage, slice->coords, shape); // expensive operation
+    //return reinterpret_cast<void*>(nm::YaleStorage<nm::dtype_enum_T<storage->dtype>::type>(casted_storage).alloc_ref(slice));
+    NAMED_DTYPE_TEMPLATE_TABLE(ref_table, nm::yale_storage::ref, YALE_STORAGE*, YALE_STORAGE* storage, SLICE* slice)
 
-    size_t request_capacity = shape[0] + ndnz + 1; // capacity of new matrix
-    YALE_STORAGE* ns        = nm_yale_storage_create(casted_storage->dtype, shape, 2, request_capacity);
+    YALE_STORAGE* ref = ref_table[casted_storage->dtype](casted_storage, slice);
 
-    // This check probably isn't necessary.
-    if (ns->capacity < request_capacity)
-      rb_raise(nm_eStorageTypeError, "conversion failed; capacity of %ld requested, max allowable is %ld", request_capacity, ns->capacity);
+    NAMED_LR_DTYPE_TEMPLATE_TABLE(slice_copy_table, nm::yale_storage::slice_copy, YALE_STORAGE*, YALE_STORAGE*)
 
-    NAMED_LR_DTYPE_TEMPLATE_TABLE(slice_copy_table, nm::yale_storage::slice_copy, void, YALE_STORAGE* ns, const YALE_STORAGE* s, size_t*, size_t*, nm::dtype_t)
+    YALE_STORAGE* ns = slice_copy_table[casted_storage->dtype][casted_storage->dtype](ref);
 
-    slice_copy_table[ns->dtype][casted_storage->dtype](ns, casted_storage, slice->coords, slice->lengths, casted_storage->dtype);
+    xfree(ref);
 
     return ns;
   }
@@ -1826,18 +1716,21 @@ static void nm_yale_storage_increment_ia_after(YALE_STORAGE* s, size_t ija_size,
 
 
 /*
- * C accessor for yale_storage::ref, which returns a pointer to the correct location in a YALE_STORAGE object
- * for some set of coordinates.
+ * C accessor for yale_storage::ref, which returns either a pointer to the correct location in a YALE_STORAGE object
+ * for some set of coordinates, or a pointer to a single element.
  */
-void* nm_yale_storage_ref(STORAGE* storage, SLICE* slice) {
+void* nm_yale_storage_ref(const STORAGE* storage, SLICE* slice) {
   YALE_STORAGE* casted_storage = (YALE_STORAGE*)storage;
 
   if (slice->single) {
+    //return reinterpret_cast<void*>(nm::YaleStorage<nm::dtype_enum_T<storage->dtype>::type>(casted_storage).get_single_p(slice));
     NAMED_DTYPE_TEMPLATE_TABLE(elem_copy_table,  nm::yale_storage::get_single, void*, YALE_STORAGE*, SLICE*)
     return elem_copy_table[casted_storage->dtype](casted_storage, slice);
   } else {
-    NAMED_DTYPE_TEMPLATE_TABLE(ref_table, nm::yale_storage::ref, void*, YALE_STORAGE* storage, SLICE* slice)
-    return ref_table[casted_storage->dtype](casted_storage, slice);
+    //return reinterpret_cast<void*>(nm::YaleStorage<nm::dtype_enum_T<storage->dtype>::type>(casted_storage).alloc_ref(slice));
+    NAMED_DTYPE_TEMPLATE_TABLE(ref_table, nm::yale_storage::ref, YALE_STORAGE*, YALE_STORAGE* storage, SLICE* slice)
+    return reinterpret_cast<void*>(ref_table[casted_storage->dtype](casted_storage, slice));
+
   }
 }
 
@@ -1858,11 +1751,11 @@ bool nm_yale_storage_eqeq(const STORAGE* left, const STORAGE* right) {
  * Copy constructor for changing dtypes. (C accessor)
  */
 STORAGE* nm_yale_storage_cast_copy(const STORAGE* rhs, nm::dtype_t new_dtype, void* dummy) {
-  NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::cast_copy, YALE_STORAGE*, const YALE_STORAGE* rhs, nm::dtype_t new_dtype);
+  NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::cast_copy, YALE_STORAGE*, const YALE_STORAGE* rhs);
 
   const YALE_STORAGE* casted_rhs = reinterpret_cast<const YALE_STORAGE*>(rhs);
-
-  return (STORAGE*)ttable[new_dtype][casted_rhs->dtype](casted_rhs, new_dtype);
+  //return reinterpret_cast<STORAGE*>(nm::YaleStorage<nm::dtype_enum_T< rhs->dtype >::type>(rhs).alloc_copy<nm::dtype_enum_T< new_dtype >::type>());
+  return (STORAGE*)ttable[new_dtype][casted_rhs->dtype](casted_rhs);
 }
 
 
@@ -1967,34 +1860,9 @@ STORAGE* nm_yale_storage_matrix_multiply(const STORAGE_PAIR& casted_storage, siz
  */
 
 YALE_STORAGE* nm_yale_storage_create(nm::dtype_t dtype, size_t* shape, size_t dim, size_t init_capacity) {
-  YALE_STORAGE* s;
-  size_t max_capacity;
-
-	// FIXME: This error should be handled in the nmatrix.c file.
-  if (dim != 2) {
-   	rb_raise(rb_eNotImpError, "Can only support 2D matrices");
-  }
-
-  s = alloc(dtype, shape, dim);
-  max_capacity = nm::yale_storage::max_size(s);
-
-  // Set matrix capacity (and ensure its validity)
-  if (init_capacity < NM_YALE_MINIMUM(s)) {
-  	s->capacity = NM_YALE_MINIMUM(s);
-
-  } else if (init_capacity > max_capacity) {
-  	// Don't allow storage to be created larger than necessary
-  	s->capacity = max_capacity;
-
-  } else {
-  	s->capacity = init_capacity;
-
-  }
-
-  s->ija = ALLOC_N( IType, s->capacity );
-  s->a   = ALLOC_N( char,  DTYPE_SIZES[s->dtype] * s->capacity );
-
-  return s;
+  DTYPE_OBJECT_STATIC_TABLE(nm::YaleStorage, create, YALE_STORAGE*, size_t* shape, size_t dim, size_t init_capacity)
+  return ttable[dtype](shape, dim, init_capacity);
+  //return nm::YaleStorage<nm::dtype_enum_T<dtype>::type>::create(shape, dim, init_capacity);
 }
 
 /*

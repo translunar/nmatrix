@@ -52,7 +52,7 @@ extern "C" {
 #include "util/io.h"
 #include "storage/storage.h"
 #include "storage/list.h"
-#include "storage/yale.h"
+#include "storage/yale/yale.h"
 
 #include "nmatrix.h"
 
@@ -351,7 +351,7 @@ static VALUE nm_each_stored_with_indices(VALUE nmatrix);
 static VALUE nm_each_ordered_stored_with_indices(VALUE nmatrix);
 
 static SLICE* get_slice(size_t dim, int argc, VALUE* arg, size_t* shape);
-static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLICE*), void (*delete_func)(NMATRIX*), VALUE self);
+static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(const STORAGE*, SLICE*), void (*delete_func)(NMATRIX*), VALUE self);
 static VALUE nm_mset(int argc, VALUE* argv, VALUE self);
 static VALUE nm_mget(int argc, VALUE* argv, VALUE self);
 static VALUE nm_mref(int argc, VALUE* argv, VALUE self);
@@ -1471,7 +1471,7 @@ static VALUE nm_is_ref(VALUE self) {
  *
  */
 static VALUE nm_mget(int argc, VALUE* argv, VALUE self) {
-  static void* (*ttable[nm::NUM_STYPES])(STORAGE*, SLICE*) = {
+  static void* (*ttable[nm::NUM_STYPES])(const STORAGE*, SLICE*) = {
     nm_dense_storage_get,
     nm_list_storage_get,
     nm_yale_storage_get
@@ -1490,7 +1490,7 @@ static VALUE nm_mget(int argc, VALUE* argv, VALUE self) {
  *
  */
 static VALUE nm_mref(int argc, VALUE* argv, VALUE self) {
-  static void* (*ttable[nm::NUM_STYPES])(STORAGE*, SLICE*) = {
+  static void* (*ttable[nm::NUM_STYPES])(const STORAGE*, SLICE*) = {
     nm_dense_storage_ref,
     nm_list_storage_ref,
     nm_yale_storage_ref
@@ -1693,7 +1693,7 @@ static VALUE nm_effective_dim(VALUE self) {
 /*
  * Get a slice of an NMatrix.
  */
-static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLICE*), void (*delete_func)(NMATRIX*), VALUE self) {
+static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(const STORAGE*, SLICE*), void (*delete_func)(NMATRIX*), VALUE self) {
   VALUE result = Qnil;
   STORAGE* s = NM_STORAGE(self);
 
@@ -1703,7 +1703,7 @@ static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(STORAGE*, SLIC
     SLICE* slice = get_slice(NM_DIM(self), argc, argv, s->shape);
 
     if (slice->single) {
-      static void* (*ttable[nm::NUM_STYPES])(STORAGE*, SLICE*) = {
+      static void* (*ttable[nm::NUM_STYPES])(const STORAGE*, SLICE*) = {
         nm_dense_storage_ref,
         nm_list_storage_ref,
         nm_yale_storage_ref

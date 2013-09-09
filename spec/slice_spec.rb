@@ -134,16 +134,12 @@ describe "Slice operation" do
       it "should have #is_ref? method" do
         a = @m[0..1, 0..1]
         b = @m.slice(0..1, 0..1)
-
-
         @m.is_ref?.should be_false
         a.is_ref?.should be_true
         b.is_ref?.should be_false
       end
 
       it "reference should compare with non-reference" do
-        require 'pry'
-        binding.pry if stype == :yale
         @m.slice(1..2,0..1).should == @m[1..2, 0..1]
         @m[1..2,0..1].should == @m.slice(1..2, 0..1)
         @m[1..2,0..1].should == @m[1..2, 0..1]
@@ -164,22 +160,30 @@ describe "Slice operation" do
           @m[2,1].should eql(7)
         end
 
-        it 'should return a 1x2 matrix with refs to self elements' do
+        it 'should return a 1x2 matrix without refs to self elements' do
           n = @m.slice(0,1..2)
           n.shape.should eql([1,2])
 
           n[0].should == @m[0,1]
+          n[1].should == @m[0,2]
           n[0] = -9
           @m[0,1].should eql(1)
+          @m[0,2].should eql(2)
         end
 
-        it 'should return a 2x1 matrix with refs to self elements' do
+        it 'should return a 2x1 matrix without refs to self elements' do
+          @m.extend NMatrix::YaleFunctions
+          require 'pry'
+          binding.pry if @m.yale?
+
           n = @m.slice(0..1,1)
           n.shape.should eql([2,1])
 
           n[0].should == @m[0,1]
+          n[1].should == @m[1,1]
           n[0] = -9
           @m[0,1].should eql(1)
+          @m[1,1].should eql(4)
         end
 
         it 'should be correct slice for range 0..2 and 0...3' do
@@ -187,7 +191,7 @@ describe "Slice operation" do
         end
 
         [:dense, :list, :yale].each do |cast_type|
-          it "should cast from #{stype.upcase} to #{cast_type.upcase}" do
+          it "should cast copied slice from #{stype.upcase} to #{cast_type.upcase}" do
             nm_eql(@m.slice(1..2, 1..2).cast(cast_type, :int32), @m.slice(1..2,1..2)).should be_true
             nm_eql(@m.slice(0..1, 1..2).cast(cast_type, :int32), @m.slice(0..1,1..2)).should be_true
             nm_eql(@m.slice(1..2, 0..1).cast(cast_type, :int32), @m.slice(1..2,0..1)).should be_true
@@ -195,6 +199,8 @@ describe "Slice operation" do
 
             # Non square
             nm_eql(@m.slice(0..2, 1..2).cast(cast_type, :int32), @m.slice(0..2,1..2)).should be_true
+            #require 'pry'
+            #binding.pry if cast_type == :yale
             nm_eql(@m.slice(1..2, 0..2).cast(cast_type, :int32), @m.slice(1..2,0..2)).should be_true
 
             # Full
@@ -358,7 +364,7 @@ describe "Slice operation" do
         end
 
         [:dense, :list, :yale].each do |cast_type|
-          it "should cast from #{stype.upcase} to #{cast_type.upcase}" do
+          it "should cast reference-slice from #{stype.upcase} to #{cast_type.upcase}" do
 
             nm_eql(@m[1..2, 1..2].cast(cast_type), @m[1..2,1..2]).should be_true
             nm_eql(@m[0..1, 1..2].cast(cast_type), @m[0..1,1..2]).should be_true

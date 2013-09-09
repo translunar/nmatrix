@@ -336,6 +336,7 @@ typedef VALUE (*METHOD)(...);
  */
 
 #ifdef __cplusplus
+
 extern "C" {
 #endif
 

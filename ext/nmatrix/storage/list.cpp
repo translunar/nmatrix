@@ -578,7 +578,7 @@ static LIST* slice_copy(const LIST_STORAGE* src, LIST* src_rows, size_t* coords,
 /*
  * Documentation goes here.
  */
-void* nm_list_storage_get(STORAGE* storage, SLICE* slice) {
+void* nm_list_storage_get(const STORAGE* storage, SLICE* slice) {
   LIST_STORAGE* s = (LIST_STORAGE*)storage;
   LIST_STORAGE* ns = NULL;
   NODE* n;
@@ -604,7 +604,7 @@ void* nm_list_storage_get(STORAGE* storage, SLICE* slice) {
  * Get the contents of some set of coordinates. Note: Does not make a copy!
  * Don't free!
  */
-void* nm_list_storage_ref(STORAGE* storage, SLICE* slice) {
+void* nm_list_storage_ref(const STORAGE* storage, SLICE* slice) {
   LIST_STORAGE* s = (LIST_STORAGE*)storage;
   LIST_STORAGE* ns = NULL;
   NODE* n;

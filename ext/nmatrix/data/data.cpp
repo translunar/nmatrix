@@ -115,6 +115,7 @@ namespace nm {
     }
   }
 
+
 } // end of namespace nm
 extern "C" {
 
@@ -306,6 +307,7 @@ void* rubyobj_to_cval(VALUE val, nm::dtype_t dtype) {
 
   return ret_val;
 }
+
 
 void nm_init_data() {
     nm::RubyObject obj(INT2FIX(1));

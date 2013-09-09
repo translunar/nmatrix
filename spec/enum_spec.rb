@@ -41,6 +41,7 @@ describe "NMatrix enumeration for" do
           vv = []
           ii = []
           jj = []
+          @m.extend NMatrix::YaleFunctions
           @m.each_row do |row|
             row.each_with_indices do |v,i,j|
               vv << v
@@ -48,9 +49,6 @@ describe "NMatrix enumeration for" do
               jj << j
             end
           end
-
-          require 'pry'
-          binding.pry
 
           vv.should == [7,8,9, 12,13,0, 0,0,0, 0,17,18]
           ii.should == [0]*12
@@ -110,6 +108,7 @@ describe "NMatrix enumeration for" do
             ii << i
             jj << j
           end
+
           ii.should == [0,0, 1,   3,3 ]
           jj.should == [1,2, 0,   1,2 ]
           vv.should == [8,9, 12, 17,18]
