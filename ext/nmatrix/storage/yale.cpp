@@ -2191,7 +2191,8 @@ void nm_yale_storage_init(YALE_STORAGE* s, void* init_val) {
  * Ruby GC mark function for YALE_STORAGE. C accessible.
  */
 void nm_yale_storage_mark(void* storage_base) {
-  YALE_STORAGE* storage = (YALE_STORAGE*)storage_base;
+  NMATRIX* mat = (NMATRIX*) storage_base;
+  YALE_STORAGE* storage = (YALE_STORAGE*) mat->storage;
   size_t i;
 
   if (storage && storage->dtype == nm::RUBYOBJ) {

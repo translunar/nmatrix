@@ -320,7 +320,8 @@ void nm_list_storage_delete_ref(STORAGE* s) {
  * Documentation goes here.
  */
 void nm_list_storage_mark(void* storage_base) {
-  LIST_STORAGE* storage = (LIST_STORAGE*)storage_base;
+  NMATRIX* mat = (NMATRIX*) storage_base;
+  LIST_STORAGE* storage = (LIST_STORAGE*) mat->storage;
 
   if (storage && storage->dtype == RUBYOBJ) {
     rb_gc_mark(*((VALUE*)(storage->default_val)));
