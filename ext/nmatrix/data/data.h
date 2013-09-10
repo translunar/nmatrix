@@ -84,7 +84,7 @@ namespace nm {
  */
 
 #define STYPE_MARK_TABLE(name)									\
-  static void (*(name)[nm::NUM_STYPES])(void*) = {	\
+  static void (*(name)[nm::NUM_STYPES])(STORAGE*) = {	\
     nm_dense_storage_mark,											\
     nm_list_storage_mark,												\
     nm_yale_storage_mark												\

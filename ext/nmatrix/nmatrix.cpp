@@ -604,11 +604,8 @@ static void free_slice(SLICE* slice) {
 static VALUE nm_alloc(VALUE klass) {
   NMATRIX* mat = ALLOC(NMATRIX);
   mat->storage = NULL;
-  // FIXME: mark_table[mat->stype] should be passed to Data_Wrap_Struct, but can't be done without stype. Also, nm_delete depends on this.
-  // mat->stype   = nm::NUM_STYPES;
 
-  //STYPE_MARK_TABLE(mark_table);
-
+  // DO NOT MARK This STRUCT. It has no storage allocated, and no stype, so mark will do an invalid something.
   return Data_Wrap_Struct(klass, NULL, nm_delete, mat);
 }
 
@@ -642,6 +639,16 @@ static VALUE nm_capacity(VALUE self) {
 
   return cap;
 }
+
+
+/*
+ * Mark function.
+ */
+void nm_mark(NMATRIX* mat) {
+  STYPE_MARK_TABLE(mark)
+  mark[mat->stype](mat->storage);
+}
+
 
 /*
  * Destructor.
@@ -1099,9 +1106,7 @@ static VALUE nm_cast(VALUE self, VALUE new_stype_symbol, VALUE new_dtype_symbol,
   CAST_TABLE(cast_copy);
   lhs->storage = cast_copy[lhs->stype][rhs->stype](rhs->storage, new_dtype, init_ptr);
 
-  STYPE_MARK_TABLE(mark);
-
-  return Data_Wrap_Struct(CLASS_OF(self), mark[lhs->stype], nm_delete, lhs);
+  return Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, lhs);
 }
 
 /*
@@ -1118,9 +1123,7 @@ static VALUE nm_init_transposed(VALUE self) {
                             storage_copy_transposed[NM_STYPE(self)]( NM_STORAGE(self) )
                           );
 
-  STYPE_MARK_TABLE(mark);
-
-  return Data_Wrap_Struct(CLASS_OF(self), mark[lhs->stype], nm_delete, lhs);
+  return Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, lhs);
 }
 
 /*
@@ -1417,10 +1420,9 @@ static VALUE nm_read(int argc, VALUE* argv, VALUE self) {
   // FIXME: class methods.
   switch(stype) {
   case nm::DENSE_STORE:
-    return Data_Wrap_Struct(cNMatrix, nm_dense_storage_mark, nm_delete, nm);
   case nm::YALE_STORE:
-    return Data_Wrap_Struct(cNMatrix, nm_yale_storage_mark, nm_delete, nm);
-  default:
+    return Data_Wrap_Struct(cNMatrix, nm_mark, nm_delete, nm);
+  default: // this case never occurs (due to earlier rb_raise)
     return Qnil;
   }
 
@@ -1713,13 +1715,12 @@ static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(const STORAGE*
       else                                result = rubyobj_from_cval( ttable[NM_STYPE(self)](s, slice), NM_DTYPE(self) ).rval;
 
     } else {
-      STYPE_MARK_TABLE(mark_table);
 
       NMATRIX* mat  = ALLOC(NMATRIX);
       mat->stype    = NM_STYPE(self);
       mat->storage  = (STORAGE*)((*slice_func)( s, slice ));
 
-      result        = Data_Wrap_Struct(CLASS_OF(self), mark_table[mat->stype], delete_func, mat);
+      result        = Data_Wrap_Struct(CLASS_OF(self), nm_mark, delete_func, mat);
     }
 
     free_slice(slice);
@@ -1733,7 +1734,6 @@ static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(const STORAGE*
 //////////////////////
 
 static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
-	STYPE_MARK_TABLE(mark);
 
 	NMATRIX* left;
 	NMATRIX* result;
@@ -1797,7 +1797,7 @@ static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
     }
   }
 
-	return Data_Wrap_Struct(CLASS_OF(left_val), mark[result->stype], nm_delete, result);
+	return Data_Wrap_Struct(CLASS_OF(left_val), nm_mark, nm_delete, result);
 }
 
 /*
@@ -2229,10 +2229,7 @@ static VALUE matrix_multiply(NMATRIX* left, NMATRIX* right) {
   if (left->storage != casted.left)   free_storage[result->stype](casted.left);
   if (right->storage != casted.right) free_storage[result->stype](casted.right);
 
-
-  STYPE_MARK_TABLE(mark_table);
-
-  if (result) return Data_Wrap_Struct(cNMatrix, mark_table[result->stype], nm_delete, result);
+  if (result) return Data_Wrap_Struct(cNMatrix, nm_mark, nm_delete, result);
   return Qnil; // Only if we try to multiply list matrices should we return Qnil.
 }
 
@@ -2296,7 +2293,7 @@ VALUE rb_nmatrix_dense_create(nm::dtype_t dtype, size_t* shape, size_t dim, void
   nm = nm_create(nm::DENSE_STORE, nm_dense_storage_create(dtype, shape_copy, dim, elements_copy, length));
 
   // tell Ruby about the matrix and its storage, particularly how to garbage collect it.
-  return Data_Wrap_Struct(cNMatrix, nm_dense_storage_mark, nm_dense_storage_delete, nm);
+  return Data_Wrap_Struct(cNMatrix, nm_mark, nm_delete, nm);
 }
 
 /*

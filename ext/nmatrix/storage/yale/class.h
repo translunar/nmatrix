@@ -121,7 +121,7 @@ public:
   }
 
   // Binary search between left and right in IJA for column ID real_j. Returns left if not found.
-  size_t real_find_pos(long left, long right, size_t real_j, bool& found) const {
+  size_t real_find_pos(size_t left, size_t right, size_t real_j, bool& found) const {
     if (left > right) {
       found = false;
       return left;
@@ -140,7 +140,6 @@ public:
   // Binary search between left and right in IJA for column ID real_j. Essentially finds where the slice should begin,
   // with no guarantee that there's anything in there.
   size_t real_find_left_boundary_pos(size_t left, size_t right, size_t real_j) const {
-    std::cerr << "rflbp: left=" << left << "\tright=" << right << "\treal_j=" << real_j << std::endl;
     if (left > right) return right;
     if (ija(left) >= real_j) return left;
 
@@ -151,6 +150,21 @@ public:
     else if (mid_j > real_j)  return real_find_left_boundary_pos(left, mid, real_j);
     else                      return real_find_left_boundary_pos(mid + 1, right, real_j);
   }
+
+  // Binary search between left and right in IJA for column ID real_j. Essentially finds where the slice should begin,
+  // with no guarantee that there's anything in there.
+  size_t real_find_right_boundary_pos(size_t left, size_t right, size_t real_j) const {
+    if (left > right) return right;
+    if (ija(right) <= real_j) return right;
+
+    size_t mid   = (left + right) / 2;
+    size_t mid_j = ija(mid);
+
+    if (mid_j == real_j)      return mid;
+    else if (mid_j > real_j)  return real_find_right_boundary_pos(left, mid, real_j);
+    else                      return real_find_right_boundary_pos(mid + 1, right, real_j);
+  }
+
 
   // Binary search for coordinates i,j in the slice. If not found, return -1.
   std::pair<size_t,bool> find_pos(const std::pair<size_t,size_t>& ij) const {
@@ -166,15 +180,12 @@ public:
   size_t find_pos_for_insertion(size_t i, size_t j) const {
     size_t left   = ija(i + offset(0));
     size_t right  = ija(i + offset(0) + 1) - 1;
-    std::cerr << "fpfi: i=" << i << "\tleft=" << left << "\tright=" << right << "\treal_j=" << j + offset(1) << std::endl;
 
     // Check that the right search point is valid. rflbp will check to make sure the left is valid relative to left.
     if (right > ija(real_shape(0))) {
-      std::cerr << "\tright now set to real_shape(0) = " << real_shape(0) << std::endl;
       right = ija(real_shape(0));
     }
     size_t result = real_find_left_boundary_pos(left, right, j + offset(1));
-    std::cerr << "\t" << result << std::endl;
     return result;
   }
 
@@ -184,28 +195,27 @@ public:
   typedef yale_storage::stored_diagonal_iterator_T<D,D,YaleStorage<D> >              stored_diagonal_iterator;
   typedef yale_storage::stored_diagonal_iterator_T<D,const D,const YaleStorage<D> >  const_stored_diagonal_iterator;
 
-  typedef yale_storage::stored_nondiagonal_iterator_T<D,const D,const YaleStorage<D> >   const_stored_nondiagonal_iterator;
-  typedef yale_storage::stored_nondiagonal_iterator_T<D,D,YaleStorage<D>>                stored_nondiagonal_iterator;
-
-  typedef yale_storage::stored_iterator_T<D,D,YaleStorage<D> >             stored_iterator;
-  typedef yale_storage::stored_iterator_T<D,const D,const YaleStorage<D> > const_stored_iterator;
-
   typedef yale_storage::iterator_T<D,D,YaleStorage<D> >                iterator;
   typedef yale_storage::iterator_T<D,const D,const YaleStorage<D> >    const_iterator;
 
-  typedef yale_storage::ordered_iterator_T<D,D,YaleStorage<D> >              ordered_iterator;
-  typedef yale_storage::ordered_iterator_T<D,const D,const YaleStorage<D> >  const_ordered_iterator;
 
+  typedef yale_storage::row_iterator_T<D,D,YaleStorage<D> >             row_iterator;
+  typedef yale_storage::row_iterator_T<D,const D,const YaleStorage<D> > const_row_iterator;
+
+  typedef yale_storage::row_stored_iterator_T<D,D,YaleStorage<D>,row_iterator>    row_stored_iterator;
+  typedef yale_storage::row_stored_nd_iterator_T<D,D,YaleStorage<D>,row_iterator> row_stored_nd_iterator;
+  typedef yale_storage::row_stored_iterator_T<D,const D,const YaleStorage<D>,const_row_iterator>       const_row_stored_iterator;
+  typedef yale_storage::row_stored_nd_iterator_T<D,const D,const YaleStorage<D>,const_row_iterator>    const_row_stored_nd_iterator;
 
   // Variety of iterator begin and end functions.
-  iterator begin(size_t row = 0)                      {      return iterator(*this, row);               }
-  iterator row_end(size_t row)                        {      return begin(row+1);                      }
-  iterator end()                                      {      return iterator(*this, shape(0));          }
-  const_iterator cbegin(size_t row = 0) const         {      return const_iterator(*this, row);         }
-  const_iterator crow_end(size_t row) const           {      return cbegin(row+1);                     }
-  const_iterator cend() const                         {      return const_iterator(*this, shape(0));    }
+  iterator begin(size_t row = 0)                      {      return iterator(*this, row);                 }
+  iterator row_end(size_t row)                        {      return begin(row+1);                         }
+  iterator end()                                      {      return iterator(*this, shape(0));            }
+  const_iterator cbegin(size_t row = 0) const         {      return const_iterator(*this, row);           }
+  const_iterator crow_end(size_t row) const           {      return cbegin(row+1);                        }
+  const_iterator cend() const                         {      return const_iterator(*this, shape(0));      }
 
-  stored_diagonal_iterator sdbegin(size_t d = 0)      {      return stored_diagonal_iterator(*this, d); }
+  stored_diagonal_iterator sdbegin(size_t d = 0)      {      return stored_diagonal_iterator(*this, d);   }
   stored_diagonal_iterator sdend()                    {
     return stored_diagonal_iterator(*this, std::min( shape(0) + offset(0), shape(1) + offset(1) ) - std::max(offset(0), offset(1)) );
   }
@@ -213,25 +223,11 @@ public:
   const_stored_diagonal_iterator csdend() const        {
     return const_stored_diagonal_iterator(*this, std::min( shape(0) + offset(0), shape(1) + offset(1) ) - std::max(offset(0), offset(1)) );
   }
+  row_iterator ribegin(size_t row = 0) const          {      return row_iterator(*this, row);             }
+  row_iterator riend() const                          {      return row_iterator(*this, shape(0));        }
+  const_row_iterator cribegin(size_t row = 0) const   {      return const_row_iterator(*this, row);       }
+  const_row_iterator criend() const                   {      return const_row_iterator(*this, shape(0));  }
 
-  stored_nondiagonal_iterator sndbegin(size_t row = 0){      return stored_nondiagonal_iterator(*this, row); }
-  stored_nondiagonal_iterator sndrow_end(size_t row)  {      return sndbegin(row+1);                   }
-  stored_nondiagonal_iterator sndend()                {      return stored_nondiagonal_iterator(*this, shape(0)); }
-  const_stored_nondiagonal_iterator csndbegin(size_t row = 0) const { return const_stored_nondiagonal_iterator(*this, row); }
-  const_stored_nondiagonal_iterator csndrow_end(size_t row) const {   return csndbegin(row+1);                   }
-  const_stored_nondiagonal_iterator csndend() const               {   return const_stored_nondiagonal_iterator(*this, shape(0)); }
-
-  stored_iterator sbegin()                            {      return stored_iterator(*this, 0);       }
-  stored_iterator send()                              {      return stored_iterator(*this, shape(0));      }
-  const_stored_iterator csbegin() const               {      return const_stored_iterator(*this, 0);       }
-  const_stored_iterator csend() const                 {      return const_stored_iterator(*this, shape(0));      }
-
-  ordered_iterator obegin(size_t row = 0)             {      return ordered_iterator(*this, row);       }
-  ordered_iterator oend()                             {      return ordered_iterator(*this, shape(0));  }
-  ordered_iterator orow_end(size_t row)               {      return obegin(row+1);                     }
-  const_ordered_iterator cobegin(size_t row = 0) const{      return const_ordered_iterator(*this, row); }
-  const_ordered_iterator corow_end(size_t row) const  {      return cobegin(row+1);                    }
-  const_ordered_iterator coend() const                {      return const_ordered_iterator(*this, shape(0)); }
 
   /*
    * Get a count of the ndnz in the slice as if it were its own matrix.
@@ -239,28 +235,36 @@ public:
   size_t count_copy_ndnz() const {
     if (!slice) return s->ndnz; // easy way -- not a slice.
     size_t count = 0;
-    for (const_stored_nondiagonal_iterator iter = csndbegin(); iter != csndend(); ++iter) {
-      if (iter.i() != iter.j() && *iter == const_default_obj()) ++count;
+
+    // Visit all stored entries.
+    for (const_row_iterator it = cribegin(); it != criend(); ++it){
+      for (auto jt = it.begin(); jt != it.end(); ++jt) {
+        if (it.i() != jt.j() && *jt != const_default_obj()) ++count;
+      }
     }
+
     return count;
   }
 
   /*
    * Returns the iterator for i,j or snd_end() if not found.
    */
-  stored_nondiagonal_iterator find(const std::pair<size_t,size_t>& ij) {
+/*  stored_nondiagonal_iterator find(const std::pair<size_t,size_t>& ij) {
     std::pair<size_t,bool> find_pos_result = find_pos(ij);
     if (!find_pos_result.second) return sndend();
     else return stored_nondiagonal_iterator(*this, ij.first, find_pos_result.first);
-  }
+  } */
 
   /*
    * Returns a stored_nondiagonal_iterator pointing to the location where some coords i,j should go, or returns their
    * location if present.
    */
-  stored_nondiagonal_iterator lower_bound(const std::pair<size_t,size_t>& ij) {
-    return stored_nondiagonal_iterator(*this, ij.first, find_pos_for_insertion(ij.first, ij.second));
+  std::pair<row_iterator, row_stored_nd_iterator> lower_bound(const std::pair<size_t,size_t>& ij)  {
+    row_iterator it            = ribegin(ij.first);
+    row_stored_nd_iterator jt  = it.lower_bound(ij.second);
+    return std::make_pair(it,jt);
   }
+
 
   /*
    * Insert an element in column j, using position's p() as the location to insert the new column. i and j will be the
@@ -272,31 +276,22 @@ public:
    *   - position.p() must be between ija(real_i) and ija(real_i+1), inclusive, where real_i = i + offset(0)
    *   - real_i and real_j must not be equal
    */
-  bool insert(stored_nondiagonal_iterator position, size_t i, size_t j, const D& val) {
-    return insert(position, std::make_pair(i,j), val);
-  }
-
-  /*
-   * See the above insert.
-   */
-  bool insert(stored_nondiagonal_iterator position, const std::pair<size_t,size_t>& ij, const D& val) {
-    size_t  i = ij.first,
-            j = ij.second,
-           sz = size();
-
-    if (position != ij) {
-      *position = val; // replace
-      return false;
+  bool insert(row_iterator& it, row_stored_nd_iterator position, size_t j, const D& val) {
+    size_t sz = size();
+    if (position.j() == j) {
+      *position = val;      // replace existing
     } else if (sz + 1 > capacity()) {
-      update_resize_move(position, ij.first+offset(0), 1);
+      update_resize_move(position, it.i() + offset(0), 1);
     } else {
       move_right(position, 1);
-      update_real_row_sizes_from(ij.first+offset(0), 1);
+      update_real_row_sizes_from(it.i() + offset(0), 1);
     }
-    ija(position.p()) = j + offset(1); // set the column ID
-    a(position.p())   = val;           // set the value
+    ija(position.p()) = j + offset(1);    // set column ID
+    a(position.p())   = val;
+
     return true;
   }
+
 
   /*
    * Insert n elements v in columns j, using position as a guide. i gives the starting row. If at any time a value in j
@@ -319,41 +314,13 @@ public:
       s->a(position.real_i()) = val;
       return position;
     } else {
-      return insert(stored_nondiagonal_iterator(position), position.i(), j, val);
+      row_iterator it = ribegin(position.i());
+      row_stored_nd_iterator position = it.ndbegin(j);
+      return insert(it, position, j, val);
     }
   }
 
-  // Simple insertion/getting of an element -- happens when [] is called.
-  inline D& operator[](const std::pair<size_t,size_t>& ij) {
-    if (ij.first > shape(0) || ij.second > shape(1)) rb_raise(rb_eRangeError, "element access out of range at %u, %u", ij.first, ij.second);
-    if (ij.first + offset(0) == ij.second + offset(1)) return a(ij.first + offset(0));
-    stored_nondiagonal_iterator iter = lower_bound(ij);
-    if (iter != ij) { // if not found, insert the default
-      insert(iter, ij, const_default_obj());
-    }
-    // we can now safely return a reference
-    return *iter;
-  }
 
-  /*
-   * Attempt to return a reference to some location i,j. Not Ruby-safe; will throw out_of_range if not found.
-   */
-  inline D& at(const std::pair<size_t,size_t>& ij) {
-    if (ij.first > shape(0) || ij.second > shape(1)) throw std::out_of_range("i,j out of bounds");
-    if (ij.first + offset(0) == ij.second + offset(1)) return a(ij.first + offset(0));
-    stored_nondiagonal_iterator iter = find(ij);
-    if (iter != ij) throw std::out_of_range("i,j not found in matrix");
-    return *iter;
-  }
-
-  // See above.
-  inline const D& at(const std::pair<size_t,size_t>& ij) const {
-    if (ij.first > shape(0) || ij.second > shape(1)) throw std::out_of_range("i,j out of bounds");
-    if (ij.first + offset(0) == ij.second + offset(1)) return a(ij.first + offset(0));
-    stored_nondiagonal_iterator iter = find(ij);
-    if (iter != ij) throw std::out_of_range("i,j not found in matrix");
-    return *iter;
-  }
 
 
   /*
@@ -538,7 +505,7 @@ public:
   void copy(YALE_STORAGE& ns) const {
     nm::dtype_t new_dtype = nm::ctype_to_dtype_enum<E>::value_type;
     // get the default value for initialization (we'll re-use val for other copies after this)
-    E val = static_cast<E>(default_obj());
+    E val = static_cast<E>(const_default_obj());
 
     // initialize the matrix structure and clear the diagonal so we don't have to
     // keep track of unwritten entries.
@@ -547,35 +514,21 @@ public:
     E* ns_a    = reinterpret_cast<E*>(ns.a);
     size_t sz  = shape(0) + 1; // current used size of ns
 
-    // FIXME: Set this up so if THIS and NS have a shared diagonal, we use stored_diagonal and stored_nondiagonal instead. Faster.
-    for (size_t i = 0; i < shape(0); ++i) {
-      std::cerr << "copy row i = " << i << std::endl;
-
-      const_ordered_iterator iter = cobegin(i);
-      const_ordered_iterator next = cobegin(i+1);
-      std::cerr << std::endl;
-      std::cerr << "\titer.i,j=" << iter.i() << "," << iter.j() << "\tdenseloc=" << iter.dense_location() << std::endl;
-      std::cerr << "\tnext.i,j=" << next.i() << "," << next.j() << "\tdenseloc=" << next.dense_location() << std::endl;
-      std::cerr << std::boolalpha << "\titer < next ? " << (iter < next) << std::endl;
-
-      for (const_ordered_iterator iter = cobegin(i); iter.i() == i && iter < next; ++iter) {
-        std::cerr << "\t****\t\t\tcopy: iter != next_iter" << std::endl;
-        std::cerr  << "\t\t\t\t\t\ti,j=" << iter.i() << "," << iter.j();
-        std::cerr << "   i,j=" << next.i() << "," << next.j() << std::endl;
-
-        if (i == iter.j()) {  // set diagonal in ns
-          std::cerr << "\t\t****\t\t\tcopy: diag i=" << i << std::endl;
-          ns_a[i]       = static_cast<E>(*iter);
-        } else {
-          std::cerr << "\t\t****\t\t\tcopy: nd   i=" << i << ", j=" << iter.j() << std::endl;
-          ns.ija[sz]    = iter.j();
-          ns_a[sz]      = static_cast<E>(*iter);
-
+    // FIXME: If diagonals line up, it's probably faster to do this with stored diagonal and stored non-diagonal iterators
+    for (const_row_iterator it = cribegin(); it != criend(); ++it) {
+      for (auto jt = it.begin(); !jt.end(); ++jt) {
+        if (it.i() == jt.j()) {
+          std::cerr << "copy(ns): writing to diag pos " << it.i() << std::endl;
+          ns_a[it.i()]  = static_cast<E>(*jt);
+        } else if (*jt != const_default_obj()) {
+          std::cerr << "copy(ns): writing to pos " << sz << std::endl;
+          ns_a[sz]      = static_cast<E>(*jt);
+          ns.ija[sz]    = jt.j();
           ++sz;
         }
       }
-
-      ns.ija[i+1] = sz;
+      std::cerr << "copy(ns): updating row end pointer for row " << it.i() << " to " << sz << std::endl;
+      ns.ija[it.i()+1]  = sz;
     }
 
     //ns.ija[shape(0)] = sz;                // indicate end of last row
@@ -624,27 +577,35 @@ public:
 
   template <typename E>
   bool operator==(const YaleStorage<E>& rhs) const {
+    for (size_t i = 0; i < shape(0); ++i) {
+      typename YaleStorage<D>::const_row_iterator li = cribegin(i);
+      typename YaleStorage<E>::const_row_iterator ri = rhs.cribegin(i);
 
-    typename YaleStorage<D>::const_ordered_iterator l = cobegin();
-    typename YaleStorage<E>::const_ordered_iterator r = rhs.cobegin();
+      size_t j = 0; // keep track of j so we can compare different defaults
 
-    while (l != coend() || r != rhs.coend()) {
-      std::cerr << "looping:\t";
-      if (l != coend()) std::cerr << "l != coend() (l ij=" << l.i() << "," << l.j() << ")\t";
-      if (r != rhs.coend()) std::cerr << "r != coend() (r ij=" << r.i() << "," << r.j() << ")\t";
-      std::cerr << "coend() ij=" << coend().i() << "," << coend().j() << std::endl;
-
-      if (r == rhs.coend() || (l != coend() && r > l)) {
-        if (*l != rhs.const_default_obj()) return false;
-        ++l;
-      } else if (l == coend() || (r != rhs.coend() && l > r)) {
-        if (const_default_obj() != *r) return false;
-        ++r;
-      } else {
-        if (*l != *r) return false;
-        ++l;
-        ++r;
+      typename YaleStorage<D>::const_row_iterator::row_stored_iterator lj = li.begin();
+      typename YaleStorage<E>::const_row_iterator::row_stored_iterator rj = ri.begin();
+      while (!lj.end() || !rj.end()) {
+        if (lj < rj) {
+          if (*lj != rhs.const_default_obj()) return false;
+          ++lj;
+        } else if (rj < lj) {
+          if (const_default_obj() != *rj)     return false;
+          ++rj;
+        } else { // rj == lj
+          if (*lj != *rj) return false;
+          ++lj;
+          ++rj;
+        }
+        ++j;
       }
+
+      // if we skip an entry (because it's an ndnz in BOTH matrices), we need to compare defaults.
+      // (We know we skipped if lj and rj hit end before j does.)
+      if (j < shape(1) && const_default_obj() != rhs.const_default_obj()) return false;
+
+      ++li;
+      ++ri;
     }
 
     return true;
@@ -664,7 +625,7 @@ protected:
    * Move elements in the IJA and A arrays by n (to the right).
    * Does not update row sizes.
    */
-  void move_right(stored_nondiagonal_iterator position, size_t n) {
+  void move_right(row_stored_nd_iterator position, size_t n) {
     size_t sz = size();
     for (size_t m = 0; m < sz - position.p(); ++m) {
       ija(sz+n-1-m) = ija(sz-1-m);
@@ -675,7 +636,7 @@ protected:
   /*
    * Like move_right, but also involving a resize. This updates row sizes as well.
    */
-  void update_resize_move(stored_nondiagonal_iterator position, size_t real_i, int n) {
+  void update_resize_move(row_stored_nd_iterator position, size_t real_i, int n) {
     size_t sz      = size(); // current size of the storage vectors
     size_t new_cap = capacity() * nm::yale_storage::GROWTH_CONSTANT;
     size_t max_cap = real_max_size();
@@ -729,7 +690,7 @@ protected:
    * Move elements in the IJA and A arrays by n (to the left). Here position gives
    * the location to move to, and they should come from n to the right.
    */
-  void move_left(stored_nondiagonal_iterator position, size_t n) {
+  void move_left(row_stored_nd_iterator position, size_t n) {
     size_t sz = size();
     for (size_t m = sz; m > position.p() + n; --m) {   // work backwards
       ija(m-n)      = ija(m);

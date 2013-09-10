@@ -67,9 +67,12 @@
 
 #include "iterators/base.h"
 #include "iterators/stored_diagonal.h"
-#include "iterators/stored_nondiagonal.h"
-#include "iterators/stored.h"
-#include "iterators/ordered.h"
+//#include "iterators/stored_nondiagonal.h"
+//#include "iterators/stored.h"
+//#include "iterators/ordered.h"
+#include "iterators/row_stored_nd.h"
+#include "iterators/row_stored.h"
+#include "iterators/row.h"
 #include "iterators/iterator.h"
 #include "class.h"
 #include "yale.h"
@@ -284,7 +287,6 @@ template <typename LDType, typename RDType>
 static YALE_STORAGE* slice_copy(YALE_STORAGE* s) {
   YaleStorage<RDType> y(s);
   YALE_STORAGE* ns = y.template alloc_copy<LDType>();
-  y.template copy<LDType>(*ns);
   return ns;
 }
 
@@ -1328,7 +1330,7 @@ static VALUE map_stored(VALUE self) {
   }
 
   NMATRIX* m = nm_create(nm::YALE_STORE, reinterpret_cast<STORAGE*>(r));
-  return Data_Wrap_Struct(CLASS_OF(self), nm_yale_storage_mark, nm_delete, m);
+  return Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, m);
 }
 
 
@@ -1448,7 +1450,7 @@ static VALUE map_merged_stored(VALUE left, VALUE right, VALUE init) {
   }
 
   NMATRIX* m = nm_create(nm::YALE_STORE, reinterpret_cast<STORAGE*>(r));
-  return Data_Wrap_Struct(CLASS_OF(left), nm_yale_storage_mark, nm_delete, m);
+  return Data_Wrap_Struct(CLASS_OF(left), nm_mark, nm_delete, m);
 }
 
 
@@ -1467,8 +1469,10 @@ static VALUE each_stored_with_indices(VALUE nm) {
     rb_yield_values(3, ~d, d.rb_i(), d.rb_j());
   }
 
-  for (typename YaleStorage<DType>::const_stored_nondiagonal_iterator nd = y.csndbegin(); nd != y.csndend(); ++nd) {
-    rb_yield_values(3, ~nd, nd.rb_i(), nd.rb_j());
+  for (typename YaleStorage<DType>::const_row_iterator it = y.cribegin(); it != y.criend(); ++it) {
+    for (auto jt = it.ndbegin(); jt != it.ndend(); ++jt) {
+      rb_yield_values(3, ~jt, it.rb_i(), jt.rb_j());
+    }
   }
 
   return nm;
@@ -1505,8 +1509,10 @@ static VALUE stored_nondiagonal_each_with_indices(VALUE nm) {
   // If we don't have a block, return an enumerator.
   RETURN_SIZED_ENUMERATOR(nm, 0, 0, 0); // FIXME: need diagonal length
 
-  for (typename YaleStorage<DType>::const_stored_nondiagonal_iterator nd = y.csndbegin(); nd != y.csndend(); ++nd) {
-    rb_yield_values(3, ~nd, nd.rb_i(), nd.rb_j());
+  for (typename YaleStorage<DType>::const_row_iterator it = y.cribegin(); it != y.criend(); ++it) {
+    for (auto jt = it.ndbegin(); jt != it.ndend(); ++jt) {
+      rb_yield_values(3, ~jt, it.rb_i(), jt.rb_j());
+    }
   }
 
   return nm;
@@ -1524,8 +1530,10 @@ static VALUE each_ordered_stored_with_indices(VALUE nm) {
   // If we don't have a block, return an enumerator.
   RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_yale_stored_enumerator_length);
 
-  for (typename YaleStorage<DType>::const_ordered_iterator iter = y.cobegin(); iter != y.coend(); ++iter) {
-    rb_yield_values(3, ~iter, iter.rb_i(), iter.rb_j());
+  for (typename YaleStorage<DType>::const_row_iterator it = y.cribegin(); it != y.criend(); ++it) {
+    for (auto jt = it.begin(); jt != it.end(); ++jt) {
+      rb_yield_values(3, ~jt, it.rb_i(), jt.rb_j());
+    }
   }
 
   return nm;
@@ -1909,7 +1917,7 @@ void nm_yale_storage_init(YALE_STORAGE* s, void* init_val) {
 /*
  * Ruby GC mark function for YALE_STORAGE. C accessible.
  */
-void nm_yale_storage_mark(void* storage_base) {
+void nm_yale_storage_mark(STORAGE* storage_base) {
   YALE_STORAGE* storage = (YALE_STORAGE*)storage_base;
   size_t i;
 

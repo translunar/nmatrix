@@ -216,7 +216,7 @@ void nm_dense_storage_delete_ref(STORAGE* s) {
 /*
  * Mark values in a dense matrix for garbage collection. This may not be necessary -- further testing required.
  */
-void nm_dense_storage_mark(void* storage_base) {
+void nm_dense_storage_mark(STORAGE* storage_base) {
   DENSE_STORAGE* storage = (DENSE_STORAGE*)storage_base;
 
   if (storage && storage->dtype == nm::RUBYOBJ) {
@@ -267,7 +267,7 @@ VALUE nm_dense_map_pair(VALUE self, VALUE right) {
 
   NMATRIX* m = nm_create(nm::DENSE_STORE, reinterpret_cast<STORAGE*>(result));
 
-  return Data_Wrap_Struct(CLASS_OF(self), nm_dense_storage_mark, nm_delete, m);
+  return Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, m);
 }
 
 
@@ -299,7 +299,7 @@ VALUE nm_dense_map(VALUE self) {
 
   NMATRIX* m = nm_create(nm::DENSE_STORE, reinterpret_cast<STORAGE*>(result));
 
-  return Data_Wrap_Struct(CLASS_OF(self), nm_dense_storage_mark, nm_delete, m);
+  return Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, m);
 }
 
 
@@ -437,7 +437,7 @@ void* nm_dense_storage_get(const STORAGE* storage, SLICE* slice) {
  *
  * FIXME: Template the first condition.
  */
-void* nm_dense_storage_ref(STORAGE* storage, SLICE* slice) {
+void* nm_dense_storage_ref(const STORAGE* storage, SLICE* slice) {
   DENSE_STORAGE* s = (DENSE_STORAGE*)storage;
 
   if (slice->single)

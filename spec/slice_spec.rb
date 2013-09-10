@@ -54,6 +54,10 @@ describe "Slice operation" do
           vs = []
           is = []
           js = []
+
+          require 'pry'
+          binding.pry if stype == :yale
+
           n[3,1..9].each_stored_with_indices do |v,i,j|
             vs << v
             is << i
@@ -173,8 +177,6 @@ describe "Slice operation" do
 
         it 'should return a 2x1 matrix without refs to self elements' do
           @m.extend NMatrix::YaleFunctions
-          require 'pry'
-          binding.pry if @m.yale?
 
           n = @m.slice(0..1,1)
           n.shape.should eql([2,1])
@@ -364,18 +366,22 @@ describe "Slice operation" do
         end
 
         [:dense, :list, :yale].each do |cast_type|
-          it "should cast reference-slice from #{stype.upcase} to #{cast_type.upcase}" do
-
+          it "should cast a square reference-slice from #{stype.upcase} to #{cast_type.upcase}" do
             nm_eql(@m[1..2, 1..2].cast(cast_type), @m[1..2,1..2]).should be_true
             nm_eql(@m[0..1, 1..2].cast(cast_type), @m[0..1,1..2]).should be_true
             nm_eql(@m[1..2, 0..1].cast(cast_type), @m[1..2,0..1]).should be_true
             nm_eql(@m[0..1, 0..1].cast(cast_type), @m[0..1,0..1]).should be_true
+          end
 
+          it "should cast a rectangular reference-slice from #{stype.upcase} to #{cast_type.upcase}" do
+            require 'pry'
+            binding.pry if stype == :yale && cast_type == :yale
             # Non square
-            nm_eql(@m[0..2, 1..2].cast(cast_type), @m[0..2,1..2]).should be_true
-            nm_eql(@m[1..2, 0..2].cast(cast_type), @m[1..2,0..2]).should be_true
+            nm_eql(@m[0..2, 1..2].cast(cast_type), @m[0..2,1..2]).should be_true # FIXME: memory problem.
+            nm_eql(@m[1..2, 0..2].cast(cast_type), @m[1..2,0..2]).should be_true # this one is fine
+          end
 
-            # Full
+          it "should cast a square full-matrix reference-slice from #{stype.upcase} to #{cast_type.upcase}" do
             nm_eql(@m[0..2, 0..2].cast(cast_type), @m).should be_true
           end
         end

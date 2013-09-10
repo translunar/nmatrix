@@ -103,8 +103,6 @@ public:
   {
     if (ii < shape(0)) {
       advance_to_first_valid_entry();
-
-      std::cerr << "initial: p=" << p_ << ", i=" << i_ << std::endl;
     }
   }
 
@@ -157,8 +155,6 @@ public:
              real_row_end   = ija(i_ + offset(0) + 1);
       ++p_;
 
-      std::cerr << "new p=" << p_ << std::endl;
-
       if (p_ >= y.size()) {
         i_ = shape(0);
         return *this;
@@ -166,12 +162,7 @@ public:
 
       while (i_ < shape(0) && !find_valid_p_for_row()) { // skip forward
         ++i_;
-
-        //if (i_ < shape(0)) {
         p_ = ija(i_ + offset(0)); // update p to row beginning.
-        std::cerr << " new p=" << p_ << std::endl;
-        //}
-        std::cerr << "  new i=" << i_ << std::endl;
       }
     }
 
