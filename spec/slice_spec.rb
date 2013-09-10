@@ -34,6 +34,13 @@ describe "Slice operation" do
         @m = create_matrix(stype)
       end
 
+      it "should correctly return a row of a reference-slice" do
+        @n = create_rectangular_matrix(stype)
+        @m = @n[1..4,1..3]
+        @m.row(1, :copy).should == @m.row(1, :reference)
+        @m.row(1, :copy).to_flat_array.should == [12,13,0]
+      end
+
       if stype == :yale
         it "should binary search for the left boundary of a partial row of stored indices correctly" do
           n = NMatrix.new(:yale, 10, :int32)
@@ -47,6 +54,7 @@ describe "Slice operation" do
           vs = []
           is = []
           js = []
+
           n[3,1..9].each_stored_with_indices do |v,i,j|
             vs << v
             is << i
@@ -108,27 +116,16 @@ describe "Slice operation" do
         end
       end
 
-      it "should return correct shape and 1st-order supershape" do
+      it "should return correct supershape" do
         x = NMatrix.random([10,12])
         y = x[0...8,5...12]
         y.shape.should == [8,7]
         y.supershape.should == [10,12]
       end
 
-      it "should return correct 1st- and 2nd-order supershape" do
-        pending "Not yet sure if we ever want to enable reference slices of reference slices"
-        x = NMatrix.random([10,12])
-        y = x[0...8,5...12]
-        z = y[0...3,0...4]
-        z.supershape(2).should == y.supershape(1)
-        z.supershape(1).should == [8,7]
-      end
-
       it "should have #is_ref? method" do
         a = @m[0..1, 0..1]
         b = @m.slice(0..1, 0..1)
-
-
         @m.is_ref?.should be_false
         a.is_ref?.should be_true
         b.is_ref?.should be_false
@@ -155,22 +152,28 @@ describe "Slice operation" do
           @m[2,1].should eql(7)
         end
 
-        it 'should return a 1x2 matrix with refs to self elements' do
+        it 'should return a 1x2 matrix without refs to self elements' do
           n = @m.slice(0,1..2)
           n.shape.should eql([1,2])
 
           n[0].should == @m[0,1]
+          n[1].should == @m[0,2]
           n[0] = -9
           @m[0,1].should eql(1)
+          @m[0,2].should eql(2)
         end
 
-        it 'should return a 2x1 matrix with refs to self elements' do
+        it 'should return a 2x1 matrix without refs to self elements' do
+          @m.extend NMatrix::YaleFunctions
+
           n = @m.slice(0..1,1)
           n.shape.should eql([2,1])
 
           n[0].should == @m[0,1]
+          n[1].should == @m[1,1]
           n[0] = -9
           @m[0,1].should eql(1)
+          @m[1,1].should eql(4)
         end
 
         it 'should be correct slice for range 0..2 and 0...3' do
@@ -178,7 +181,7 @@ describe "Slice operation" do
         end
 
         [:dense, :list, :yale].each do |cast_type|
-          it "should cast from #{stype.upcase} to #{cast_type.upcase}" do
+          it "should cast copied slice from #{stype.upcase} to #{cast_type.upcase}" do
             nm_eql(@m.slice(1..2, 1..2).cast(cast_type, :int32), @m.slice(1..2,1..2)).should be_true
             nm_eql(@m.slice(0..1, 1..2).cast(cast_type, :int32), @m.slice(0..1,1..2)).should be_true
             nm_eql(@m.slice(1..2, 0..1).cast(cast_type, :int32), @m.slice(1..2,0..1)).should be_true
@@ -186,6 +189,8 @@ describe "Slice operation" do
 
             # Non square
             nm_eql(@m.slice(0..2, 1..2).cast(cast_type, :int32), @m.slice(0..2,1..2)).should be_true
+            #require 'pry'
+            #binding.pry if cast_type == :yale
             nm_eql(@m.slice(1..2, 0..2).cast(cast_type, :int32), @m.slice(1..2,0..2)).should be_true
 
             # Full
@@ -349,18 +354,20 @@ describe "Slice operation" do
         end
 
         [:dense, :list, :yale].each do |cast_type|
-          it "should cast from #{stype.upcase} to #{cast_type.upcase}" do
-
+          it "should cast a square reference-slice from #{stype.upcase} to #{cast_type.upcase}" do
             nm_eql(@m[1..2, 1..2].cast(cast_type), @m[1..2,1..2]).should be_true
             nm_eql(@m[0..1, 1..2].cast(cast_type), @m[0..1,1..2]).should be_true
             nm_eql(@m[1..2, 0..1].cast(cast_type), @m[1..2,0..1]).should be_true
             nm_eql(@m[0..1, 0..1].cast(cast_type), @m[0..1,0..1]).should be_true
+          end
 
+          it "should cast a rectangular reference-slice from #{stype.upcase} to #{cast_type.upcase}" do
             # Non square
-            nm_eql(@m[0..2, 1..2].cast(cast_type), @m[0..2,1..2]).should be_true
-            nm_eql(@m[1..2, 0..2].cast(cast_type), @m[1..2,0..2]).should be_true
+            nm_eql(@m[0..2, 1..2].cast(cast_type), @m[0..2,1..2]).should be_true # FIXME: memory problem.
+            nm_eql(@m[1..2, 0..2].cast(cast_type), @m[1..2,0..2]).should be_true # this one is fine
+          end
 
-            # Full
+          it "should cast a square full-matrix reference-slice from #{stype.upcase} to #{cast_type.upcase}" do
             nm_eql(@m[0..2, 0..2].cast(cast_type), @m).should be_true
           end
         end

@@ -111,7 +111,7 @@ $srcs = [
          'storage/common.cpp',
          'storage/storage.cpp',
          'storage/dense.cpp',
-         'storage/yale.cpp',
+         'storage/yale/yale.cpp',
          'storage/list.cpp'
         ]
 # add smmp in to get generic transp; remove smmp2 to eliminate funcptr transp
@@ -160,7 +160,7 @@ have_func("cblas_dgemm", "cblas.h")
 # Order matters here: ATLAS has to go after LAPACK: http://mail.scipy.org/pipermail/scipy-user/2007-January/010717.html
 $libs += " -llapack -lcblas -latlas "
 
-$objs = %w{nmatrix ruby_constants data/data util/io math util/sl_list storage/common storage/storage storage/dense storage/yale storage/list}.map { |i| i + ".o" }
+$objs = %w{nmatrix ruby_constants data/data util/io math util/sl_list storage/common storage/storage storage/dense storage/yale/yale storage/list}.map { |i| i + ".o" }
 
 #CONFIG['CXX'] = 'clang++'
 CONFIG['CXX'] = 'g++'
@@ -221,6 +221,12 @@ create_makefile("nmatrix")
 Dir.mkdir("data") unless Dir.exists?("data")
 Dir.mkdir("util") unless Dir.exists?("util")
 Dir.mkdir("storage") unless Dir.exists?("storage")
+Dir.chdir("storage") do
+  Dir.mkdir("yale") unless Dir.exists?("yale")
+  Dir.chdir("yale") do
+    Dir.mkdir("iterators") unless Dir.exists?("iterators")
+  end
+end
 
 # to clean up object files in subdirectories:
 open('Makefile', 'a') do |f|

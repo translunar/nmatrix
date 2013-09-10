@@ -55,12 +55,6 @@ const char* const STYPE_NAMES[nm::NUM_STYPES] = {
 	"yale"
 };
 
-// void (* const STYPE_MARK[nm::NUM_STYPES])(void*) = {
-// 	nm_dense_storage_mark,
-// 	nm_list_storage_mark,
-// 	nm_yale_storage_mark
-// };
-
 } // end extern "C" block
 
 /*
@@ -130,11 +124,11 @@ DENSE_STORAGE* create_from_list_storage(const LIST_STORAGE* rhs, dtype_t l_dtype
 /*
  * Create/allocate dense storage, copying into it the contents of a Yale matrix.
  */
-template <typename LDType, typename RDType, typename RIType>
+template <typename LDType, typename RDType>
 DENSE_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype) {
 
   // Position in rhs->elements.
-  RIType* rhs_ija = reinterpret_cast<RIType*>(reinterpret_cast<YALE_STORAGE*>(rhs->src)->ija);
+  IType*  rhs_ija = reinterpret_cast<YALE_STORAGE*>(rhs->src)->ija;
   RDType* rhs_a   = reinterpret_cast<RDType*>(reinterpret_cast<YALE_STORAGE*>(rhs->src)->a);
 
   // Allocate and set shape.
@@ -152,7 +146,7 @@ DENSE_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype
 
   // Walk through rows. For each entry we set in dense, increment pos.
   for (size_t i = 0; i < shape[0]; ++i) {
-    RIType ri = i + rhs->offset[0];
+    IType ri = i + rhs->offset[0];
 
     if (rhs_ija[ri] == rhs_ija[ri+1]) { // Check boundaries of row: is row empty? (Yes.)
 
@@ -169,13 +163,13 @@ DENSE_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype
     } else {  // Row contains entries: write those in each column, interspersed with zeros.
 
       // Get the first ija position of the row (as sliced)
-      RIType ija = nm::yale_storage::binary_search_left_boundary<RIType>(rhs, rhs_ija[ri], rhs_ija[ri+1]-1, rhs->offset[1]);
+      IType ija = nm::yale_storage::binary_search_left_boundary(rhs, rhs_ija[ri], rhs_ija[ri+1]-1, rhs->offset[1]);
 
       // What column is it?
-      RIType next_stored_rj = rhs_ija[ija];
+      IType next_stored_rj = rhs_ija[ija];
 
 			for (size_t j = 0; j < shape[1]; ++j) {
-			  RIType rj = j + rhs->offset[1];
+			  IType rj = j + rhs->offset[1];
 
         if (rj == ri) { // at a diagonal in RHS
           lhs_elements[pos] = static_cast<LDType>(rhs_a[ri]);
@@ -317,7 +311,7 @@ LIST_STORAGE* create_from_dense_storage(const DENSE_STORAGE* rhs, dtype_t l_dtyp
 /*
  * Creation of list storage from yale storage.
  */
-template <typename LDType, typename RDType, typename RIType>
+template <typename LDType, typename RDType>
 LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype) {
   // allocate and copy shape
   size_t *shape = ALLOC_N(size_t, rhs->dim);
@@ -334,25 +328,25 @@ LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype)
 
   if (rhs->dim != 2)    rb_raise(nm_eStorageTypeError, "Can only convert matrices of dim 2 from yale.");
 
-  RIType* rhs_ija  = reinterpret_cast<RIType*>(reinterpret_cast<YALE_STORAGE*>(rhs->src)->ija);
+  IType* rhs_ija  = reinterpret_cast<YALE_STORAGE*>(rhs->src)->ija;
 
   NODE *last_row_added = NULL;
   // Walk through rows and columns as if RHS were a dense matrix
-  for (RIType i = 0; i < shape[0]; ++i) {
-    RIType ri = i + rhs->offset[0];
+  for (IType i = 0; i < shape[0]; ++i) {
+    IType ri = i + rhs->offset[0];
 
     NODE *last_added = NULL;
 
     // Get boundaries of beginning and end of row
-    RIType ija      = rhs_ija[ri],
-           ija_next = rhs_ija[ri+1];
+    IType ija      = rhs_ija[ri],
+          ija_next = rhs_ija[ri+1];
 
     // Are we going to need to add a diagonal for this row?
     bool add_diag = false;
     if (rhs_a[ri] != R_ZERO) add_diag = true; // non-zero and located within the bounds of the slice
 
     if (ija < ija_next || add_diag) {
-      ija = nm::yale_storage::binary_search_left_boundary<RIType>(rhs, ija, ija_next-1, rhs->offset[1]);
+      ija = nm::yale_storage::binary_search_left_boundary(rhs, ija, ija_next-1, rhs->offset[1]);
 
       LIST* curr_row = list::create();
 
@@ -360,8 +354,8 @@ LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype)
 
       while (ija < ija_next) {
         // Find first column in slice
-        RIType rj = rhs_ija[ija];
-        RIType j  = rj - rhs->offset[1];
+        IType rj = rhs_ija[ija];
+        IType j  = rj - rhs->offset[1];
 
         // Is there a nonzero diagonal item between the previously added item and the current one?
         if (rj > ri && add_diag) {
@@ -472,13 +466,13 @@ namespace yale_storage { // FIXME: Move to yale.cpp
   /*
    * Creation of yale storage from dense storage.
    */
-  template <typename LDType, typename RDType, typename LIType>
+  template <typename LDType, typename RDType>
   YALE_STORAGE* create_from_dense_storage(const DENSE_STORAGE* rhs, dtype_t l_dtype, void* init) {
 
     if (rhs->dim != 2) rb_raise(nm_eStorageTypeError, "can only convert matrices of dim 2 to yale");
 
-    LIType pos = 0;
-    LIType ndnz = 0;
+    IType pos = 0;
+    IType ndnz = 0;
 
     // We need a zero value. This should nearly always be zero, but sometimes you might want false or nil.
     LDType    L_INIT(0);
@@ -508,27 +502,27 @@ namespace yale_storage { // FIXME: Move to yale.cpp
     size_t request_capacity = shape[0] + ndnz + 1;
 
     // Create with minimum possible capacity -- just enough to hold all of the entries
-    YALE_STORAGE* lhs = nm_yale_storage_create(l_dtype, shape, 2, request_capacity, UINT8);
+    YALE_STORAGE* lhs = nm_yale_storage_create(l_dtype, shape, 2, request_capacity);
 
     if (lhs->capacity < request_capacity)
       rb_raise(nm_eStorageTypeError, "conversion failed; capacity of %ld requested, max allowable is %ld", (unsigned long)request_capacity, (unsigned long)(lhs->capacity));
 
     LDType* lhs_a     = reinterpret_cast<LDType*>(lhs->a);
-    LIType* lhs_ija   = reinterpret_cast<LIType*>(lhs->ija);
+    IType* lhs_ija    = lhs->ija;
 
     // Set the zero position in the yale matrix
     lhs_a[shape[0]]   = L_INIT;
 
     // Start just after the zero position.
-    LIType ija = shape[0]+1;
-    pos        = 0;
+    IType ija = shape[0]+1;
+    pos       = 0;
 
     // Copy contents
-    for (LIType i = 0; i < rhs->shape[0]; ++i) {
+    for (IType i = 0; i < rhs->shape[0]; ++i) {
       // indicate the beginning of a row in the IJA array
       lhs_ija[i] = ija;
 
-      for (LIType j = 0; j < rhs->shape[1];  ++j) {
+      for (IType j = 0; j < rhs->shape[1];  ++j) {
         pos = rhs->stride[0] * (i + rhs->offset[0]) + rhs->stride[1] * (j + rhs->offset[1]); // calc position with offsets
 
         if (i == j) { // copy to diagonal
@@ -551,7 +545,7 @@ namespace yale_storage { // FIXME: Move to yale.cpp
   /*
    * Creation of yale storage from list storage.
    */
-  template <typename LDType, typename RDType, typename LIType>
+  template <typename LDType, typename RDType>
   YALE_STORAGE* create_from_list_storage(const LIST_STORAGE* rhs, nm::dtype_t l_dtype) {
     if (rhs->dim != 2) rb_raise(nm_eStorageTypeError, "can only convert matrices of dim 2 to yale");
 
@@ -570,18 +564,18 @@ namespace yale_storage { // FIXME: Move to yale.cpp
     shape[1] = rhs->shape[1];
 
     size_t request_capacity = shape[0] + ndnz + 1;
-    YALE_STORAGE* lhs = nm_yale_storage_create(l_dtype, shape, 2, request_capacity, UINT8);
+    YALE_STORAGE* lhs = nm_yale_storage_create(l_dtype, shape, 2, request_capacity);
 
     if (lhs->capacity < request_capacity)
       rb_raise(nm_eStorageTypeError, "conversion failed; capacity of %ld requested, max allowable is %ld", (unsigned long)request_capacity, (unsigned long)(lhs->capacity));
 
     // Initialize the A and IJA arrays
-    init<LDType,LIType>(lhs, rhs->default_val);
+    init<LDType>(lhs, rhs->default_val);
 
-    LIType* lhs_ija = reinterpret_cast<LIType*>(lhs->ija);
+    IType*  lhs_ija = lhs->ija;
     LDType* lhs_a   = reinterpret_cast<LDType*>(lhs->a);
 
-    LIType ija = lhs->shape[0]+1;
+    IType ija = lhs->shape[0]+1;
 
     // Copy contents 
     for (NODE* i_curr = rhs->rows->first; i_curr; i_curr = i_curr->next) {
@@ -634,29 +628,25 @@ extern "C" {
 
 
   STORAGE* nm_yale_storage_from_dense(const STORAGE* right, nm::dtype_t l_dtype, void* init) {
-    NAMED_LRI_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::create_from_dense_storage, YALE_STORAGE*, const DENSE_STORAGE* rhs, nm::dtype_t l_dtype, void*);
+    NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::create_from_dense_storage, YALE_STORAGE*, const DENSE_STORAGE* rhs, nm::dtype_t l_dtype, void*);
 
-    nm::itype_t itype = nm_yale_storage_default_itype((const YALE_STORAGE*)right);
-
-    if (!ttable[l_dtype][right->dtype][itype]) {
+    if (!ttable[l_dtype][right->dtype]) {
       rb_raise(nm_eDataTypeError, "casting between these dtypes is undefined");
       return NULL;
     }
 
-    return (STORAGE*)ttable[l_dtype][right->dtype][itype]((const DENSE_STORAGE*)right, l_dtype, init);
+    return (STORAGE*)ttable[l_dtype][right->dtype]((const DENSE_STORAGE*)right, l_dtype, init);
   }
 
   STORAGE* nm_yale_storage_from_list(const STORAGE* right, nm::dtype_t l_dtype, void* dummy) {
-    NAMED_LRI_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::create_from_list_storage, YALE_STORAGE*, const LIST_STORAGE* rhs, nm::dtype_t l_dtype);
+    NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::create_from_list_storage, YALE_STORAGE*, const LIST_STORAGE* rhs, nm::dtype_t l_dtype);
 
-    nm::itype_t itype = nm_yale_storage_default_itype((const YALE_STORAGE*)right);
-
-    if (!ttable[l_dtype][right->dtype][itype]) {
+    if (!ttable[l_dtype][right->dtype]) {
       rb_raise(nm_eDataTypeError, "casting between these dtypes is undefined");
       return NULL;
     }
 
-    return (STORAGE*)ttable[l_dtype][right->dtype][itype]((const LIST_STORAGE*)right, l_dtype);
+    return (STORAGE*)ttable[l_dtype][right->dtype]((const LIST_STORAGE*)right, l_dtype);
   }
 
   STORAGE* nm_dense_storage_from_list(const STORAGE* right, nm::dtype_t l_dtype, void* dummy) {
@@ -671,16 +661,16 @@ extern "C" {
   }
 
   STORAGE* nm_dense_storage_from_yale(const STORAGE* right, nm::dtype_t l_dtype, void* dummy) {
-    NAMED_LRI_DTYPE_TEMPLATE_TABLE(ttable, nm::dense_storage::create_from_yale_storage, DENSE_STORAGE*, const YALE_STORAGE* rhs, nm::dtype_t l_dtype);
+    NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::dense_storage::create_from_yale_storage, DENSE_STORAGE*, const YALE_STORAGE* rhs, nm::dtype_t l_dtype);
 
     const YALE_STORAGE* casted_right = reinterpret_cast<const YALE_STORAGE*>(right);
 
-    if (!ttable[l_dtype][right->dtype][casted_right->itype]) {
+    if (!ttable[l_dtype][right->dtype]) {
       rb_raise(nm_eDataTypeError, "casting between these dtypes is undefined");
       return NULL;
     }
 
-    return reinterpret_cast<STORAGE*>(ttable[l_dtype][right->dtype][casted_right->itype](casted_right, l_dtype));
+    return reinterpret_cast<STORAGE*>(ttable[l_dtype][right->dtype](casted_right, l_dtype));
   }
 
   STORAGE* nm_list_storage_from_dense(const STORAGE* right, nm::dtype_t l_dtype, void* init) {
@@ -695,16 +685,16 @@ extern "C" {
   }
 
   STORAGE* nm_list_storage_from_yale(const STORAGE* right, nm::dtype_t l_dtype, void* dummy) {
-    NAMED_LRI_DTYPE_TEMPLATE_TABLE(ttable, nm::list_storage::create_from_yale_storage, LIST_STORAGE*, const YALE_STORAGE* rhs, nm::dtype_t l_dtype);
+    NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::list_storage::create_from_yale_storage, LIST_STORAGE*, const YALE_STORAGE* rhs, nm::dtype_t l_dtype);
 
     const YALE_STORAGE* casted_right = reinterpret_cast<const YALE_STORAGE*>(right);
 
-    if (!ttable[l_dtype][right->dtype][casted_right->itype]) {
+    if (!ttable[l_dtype][right->dtype]) {
       rb_raise(nm_eDataTypeError, "casting between these dtypes is undefined");
       return NULL;
     }
 
-    return (STORAGE*)ttable[l_dtype][right->dtype][casted_right->itype](casted_right, l_dtype);
+    return (STORAGE*)ttable[l_dtype][right->dtype](casted_right, l_dtype);
   }
 
 } // end of extern "C"

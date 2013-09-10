@@ -28,11 +28,13 @@ require "./lib/nmatrix"
 
 describe NMatrix::IO do
   it "repacks a string" do
-    NMatrix::IO::Matlab.repack("hello", :miUINT8, :dtype => :byte).should == "hello"
+    NMatrix::IO::Matlab.repack("hello", :miUINT8, :byte).should == "hello"
   end
 
   it "creates yale from internal byte-string function" do
-    n = NMatrix.new(:yale, [4,4], :byte, "\0\1\3\3\4", "\0\1\3\0\0\0\0\0\0\0\0", "\2\3\5\4", :byte)
+    ia = NMatrix::IO::Matlab.repack("\0\1\3\3\4", :miUINT8, :itype)
+    ja = NMatrix::IO::Matlab.repack("\0\1\3\0\0\0\0\0\0\0\0", :miUINT8, :itype)
+    n = NMatrix.new(:yale, [4,4], :byte, ia, ja, "\2\3\5\4", :byte)
     n[0,0].should == 2
     n[1,1].should == 3
     n[1,3].should == 5

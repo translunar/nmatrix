@@ -47,7 +47,7 @@
 #include "common.h"
 #include "dense.h"
 #include "list.h"
-#include "yale.h"
+#include "yale/yale.h"
 
 /*
  * Macros
@@ -76,7 +76,7 @@ namespace nm {
 extern "C" {
 
   extern const char* const STYPE_NAMES[nm::NUM_STYPES];
-  extern void (* const STYPE_MARK[nm::NUM_STYPES])(void*);
+  extern void (* const STYPE_MARK[nm::NUM_STYPES])(STORAGE*);
 
   /*
    * Functions

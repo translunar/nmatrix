@@ -102,6 +102,7 @@ describe NMatrix::BLAS do
           ab[1].should be_within(1e-6).of(-5.quo(3))
           c.should be_within(1e-6).of(-3.quo(5))
         else
+          pending "need correct test cases"
           ab[0].should be_within(1e-6).of(10)
           ab[1].should be_within(1e-6).of(5.quo(3))
           c.should be_within(1e-6).of(3.quo(5))

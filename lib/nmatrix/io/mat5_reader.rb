@@ -293,19 +293,16 @@ module NMatrix::IO::Matlab
 
       #
       # call-seq:
-      #     repacked_indices(to_itype) ->
+      #     repacked_indices ->
       #
       # Unpacks and repacks index data into the appropriate format for NMatrix.
       #
       # If data is already in the appropriate format, does not unpack or
       # repack, just returns directly.
       #
-      def repacked_indices(to_itype)
-        return [row_index.data, column_index.data] if to_itype == :uint32 # No need to re-pack -- already correct
-
-        STDERR.puts "indices: Requesting itype #{to_itype.inspect}"
-        repacked_row_indices = ::NMatrix::IO::Matlab.repack( self.row_index.data, :miINT32, :itype => to_itype )
-        repacked_col_indices = ::NMatrix::IO::Matlab.repack( self.column_index.data, :miINT32, :itype => to_itype )
+      def repacked_indices
+        repacked_row_indices = ::NMatrix::IO::Matlab.repack( self.row_index.data, :miINT32, :itype )
+        repacked_col_indices = ::NMatrix::IO::Matlab.repack( self.column_index.data, :miINT32, :itype )
 
         [repacked_row_indices, repacked_col_indices]
       end
@@ -341,14 +338,11 @@ module NMatrix::IO::Matlab
         when :mxSPARSE
           raise(NotImplementedError, "expected .mat row indices to be of type :miINT32") unless row_index.tag.data_type == :miINT32
           raise(NotImplementedError, "expected .mat column indices to be of type :miINT32") unless column_index.tag.data_type == :miINT32
-
-          to_itype = NMatrix.itype_by_shape(dimensions)
-
           #require 'pry'
           #binding.pry
 
           # MATLAB always uses :miINT32 for indices according to the spec
-          ia_ja                     = repacked_indices(to_itype)
+          ia_ja                     = repacked_indices
           data_str, repacked_dtype  = repacked_data(dtype)
           NMatrix.new(:yale, self.dimensions.reverse, repacked_dtype, ia_ja[0], ia_ja[1], data_str, repacked_dtype)
 
@@ -443,9 +437,9 @@ module NMatrix::IO::Matlab
 
     FIRST_TAG_FIELD_POS = 128
 
-    ####################
-    # Instance Methods #
-    ####################
+    ###################################
+    # Instance Methods for Mat5Reader #
+    ###################################
 
     def initialize(stream, options = {})
       super(stream, options)

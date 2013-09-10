@@ -217,14 +217,17 @@ void nm_dense_storage_delete_ref(STORAGE* s) {
  * Mark values in a dense matrix for garbage collection. This may not be necessary -- further testing required.
  */
 void nm_dense_storage_mark(STORAGE* storage_base) {
-  DENSE_STORAGE* storage = (DENSE_STORAGE*) storage_base;
-  
+
+  DENSE_STORAGE* storage = (DENSE_STORAGE*)storage_base;
+
   if (storage && storage->dtype == nm::RUBYOBJ) {
     VALUE* els = reinterpret_cast<VALUE*>(storage->elements);
 
-  	for (size_t index = nm_storage_count_max_elements(storage); index-- > 0;) {
-      rb_gc_mark(els[index]);
-    }
+    rb_gc_mark_locations(els, els + nm_storage_count_max_elements(storage) * sizeof(VALUE));
+
+  	//for (size_t index = nm_storage_count_max_elements(storage); index-- > 0;) {
+    //  rb_gc_mark(els[index]);
+    //}
   }
 }
 
@@ -419,7 +422,7 @@ static void slice_copy(DENSE_STORAGE *dest, const DENSE_STORAGE *src, size_t* le
  *
  * FIXME: Template the first condition.
  */
-void* nm_dense_storage_get(STORAGE* storage, SLICE* slice) {
+void* nm_dense_storage_get(const STORAGE* storage, SLICE* slice) {
   DENSE_STORAGE* s = (DENSE_STORAGE*)storage;
 
   if (slice->single)
@@ -448,7 +451,7 @@ void* nm_dense_storage_get(STORAGE* storage, SLICE* slice) {
  *
  * FIXME: Template the first condition.
  */
-void* nm_dense_storage_ref(STORAGE* storage, SLICE* slice) {
+void* nm_dense_storage_ref(const STORAGE* storage, SLICE* slice) {
   DENSE_STORAGE* s = (DENSE_STORAGE*)storage;
 
   if (slice->single)

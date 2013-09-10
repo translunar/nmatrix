@@ -1,6 +1,7 @@
 # -*- ruby -*-
 
 require 'rubygems'
+require 'rubygems/package_task'
 require 'bundler'
 begin
   Bundler.setup(:default, :development)
@@ -21,8 +22,7 @@ end
 
 gemspec = eval(IO.read("nmatrix.gemspec"))
 
-require "rake/gempackagetask"
-Rake::GemPackageTask.new(gemspec).define
+Gem::PackageTask.new(gemspec).define
 
 desc "install the gem locally"
 task :install => [:package] do
@@ -161,6 +161,34 @@ namespace :clean do
       end
     end
   end
+end
+
+
+task :check_manifest do |task|
+  manifest_files  = File.read("Manifest.txt").split
+
+  git_files       = `git ls-files |grep -v 'spec/'`.split
+  ignore_files    = %w{.gitignore .rspec ext/nmatrix/binary_format.txt ext/nmatrix/ttable_helper.rb scripts/mac-brew-gcc.sh}
+
+  possible_files  = git_files - ignore_files
+
+  missing_files   = possible_files - manifest_files
+  extra_files     = manifest_files - possible_files
+
+  unless missing_files.empty?
+    STDERR.puts "The following files are in the git repo but not the Manifest:"
+    missing_files.each { |f| STDERR.puts " -- #{f}"}
+  end
+
+  unless extra_files.empty?
+    STDERR.puts "The following files are in the Manifest but may not be necessary:"
+    extra_files.each { |f| STDERR.puts " -- #{f}"}
+  end
+
+  if extra_files.empty? && missing_files.empty?
+    STDERR.puts "Manifest looks good!"
+  end
+
 end
 
 # vim: syntax=ruby

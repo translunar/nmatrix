@@ -85,8 +85,8 @@ VALUE nm_dense_map_pair(VALUE self, VALUE right);
 VALUE nm_dense_map(VALUE self);
 VALUE nm_dense_each(VALUE nmatrix);
 VALUE nm_dense_each_with_indices(VALUE nmatrix);
-void*	nm_dense_storage_get(STORAGE* s, SLICE* slice);
-void*	nm_dense_storage_ref(STORAGE* s, SLICE* slice);
+void*	nm_dense_storage_get(const STORAGE* s, SLICE* slice);
+void*	nm_dense_storage_ref(const STORAGE* s, SLICE* slice);
 void  nm_dense_storage_set(VALUE left, SLICE* slice, VALUE right);
 
 ///////////

@@ -41,7 +41,6 @@
  * Extern Types
  */
 extern const char* const DTYPE_NAMES[nm::NUM_DTYPES];
-extern const char* const ITYPE_NAMES[nm::NUM_ITYPES];
 
 namespace nm { namespace io {
   /*
@@ -77,7 +76,6 @@ extern "C" {
   nm::dtype_t nm_dtype_from_rbstring(VALUE str);
   nm::stype_t nm_stype_from_rbsymbol(VALUE sym);
   nm::stype_t nm_stype_from_rbstring(VALUE str);
-  nm::itype_t nm_itype_from_rbsymbol(VALUE sym);
 
   void nm_init_io(void);
 

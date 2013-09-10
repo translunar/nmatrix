@@ -43,23 +43,22 @@
  */
 
 #include <limits> // for std::numeric_limits<T>::max()
+#include <stdexcept>
 
 /*
  * Project Includes
  */
 
-#include "types.h"
-#include "data/data.h"
-#include "common.h"
-#include "nmatrix.h"
+#include "../../types.h"
+#include "../../data/data.h"
+#include "../common.h"
+#include "../../nmatrix.h"
 
 extern "C" {
 
   /*
    * Macros
    */
-
-  #define NM_YALE_MINIMUM(sptr)               (((YALE_STORAGE*)(sptr))->shape[0]*2 + 1) // arbitrarily defined
 
   #ifndef NM_CHECK_ALLOC
    #define NM_CHECK_ALLOC(x) if (!x) rb_raise(rb_eNoMemError, "insufficient memory");
@@ -83,8 +82,8 @@ extern "C" {
   // Lifecycle //
   ///////////////
 
-  YALE_STORAGE* nm_yale_storage_create(nm::dtype_t dtype, size_t* shape, size_t dim, size_t init_capacity, nm::itype_t itype);
-  YALE_STORAGE* nm_yale_storage_create_from_old_yale(nm::dtype_t dtype, size_t* shape, void* ia, void* ja, void* a, nm::dtype_t from_dtype);
+  YALE_STORAGE* nm_yale_storage_create(nm::dtype_t dtype, size_t* shape, size_t dim, size_t init_capacity);
+  YALE_STORAGE* nm_yale_storage_create_from_old_yale(nm::dtype_t dtype, size_t* shape, char* ia, char* ja, char* a, nm::dtype_t from_dtype);
   YALE_STORAGE*	nm_yale_storage_create_merged(const YALE_STORAGE* merge_template, const YALE_STORAGE* other);
   void          nm_yale_storage_delete(STORAGE* s);
   void          nm_yale_storage_delete_ref(STORAGE* s);
@@ -97,8 +96,11 @@ extern "C" {
 
   VALUE nm_yale_each_with_indices(VALUE nmatrix);
   VALUE nm_yale_each_stored_with_indices(VALUE nmatrix);
-  void* nm_yale_storage_get(STORAGE* s, SLICE* slice);
-  void*	nm_yale_storage_ref(STORAGE* s, SLICE* slice);
+  VALUE nm_yale_stored_diagonal_each_with_indices(VALUE nmatrix);
+  VALUE nm_yale_stored_nondiagonal_each_with_indices(VALUE nmatrix);
+  VALUE nm_yale_each_ordered_stored_with_indices(VALUE nmatrix);
+  void* nm_yale_storage_get(const STORAGE* s, SLICE* slice);
+  void*	nm_yale_storage_ref(const STORAGE* s, SLICE* slice);
   void  nm_yale_storage_set(VALUE left, SLICE* slice, VALUE right);
 
   //char  nm_yale_storage_vector_insert(YALE_STORAGE* s, size_t pos, size_t* js, void* vals, size_t n, bool struct_only, nm::dtype_t dtype, nm::itype_t itype);
@@ -125,39 +127,6 @@ extern "C" {
   // Utility //
   /////////////
 
-  /*
-   * Calculates the itype a YALE_STORAGE object would need without actually needing
-   * to see the YALE_STORAGE object. Does this just by looking at the shape.
-   *
-   * Useful for creating Yale Storage by other means than NMatrix.new(:yale, ...),
-   * e.g., from a MATLAB v5 .mat file.
-   */
-  inline nm::itype_t nm_yale_storage_itype_by_shape(const size_t* shape) {
-    uint64_t yale_max_size = shape[0] * (shape[1]+1);
-
-    if (yale_max_size < static_cast<uint64_t>(std::numeric_limits<uint8_t>::max()) - 2) {
-      return nm::UINT8;
-
-    } else if (yale_max_size < static_cast<uint64_t>(std::numeric_limits<uint16_t>::max()) - 2) {
-      return nm::UINT16;
-
-    } else if (yale_max_size < std::numeric_limits<uint32_t>::max() - 2) {
-      return nm::UINT32;
-
-    } else {
-      return nm::UINT64;
-    }
-  }
-
-  /*
-   * Determine the index dtype (which will be used for the ija vector). This is
-   * determined by matrix shape, not IJA/A vector capacity. Note that it's MAX-2
-   * because UINTX_MAX and UINTX_MAX-1 are both reserved for sparse matrix
-   * multiplication.
-   */
-  inline nm::itype_t nm_yale_storage_default_itype(const YALE_STORAGE* s) {
-    return nm_yale_storage_itype_by_shape(s->shape);
-  }
 
 
   /////////////////////////
@@ -176,19 +145,21 @@ extern "C" {
 
 } // end of extern "C" block
 
-namespace nm { namespace yale_storage {
+namespace nm {
+
+namespace yale_storage {
 
   /*
-   * Constants
+   * Typedefs
    */
-  const float GROWTH_CONSTANT = 1.5;
+
+  typedef size_t IType;
 
 
   /*
    * Templated Functions
    */
 
-  template <typename IType>
   int binary_search(YALE_STORAGE* s, IType left, IType right, IType key);
 
   /*
@@ -214,14 +185,14 @@ namespace nm { namespace yale_storage {
     }
   }
 
-  template <typename DType, typename IType>
+  template <typename DType>
   void init(YALE_STORAGE* s, void* init_val);
 
-  template <typename IType>
   size_t  get_size(const YALE_STORAGE* storage);
 
-  template <typename IType>
   IType binary_search_left_boundary(const YALE_STORAGE* s, IType left, IType right, IType bound);
+
+
 }} // end of namespace nm::yale_storage
 
 #endif // YALE_H

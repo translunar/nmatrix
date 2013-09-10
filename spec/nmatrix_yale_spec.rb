@@ -28,11 +28,6 @@ require "./lib/nmatrix"
 
 describe NMatrix do
   context :yale do
-    it "calculates itype" do
-      NMatrix.itype_by_shape([4,4]).should == :uint8
-      NMatrix.itype_by_shape(4).should == :uint8
-      ## FIXME: Check larger shapes for correct itype
-    end
 
     it "compares two empty matrices" do
       n = NMatrix.new(:yale, [4,4], :float64)

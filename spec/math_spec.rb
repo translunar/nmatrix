@@ -53,7 +53,11 @@ describe "math" do
         begin
           a.invert!
         rescue NotImplementedError => e
-          pending e.to_s
+          if dtype.to_s =~ /rational/
+            pending "getri needs rational implementation"
+          else
+            pending e.to_s
+          end
         end
         a.should == b
       end
