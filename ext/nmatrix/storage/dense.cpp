@@ -159,7 +159,9 @@ DENSE_STORAGE* nm_dense_storage_create(nm::dtype_t dtype, size_t* shape, size_t 
 
   } else {
     s->elements = ALLOC_N(char, DTYPE_SIZES[dtype]*count);
-    memset((char*) s->elements, 0, DTYPE_SIZES[dtype]*count);
+    if (dtype == nm::RUBYOBJ) {
+      memset((char*) s->elements, 0, DTYPE_SIZES[dtype]*count);
+    }
     size_t copy_length = elements_length;
 
     if (elements_length > 0) {
