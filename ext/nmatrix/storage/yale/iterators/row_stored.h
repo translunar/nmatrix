@@ -118,8 +118,7 @@ public:
 
   // Ruby VALUE de-reference
   VALUE operator~() const {
-    if (typeid(D) == typeid(RubyObject)) return (**this); // FIXME: return rval instead, faster;
-    else return RubyObject(*(*this)).rval;
+    return nm_rb_dereference<D>(**this);
   }
 
 };

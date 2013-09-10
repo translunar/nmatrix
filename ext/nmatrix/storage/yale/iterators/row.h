@@ -55,8 +55,11 @@ public:
   typedef row_stored_nd_iterator_T<D,const RefType,const YaleRef>   const_row_stored_nd_iterator;*/
 
   template <typename E, typename ERefType, typename EYaleRef> friend class row_iterator_T;
-  friend class row_stored_iterator_T<D,RefType,YaleRef>;
-  friend class row_stored_nd_iterator_T<D,RefType,YaleRef>;//row_stored_iterator;
+  friend class row_stored_iterator_T<D,RefType,YaleRef, row_iterator_T<D,RefType,YaleRef> >;
+  friend class row_stored_nd_iterator_T<D,RefType,YaleRef, row_iterator_T<D,RefType,YaleRef> >;//row_stored_iterator;
+  friend class row_stored_iterator_T<D,RefType,YaleRef, const row_iterator_T<D,RefType,YaleRef> >;
+  friend class row_stored_nd_iterator_T<D,RefType,YaleRef, const row_iterator_T<D,RefType,YaleRef> >;//row_stored_iterator;
+
   //friend row_stored_nd_iterator;
 
   inline size_t ija(size_t pp) const { return y.ija(pp); }
