@@ -67,9 +67,6 @@
 
 #include "iterators/base.h"
 #include "iterators/stored_diagonal.h"
-//#include "iterators/stored_nondiagonal.h"
-//#include "iterators/stored.h"
-//#include "iterators/ordered.h"
 #include "iterators/row_stored_nd.h"
 #include "iterators/row_stored.h"
 #include "iterators/row.h"
