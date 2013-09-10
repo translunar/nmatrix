@@ -34,6 +34,8 @@
 #ifndef YALE_ITERATORS_ROW_STORED_H
 # define YALE_ITERATORS_ROW_STORED_H
 
+#include <stdexcept>
+
 namespace nm { namespace yale_storage {
 
 

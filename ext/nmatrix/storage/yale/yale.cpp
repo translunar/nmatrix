@@ -971,7 +971,7 @@ template <typename DType>
 static char vector_insert(YALE_STORAGE* s, size_t pos, size_t* j, void* val_, size_t n, bool struct_only) {
 
   if (pos < s->shape[0]) {
-    rb_raise(rb_eArgError, "vector insert pos (%d) is before beginning of ja (%d); this should not happen", pos, s->shape[0]);
+    rb_raise(rb_eArgError, "vector insert pos (%u) is before beginning of ja (%u); this should not happen", pos, s->shape[0]);
   }
 
   DType* val = reinterpret_cast<DType*>(val_);
@@ -1874,9 +1874,12 @@ void nm_yale_storage_mark(STORAGE* storage_base) {
   size_t i;
 
   if (storage && storage->dtype == nm::RUBYOBJ) {
-  	for (i = storage->capacity; i-- > 0;) {
-      rb_gc_mark(*((VALUE*)((char*)(storage->a) + i*DTYPE_SIZES[nm::RUBYOBJ])));
-    }
+
+    VALUE* a = (VALUE*)(storage->a);
+    rb_gc_mark_locations(a, a + storage->capacity * sizeof(VALUE));
+  	//for (i = storage->capacity; i-- > 0;) {
+    //  rb_gc_mark(*((VALUE*)((char*)(storage->a) + i*DTYPE_SIZES[nm::RUBYOBJ])));
+    //}
   }
 }
 

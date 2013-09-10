@@ -583,8 +583,8 @@ public:
 
       size_t j = 0; // keep track of j so we can compare different defaults
 
-      typename YaleStorage<D>::const_row_iterator::row_stored_iterator lj = li.begin();
-      typename YaleStorage<E>::const_row_iterator::row_stored_iterator rj = ri.begin();
+      auto lj = li.begin();
+      auto rj = ri.begin();
       while (!lj.end() || !rj.end()) {
         if (lj < rj) {
           if (*lj != rhs.const_default_obj()) return false;

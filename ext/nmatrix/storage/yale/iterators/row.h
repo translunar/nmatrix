@@ -31,6 +31,8 @@
 #ifndef YALE_ITERATORS_ROW_H
 # define YALE_ITERATORS_ROW_H
 
+#include <stdexcept>
+
 namespace nm { namespace yale_storage {
 
 template <typename D,
@@ -47,14 +49,15 @@ protected:
   size_t i_;
   size_t p_first, p_last; // first and last IJA positions in the row
 public:
-  typedef row_stored_iterator_T<D,RefType,YaleRef>                  row_stored_iterator;
+/*  typedef row_stored_iterator_T<D,RefType,YaleRef>                  row_stored_iterator;
   typedef row_stored_nd_iterator_T<D,RefType,YaleRef>               row_stored_nd_iterator;
   typedef row_stored_iterator_T<D,const RefType,const YaleRef>      const_row_stored_iterator;
-  typedef row_stored_nd_iterator_T<D,const RefType,const YaleRef>   const_row_stored_nd_iterator;
+  typedef row_stored_nd_iterator_T<D,const RefType,const YaleRef>   const_row_stored_nd_iterator;*/
 
   template <typename E, typename ERefType, typename EYaleRef> friend class row_iterator_T;
-  friend row_stored_iterator;
-  friend row_stored_nd_iterator;
+  friend class row_stored_iterator_T<D,RefType,YaleRef>;
+  friend class row_stored_nd_iterator_T<D,RefType,YaleRef>;//row_stored_iterator;
+  //friend row_stored_nd_iterator;
 
   inline size_t ija(size_t pp) const { return y.ija(pp); }
   inline RefType& a(size_t p) const  { return y.a_p()[p]; }
@@ -211,8 +214,8 @@ public:
   row_stored_nd_iterator_T<D,RefType,YaleRef> ndend() const {  return row_stored_nd_iterator_T<D,RefType,YaleRef>(*this, p_last+1); }
 
 
-  row_stored_nd_iterator lower_bound(const size_t& j) const {
-    row_stored_nd_iterator(*this, y.real_find_left_boundary_pos(p_first, p_last, y.offset(1)));
+  row_stored_nd_iterator_T<D,RefType,YaleRef> lower_bound(const size_t& j) const {
+    row_stored_nd_iterator_T<D,RefType,YaleRef>(*this, y.real_find_left_boundary_pos(p_first, p_last, y.offset(1)));
   }
 
 };

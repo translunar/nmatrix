@@ -31,12 +31,23 @@
 
 #include <type_traits>
 #include <typeinfo>
+#include <stdexcept>
 
 namespace nm {
 
 template <typename D> class YaleStorage;
 
 namespace yale_storage {
+
+template <typename D>
+VALUE nm_rb_dereference(D const& v) {
+  return nm::RubyObject(v).rval;
+}
+
+template <>
+VALUE nm_rb_dereference<nm::RubyObject>(nm::RubyObject const& v) {
+  return v.rval;
+}
 
 /*
  * Iterator base class (pure virtual).
@@ -105,9 +116,11 @@ public:
 
 
   // Ruby VALUE de-reference
-  virtual VALUE operator~() const {
-    if (typeid(D) == typeid(RubyObject)) return (**this); // FIXME: return rval instead, faster;
-    else return RubyObject(*(*this)).rval;
+  inline VALUE operator~() const {
+    return nm_rb_dereference<D>(**this);
+  //virtual VALUE operator~() const {
+  //  if (typeid(D) == typeid(RubyObject)) return (**this); // FIXME: return rval instead, faster;
+  //  else return RubyObject(*(*this)).rval;
   }
 
   virtual bool operator==(const std::pair<size_t,size_t>& ij) {
@@ -122,6 +135,7 @@ public:
     return i() != rhs.i() || j() != rhs.j();
   }
 };
+
 
 } } // end of namespace nm::yale_storage
 
