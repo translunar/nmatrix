@@ -146,8 +146,7 @@ static DENSE_STORAGE* nm_dense_storage_create_dummy(nm::dtype_t dtype, size_t* s
  * Note that elements and elements_length are for initial value(s) passed in.
  * If they are the correct length, they will be used directly. If not, they
  * will be concatenated over and over again into a new elements array. If
- * elements is NULL, the new elements array will be initialized to all zero
- * bytes.
+ * elements is NULL, the new elements array will not be initialized.
  */
 DENSE_STORAGE* nm_dense_storage_create(nm::dtype_t dtype, size_t* shape, size_t dim, void* elements, size_t elements_length) {
 
