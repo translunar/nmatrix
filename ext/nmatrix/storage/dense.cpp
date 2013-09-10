@@ -159,9 +159,7 @@ DENSE_STORAGE* nm_dense_storage_create(nm::dtype_t dtype, size_t* shape, size_t 
 
   } else {
     s->elements = ALLOC_N(char, DTYPE_SIZES[dtype]*count);
-    if (dtype == nm::RUBYOBJ) {
-      memset((char*) s->elements, 0, DTYPE_SIZES[dtype]*count);
-    }
+
     size_t copy_length = elements_length;
 
     if (elements_length > 0) {
@@ -226,8 +224,7 @@ void nm_dense_storage_mark(STORAGE* storage_base) {
     VALUE* els = reinterpret_cast<VALUE*>(storage->elements);
 
   	for (size_t index = nm_storage_count_max_elements(storage); index-- > 0;) {
-      if (els[index])
-        rb_gc_mark(els[index]);
+      rb_gc_mark(els[index]);
     }
   }
 }
@@ -258,11 +255,7 @@ VALUE nm_dense_map_pair(VALUE self, VALUE right) {
   DENSE_STORAGE* result = nm_dense_storage_create(nm::RUBYOBJ, shape_copy, s->dim, NULL, 0);
   VALUE* result_elem = reinterpret_cast<VALUE*>(result->elements);
 
-  // the ruby matrix creation needs to happen before we start storing
-  // elements, or else matrices of ruby objects can get garbage collected
-  // while the matrix is still being filled
-  NMATRIX* m = nm_create(nm::DENSE_STORE, reinterpret_cast<STORAGE*>(result));
-  VALUE rb_nm = Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, m);
+  nm_register_values(result_elem, count);
 
   for (size_t k = 0; k < count; ++k) {
     nm_dense_storage_coords(result, k, coords);
@@ -275,8 +268,13 @@ VALUE nm_dense_map_pair(VALUE self, VALUE right) {
     result_elem[k] = rb_yield_values(2, sval, tval);
   }
 
+  NMATRIX* m = nm_create(nm::DENSE_STORE, reinterpret_cast<STORAGE*>(result));
+  VALUE rb_nm = Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, m);
+
+  nm_unregister_values(result_elem, count);
 
   return rb_nm;
+
 }
 
 /*
@@ -298,11 +296,7 @@ VALUE nm_dense_map(VALUE self) {
   DENSE_STORAGE* result = nm_dense_storage_create(nm::RUBYOBJ, shape_copy, s->dim, NULL, 0);
   VALUE* result_elem = reinterpret_cast<VALUE*>(result->elements);
 
-  // the ruby matrix creation needs to happen before we start storing
-  // elements, or else matrices of ruby objects can get garbage collected
-  // while the matrix is still being filled
-  NMATRIX* m = nm_create(nm::DENSE_STORE, reinterpret_cast<STORAGE*>(result));
-  VALUE rb_nm = Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, m);
+  nm_register_values(result_elem, count);
 
   for (size_t k = 0; k < count; ++k) {
     nm_dense_storage_coords(result, k, coords);
@@ -310,6 +304,11 @@ VALUE nm_dense_map(VALUE self) {
 
     result_elem[k] = rb_yield(NM_DTYPE(self) == nm::RUBYOBJ ? reinterpret_cast<VALUE*>(s->elements)[s_index] : rubyobj_from_cval((char*)(s->elements) + s_index*DTYPE_SIZES[NM_DTYPE(self)], NM_DTYPE(self)).rval);
   }
+
+  NMATRIX* m = nm_create(nm::DENSE_STORE, reinterpret_cast<STORAGE*>(result));
+  VALUE rb_nm = Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, m);
+
+  nm_unregister_values(result_elem, count);
 
   return rb_nm;
 
