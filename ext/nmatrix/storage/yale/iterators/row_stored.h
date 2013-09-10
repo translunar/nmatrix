@@ -60,13 +60,14 @@ protected:
 
 public:
 
-  row_stored_iterator_T(RowRef& row, size_t pp)
+  // end_ is necessary for the logic when a row is empty other than the diagonal. If we just
+  // relied on pp == last_p+1, it'd look like these empty rows were actually end() iterators.
+  // So we have to actually mark end_ by telling it to ignore that diagonal visitation.
+  row_stored_iterator_T(RowRef& row, size_t pp, bool end_ = false)
   : row_stored_nd_iterator_T<D,RefType,YaleRef,RowRef>(row, pp),
     d_visited(!row.has_diag()), // if the row has no diagonal, just marked it as visited.
-    d(r.is_diag_first())        // do we start at the diagonal?
+    d(r.is_diag_first() && !end_)        // do we start at the diagonal?
   {
-    std::cerr << "row_stored_iterator::init d_visited = " << std::boolalpha << d_visited << ", d = " << d << std::endl;
-    std::cerr << "   end() ? " << end() << "\tp=" << p_ << ", p_last=" << r.p_last << std::endl;
   }
 
   virtual bool end() const {
@@ -76,18 +77,16 @@ public:
   row_stored_iterator_T<D,RefType,YaleRef,RowRef>& operator++() {
     if (end()) throw std::out_of_range("cannot increment row stored iterator past end of stored row");
     if (d) {
-      std::cerr << "row_stored_iterator: operator++: from diag" << std::endl;
       d_visited = true;
       d         = false;
     } else {
       ++p_;
-      std::cerr << "row_stored_iterator: operator++: from p = " << p_;
       // Are we at a diagonal?
-      if (!d_visited && p_ > r.p_diag()) {
-        std::cerr << " to diag";
+      // If we hit the end or reach a point where j > diag_j, and still
+      // haven't visited the diagonal, we should do so before continuing.
+      if (!d_visited && (end() || j() > r.diag_j())) {
         d = true;
       }
-      std::cerr << "\tend() ? " << end() << std::endl;
     }
 
     return *this;

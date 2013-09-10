@@ -69,11 +69,8 @@ public:
         p_first = y.real_find_left_boundary_pos(p_first, p_last, y.offset(1));
         if (!nd_empty()) {
           // also try to find new p_last
-          std::cerr << "searching for new p_last between p_first=" << p_first << ",p_last=" << p_last;
-          std::cerr << "\treal_j = " << y.offset(1)+y.shape(1)-1;
           p_last = y.real_find_left_boundary_pos(p_first, p_last, y.offset(1) + y.shape(1) - 1);
           if (y.ija(p_last) - y.offset(1) >= shape(1)) --p_last; // searched too far.
-          std::cerr << "\tfound: " << p_last << std::endl;
         }
       }
     } else { // invalid row -- this is an end iterator.
@@ -205,12 +202,12 @@ public:
 
   row_stored_iterator_T<D,RefType,YaleRef> begin() {  return row_stored_iterator_T<D,RefType,YaleRef>(*this, p_first);  }
   row_stored_nd_iterator_T<D,RefType,YaleRef> ndbegin() {  return row_stored_nd_iterator_T<D,RefType,YaleRef>(*this, p_first);  }
-  row_stored_iterator_T<D,RefType,YaleRef> end() { return row_stored_iterator_T<D,RefType,YaleRef>(*this, p_last+1); }
+  row_stored_iterator_T<D,RefType,YaleRef> end() { return row_stored_iterator_T<D,RefType,YaleRef>(*this, p_last+1, true); }
   row_stored_nd_iterator_T<D,RefType,YaleRef> ndend() {  return row_stored_nd_iterator_T<D,RefType,YaleRef>(*this, p_last+1); }
 
   row_stored_iterator_T<D,RefType,YaleRef> begin() const {  return row_stored_iterator_T<D,RefType,YaleRef>(*this, p_first);  }
   row_stored_nd_iterator_T<D,RefType,YaleRef> ndbegin() const {  return row_stored_nd_iterator_T<D,RefType,YaleRef>(*this, p_first);  }
-  row_stored_iterator_T<D,RefType,YaleRef> end() const { return row_stored_iterator_T<D,RefType,YaleRef>(*this, p_last+1); }
+  row_stored_iterator_T<D,RefType,YaleRef> end() const { return row_stored_iterator_T<D,RefType,YaleRef>(*this, p_last+1, true); }
   row_stored_nd_iterator_T<D,RefType,YaleRef> ndend() const {  return row_stored_nd_iterator_T<D,RefType,YaleRef>(*this, p_last+1); }
 
 

@@ -55,9 +55,6 @@ describe "Slice operation" do
           is = []
           js = []
 
-          require 'pry'
-          binding.pry if stype == :yale
-
           n[3,1..9].each_stored_with_indices do |v,i,j|
             vs << v
             is << i
@@ -119,20 +116,11 @@ describe "Slice operation" do
         end
       end
 
-      it "should return correct shape and 1st-order supershape" do
+      it "should return correct supershape" do
         x = NMatrix.random([10,12])
         y = x[0...8,5...12]
         y.shape.should == [8,7]
         y.supershape.should == [10,12]
-      end
-
-      it "should return correct 1st- and 2nd-order supershape" do
-        pending "Not yet sure if we ever want to enable reference slices of reference slices"
-        x = NMatrix.random([10,12])
-        y = x[0...8,5...12]
-        z = y[0...3,0...4]
-        z.supershape(2).should == y.supershape(1)
-        z.supershape(1).should == [8,7]
       end
 
       it "should have #is_ref? method" do
@@ -374,8 +362,6 @@ describe "Slice operation" do
           end
 
           it "should cast a rectangular reference-slice from #{stype.upcase} to #{cast_type.upcase}" do
-            require 'pry'
-            binding.pry if stype == :yale && cast_type == :yale
             # Non square
             nm_eql(@m[0..2, 1..2].cast(cast_type), @m[0..2,1..2]).should be_true # FIXME: memory problem.
             nm_eql(@m[1..2, 0..2].cast(cast_type), @m[1..2,0..2]).should be_true # this one is fine

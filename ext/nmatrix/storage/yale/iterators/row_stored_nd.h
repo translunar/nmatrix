@@ -118,9 +118,9 @@ public:
 
   // There is something wrong with this function.
   virtual bool operator!=(const row_stored_nd_iterator_T<D,RefType>& rhs) const {
-    if (r.i() != rhs.r.i())     return true;
-    if (end())                  return !rhs.end();
-    else if (rhs.end())         return true;
+    if (r.i() != rhs.r.i()) return true;
+    if (end())              return !rhs.end();
+    else if (rhs.end())     return true;
     return j() != rhs.j();
   }
 

@@ -1335,51 +1335,6 @@ static VALUE map_stored(VALUE self) {
 
 
 /*
- * eqeq function for slicing and different defaults.
- */
-template <typename LDType, typename RDType>
-static bool eqeq_different_defaults(const YALE_STORAGE* s, const LDType& s_init, const YALE_STORAGE* t, const RDType& t_init) {
-
-  std::array<size_t,2>  s_offsets = get_offsets(const_cast<YALE_STORAGE*>(s)),
-                        t_offsets = get_offsets(const_cast<YALE_STORAGE*>(t));
-
-  for (IType ri = 0; ri < s->shape[0]; ++ri) {
-    RowIterator sit(const_cast<YALE_STORAGE*>(s), IJA(s), ri + s_offsets[0], s->shape[1], s_offsets[1]);
-    RowIterator tit(const_cast<YALE_STORAGE*>(t), IJA(t), ri + t_offsets[0], s->shape[1], t_offsets[1]);
-
-    while (!sit.end() || !tit.end()) {
-
-      // Perform the computation. Use a default value if the matrix doesn't have some value stored.
-      if (tit.end() || (!sit.end() && sit.offset_j() < tit.offset_j())) {
-        if (sit.template cobj<LDType>() != t_init) {
-          std::cerr << int(sit.proper_j()) << "\tsit != t_init" << std::endl;
-          return false;
-        }
-        ++sit;
-
-      } else if (sit.end() || (!tit.end() && sit.offset_j() > tit.offset_j())) {
-        if (s_init != tit.template cobj<RDType>()) {
-          std::cerr << int(tit.proper_j()) << "\ts_init != tit" << std::endl;
-          return false;
-        }
-        ++tit;
-
-      } else {  // same index
-        if (sit.template cobj<LDType>() != tit.template cobj<RDType>()) {
-          std::cerr << int(sit.proper_j()) << ", " << int(tit.proper_j()) << "\tsit != tit" << std::endl;
-          std::cerr << "\t" << int(sit.template cobj<LDType>()) << " != " << int(tit.template cobj<RDType>()) << std::endl;
-          return false;
-        }
-        ++sit;
-        ++tit;
-      }
-    }
-  }
-  return true;
-}
-
-
-/*
  * map_stored which visits the stored entries of two matrices in order.
  */
 static VALUE map_merged_stored(VALUE left, VALUE right, VALUE init) {
