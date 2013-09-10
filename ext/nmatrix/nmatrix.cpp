@@ -610,7 +610,7 @@ static VALUE nm_alloc(VALUE klass) {
 
   //STYPE_MARK_TABLE(mark_table);
 
-  return Data_Wrap_Struct(klass, nm_mark, nm_delete, mat);
+  return Data_Wrap_Struct(klass, NULL, nm_delete, mat);
 }
 
 /*
