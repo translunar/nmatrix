@@ -105,31 +105,6 @@ public:
   // Need to declare all row_stored_iterator_T friends of each other.
   template <typename E, typename ERefType, typename EYaleRef, typename ERowRef> friend class row_stored_iterator_T;
 
-/*  virtual bool operator==(const row_stored_iterator_T<D,RefType,YaleRef,RowRef>& rhs) const {
-    if (r != rhs.r)     return false;
-    if (end())          return rhs.end();
-    else if (rhs.end()) return false;
-    return j() == rhs.j();
-  }
-
-  virtual bool operator!=(const row_stored_iterator_T<D,RefType,YaleRef,RowRef>& rhs) const {
-    if (r.i() != rhs.r.i()) return true;
-    if (end())              return !rhs.end();
-    else if (rhs.end())     return true;
-    return j() != rhs.j();
-  }
-
-  template <typename E, typename ERefType = typename std::conditional<std::is_const<RefType>::value, const E, E>::type>
-  bool operator<(const row_stored_iterator_T<E,ERefType>& rhs) const {
-    if (r < rhs.r)      return true;
-    if (r > rhs.r)      return false;
-
-    // r == rhs.r
-    if (end())        return false;
-    if (rhs.end())    return true;
-    return j() < rhs.j();
-  }*/
-
   // De-reference the iterator
   RefType& operator*()       {
     return d ? r.a(r.p_diag()) : r.a(p_);
