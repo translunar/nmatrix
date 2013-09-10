@@ -220,8 +220,6 @@ void nm_dense_storage_delete_ref(STORAGE* s) {
  * Mark values in a dense matrix for garbage collection. This may not be necessary -- further testing required.
  */
 void nm_dense_storage_mark(STORAGE* storage_base) {
-  if (storage_base && storage_base->src && storage_base != storage_base->src)
-    nm_dense_storage_mark(storage_base->src);
   DENSE_STORAGE* storage = (DENSE_STORAGE*) storage_base;
   
   if (storage && storage->dtype == nm::RUBYOBJ) {
