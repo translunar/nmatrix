@@ -116,6 +116,8 @@ extern "C" {
 
 namespace nm { namespace yale_storage {
 
+template <typename LD, typename RD>
+static VALUE map_merged_stored(VALUE left, VALUE right, VALUE init);
 
 template <typename DType>
 static bool						ndrow_is_empty(const YALE_STORAGE* s, IType ija, const IType ija_next);
@@ -330,72 +332,6 @@ static size_t count_slice_copy_ndnz(const YALE_STORAGE* s, size_t* offset, size_
   return ndnz;
 }
 
-
-
-/*
- * Copy some portion of a matrix into a new matrix.
- */
-template <typename LDType, typename RDType>
-static void slice_copy(YALE_STORAGE* ns, const YALE_STORAGE* s, size_t* offset, size_t* lengths, dtype_t new_dtype) {
-
-  IType* src_ija = s->ija;
-  RDType* src_a  = reinterpret_cast<RDType*>(s->a);
-
-  RDType RZERO(*reinterpret_cast<RDType*>(default_value_ptr(s)));
-
-   // Initialize the A and IJA arrays
-  LDType val(RZERO); // need default value for init. Can't use ns default value because it's not initialized yet
-  init<LDType>(ns, &val);
-  IType*  dst_ija = ns->ija;
-  LDType* dst_a   = reinterpret_cast<LDType*>(ns->a);
-
-  size_t ija  = lengths[0] + 1;
-
-  size_t i, j; // indexes of destination matrix
-  size_t k, l; // indexes of source matrix
-
-  for (i = 0; i < lengths[0]; ++i) {
-    k = i + offset[0];
-    for (j = 0; j < lengths[1]; ++j) {
-      bool found = false;
-      l = j + offset[1];
-
-      // Get value from source matrix
-      if (k == l) { // source diagonal
-        if (src_a[k] != RZERO) { // don't bother copying non-zero values from the diagonal
-          val = src_a[k];
-          found = true;
-        }
-      } else {
-        // copy one non-diagonal element
-        for (size_t c = src_ija[k]; !found && c < src_ija[k+1]; ++c) {
-          if (src_ija[c] == l) {
-            val   = src_a[c];
-            found = true;
-          }
-        }
-      }
-
-      if (found) {
-        // Set value in destination matrix
-        if (i == j) {
-          dst_a[i] = val;
-        } else {
-          // copy non-diagonal element
-          dst_ija[ija] = j;
-          dst_a[ija]   = val;
-          ++ija;
-          for (size_t c = i + 1; c <= lengths[0]; ++c) {
-            dst_ija[c] = ija;
-          }
-        }
-      }
-    }
-  }
-
-  dst_ija[lengths[0]] = ija; // indicate the end of the last row
-  ns->ndnz            = ija - lengths[0] - 1; // update ndnz count
-}
 
 
 /*
@@ -1375,8 +1311,12 @@ static VALUE map_stored(VALUE self) {
 /*
  * map_stored which visits the stored entries of two matrices in order.
  */
+template <typename LD, typename RD>
 static VALUE map_merged_stored(VALUE left, VALUE right, VALUE init) {
-
+  nm::YaleStorage<LD> l(NM_STORAGE_YALE(left));
+  nm::YaleStorage<RD> r(NM_STORAGE_YALE(right));
+  return l.map_merged_stored(CLASS_OF(left), r, init);
+/*
   YALE_STORAGE *s = NM_STORAGE_YALE(left),
                *t = NM_STORAGE_YALE(right);
 
@@ -1443,7 +1383,7 @@ static VALUE map_merged_stored(VALUE left, VALUE right, VALUE init) {
   }
 
   NMATRIX* m = nm_create(nm::YALE_STORE, reinterpret_cast<STORAGE*>(r));
-  return Data_Wrap_Struct(CLASS_OF(left), nm_mark, nm_delete, m);
+  return Data_Wrap_Struct(CLASS_OF(left), nm_mark, nm_delete, m); */
 }
 
 
@@ -2292,7 +2232,9 @@ VALUE nm_yale_default_value(VALUE self) {
  * A map operation on two Yale matrices which only iterates across the stored indices.
  */
 VALUE nm_yale_map_merged_stored(VALUE left, VALUE right, VALUE init) {
-  return nm::yale_storage::map_merged_stored(left, right, init);
+  NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::map_merged_stored, VALUE, VALUE, VALUE, VALUE)
+  return ttable[NM_DTYPE(left)][NM_DTYPE(right)](left, right, init);
+  //return nm::yale_storage::map_merged_stored(left, right, init);
 }
 
 

@@ -52,6 +52,7 @@ describe NMatrix do
       n[0,1] = 1
       m = NMatrix.new(:yale, [2,2], :float64)
       m[0,1] = -1
+      x = n+m
       (n+m).should == NMatrix.new(:yale, [2,2], :float64)
     end
 

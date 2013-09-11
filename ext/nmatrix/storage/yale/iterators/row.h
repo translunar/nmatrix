@@ -109,6 +109,7 @@ public:
   //friend row_stored_nd_iterator;
 
   inline size_t ija(size_t pp) const { return y.ija(pp); }
+  inline size_t& ija(size_t pp)      { return y.ija(pp); }
   inline RefType& a(size_t p) const  { return y.a_p()[p]; }
   inline RefType& a(size_t p)        { return y.a_p()[p]; }
 
@@ -286,6 +287,7 @@ public:
   }
 
   //template <typename = typename std::enable_if<!std::is_const<RefType>::value>::type>
+  template <typename T = typename std::conditional<std::is_const<RefType>::value,void,row_stored_nd_iterator>::type>
   row_stored_nd_iterator insert(row_stored_iterator position, size_t jj, const D& val) {
     if (position.diag()) {
       *position = val;  // simply replace existing, regardless of whether it's 0 or not
@@ -310,12 +312,15 @@ public:
   //template <typename = typename std::enable_if<!std::is_const<RefType>::value>::type>
   row_stored_nd_iterator insert(row_stored_nd_iterator position, size_t jj, const D& val) {
     size_t sz = y.size();
-    if (position.j() == jj) {
+    if (!position.end() && position.j() == jj) {
+      std::cerr << "insert: *position = val at " << i_ << "," << jj << "\tp=" << position.p() << std::endl;
       *position = val;      // replace existing
     } else {
       if (sz + 1 > y.capacity()) {
+        std::cerr << "insert: update_resize_move " << i_ << "," << jj << "\tp=" << position.p() << std::endl;
         y.update_resize_move(position, real_i(), 1);
       } else {
+        std::cerr << "insert: move_right at " << i_ << "," << jj << "\tp=" << position.p() << std::endl;
         y.move_right(position, 1);
         y.update_real_row_sizes_from(real_i(), 1);
       }
@@ -324,13 +329,14 @@ public:
       adjust_length(1);
     }
 
-    return ++position;
+    return position++;
   }
 
   //template <typename = typename std::enable_if<!std::is_const<RefType>::value>::type>
   row_stored_nd_iterator insert(size_t j, const D& val) {
     return insert(ndfind(j), j, val);
   }
+
 
 };
 

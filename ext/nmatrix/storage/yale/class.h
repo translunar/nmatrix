@@ -69,6 +69,13 @@ public:
   inline const D& default_obj() const { return a(s->shape[0]); }
   inline const D& const_default_obj() const { return a(s->shape[0]); }
 
+  /*
+   * Return a Ruby VALUE representation of default_obj()
+   */
+  VALUE const_default_value() const {
+    return nm::yale_storage::nm_rb_dereference(a(s->shape[0]));
+  }
+
   inline size_t* ija_p()       const       { return reinterpret_cast<size_t*>(s->ija); }
   inline const size_t& ija(size_t p) const { return ija_p()[p]; }
   inline size_t& ija(size_t p)             { return ija_p()[p]; }
@@ -192,6 +199,7 @@ public:
   typedef yale_storage::iterator_T<D,const D,const YaleStorage<D> >    const_iterator;
 
 
+  friend class yale_storage::row_iterator_T<D,D,YaleStorage<D> >;
   typedef yale_storage::row_iterator_T<D,D,YaleStorage<D> >             row_iterator;
   typedef yale_storage::row_iterator_T<D,const D,const YaleStorage<D> > const_row_iterator;
 
@@ -216,8 +224,8 @@ public:
   const_stored_diagonal_iterator csdend() const        {
     return const_stored_diagonal_iterator(*this, std::min( shape(0) + offset(0), shape(1) + offset(1) ) - std::max(offset(0), offset(1)) );
   }
-  row_iterator ribegin(size_t row = 0) const          {      return row_iterator(*this, row);             }
-  row_iterator riend() const                          {      return row_iterator(*this, shape(0));        }
+  row_iterator ribegin(size_t row = 0)                {      return row_iterator(*this, row);             }
+  row_iterator riend()                                {      return row_iterator(*this, shape(0));        }
   const_row_iterator cribegin(size_t row = 0) const   {      return const_row_iterator(*this, row);       }
   const_row_iterator criend() const                   {      return const_row_iterator(*this, shape(0));  }
 
@@ -516,27 +524,44 @@ public:
 
 
   /*
+   * Make a very basic allocation. No structure or copy or anything. It'll be shaped like this
+   * matrix.
+   *
+   * TODO: Combine this with ::create()'s ::alloc(). These are redundant.
+   */
+   template <typename E>
+   YALE_STORAGE* alloc_basic_copy(size_t new_capacity, size_t new_ndnz) const {
+     nm::dtype_t new_dtype = nm::ctype_to_dtype_enum<E>::value_type;
+     YALE_STORAGE* lhs     = ALLOC( YALE_STORAGE );
+     lhs->dim              = s->dim;
+     lhs->shape            = ALLOC_N( size_t, lhs->dim );
+
+     lhs->shape[0]         = shape(0);
+     lhs->shape[1]         = shape(1);
+
+     lhs->offset           = ALLOC_N( size_t, lhs->dim );
+
+     lhs->offset[0]        = 0;
+     lhs->offset[1]        = 0;
+
+     lhs->capacity         = new_capacity;
+     lhs->dtype            = new_dtype;
+     lhs->ndnz             = new_ndnz;
+     lhs->ija              = ALLOC_N( size_t, new_capacity );
+     lhs->a                = ALLOC_N( E,      new_capacity );
+     lhs->src              = lhs;
+     lhs->count            = 1;
+
+     return lhs;
+   }
+
+
+  /*
    * Make a full matrix structure copy (entries remain uninitialized). Remember to xfree()!
    */
   template <typename E>
   YALE_STORAGE* alloc_struct_copy(size_t new_capacity) const {
-    nm::dtype_t new_dtype = nm::ctype_to_dtype_enum<E>::value_type;
-    YALE_STORAGE* lhs     = ALLOC( YALE_STORAGE );
-    lhs->dim              = s->dim;
-    lhs->shape            = ALLOC_N( size_t, lhs->dim );
-    lhs->offset           = ALLOC_N( size_t, lhs->dim );
-    memcpy(lhs->shape, shape_p(), lhs->dim * sizeof(size_t));
-    lhs->offset[0]        = 0;
-    lhs->offset[1]        = 0;
-
-    lhs->capacity         = new_capacity;
-    lhs->dtype            = new_dtype;
-    lhs->ndnz             = count_copy_ndnz();
-    lhs->ija              = ALLOC_N( size_t, new_capacity );
-    lhs->a                = ALLOC_N( E,      new_capacity );
-    lhs->src              = lhs;
-    lhs->count            = 1;
-
+    YALE_STORAGE* lhs     = alloc_basic_copy<E>(new_capacity, count_copy_ndnz());
     // Now copy the IJA contents
     if (slice) {
       rb_raise(rb_eNotImpError, "cannot copy struct due to different offsets");
@@ -596,15 +621,15 @@ public:
 
     YALE_STORAGE* lhs;
     if (slice) {
-      size_t* shape     = ALLOC_N(size_t, 2);
-      shape[0]          = this->shape(0);
-      shape[1]          = this->shape(1);
+      size_t* xshape    = ALLOC_N(size_t, 2);
+      xshape[0]         = shape(0);
+      xshape[1]         = shape(1);
       size_t ndnz       = count_copy_ndnz();
-      size_t reserve    = this->shape(0) + ndnz + 1;
+      size_t reserve    = shape(0) + ndnz + 1;
 
       std::cerr << "reserve = " << reserve << std::endl;
 
-      lhs               = YaleStorage<E>::create(shape, 2, reserve);
+      lhs               = YaleStorage<E>::create(xshape, 2, reserve);
 
       if (lhs->capacity < reserve)
         rb_raise(nm_eStorageTypeError, "conversion failed; capacity of %ld requested, max allowable is %ld", reserve, lhs->capacity);
@@ -662,11 +687,88 @@ public:
     return true;
   }
 
+  /*
+   * Necessary for element-wise operations. The return dtype will be nm::RUBYOBJ.
+   */
+  template <typename E>
+  VALUE map_merged_stored(VALUE klass, nm::YaleStorage<E>& t, VALUE r_init) const {
+    VALUE s_init    = const_default_value(),
+          t_init    = t.const_default_value();
+
+    // Make a reasonable approximation of the resulting capacity
+    size_t s_ndnz   = count_copy_ndnz(),
+           t_ndnz   = t.count_copy_ndnz();
+    size_t reserve  = shape(0) + std::max(s_ndnz, t_ndnz) + 1;
+
+    size_t* xshape  = ALLOC_N(size_t, 2);
+    xshape[0]       = shape(0);
+    xshape[1]       = shape(1);
+
+    YALE_STORAGE* rs= YaleStorage<nm::RubyObject>::create(xshape, 2, reserve);
+
+    if (r_init == Qnil)
+      r_init       = rb_yield_values(2, s_init, t_init);
+
+    nm::RubyObject r_init_obj(r_init);
+
+    // Prepare the matrix structure
+    YaleStorage<nm::RubyObject>::init(*rs, &r_init_obj);
+    NMATRIX* m     = nm_create(nm::YALE_STORE, reinterpret_cast<STORAGE*>(rs));
+    VALUE result   = Data_Wrap_Struct(klass, nm_mark, nm_delete, m);
+
+    // No obvious, efficient way to pass a length function as the fourth argument here:
+    RETURN_SIZED_ENUMERATOR(result, 0, 0, 0);
+
+    // Create an object for us to iterate over.
+    YaleStorage<nm::RubyObject> r(rs);
+
+    // Walk down our new matrix, inserting values as we go.
+    for (size_t i = 0; i < xshape[0]; ++i) {
+      YaleStorage<nm::RubyObject>::row_iterator   ri = r.ribegin(i);
+      typename YaleStorage<D>::const_row_iterator si = cribegin(i);
+      typename YaleStorage<E>::const_row_iterator ti = t.cribegin(i);
+
+      auto sj = si.begin();
+      auto tj = ti.begin();
+      auto rj = ri.ndbegin();
+
+      while (sj != si.end() || tj != ti.end()) {
+        VALUE  v;
+        size_t j;
+
+        if (sj < tj) {
+          v = rb_yield_values(2, ~sj, t_init);
+          j = sj.j();
+          ++sj;
+        } else if (tj < sj) {
+          v = rb_yield_values(2, s_init, ~tj);
+          j = tj.j();
+          ++tj;
+        } else {
+          v = rb_yield_values(2, ~sj, ~tj);
+          j = sj.j();
+          ++sj;
+          ++tj;
+        }
+
+        // FIXME: This can be sped up by inserting all at the same time
+        // since it's a new matrix. But that function isn't quite ready
+        // yet.
+        if (j == i) r.a(i) = v;
+        else        rj     = ri.insert(rj, j, v);
+        //RB_P(rb_funcall(result, rb_intern("yale_ija"), 0));
+      }
+    }
+
+    return result;
+  }
+
 protected:
   /*
    * Update row sizes starting with row i
    */
   void update_real_row_sizes_from(size_t real_i, int change) {
+    ++real_i;
     for (; real_i <= real_shape(0); ++real_i) {
       ija(real_i) += change;
     }
