@@ -577,7 +577,7 @@ public:
   /*
    * Copy this slice (or the full matrix if it isn't a slice) into a new matrix which is already allocated, ns.
    */
-  template <typename E>
+  template <typename E, bool Yield=false>
   void copy(YALE_STORAGE& ns) const {
     nm::dtype_t new_dtype = nm::ctype_to_dtype_enum<E>::value_type;
     // get the default value for initialization (we'll re-use val for other copies after this)
@@ -595,10 +595,12 @@ public:
       for (auto jt = it.begin(); !jt.end(); ++jt) {
         if (it.i() == jt.j()) {
           std::cerr << "copy(ns): writing to diag pos " << it.i() << std::endl;
-          ns_a[it.i()]  = static_cast<E>(*jt);
+          if (Yield)  ns_a[it.i()] = rb_yield(~jt);
+          else        ns_a[it.i()] = static_cast<E>(*jt);
         } else if (*jt != const_default_obj()) {
           std::cerr << "copy(ns): writing to pos " << sz << std::endl;
-          ns_a[sz]      = static_cast<E>(*jt);
+          if (Yield)  ns_a[sz]     = rb_yield(~jt);
+          else        ns_a[sz]     = static_cast<E>(*jt);
           ns.ija[sz]    = jt.j();
           ++sz;
         }
@@ -614,8 +616,10 @@ public:
 
   /*
    * Allocate a casted copy of this matrix/reference. Remember to xfree() the result!
+   *
+   * If Yield is true, E must be nm::RubyObject, and it will call an rb_yield upon the stored value.
    */
-  template <typename E>
+  template <typename E, bool Yield = false>
   YALE_STORAGE* alloc_copy() const {
     nm::dtype_t new_dtype = nm::ctype_to_dtype_enum<E>::value_type;
 
@@ -632,17 +636,18 @@ public:
       lhs               = YaleStorage<E>::create(xshape, 2, reserve);
 
       if (lhs->capacity < reserve)
-        rb_raise(nm_eStorageTypeError, "conversion failed; capacity of %ld requested, max allowable is %ld", reserve, lhs->capacity);
+        rb_raise(nm_eStorageTypeError, "conversion failed; capacity of %u requested, max allowable is %u", reserve, lhs->capacity);
 
       // Fill lhs with what's in our current matrix.
-      copy<E>(*lhs);
+      copy<E, Yield>(*lhs);
     } else {
       // Copy the structure and setup the IJA structure.
       lhs               = alloc_struct_copy<E>(s->capacity);
 
       E* la = reinterpret_cast<E*>(lhs->a);
       for (size_t m = 0; m < size(); ++m) {
-        la[m] = static_cast<E>(a(m));
+        if (Yield) la[m] = rb_yield(nm::yale_storage::nm_rb_dereference(a(m)));
+        else       la[m] = static_cast<E>(a(m));
       }
 
     }
@@ -650,6 +655,7 @@ public:
     return lhs;
 
   }
+
 
   template <typename E>
   bool operator==(const YaleStorage<E>& rhs) const {

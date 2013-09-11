@@ -424,7 +424,7 @@ protected
       self.__dense_map_pair__(rhs) { |l,r| l.send(op,r) }.cast(stype, NMatrix.upcast(dtype, rhs.dtype))
     end
     define_method("__yale_elementwise_#{ewop}__") do |rhs|
-      self.__yale_map_merged_stored__(rhs, nil) { |l,r| l.send(op,r) } #.cast(stype, NMatrix.upcast(dtype, rhs.dtype))
+      self.__yale_map_merged_stored__(rhs, nil) { |l,r| l.send(op,r) }.cast(stype, NMatrix.upcast(dtype, rhs.dtype))
     end
     define_method("__list_scalar_#{ewop}__") do |rhs|
       self.__list_map_merged_stored__(rhs, nil) { |l,r| l.send(op,r) }.cast(stype, NMatrix.upcast(dtype, NMatrix.min_dtype(rhs)))

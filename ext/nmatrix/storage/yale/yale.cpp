@@ -285,7 +285,7 @@ void init(YALE_STORAGE* s, void* init_val) {
 template <typename LDType, typename RDType>
 static YALE_STORAGE* slice_copy(YALE_STORAGE* s) {
   YaleStorage<RDType> y(s);
-  YALE_STORAGE* ns = y.template alloc_copy<LDType>();
+  YALE_STORAGE* ns = y.template alloc_copy<LDType, false>();
   return ns;
 }
 
@@ -1265,45 +1265,13 @@ static VALUE nm_yale_enumerator_length(VALUE nmatrix) {
 /*
  * Map the stored values of a matrix in storage order.
  */
+template <typename D>
 static VALUE map_stored(VALUE self) {
-
   YALE_STORAGE* s = NM_STORAGE_YALE(self);
-
-  size_t* shape   = ALLOC_N(size_t, 2);
-  shape[0]        = s->shape[0];
-  shape[1]        = s->shape[1];
-
-  std::array<size_t,2>  s_offsets = get_offsets(s);
-
-  RETURN_SIZED_ENUMERATOR(self, 0, 0, nm_yale_enumerator_length);
-  VALUE init      = rb_yield(default_value(s));
-
-  // Try to find a reasonable capacity to request when creating the matrix
-  size_t ndnz     = src_ndnz(s);
-  if (s->src != s) // need to guess capacity
-    ndnz = yale_count_slice_copy_ndnz(s, s->offset, s->shape);
-  size_t request_capacity = s->shape[0] + ndnz + 1;
-
-  YALE_STORAGE* r = nm_yale_storage_create(nm::RUBYOBJ, shape, 2, request_capacity);
-  if (r->capacity < request_capacity)
-    rb_raise(nm_eStorageTypeError, "conversion failed; capacity of %ld requested, max allowable is %ld", request_capacity, r->capacity);
-  nm_yale_storage_init(r, &init);
-
-  for (IType ri = 0; ri < shape[0]; ++ri) {
-    RowIterator sit(s, ri + s_offsets[0], shape[1], s_offsets[1]);
-    RowIterator rit(r, ri, shape[1]);
-
-    while (!sit.end()) {
-      VALUE rv = rb_yield(sit.obj());
-      VALUE rj = sit.offset_j();
-      rit.insert(rj, rv);
-      ++sit;
-    }
-    // Update the row end information.
-    rit.update_row_end();
-  }
-
-  NMATRIX* m = nm_create(nm::YALE_STORE, reinterpret_cast<STORAGE*>(r));
+  YaleStorage<D> y(s);
+  RETURN_SIZED_ENUMERATOR(self, 0, 0, nm_yale_stored_enumerator_length);
+  YALE_STORAGE* r = y.template alloc_copy<nm::RubyObject, true>();
+  NMATRIX* m      = nm_create(nm::YALE_STORE, reinterpret_cast<STORAGE*>(r));
   return Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, m);
 }
 
@@ -1316,74 +1284,6 @@ static VALUE map_merged_stored(VALUE left, VALUE right, VALUE init) {
   nm::YaleStorage<LD> l(NM_STORAGE_YALE(left));
   nm::YaleStorage<RD> r(NM_STORAGE_YALE(right));
   return l.map_merged_stored(CLASS_OF(left), r, init);
-/*
-  YALE_STORAGE *s = NM_STORAGE_YALE(left),
-               *t = NM_STORAGE_YALE(right);
-
-  size_t* shape   = ALLOC_N(size_t, 2);
-  shape[0]        = s->shape[0];
-  shape[1]        = s->shape[1];
-
-  std::array<size_t,2>  s_offsets = get_offsets(s),
-                        t_offsets = get_offsets(t);
-
-  VALUE s_init    = default_value(s),
-        t_init    = default_value(t);
-
-  RETURN_SIZED_ENUMERATOR(left, 0, 0, 0); // fourth argument should be the enumeration length function.
-
-  if (init == Qnil)
-    init          = rb_yield_values(2, s_init, t_init);
-
-  // Make a reasonable approximation of the resulting capacity
-  size_t s_ndnz = src_ndnz(s), t_ndnz = src_ndnz(t);
-  if (s->src != s) s_ndnz = yale_count_slice_copy_ndnz(s, s->offset, s->shape);
-  if (t->src != t) t_ndnz = yale_count_slice_copy_ndnz(t, t->offset, t->shape);
-  size_t request_capacity = shape[0] + NM_MAX(s_ndnz, t_ndnz) + 1;
-
-  YALE_STORAGE* r = nm_yale_storage_create(nm::RUBYOBJ, shape, 2, request_capacity);
-  if (r->capacity < request_capacity)
-    rb_raise(nm_eStorageTypeError, "conversion failed; capacity of %ld requested, max allowable is %ld", request_capacity, r->capacity);
-
-  nm_yale_storage_init(r, &init);
-
-  for (IType ri = 0; ri < shape[0]; ++ri) {
-    RowIterator sit(s, IJA(s), ri + s_offsets[0], shape[1], s_offsets[1]);
-    RowIterator tit(t, IJA(t), ri + t_offsets[0], shape[1], t_offsets[1]);
-
-    RowIterator rit(r, reinterpret_cast<IType*>(r->ija), ri, shape[1]);
-    while (!sit.end() || !tit.end()) {
-      VALUE rv;
-      IType rj;
-
-      // Perform the computation. Use a default value if the matrix doesn't have some value stored.
-      if (tit.end() || (!sit.end() && sit.offset_j() < tit.offset_j())) {
-        rv = rb_yield_values(2, sit.obj(), t_init);
-        rj = sit.offset_j();
-        ++sit;
-
-      } else if (sit.end() || (!tit.end() && sit.offset_j() > tit.offset_j())) {
-        rv = rb_yield_values(2, s_init, tit.obj());
-        rj = tit.offset_j();
-        ++tit;
-
-      } else {  // same index
-        rv = rb_yield_values(2, sit.obj(), tit.obj());
-        rj = sit.offset_j();
-        ++sit;
-        ++tit;
-      }
-
-      rit.insert(rj, rv); // handles increment (and testing for default, etc)
-
-    }
-
-    // Update the row end information.
-    rit.update_row_end();
-  }
-
-  NMATRIX* m = nm_create(nm::YALE_STORE, reinterpret_cast<STORAGE*>(r));
-  return Data_Wrap_Struct(CLASS_OF(left), nm_mark, nm_delete, m); */
 }
 
 
@@ -2245,7 +2145,8 @@ VALUE nm_yale_map_merged_stored(VALUE left, VALUE right, VALUE init) {
  * A map operation on two Yale matrices which only iterates across the stored indices.
  */
 VALUE nm_yale_map_stored(VALUE self) {
-  return nm::yale_storage::map_stored(self);
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::yale_storage::map_stored, VALUE, VALUE)
+  return ttable[NM_DTYPE(self)](self);
 }
 
 } // end of extern "C" block
