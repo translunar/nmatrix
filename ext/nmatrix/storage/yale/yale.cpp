@@ -285,8 +285,21 @@ void init(YALE_STORAGE* s, void* init_val) {
 template <typename LDType, typename RDType>
 static YALE_STORAGE* slice_copy(YALE_STORAGE* s) {
   YaleStorage<RDType> y(s);
-  YALE_STORAGE* ns = y.template alloc_copy<LDType, false>();
-  return ns;
+  return y.template alloc_copy<LDType, false>();
+}
+
+
+/*
+ * Template version of copy transposed. This could also, in theory, allow a map -- but transpose.h
+ * would need to be updated.
+ *
+ * TODO: Update for slicing? Update for different dtype in and out? We can cast rather easily without
+ * too much modification.
+ */
+template <typename D>
+YALE_STORAGE* copy_transposed(YALE_STORAGE* rhs) {
+  YaleStorage<D> y(rhs);
+  return y.template alloc_copy_transposed<D, false>();
 }
 
 
@@ -1634,29 +1647,14 @@ static bool default_value_is_numeric_zero(const YALE_STORAGE* s) {
 }
 
 
+
 /*
  * Transposing copy constructor.
  */
 STORAGE* nm_yale_storage_copy_transposed(const STORAGE* rhs_base) {
   YALE_STORAGE* rhs = (YALE_STORAGE*)rhs_base;
-
-  if (rhs->src != rhs)
-    rb_raise(rb_eNotImpError, "must be called on a real matrix and not a slice");
-
-  size_t* shape = ALLOC_N(size_t, 2);
-  shape[0] = rhs->shape[1];
-  shape[1] = rhs->shape[0];
-
-  size_t size   = nm_yale_storage_get_size(rhs);
-
-  YALE_STORAGE* lhs = nm_yale_storage_create(rhs->dtype, shape, 2, size);
-  nm_yale_storage_init(lhs, default_value_ptr(rhs));
-
-  NAMED_DTYPE_TEMPLATE_TABLE(transp, nm::math::transpose_yale, void, const size_t n, const size_t m, const IType* ia_, const IType* ja_, const void* a_, const bool diaga, IType* ib_, IType* jb_, void* b_, const bool move);
-
-  transp[lhs->dtype](rhs->shape[0], rhs->shape[1], rhs->ija, rhs->ija, rhs->a, true, lhs->ija, lhs->ija, lhs->a, true);
-
-  return (STORAGE*)lhs;
+  NAMED_DTYPE_TEMPLATE_TABLE(transp, nm::yale_storage::copy_transposed, YALE_STORAGE*, YALE_STORAGE*)
+  return (STORAGE*)(transp[rhs->dtype](rhs));
 }
 
 /*
@@ -1693,9 +1691,11 @@ STORAGE* nm_yale_storage_matrix_multiply(const STORAGE_PAIR& casted_storage, siz
  */
 
 YALE_STORAGE* nm_yale_storage_create(nm::dtype_t dtype, size_t* shape, size_t dim, size_t init_capacity) {
-  DTYPE_OBJECT_STATIC_TABLE(nm::YaleStorage, create, YALE_STORAGE*, size_t* shape, size_t dim, size_t init_capacity)
-  return ttable[dtype](shape, dim, init_capacity);
-  //return nm::YaleStorage<nm::dtype_enum_T<dtype>::type>::create(shape, dim, init_capacity);
+  if (dim != 2) {
+    rb_raise(nm_eStorageTypeError, "yale supports only 2-dimensional matrices");
+  }
+  DTYPE_OBJECT_STATIC_TABLE(nm::YaleStorage, create, YALE_STORAGE*, size_t* shape, size_t init_capacity)
+  return ttable[dtype](shape, init_capacity);
 }
 
 /*
@@ -1750,15 +1750,14 @@ void nm_yale_storage_mark(STORAGE* storage_base) {
 
     VALUE* a = (VALUE*)(storage->a);
     rb_gc_mark_locations(a, a + storage->capacity * sizeof(VALUE));
-  	//for (i = storage->capacity; i-- > 0;) {
-    //  rb_gc_mark(*((VALUE*)((char*)(storage->a) + i*DTYPE_SIZES[nm::RUBYOBJ])));
-    //}
   }
 }
 
 
 /*
  * Allocates and initializes the basic struct (but not the IJA or A vectors).
+ *
+ * This function is ONLY used when creating from old yale.
  */
 static YALE_STORAGE* alloc(nm::dtype_t dtype, size_t* shape, size_t dim) {
   YALE_STORAGE* s;

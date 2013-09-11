@@ -47,6 +47,7 @@ ext/nmatrix/storage/yale/iterators/row.h
 ext/nmatrix/storage/yale/iterators/row_stored.h
 ext/nmatrix/storage/yale/iterators/row_stored_nd.h
 ext/nmatrix/storage/yale/iterators/stored_diagonal.h
+ext/nmatrix/storage/yale/math/transpose.h
 ext/nmatrix/util/io.cpp
 ext/nmatrix/util/io.h
 ext/nmatrix/util/sl_list.cpp

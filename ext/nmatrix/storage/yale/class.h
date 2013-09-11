@@ -29,6 +29,8 @@
 #ifndef YALE_CLASS_H
 # define YALE_CLASS_H
 
+#include "math/transpose.h"
+
 namespace nm {
 
 
@@ -463,12 +465,13 @@ public:
   }
 
 
-  static YALE_STORAGE* create(size_t* shape, size_t dim, size_t reserve) {
-    if (dim != 2) {
-      rb_raise(rb_eNotImpError, "yale can only support 2D matrices");
-    }
+  /*
+   * Create basic storage of same dtype as YaleStorage<D>. Allocates it,
+   * reserves necessary space, but doesn't fill structure at all.
+   */
+  static YALE_STORAGE* create(size_t* shape, size_t reserve) {
 
-    YALE_STORAGE* s = alloc( shape, dim );
+    YALE_STORAGE* s = alloc( shape, 2 );
     size_t max_sz   = YaleStorage<D>::max_size(shape),
            min_sz   = YaleStorage<D>::min_size(shape);
 
@@ -633,7 +636,7 @@ public:
 
       std::cerr << "reserve = " << reserve << std::endl;
 
-      lhs               = YaleStorage<E>::create(xshape, 2, reserve);
+      lhs               = YaleStorage<E>::create(xshape, reserve);
 
       if (lhs->capacity < reserve)
         rb_raise(nm_eStorageTypeError, "conversion failed; capacity of %u requested, max allowable is %u", reserve, lhs->capacity);
@@ -653,7 +656,39 @@ public:
     }
 
     return lhs;
+  }
 
+  /*
+   * Allocate a transposed copy of the matrix
+   */
+  /*
+   * Allocate a casted copy of this matrix/reference. Remember to xfree() the result!
+   *
+   * If Yield is true, E must be nm::RubyObject, and it will call an rb_yield upon the stored value.
+   */
+  template <typename E, bool Yield = false>
+  YALE_STORAGE* alloc_copy_transposed() const {
+
+    if (slice) {
+      rb_raise(rb_eNotImpError, "please make a copy before transposing");
+    } else {
+      // Copy the structure and setup the IJA structure.
+      size_t* xshape    = ALLOC_N(size_t, 2);
+      xshape[0]         = shape(1);
+      xshape[1]         = shape(0);
+
+      // Take a stab at the number of non-diagonal stored entries we'll have.
+      size_t reserve    = size() - xshape[1] + xshape[0];
+      YALE_STORAGE* lhs = YaleStorage<E>::create(xshape, reserve);
+      E r_init          = static_cast<E>(const_default_obj());
+      YaleStorage<E>::init(*lhs, &r_init);
+
+      nm::yale_storage::transpose_yale<D,E,true,true>(shape(0), shape(1), ija_p(), ija_p(), a_p(), const_default_obj(),
+                                                      lhs->ija, lhs->ija, reinterpret_cast<E*>(lhs->a), r_init);
+      return lhs;
+    }
+
+    return NULL;
   }
 
 
@@ -710,7 +745,7 @@ public:
     xshape[0]       = shape(0);
     xshape[1]       = shape(1);
 
-    YALE_STORAGE* rs= YaleStorage<nm::RubyObject>::create(xshape, 2, reserve);
+    YALE_STORAGE* rs= YaleStorage<nm::RubyObject>::create(xshape, reserve);
 
     if (r_init == Qnil)
       r_init       = rb_yield_values(2, s_init, t_init);
