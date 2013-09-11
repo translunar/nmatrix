@@ -72,6 +72,10 @@ public:
   {
   }
 
+  virtual bool diag() const {
+    return d;
+  }
+
   virtual bool end() const {
     return !d && p_ > r.p_last;
   }

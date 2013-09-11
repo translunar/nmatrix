@@ -48,25 +48,13 @@ protected:
   YaleRef& y;
   size_t i_;
   size_t p_first, p_last; // first and last IJA positions in the row
-public:
-/*  typedef row_stored_iterator_T<D,RefType,YaleRef>                  row_stored_iterator;
-  typedef row_stored_nd_iterator_T<D,RefType,YaleRef>               row_stored_nd_iterator;
-  typedef row_stored_iterator_T<D,const RefType,const YaleRef>      const_row_stored_iterator;
-  typedef row_stored_nd_iterator_T<D,const RefType,const YaleRef>   const_row_stored_nd_iterator;*/
 
-  template <typename E, typename ERefType, typename EYaleRef> friend class row_iterator_T;
-  friend class row_stored_iterator_T<D,RefType,YaleRef, row_iterator_T<D,RefType,YaleRef> >;
-  friend class row_stored_nd_iterator_T<D,RefType,YaleRef, row_iterator_T<D,RefType,YaleRef> >;//row_stored_iterator;
-  friend class row_stored_iterator_T<D,RefType,YaleRef, const row_iterator_T<D,RefType,YaleRef> >;
-  friend class row_stored_nd_iterator_T<D,RefType,YaleRef, const row_iterator_T<D,RefType,YaleRef> >;//row_stored_iterator;
 
-  //friend row_stored_nd_iterator;
-
-  inline size_t ija(size_t pp) const { return y.ija(pp); }
-  inline RefType& a(size_t p) const  { return y.a_p()[p]; }
-  inline RefType& a(size_t p)        { return y.a_p()[p]; }
-
-  void update_positions() {
+  /*
+   * Update the row positions -- use to ensure a row stays valid after an insert operation. Also
+   * used to initialize a row iterator at a different row index.
+   */
+  void update() {
     if (i_ < y.shape(0)) {
       p_first = p_real_first();
       p_last  = p_real_last();
@@ -85,10 +73,51 @@ public:
     }
   }
 
+  /*
+   * Indicate to the row iterator that p_first and p_last have moved by some amount. Only
+   * defined for row_iterator, not const_row_iterator. This is a lightweight form of update().
+   */
+  //template <typename = typename std::enable_if<!std::is_const<RefType>::value>::type>
+  void shift(int amount) {
+    p_first += amount;
+    p_last  += amount;
+  }
+
+
+  /*
+   * Enlarge the row by amount by moving p_last over. This is a lightweight form of update().
+   */
+  //template <typename = typename std::enable_if<!std::is_const<RefType>::value>::type>
+  void adjust_length(int amount) {
+    p_last  += amount;
+  }
+
+public:
+/*  typedef row_stored_iterator_T<D,RefType,YaleRef>                  row_stored_iterator;
+  typedef row_stored_nd_iterator_T<D,RefType,YaleRef>               row_stored_nd_iterator;
+  typedef row_stored_iterator_T<D,const RefType,const YaleRef>      const_row_stored_iterator;
+  typedef row_stored_nd_iterator_T<D,const RefType,const YaleRef>   const_row_stored_nd_iterator;*/
+  typedef row_stored_iterator_T<D,RefType,YaleRef, row_iterator_T<D,RefType,YaleRef> > row_stored_iterator;
+  typedef row_stored_nd_iterator_T<D,RefType,YaleRef, row_iterator_T<D,RefType,YaleRef> > row_stored_nd_iterator;
+  template <typename E, typename ERefType, typename EYaleRef> friend class row_iterator_T;
+  friend class row_stored_iterator_T<D,RefType,YaleRef, row_iterator_T<D,RefType,YaleRef> >;
+  friend class row_stored_nd_iterator_T<D,RefType,YaleRef, row_iterator_T<D,RefType,YaleRef> >;//row_stored_iterator;
+  friend class row_stored_iterator_T<D,RefType,YaleRef, const row_iterator_T<D,RefType,YaleRef> >;
+  friend class row_stored_nd_iterator_T<D,RefType,YaleRef, const row_iterator_T<D,RefType,YaleRef> >;//row_stored_iterator;
+  friend class nm::YaleStorage<D>;
+
+  //friend row_stored_nd_iterator;
+
+  inline size_t ija(size_t pp) const { return y.ija(pp); }
+  inline RefType& a(size_t p) const  { return y.a_p()[p]; }
+  inline RefType& a(size_t p)        { return y.a_p()[p]; }
+
+
+
   row_iterator_T(YaleRef& obj, size_t ii = 0)
   : y(obj), i_(ii)
   {
-    update_positions();
+    update();
   }
 
   template <typename E, typename ERefType = typename std::conditional<std::is_const<RefType>::value, const E, E>::type>
@@ -114,7 +143,7 @@ public:
   row_iterator_T<D,RefType,YaleRef>& operator++() {
     if (is_end()) throw std::out_of_range("attempted to iterate past end of slice (vertically)");
     ++i_;
-    update_positions();
+    update();
     return *this;
   }
 
@@ -205,6 +234,11 @@ public:
 
   inline VALUE rb_i() const { return LONG2NUM(i()); }
 
+  row_stored_nd_iterator_T<D,RefType,YaleRef> ndfind(size_t j) {
+    if (j == 0) return ndbegin();
+    size_t p = y.real_find_left_boundary_pos(p_first, p_last, j + y.offset(1));
+    return row_stored_nd_iterator_T<D,RefType,YaleRef>(*this, p);
+  }
 
   row_stored_iterator_T<D,RefType,YaleRef> begin() {  return row_stored_iterator_T<D,RefType,YaleRef>(*this, p_first);  }
   row_stored_nd_iterator_T<D,RefType,YaleRef> ndbegin() {  return row_stored_nd_iterator_T<D,RefType,YaleRef>(*this, p_first);  }
@@ -219,6 +253,83 @@ public:
 
   row_stored_nd_iterator_T<D,RefType,YaleRef> lower_bound(const size_t& j) const {
     row_stored_nd_iterator_T<D,RefType,YaleRef>(*this, y.real_find_left_boundary_pos(p_first, p_last, y.offset(1)));
+  }
+
+  /*
+   * Remove an entry from an already found non-diagonal position. Adjust this row appropriately so we can continue to
+   * use it.
+   */
+  //template <typename = typename std::enable_if<!std::is_const<RefType>::value>::type>
+  row_stored_nd_iterator erase(row_stored_nd_iterator position) {
+    size_t sz = y.size();
+    if (y.capacity() / nm::yale_storage::GROWTH_CONSTANT <= sz - 1) {
+      y.update_resize_move(position, i() + offset(0), -1);
+    } else {
+      y.move_left(position, 1);
+    }
+    adjust_length(-1);
+    return row_stored_nd_iterator(*this, position.p()-1);
+  }
+
+  /*
+   * Remove an entry from the matrix at the already-located position. If diagonal, just sets to default; otherwise,
+   * actually removes the entry.
+   */
+  //template <typename = typename std::enable_if<!std::is_const<RefType>::value>::type>
+  row_stored_nd_iterator erase(const row_stored_iterator& jt) {
+    if (jt.diag()) {
+      *jt = y.const_default_obj(); // diagonal is the easy case -- no movement.
+      return row_stored_nd_iterator(*this, jt.p());
+    } else {
+      return erase(row_stored_nd_iterator(*this, jt.p()));
+    }
+  }
+
+  //template <typename = typename std::enable_if<!std::is_const<RefType>::value>::type>
+  row_stored_nd_iterator insert(row_stored_iterator position, size_t jj, const D& val) {
+    if (position.diag()) {
+      *position = val;  // simply replace existing, regardless of whether it's 0 or not
+      ++position;
+      return row_stored_nd_iterator(*this, position.p());
+    } else {
+      row_stored_nd_iterator jt(*this, position.p());
+      return insert(jt, jj, val);
+    }
+  }
+
+  /*
+   * Insert an element in column j, using position's p() as the location to insert the new column. i and j will be the
+   * coordinates. This also does a replace if column j is already present.
+   *
+   * Returns true if a new entry was added and false if an entry was replaced.
+   *
+   * Pre-conditions:
+   *   - position.p() must be between ija(real_i) and ija(real_i+1), inclusive, where real_i = i + offset(0)
+   *   - real_i and real_j must not be equal
+   */
+  //template <typename = typename std::enable_if<!std::is_const<RefType>::value>::type>
+  row_stored_nd_iterator insert(row_stored_nd_iterator position, size_t jj, const D& val) {
+    size_t sz = y.size();
+    if (position.j() == jj) {
+      *position = val;      // replace existing
+    } else {
+      if (sz + 1 > y.capacity()) {
+        y.update_resize_move(position, real_i(), 1);
+      } else {
+        y.move_right(position, 1);
+        y.update_real_row_sizes_from(real_i(), 1);
+      }
+      ija(position.p()) = jj + y.offset(1);    // set column ID
+      a(position.p())   = val;
+      adjust_length(1);
+    }
+
+    return ++position;
+  }
+
+  //template <typename = typename std::enable_if<!std::is_const<RefType>::value>::type>
+  row_stored_nd_iterator insert(size_t j, const D& val) {
+    return insert(ndfind(j), j, val);
   }
 
 };

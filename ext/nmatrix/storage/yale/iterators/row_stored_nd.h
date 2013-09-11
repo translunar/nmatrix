@@ -36,6 +36,12 @@
 namespace nm { namespace yale_storage {
 
 /*
+ * Constants
+ */
+const float GROWTH_CONSTANT = 1.5;
+
+
+/*
  * Forward declarations
  */
 template <typename D, typename RefType, typename YaleRef> class row_iterator_T;

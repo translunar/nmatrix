@@ -765,6 +765,7 @@ void set(VALUE left, SLICE* slice, VALUE right) {
     }
 
   } else {
+    YaleStorage<DType> s(storage);
 
     DType* v;
     size_t v_size = 1;
@@ -1285,6 +1286,46 @@ public:
 };
 
 
+// Helper function used only for the RETURN_SIZED_ENUMERATOR macro. Returns the length of
+// the matrix's storage.
+static VALUE nm_yale_stored_enumerator_length(VALUE nmatrix) {
+  YALE_STORAGE* s   = NM_STORAGE_YALE(nmatrix);
+  YALE_STORAGE* src = s->src == s ? s : reinterpret_cast<YALE_STORAGE*>(s->src);
+  size_t ia_size    = src->shape[0];
+  // FIXME: This needs to be corrected for slicing.
+  size_t len = std::min( s->shape[0] + s->offset[0], s->shape[1] + s->offset[1] ) + nm_yale_storage_get_size(src) -  ia_size;
+  return INT2FIX(len);
+}
+
+
+// Helper function used only for the RETURN_SIZED_ENUMERATOR macro. Returns the length of
+// the matrix's storage.
+static VALUE nm_yale_stored_nondiagonal_enumerator_length(VALUE nmatrix) {
+  YALE_STORAGE* s = NM_STORAGE_YALE(nmatrix);
+  if (s->src != s) s = reinterpret_cast<YALE_STORAGE*>(s->src);  // need to get the original storage shape
+
+  size_t ia_size = s->shape[0];
+  size_t len     = nm_yale_storage_get_size(NM_STORAGE_YALE(nmatrix)) - ia_size;
+
+  return INT2FIX(len);
+}
+
+// Helper function for diagonal length.
+static VALUE nm_yale_stored_diagonal_enumerator_length(VALUE nmatrix) {
+  YALE_STORAGE* s = NM_STORAGE_YALE(nmatrix);
+  size_t len = std::min( s->shape[0] + s->offset[0], s->shape[1] + s->offset[1] );
+  return INT2FIX(len);
+}
+
+
+// Helper function for full enumerator length.
+static VALUE nm_yale_enumerator_length(VALUE nmatrix) {
+  YALE_STORAGE* s = NM_STORAGE_YALE(nmatrix);
+  size_t len = s->shape[0] * s->shape[1];
+  return INT2FIX(len);
+}
+
+
 /*
  * Map the stored values of a matrix in storage order.
  */
@@ -1349,7 +1390,7 @@ static VALUE map_merged_stored(VALUE left, VALUE right, VALUE init) {
   VALUE s_init    = default_value(s),
         t_init    = default_value(t);
 
-  RETURN_SIZED_ENUMERATOR(left, 0, 0, 0);
+  RETURN_SIZED_ENUMERATOR(left, 0, 0, 0); // fourth argument should be the enumeration length function.
 
   if (init == Qnil)
     init          = rb_yield_values(2, s_init, t_init);
@@ -1440,7 +1481,7 @@ static VALUE stored_diagonal_each_with_indices(VALUE nm) {
   YaleStorage<DType> y(s);
 
   // If we don't have a block, return an enumerator.
-  RETURN_SIZED_ENUMERATOR(nm, 0, 0, 0); // FIXME: need diagonal length
+  RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_yale_stored_diagonal_length); // FIXME: need diagonal length
 
   for (typename YaleStorage<DType>::const_stored_diagonal_iterator d = y.csdbegin(); d != y.csdend(); ++d) {
     rb_yield_values(3, ~d, d.rb_i(), d.rb_j());
@@ -1509,14 +1550,6 @@ static VALUE each_with_indices(VALUE nm) {
 
 
 } // end of namespace nm::yale_storage
-
-
-// Helper function used only for the RETURN_SIZED_ENUMERATOR macro. Returns the length of
-// the matrix's storage.
-static VALUE nm_yale_stored_enumerator_length(VALUE nmatrix) {
-  long len = nm_yale_storage_get_size(NM_STORAGE_YALE(nmatrix));
-  return LONG2NUM(len);
-}
 
 
 } // end of namespace nm.

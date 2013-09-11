@@ -32,13 +32,6 @@
 namespace nm {
 
 
-namespace yale_storage {
-  /*
-   * Constants
-   */
-  const float GROWTH_CONSTANT = 1.5;
-
-}
 /*
  * This class is basically an intermediary for YALE_STORAGE objects which enables us to treat it like a C++ object. It
  * keeps the src pointer as its s, along with other relevant slice information.
@@ -259,10 +252,78 @@ public:
    * Returns a stored_nondiagonal_iterator pointing to the location where some coords i,j should go, or returns their
    * location if present.
    */
-  std::pair<row_iterator, row_stored_nd_iterator> lower_bound(const std::pair<size_t,size_t>& ij)  {
+  /*std::pair<row_iterator, row_stored_nd_iterator> lower_bound(const std::pair<size_t,size_t>& ij)  {
     row_iterator it            = ribegin(ij.first);
     row_stored_nd_iterator jt  = it.lower_bound(ij.second);
     return std::make_pair(it,jt);
+  } */
+
+
+  /*
+   * Most Ruby-centric insert function. Accepts coordinate information in slice,
+   * and value information of various types in +right+. This function must evaluate
+   * +right+ and determine what other functions to call in order to properly handle
+   * it.
+   */
+  std::pair<row_iterator,row_stored_nd_iterator> insert(SLICE* slice, VALUE right) {
+    if (TYPE(right) == T_DATA) {
+      if (RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete || RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete_ref) {
+        rb_raise(rb_eNotImpError, "this type of slicing not yet supported");
+      } else {
+        rb_raise(rb_eTypeError, "unrecognized type for slice assignment");
+      }
+      row_iterator it = riend();
+      return std::make_pair(it, it.ndend());
+    } else {
+
+      D* v;
+      size_t v_size = 1;
+
+      // Map the data onto D* v
+      if (TYPE(right) == T_ARRAY) {
+        v_size = RARRAY_LEN(right);
+        v      = ALLOC_N(D, v_size);
+        for (size_t m = 0; m < v_size; ++m) {
+          rubyval_to_cval(rb_ary_entry(right, m), s->dtype, &(v[m]));
+        }
+      } else {
+        v = reinterpret_cast<D*>(rubyobj_to_cval(right, dtype()));
+      }
+
+      row_iterator i = ribegin(slice->coords[0]);
+
+      row_stored_iterator j =
+      (slice->single || (slice->lengths[0] == 1 && slice->lengths[1] == 1)) ?
+        i.insert(slice->coords[1], *v) : i.insert(slice->coords, slice->lengths, v, v_size);
+
+      xfree(v);
+      return std::make_pair(i,j);
+    }
+  }
+
+
+  /*
+   * Remove an entry from an already found non-diagonal position.
+   */
+  row_iterator erase(row_iterator it, const row_stored_nd_iterator& position) {
+    it.erase(position);
+    return it;
+  }
+
+
+  /*
+   * Remove an entry from the matrix at the already-located position. If diagonal, just sets to default; otherwise,
+   * actually removes the entry.
+   */
+  row_iterator erase(row_iterator it, const row_stored_iterator& jt) {
+    it.erase((const row_stored_nd_iterator&)jt);
+    return it;
+  }
+
+
+  row_iterator insert(row_iterator it, row_stored_iterator position, size_t j, const D& val) {
+    it.insert(position, j, val);
+    return it;
   }
 
 
@@ -276,20 +337,9 @@ public:
    *   - position.p() must be between ija(real_i) and ija(real_i+1), inclusive, where real_i = i + offset(0)
    *   - real_i and real_j must not be equal
    */
-  bool insert(row_iterator& it, row_stored_nd_iterator position, size_t j, const D& val) {
-    size_t sz = size();
-    if (position.j() == j) {
-      *position = val;      // replace existing
-    } else if (sz + 1 > capacity()) {
-      update_resize_move(position, it.i() + offset(0), 1);
-    } else {
-      move_right(position, 1);
-      update_real_row_sizes_from(it.i() + offset(0), 1);
-    }
-    ija(position.p()) = j + offset(1);    // set column ID
-    a(position.p())   = val;
-
-    return true;
+  row_iterator insert(row_iterator it, row_stored_nd_iterator position, size_t j, const D& val) {
+    it.insert(position, j, val);
+    return it;
   }
 
 
@@ -309,7 +359,8 @@ public:
     return position;
   }
 
-  iterator insert(iterator position, size_t j, const D& val) {
+
+/*  iterator insert(iterator position, size_t j, const D& val) {
     if (position.real_i() == position.real_j()) {
       s->a(position.real_i()) = val;
       return position;
@@ -318,7 +369,7 @@ public:
       row_stored_nd_iterator position = it.ndbegin(j);
       return insert(it, position, j, val);
     }
-  }
+  }*/
 
 
 
