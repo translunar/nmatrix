@@ -121,6 +121,7 @@ public:
     update();
   }
 
+
   template <typename E, typename ERefType = typename std::conditional<std::is_const<RefType>::value, const E, E>::type>
   bool operator!=(const row_iterator_T<E,ERefType>& rhs) const {
     return i_ != rhs.i_;
@@ -335,6 +336,99 @@ public:
   //template <typename = typename std::enable_if<!std::is_const<RefType>::value>::type>
   row_stored_nd_iterator insert(size_t j, const D& val) {
     return insert(ndfind(j), j, val);
+  }
+
+
+  /*
+   * Determines a plan for inserting a single row. Returns an integer giving the amount of the row change.
+   */
+  int single_row_insertion_plan(row_stored_nd_iterator position, size_t jj, size_t length, D const* v, size_t v_size, const size_t& v_offset) {
+    int nd_change;
+    size_t m = v_offset;
+    for (size_t jc = jj; jc < jj + length; ++jc, ++m) {
+      if (m >= v_size) m %= v_size; // reset v position.
+
+      if (jc + y.offset(1) != real_i()) { // diagonal    -- no nd_change here
+        if (position.j() != jc) { // not present -- do we need to add it?
+          if (v[m] != y.const_default_obj()) nd_change++;
+        } else {  // position.j() == jc
+          if (v[m] == y.const_default_obj()) nd_change--;
+          ++position; // move iterator forward.
+        }
+      }
+
+    }
+    return nd_change;
+  }
+
+  /*
+   * Determine a plan for inserting a single row -- finds the position first. Returns the position and
+   * the change amount. Don't use this one if you can help it because it requires a binary search of
+   * the row.
+   */
+  std::pair<int,size_t> single_row_insertion_plan(size_t jj, size_t length, D const* v, size_t v_size, const size_t& v_offset) {
+    std::pair<int,size_t> result;
+    row_stored_nd_iterator pos = ndfind(jj);
+    result.first = single_row_insertion_plan(pos, jj, length, v, v_size, v_offset);
+    result.second = pos.p();
+    return result;
+  }
+
+  /*
+   * Insert elements into a single row. Returns an iterator to the end of the insertion range.
+   */
+  row_stored_nd_iterator insert(row_stored_nd_iterator position, size_t jj, size_t length, D const* v, size_t v_size, size_t& v_offset) {
+    int nd_change = single_row_insertion_plan(position, jj, length, v, v_size);
+
+    // First record the position, just in case our iterator becomes invalid.
+    size_t pp = position.p();
+
+    // Resize the array as necessary, or move entries after the insertion point to make room.
+    size_t sz = y.size();
+    if (sz + nd_change > y.capacity()) y.update_resize_move(position, real_i(), nd_change);
+    if (nd_change < 0)                 y.move_left(position, -nd_change);
+    else if (nd_change > 0)            y.move_right(position, nd_change);
+ // else no change!
+
+    for (size_t jc = jj; jc < jj + length; ++jc, ++v_offset, ++pp) {
+      if (v_offset >= v_size) v_offset %= v_size; // reset v position.
+
+      if (jc + y.offset(1) == real_i()) {
+        y.a(real_i())   = v[v_offset];  // modify diagonal
+      } else {
+        y.ija(pp)       = jc;           // modify non-diagonal
+        y.a(pp)         = v[v_offset];
+      }
+    }
+
+    // Update this row.
+    adjust_length(nd_change);
+
+    return row_stored_nd_iterator(*this, pp);
+  }
+
+  /*
+   * For when we don't need to worry about the offset, does the same thing as the insert above.
+   */
+  row_stored_nd_iterator insert(const row_stored_nd_iterator& position, size_t jj, size_t length, D const* v, size_t v_size) {
+    size_t v_offset = 0;
+    return insert(position, jj, length, v, v_size, v_offset);
+  }
+
+
+  /*
+   * Merges elements offered for insertion with existing elements in the row.
+   */
+  row_stored_nd_iterator insert(size_t jj, size_t length, D const* v, size_t v_size, size_t& v_offset) {
+    return insert(ndfind(jj), jj, length, v, v_size, v_offset);
+  }
+
+  /*
+   * Merges elements offered for insertion with existing elements in the row.
+   */
+  row_stored_nd_iterator insert(size_t jj, size_t length, D const* v, size_t v_size) {
+    size_t v_offset = 0;
+    return insert(ndfind(jj), jj, length, v, v_size, v_offset);
   }
 
 

@@ -209,6 +209,7 @@ public:
   typedef yale_storage::row_stored_nd_iterator_T<D,D,YaleStorage<D>,row_iterator> row_stored_nd_iterator;
   typedef yale_storage::row_stored_iterator_T<D,const D,const YaleStorage<D>,const_row_iterator>       const_row_stored_iterator;
   typedef yale_storage::row_stored_nd_iterator_T<D,const D,const YaleStorage<D>,const_row_iterator>    const_row_stored_nd_iterator;
+  typedef std::pair<row_iterator,row_stored_nd_iterator>                                               row_nd_iter_pair;
 
   // Variety of iterator begin and end functions.
   iterator begin(size_t row = 0)                      {      return iterator(*this, row);                 }
@@ -268,6 +269,73 @@ public:
     return std::make_pair(it,jt);
   } */
 
+  class multi_row_insertion_plan {
+  public:
+    std::vector<size_t>   pos;
+    std::vector<int>      change;
+    int                   total_change; // the net change occurring
+    size_t                num_changes;  // the total number of rows that need to change size
+    multi_row_insertion_plan(size_t rows_in_slice) : pos(rows_in_slice), change(rows_in_slice), total_change(0) { }
+
+    void add(size_t i, const std::pair<int,size_t>& change_and_pos) {
+      pos[i]        = change_and_pos.second;
+      change[i]     = change_and_pos.first;
+      total_change += change[i];
+      if (change[i] != 0) num_changes++;
+    }
+  };
+
+
+  /*
+   * Find all the information we need in order to modify multiple rows.
+   */
+  multi_row_insertion_plan insertion_plan(row_iterator i, size_t j, size_t* lengths, D* const v, size_t v_size) const {
+    multi_row_insertion_plan p(lengths[0] - i.i());
+
+    // v_offset is our offset in the array v. If the user wants to change two elements in each of three rows,
+    // but passes an array of size 3, we need to know that the second insertion plan must start at position
+    // 2 instead of 0; and then the third must start at 1.
+    size_t v_offset = 0;
+    for (size_t m = 0; m < lengths[0]; ++m, ++i) {
+      p.add(m, i.single_row_insertion_plan(j, lengths[1], v, v_size, v_offset));
+      v_offset      += lengths[1];
+      if (v_offset >= v_size) v_offset %= v_size; // start over in offsets if necessary
+    }
+
+    return p;
+  }
+
+
+
+  /*
+   * Insert entries in multiple rows. Slice-setting.
+   */
+  void insert(row_iterator i, size_t j, size_t* lengths, D* const v, size_t v_size) {
+    // Expensive pre-processing step: find all the information we need in order to do insertions.
+    multi_row_insertion_plan p = multi_row_insertion_plan(i, j, lengths, v, v_size);
+
+    // There are more efficient ways to do this, but this is the low hanging fruit version of the algorithm.
+    // Here's the full problem: http://stackoverflow.com/questions/18753375/algorithm-for-merging-short-lists-into-a-long-vector
+    // --JW
+
+    bool resize = false;
+    size_t sz = size();
+    if (p.num_changes > 1) resize = true; // TODO: There are surely better ways to do this, but I've gone for the low-hanging fruit
+    else if (sz + p.total_change > capacity() || sz + p.total_change < capacity() / nm::yale_storage::GROWTH_CONSTANT) resize = true;
+
+    if (resize) {
+      update_resize_move_insert(i.i() + offset(0), j + offset(1), lengths, v, v_size, p);
+    } else {
+
+      // Make the necessary modifications, which hopefully can be done in-place.
+      size_t v_offset = 0;
+      int accum       = 0;
+      for (size_t ii = 0; ii < lengths[0]; ++ii, ++i) {
+        i.insert(row_stored_nd_iterator(&i, p.pos[ii]), j, lengths[1], v, v_size, v_offset);
+      }
+    }
+  }
+
 
   /*
    * Most Ruby-centric insert function. Accepts coordinate information in slice,
@@ -275,7 +343,7 @@ public:
    * +right+ and determine what other functions to call in order to properly handle
    * it.
    */
-  std::pair<row_iterator,row_stored_nd_iterator> insert(SLICE* slice, VALUE right) {
+  row_nd_iter_pair insert(SLICE* slice, VALUE right) {
     if (TYPE(right) == T_DATA) {
       if (RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete || RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete_ref) {
         rb_raise(rb_eNotImpError, "this type of slicing not yet supported");
@@ -288,6 +356,7 @@ public:
 
       D* v;
       size_t v_size = 1;
+      bool v_alloc = false;
 
       // Map the data onto D* v
       if (TYPE(right) == T_ARRAY) {
@@ -296,18 +365,28 @@ public:
         for (size_t m = 0; m < v_size; ++m) {
           rubyval_to_cval(rb_ary_entry(right, m), s->dtype, &(v[m]));
         }
+        v_alloc = true;
       } else {
         v = reinterpret_cast<D*>(rubyobj_to_cval(right, dtype()));
       }
 
       row_iterator i = ribegin(slice->coords[0]);
 
-      row_stored_iterator j =
-      (slice->single || (slice->lengths[0] == 1 && slice->lengths[1] == 1)) ?
-        i.insert(slice->coords[1], *v) : i.insert(slice->coords, slice->lengths, v, v_size);
 
-      xfree(v);
-      return std::make_pair(i,j);
+
+      if (slice->single || (slice->lengths[0] == 1 && slice->lengths[1] == 1)) { // single entry
+        row_stored_nd_iterator j = i.insert(slice->coords[1], *v);
+        if (v_alloc) xfree(v);
+        return std::make_pair(i,j);
+      } else if (slice->lengths[0] == 1) { // single row, multiple entries
+        row_stored_nd_iterator j = i.insert(slice->coords[1], slice->lengths[1], v, v_size);
+        if (v_alloc) xfree(v);
+        return std::make_pair(i,j);
+      } else { // multiple rows, unknown number of entries
+        row_nd_iter_pair ij = insert(i, slice->coords[1], slice->lengths, v, v_size);
+        if (v_alloc) xfree(v);
+        return ij;
+      }
     }
   }
 
@@ -692,6 +771,9 @@ public:
   }
 
 
+  /*
+   * Comparison between two matrices. Does not check size and such -- assumption is that they are the same shape.
+   */
   template <typename E>
   bool operator==(const YaleStorage<E>& rhs) const {
     for (size_t i = 0; i < shape(0); ++i) {
@@ -826,6 +908,92 @@ protected:
       a(sz+n-1-m)   = a(sz-1-m);
     }
   }
+
+
+  /*
+   * Like move_right, but also involving a resize. This updates row sizes as well. This version also takes a plan for
+   * multiple rows, and tries to do them all in one copy. It's used for multi-row slice-setting.
+   */
+  void update_resize_move_insert(size_t real_i, size_t real_j, size_t* lengths, D* const v, size_t v_size, multi_row_insertion_plan p) {
+    size_t sz      = size(); // current size of the storage vectors
+    size_t new_cap = sz + p.total_change;
+
+    if (new_cap > real_max_size()) {
+      xfree(v);
+      rb_raise(rb_eStandardError, "insertion size exceeded maximum yale matrix size");
+    }
+
+    size_t* new_ija     = ALLOC_N( size_t,new_cap );
+    D* new_a            = ALLOC_N( D,     new_cap );
+
+    // Copy unchanged row pointers first.
+    size_t m = 0;
+    for (; m <= real_i; ++m) {
+      new_ija[m]        = ija(m);
+      new_a[m]          = a(m);
+    }
+
+    // Now copy unchanged locations in IJA and A.
+    size_t q = real_shape(0)+1; // q is the copy-to position.
+    size_t r = real_shape(0)+1; // r is the copy-from position.
+    for (; q < p.pos[0]; ++q) {
+      new_ija[q]        = ija(q);
+      new_a[q]          = a(q);
+    }
+
+    // For each pos and change in the slice, copy the information prior to the insertion point. Then insert the necessary
+    // information.
+    size_t v_offset = 0;
+    int accum = 0; // keep track of the total change as we go so we can update row information.
+    for (size_t i = 0; i < lengths[0]; ++i, ++m) {
+      for (; r < p.pos[i]; ++r, ++q) {
+        new_ija[q]      = ija(r);
+        new_a[q]        = a(r);
+      }
+
+      // Insert slice data for a single row.
+      for (size_t j = 0; j < lengths[1]; ++j, ++v_offset) {
+        if (v_offset >= v_size) v_offset %= v_size;
+
+        if (j + real_j == real_i) { // modify diagonal
+          new_a[real_i + i] = v[v_offset];
+        } else if (v[v_offset] != const_default_obj()) {
+          new_ija[q]        = j + real_j;
+          new_a[q]          = v[v_offset];
+          ++q; // move on to next q location
+        }
+
+        if (ija(r) == j + real_j) ++r; // move r forward if the column matches.
+      }
+
+      // Update the row pointer for the current row.
+      accum                += p.change[i];
+      new_ija[m]            = ija(m) + accum;
+      new_a[m]              = a(m); // copy diagonal for this row
+    }
+
+    // Now copy everything subsequent to the last insertion point.
+    for (; r < size(); ++r, ++q) {
+      new_ija[q]            = ija(r);
+      new_a[q]              = a(r);
+    }
+
+    // Update the remaining row pointers and copy remaining diagonals
+    for (; m <= real_shape(0); ++m) {
+      new_ija[m]            = ija(m) + accum;
+      new_a[m]              = a(m);
+    }
+
+    s->capacity = new_cap;
+
+    xfree(s->ija);
+    xfree(s->a);
+
+    s->ija      = new_ija;
+    s->a        = reinterpret_cast<void*>(new_a);
+  }
+
+
 
   /*
    * Like move_right, but also involving a resize. This updates row sizes as well.
