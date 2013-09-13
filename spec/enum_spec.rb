@@ -73,11 +73,14 @@ describe "NMatrix enumeration for" do
           vv = []
           ii = []
           jj = []
+          require 'pry'
+          binding.pry
           @n.send :__yale_stored_nondiagonal_each_with_indices__ do |v,i,j|
             vv << v
             ii << i
             jj << j
           end
+
           vv.should == [2,3,4,5,  6,8,9,10,  11,12,14,15,  16,17,18,20]
           ii.should == [[0]*4, [1]*4, [2]*4, [4]*4].flatten
           jj.should == [1,2,3,4,  0,2,3,5,   0,1,4,5,      0,2,3,5]

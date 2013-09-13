@@ -33,6 +33,7 @@ describe NMatrix do
   context "yale" do
     before :each do
       @n = NMatrix.new(:yale, 3, :int64)
+      @n.extend NMatrix::YaleFunctions
       @m = NMatrix.new(:yale, 3, :int64)
       @n[0,0] = 52
       @n[0,2] = 5

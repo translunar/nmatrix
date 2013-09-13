@@ -75,8 +75,8 @@ public:
   }
 
   // DO NOT IMPLEMENT THESE FUNCTIONS. They prevent C++ virtual slicing
-  template <typename T> row_stored_nd_iterator_T(T const& rhs);
-  template <typename T> row_stored_nd_iterator_T<D,RefType,YaleRef,RowRef> const& operator=(T const& rhs);
+  //template <typename T> row_stored_nd_iterator_T(T const& rhs);
+  //template <typename T> row_stored_nd_iterator_T<D,RefType,YaleRef,RowRef> const& operator=(T const& rhs);
 
   // Next two functions are to ensure we can still cast between nd iterators.
   row_stored_nd_iterator_T(row_stored_nd_iterator_T<D,RefType,YaleRef,RowRef> const& rhs)
@@ -108,7 +108,7 @@ public:
   }
 
   virtual size_t j() const {
-    if (end()) throw std::out_of_range("cannot dereference an end pointer");
+    if (end()) throw std::out_of_range("cannot dereference (get j()) for an end pointer");
     return r.ija(p_) - r.offset(1);
   }
 

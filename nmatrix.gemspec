@@ -50,11 +50,11 @@ EOF
 
   gem.add_dependency 'rdoc', '>=4.0.1'
 
-  gem.add_development_dependency 'rake' #, '~>0.9'
+  gem.add_development_dependency 'rake'
   gem.add_development_dependency 'bundler'
-  gem.add_development_dependency 'rspec', '~>2.9.0'
+  gem.add_development_dependency 'rspec'
+  gem.add_development_dependency 'rspec-longrun'
   gem.add_development_dependency 'pry'
-  gem.add_development_dependency 'guard-rspec', '~>0.7.0'
   gem.add_development_dependency 'rake-compiler', '~>0.8.1'
 end
 

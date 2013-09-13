@@ -312,7 +312,7 @@ public:
    */
   void insert(row_iterator i, size_t j, size_t* lengths, D* const v, size_t v_size) {
     // Expensive pre-processing step: find all the information we need in order to do insertions.
-    multi_row_insertion_plan p = multi_row_insertion_plan(i, j, lengths, v, v_size);
+    multi_row_insertion_plan p = insertion_plan(i, j, lengths, v, v_size);
 
     // There are more efficient ways to do this, but this is the low hanging fruit version of the algorithm.
     // Here's the full problem: http://stackoverflow.com/questions/18753375/algorithm-for-merging-short-lists-into-a-long-vector
@@ -331,7 +331,7 @@ public:
       size_t v_offset = 0;
       int accum       = 0;
       for (size_t ii = 0; ii < lengths[0]; ++ii, ++i) {
-        i.insert(row_stored_nd_iterator(&i, p.pos[ii]), j, lengths[1], v, v_size, v_offset);
+        i.insert(row_stored_nd_iterator(i, p.pos[ii]), j, lengths[1], v, v_size, v_offset);
       }
     }
   }
@@ -343,18 +343,17 @@ public:
    * +right+ and determine what other functions to call in order to properly handle
    * it.
    */
-  row_nd_iter_pair insert(SLICE* slice, VALUE right) {
+  void insert(SLICE* slice, VALUE right) {
     if (TYPE(right) == T_DATA) {
       if (RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete || RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete_ref) {
         rb_raise(rb_eNotImpError, "this type of slicing not yet supported");
       } else {
         rb_raise(rb_eTypeError, "unrecognized type for slice assignment");
       }
-      row_iterator it = riend();
-      return std::make_pair(it, it.ndend());
     } else {
 
       D* v;
+
       size_t v_size = 1;
       bool v_alloc = false;
 
@@ -372,21 +371,15 @@ public:
 
       row_iterator i = ribegin(slice->coords[0]);
 
-
-
       if (slice->single || (slice->lengths[0] == 1 && slice->lengths[1] == 1)) { // single entry
-        row_stored_nd_iterator j = i.insert(slice->coords[1], *v);
-        if (v_alloc) xfree(v);
-        return std::make_pair(i,j);
+        i.insert(slice->coords[1], *v);
       } else if (slice->lengths[0] == 1) { // single row, multiple entries
-        row_stored_nd_iterator j = i.insert(slice->coords[1], slice->lengths[1], v, v_size);
-        if (v_alloc) xfree(v);
-        return std::make_pair(i,j);
+        i.insert(slice->coords[1], slice->lengths[1], v, v_size);
       } else { // multiple rows, unknown number of entries
-        row_nd_iter_pair ij = insert(i, slice->coords[1], slice->lengths, v, v_size);
-        if (v_alloc) xfree(v);
-        return ij;
+        insert(i, slice->coords[1], slice->lengths, v, v_size);
       }
+
+      if (v_alloc) xfree(v);
     }
   }
 
@@ -676,18 +669,15 @@ public:
     for (const_row_iterator it = cribegin(); it != criend(); ++it) {
       for (auto jt = it.begin(); !jt.end(); ++jt) {
         if (it.i() == jt.j()) {
-          std::cerr << "copy(ns): writing to diag pos " << it.i() << std::endl;
           if (Yield)  ns_a[it.i()] = rb_yield(~jt);
           else        ns_a[it.i()] = static_cast<E>(*jt);
         } else if (*jt != const_default_obj()) {
-          std::cerr << "copy(ns): writing to pos " << sz << std::endl;
           if (Yield)  ns_a[sz]     = rb_yield(~jt);
           else        ns_a[sz]     = static_cast<E>(*jt);
           ns.ija[sz]    = jt.j();
           ++sz;
         }
       }
-      std::cerr << "copy(ns): updating row end pointer for row " << it.i() << " to " << sz << std::endl;
       ns.ija[it.i()+1]  = sz;
     }
 
@@ -713,7 +703,7 @@ public:
       size_t ndnz       = count_copy_ndnz();
       size_t reserve    = shape(0) + ndnz + 1;
 
-      std::cerr << "reserve = " << reserve << std::endl;
+//      std::cerr << "reserve = " << reserve << std::endl;
 
       lhs               = YaleStorage<E>::create(xshape, reserve);
 
@@ -904,6 +894,7 @@ protected:
   void move_right(row_stored_nd_iterator position, size_t n) {
     size_t sz = size();
     for (size_t m = 0; m < sz - position.p(); ++m) {
+      //std::cerr << "moving from " << sz-1-m << " to " << sz+n-1-m << std::endl;
       ija(sz+n-1-m) = ija(sz-1-m);
       a(sz+n-1-m)   = a(sz-1-m);
     }
@@ -1022,13 +1013,13 @@ protected:
     }
 
     // Now update row pointers following the changed row as we copy the additional values.
-    for (size_t m = real_i + 1; m < real_shape(0); ++m) {
+    for (size_t m = real_i + 1; m <= real_shape(0); ++m) {
       new_ija[m]        = ija(m) + n;
       new_a[m]          = a(m);
     }
 
     // Copy all remaining prior to insertion/removal site
-    for (size_t m = real_shape(0); m < position.p(); ++m) {
+    for (size_t m = real_shape(0) + 1; m < position.p(); ++m) {
       new_ija[m]        = ija(m);
       new_a[m]          = a(m);
     }

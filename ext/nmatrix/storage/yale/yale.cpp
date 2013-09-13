@@ -704,38 +704,9 @@ static void set_single_cell(YALE_STORAGE* storage, size_t* coords, DType& v) {
 template <typename DType>
 void set(VALUE left, SLICE* slice, VALUE right) {
   YALE_STORAGE* storage = NM_STORAGE_YALE(left);
+  YaleStorage<DType> y(storage);
 
-  // TODO: Easily modified to accept pass dense storage elements in instead of v (below). Won't work with slices.
-  if (TYPE(right) == T_DATA) {
-    if (RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete || RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete_ref) {
-      rb_raise(rb_eNotImpError, "this type of slicing not yet supported");
-    } else {
-      rb_raise(rb_eTypeError, "unrecognized type for slice assignment");
-    }
-
-  } else {
-    YaleStorage<DType> s(storage);
-
-    DType* v;
-    size_t v_size = 1;
-    if (TYPE(right) == T_ARRAY) {  // Allow the user to pass in an array
-      v_size = RARRAY_LEN(right);
-      v      = ALLOC_N(DType, v_size);
-      for (size_t m = 0; m < RARRAY_LEN(right); ++m) {
-        rubyval_to_cval(rb_ary_entry(right, m), storage->dtype, &(v[m]));
-      }
-    } else {
-      v = reinterpret_cast<DType*>(rubyobj_to_cval(right, storage->dtype));
-    }
-
-    if (slice->single || (slice->lengths[0] == 1 && slice->lengths[1] == 1)) { // set a single cell
-      set_single_cell<DType>(storage, slice->coords, *v);
-    } else {
-      set_multiple_cells<DType>(storage, slice->coords, slice->lengths, v, v_size);
-    }
-
-    xfree(v);
-  }
+  y.insert(slice, right);
 }
 
 ///////////

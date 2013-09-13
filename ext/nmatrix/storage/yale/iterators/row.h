@@ -236,12 +236,6 @@ public:
 
   inline VALUE rb_i() const { return LONG2NUM(i()); }
 
-  row_stored_nd_iterator_T<D,RefType,YaleRef> ndfind(size_t j) {
-    if (j == 0) return ndbegin();
-    size_t p = y.real_find_left_boundary_pos(p_first, p_last, j + y.offset(1));
-    return row_stored_nd_iterator_T<D,RefType,YaleRef>(*this, p);
-  }
-
   row_stored_iterator_T<D,RefType,YaleRef> begin() {  return row_stored_iterator_T<D,RefType,YaleRef>(*this, p_first);  }
   row_stored_nd_iterator_T<D,RefType,YaleRef> ndbegin() {  return row_stored_nd_iterator_T<D,RefType,YaleRef>(*this, p_first);  }
   row_stored_iterator_T<D,RefType,YaleRef> end() { return row_stored_iterator_T<D,RefType,YaleRef>(*this, p_last+1, true); }
@@ -257,6 +251,21 @@ public:
     row_stored_nd_iterator_T<D,RefType,YaleRef>(*this, y.real_find_left_boundary_pos(p_first, p_last, y.offset(1)));
   }
 
+  row_stored_nd_iterator_T<D,RefType,YaleRef> ndfind(size_t j) {
+    if (j == 0) return ndbegin();
+    std::cerr << "ndfind: p_first = " << p_first << " " << p_last << std::endl;
+    size_t p = p_first > p_last ? p_first : y.real_find_left_boundary_pos(p_first, p_last, j + y.offset(1));
+    std::cerr << "ndfind(" << j << ")" << " = " << p << "\t(max_p = " << y.ija(y.real_shape(0)) << ")" << std::endl;
+    row_stored_nd_iterator iter = row_stored_nd_iterator_T<D,RefType,YaleRef>(*this, p);
+    std::cerr << "iter.end = " << std::boolalpha << iter.end() << ", p = " << iter.p() << std::endl;
+    return iter;
+  }
+
+  row_stored_iterator_T<D,RefType,YaleRef> find(size_t j) {
+    if (j == 0) return begin(); // may or may not be on the diagonal
+    else return row_stored_iterator_T<D,RefType,YaleRef>(*this, ndfind(j).p(), false); // is on the diagonal, definitely
+  }
+
   /*
    * Remove an entry from an already found non-diagonal position. Adjust this row appropriately so we can continue to
    * use it.
@@ -265,9 +274,10 @@ public:
   row_stored_nd_iterator erase(row_stored_nd_iterator position) {
     size_t sz = y.size();
     if (y.capacity() / nm::yale_storage::GROWTH_CONSTANT <= sz - 1) {
-      y.update_resize_move(position, i() + offset(0), -1);
+      y.update_resize_move(position, real_i(), -1);
     } else {
       y.move_left(position, 1);
+      y.update_real_row_sizes_from(real_i(), -1);
     }
     adjust_length(-1);
     return row_stored_nd_iterator(*this, position.p()-1);
@@ -287,41 +297,20 @@ public:
     }
   }
 
-  //template <typename = typename std::enable_if<!std::is_const<RefType>::value>::type>
-  template <typename T = typename std::conditional<std::is_const<RefType>::value,void,row_stored_nd_iterator>::type>
-  row_stored_nd_iterator insert(row_stored_iterator position, size_t jj, const D& val) {
-    if (position.diag()) {
-      *position = val;  // simply replace existing, regardless of whether it's 0 or not
-      ++position;
-      return row_stored_nd_iterator(*this, position.p());
-    } else {
-      row_stored_nd_iterator jt(*this, position.p());
-      return insert(jt, jj, val);
-    }
-  }
 
-  /*
-   * Insert an element in column j, using position's p() as the location to insert the new column. i and j will be the
-   * coordinates. This also does a replace if column j is already present.
-   *
-   * Returns true if a new entry was added and false if an entry was replaced.
-   *
-   * Pre-conditions:
-   *   - position.p() must be between ija(real_i) and ija(real_i+1), inclusive, where real_i = i + offset(0)
-   *   - real_i and real_j must not be equal
-   */
+
   //template <typename = typename std::enable_if<!std::is_const<RefType>::value>::type>
   row_stored_nd_iterator insert(row_stored_nd_iterator position, size_t jj, const D& val) {
     size_t sz = y.size();
+    while (!position.end() && position.j() < jj) ++position; // position is just a hint. (This loop ideally only has to happen once.)
+
     if (!position.end() && position.j() == jj) {
-      std::cerr << "insert: *position = val at " << i_ << "," << jj << "\tp=" << position.p() << std::endl;
       *position = val;      // replace existing
     } else {
+
       if (sz + 1 > y.capacity()) {
-        std::cerr << "insert: update_resize_move " << i_ << "," << jj << "\tp=" << position.p() << std::endl;
         y.update_resize_move(position, real_i(), 1);
       } else {
-        std::cerr << "insert: move_right at " << i_ << "," << jj << "\tp=" << position.p() << std::endl;
         y.move_right(position, 1);
         y.update_real_row_sizes_from(real_i(), 1);
       }
@@ -333,26 +322,44 @@ public:
     return position++;
   }
 
+
+  /*
+   * This version of insert doesn't return anything. Why, when the others do?
+   *
+   * Well, mainly because j here can be a diagonal entry. Most of the inserters return the *next* element following
+   * the insertion, but to do that, we have to create a row_stored_nd_iterator, which requires at least one binary
+   * search for the location following the diagonal (and as of the writing of this, two binary searches). There's no
+   * reason to do that when we never actually *use* the return value. So instead we just have void.
+   */
   //template <typename = typename std::enable_if<!std::is_const<RefType>::value>::type>
-  row_stored_nd_iterator insert(size_t j, const D& val) {
-    return insert(ndfind(j), j, val);
+  void insert(size_t j, const D& val) {
+    if (j + y.offset(1) == real_i())  a(real_i()) = val;
+    else {
+      row_stored_nd_iterator jt = ndfind(j);
+      if (!jt.end() && jt.j() == j) {
+        if (val == y.const_default_obj()) erase(jt);          // erase
+        else                              insert(jt, j, val); // replace
+      } else { // only insert if it's not the default
+        if (val != y.const_default_obj()) insert(jt, j, val);
+      }
+    }
   }
 
 
   /*
    * Determines a plan for inserting a single row. Returns an integer giving the amount of the row change.
    */
-  int single_row_insertion_plan(row_stored_nd_iterator position, size_t jj, size_t length, D const* v, size_t v_size, const size_t& v_offset) {
+  int single_row_insertion_plan(row_stored_nd_iterator position, size_t jj, size_t length, D const* v, size_t v_size, size_t v_offset) {
     int nd_change;
-    size_t m = v_offset;
-    for (size_t jc = jj; jc < jj + length; ++jc, ++m) {
-      if (m >= v_size) m %= v_size; // reset v position.
+
+    for (size_t jc = jj; jc < jj + length; ++jc, ++v_offset) {
+      if (v_offset >= v_size) v_offset %= v_size; // reset v position.
 
       if (jc + y.offset(1) != real_i()) { // diagonal    -- no nd_change here
         if (position.j() != jc) { // not present -- do we need to add it?
-          if (v[m] != y.const_default_obj()) nd_change++;
+          if (v[v_offset] != y.const_default_obj()) nd_change++;
         } else {  // position.j() == jc
-          if (v[m] == y.const_default_obj()) nd_change--;
+          if (v[v_offset] == y.const_default_obj()) nd_change--;
           ++position; // move iterator forward.
         }
       }
@@ -378,7 +385,7 @@ public:
    * Insert elements into a single row. Returns an iterator to the end of the insertion range.
    */
   row_stored_nd_iterator insert(row_stored_nd_iterator position, size_t jj, size_t length, D const* v, size_t v_size, size_t& v_offset) {
-    int nd_change = single_row_insertion_plan(position, jj, length, v, v_size);
+    int nd_change = single_row_insertion_plan(position, jj, length, v, v_size, v_offset);
 
     // First record the position, just in case our iterator becomes invalid.
     size_t pp = position.p();

@@ -72,6 +72,13 @@ public:
   {
   }
 
+  /* Diagonal constructor. Puts us on the diagonal (unless end is true) */
+  /*row_stored_iterator_T(RowRef& row, bool end_, size_t j)
+  : row_stored_nd_iterator_T<D,RefType,YaleRef,RowRef>(row.ndfind(j)),
+    d_visited(false),
+    d(!end_ && j + row.offset(1) == row.real_i())
+  { }*/
+
   virtual bool diag() const {
     return d;
   }
