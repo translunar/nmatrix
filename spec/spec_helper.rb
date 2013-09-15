@@ -22,7 +22,10 @@
 #
 # == spec_helper.rb
 #
-# Common data for testing. 
+# Common data and helper functions for testing.
+
+require "rspec/longrun"
+
 require "./lib/nmatrix"
 require "./lib/nmatrix/rspec"
 

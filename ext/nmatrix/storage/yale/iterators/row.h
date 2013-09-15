@@ -276,6 +276,7 @@ public:
     if (y.capacity() / nm::yale_storage::GROWTH_CONSTANT <= sz - 1) {
       y.update_resize_move(position, real_i(), -1);
     } else {
+      std::cerr << "erase: calling move_left -1 on position " << position.p() << " end=" << position.end() << std::endl;
       y.move_left(position, 1);
       y.update_real_row_sizes_from(real_i(), -1);
     }
@@ -349,14 +350,18 @@ public:
   /*
    * Determines a plan for inserting a single row. Returns an integer giving the amount of the row change.
    */
-  int single_row_insertion_plan(row_stored_nd_iterator position, size_t jj, size_t length, D const* v, size_t v_size, size_t v_offset) {
-    int nd_change;
+  int single_row_insertion_plan(row_stored_nd_iterator position, size_t jj, size_t length, D const* v, size_t v_size, size_t& v_offset) {
+    int nd_change = 0;
+
+    std::cerr << "single_row_insertion_plan: length=" << length << std::endl;
 
     for (size_t jc = jj; jc < jj + length; ++jc, ++v_offset) {
       if (v_offset >= v_size) v_offset %= v_size; // reset v position.
 
       if (jc + y.offset(1) != real_i()) { // diagonal    -- no nd_change here
-        if (position.j() != jc) { // not present -- do we need to add it?
+        if (position.end()) {
+          if (v[v_offset] != y.const_default_obj()) nd_change++; // insert
+        } if (position.j() != jc) { // not present -- do we need to add it?
           if (v[v_offset] != y.const_default_obj()) nd_change++;
         } else {  // position.j() == jc
           if (v[v_offset] == y.const_default_obj()) nd_change--;
@@ -365,6 +370,8 @@ public:
       }
 
     }
+
+    std::cerr << "\tnd_change=" << nd_change << std::endl;
     return nd_change;
   }
 
@@ -373,7 +380,7 @@ public:
    * the change amount. Don't use this one if you can help it because it requires a binary search of
    * the row.
    */
-  std::pair<int,size_t> single_row_insertion_plan(size_t jj, size_t length, D const* v, size_t v_size, const size_t& v_offset) {
+  std::pair<int,size_t> single_row_insertion_plan(size_t jj, size_t length, D const* v, size_t v_size, size_t v_offset) {
     std::pair<int,size_t> result;
     row_stored_nd_iterator pos = ndfind(jj);
     result.first = single_row_insertion_plan(pos, jj, length, v, v_size, v_offset);
@@ -385,26 +392,35 @@ public:
    * Insert elements into a single row. Returns an iterator to the end of the insertion range.
    */
   row_stored_nd_iterator insert(row_stored_nd_iterator position, size_t jj, size_t length, D const* v, size_t v_size, size_t& v_offset) {
-    int nd_change = single_row_insertion_plan(position, jj, length, v, v_size, v_offset);
+    size_t tmp_v_offset = v_offset;
+    int nd_change = single_row_insertion_plan(position, jj, length, v, v_size, tmp_v_offset);
+
+    std::cerr << "insert: at column " << jj << ", iterator p = " << position.p() << " end = " << std::boolalpha << position.end() << ", length = " << length << ", nd_change = " << nd_change << std::endl;
+    if (!position.end())
+      std::cerr << "\titerator j = " << position.j() << std::endl;
 
     // First record the position, just in case our iterator becomes invalid.
     size_t pp = position.p();
 
     // Resize the array as necessary, or move entries after the insertion point to make room.
     size_t sz = y.size();
-    if (sz + nd_change > y.capacity()) y.update_resize_move(position, real_i(), nd_change);
-    if (nd_change < 0)                 y.move_left(position, -nd_change);
-    else if (nd_change > 0)            y.move_right(position, nd_change);
- // else no change!
+    if (sz + nd_change > y.capacity() || sz + nd_change <= y.capacity() / nm::yale_storage::GROWTH_CONSTANT)
+      y.update_resize_move(position, real_i(), nd_change);
+    else if (nd_change != 0) {
+      if (nd_change < 0)       y.move_left(position, -nd_change);
+      else if (nd_change > 0)  y.move_right(position, nd_change);
+      y.update_real_row_sizes_from(real_i(), nd_change);
+    }
 
-    for (size_t jc = jj; jc < jj + length; ++jc, ++v_offset, ++pp) {
+    for (size_t jc = jj; jc < jj + length; ++jc, ++v_offset) {
       if (v_offset >= v_size) v_offset %= v_size; // reset v position.
 
       if (jc + y.offset(1) == real_i()) {
         y.a(real_i())   = v[v_offset];  // modify diagonal
-      } else {
+      } else if (v[v_offset] != y.const_default_obj()) {
         y.ija(pp)       = jc;           // modify non-diagonal
         y.a(pp)         = v[v_offset];
+        ++pp;
       }
     }
 

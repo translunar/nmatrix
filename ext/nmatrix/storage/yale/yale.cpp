@@ -594,7 +594,7 @@ static void set_multiple_cells(YALE_STORAGE* s, size_t* coords, size_t* lengths,
       new_capacity = max_capacity;
 
       if (s->capacity + delta_size > max_capacity)
-        rb_raise(rb_eStandardError, "insertion size (%u on top of current %u) would lead to exceeding maximum yale matrix size (%u)", delta_size, s->capacity, max_capacity);
+        rb_raise(rb_eStandardError, "insertion size (%lu on top of current %lu) would lead to exceeding maximum yale matrix size (%lu)", delta_size, s->capacity, max_capacity);
     }
 
     // Allocate new vectors. (ija and a local variables have the old ones)
@@ -892,7 +892,7 @@ template <typename DType>
 static char vector_insert(YALE_STORAGE* s, size_t pos, size_t* j, void* val_, size_t n, bool struct_only) {
 
   if (pos < s->shape[0]) {
-    rb_raise(rb_eArgError, "vector insert pos (%u) is before beginning of ja (%u); this should not happen", pos, s->shape[0]);
+    rb_raise(rb_eArgError, "vector insert pos (%lu) is before beginning of ja (%lu); this should not happen", pos, s->shape[0]);
   }
 
   DType* val = reinterpret_cast<DType*>(val_);
@@ -1415,7 +1415,7 @@ void nm_init_yale_functions() {
   } else if (itype_size == sizeof(uint16_t)) {
     itype_dtype = ID2SYM(rb_intern("int16"));
   } else {
-    rb_raise(rb_eStandardError, "unhandled length for sizeof(IType): %u; note that IType is probably defined as size_t", sizeof(IType));
+    rb_raise(rb_eStandardError, "unhandled length for sizeof(IType): %lu; note that IType is probably defined as size_t", sizeof(IType));
   }
   rb_define_const(cNMatrix, "INDEX_DTYPE", itype_dtype);
 }

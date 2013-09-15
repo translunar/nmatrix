@@ -73,8 +73,6 @@ describe "NMatrix enumeration for" do
           vv = []
           ii = []
           jj = []
-          require 'pry'
-          binding.pry
           @n.send :__yale_stored_nondiagonal_each_with_indices__ do |v,i,j|
             vv << v
             ii << i

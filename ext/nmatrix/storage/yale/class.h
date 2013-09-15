@@ -708,7 +708,7 @@ public:
       lhs               = YaleStorage<E>::create(xshape, reserve);
 
       if (lhs->capacity < reserve)
-        rb_raise(nm_eStorageTypeError, "conversion failed; capacity of %u requested, max allowable is %u", reserve, lhs->capacity);
+        rb_raise(nm_eStorageTypeError, "conversion failed; capacity of %lu requested, max allowable is %lu", reserve, lhs->capacity);
 
       // Fill lhs with what's in our current matrix.
       copy<E, Yield>(*lhs);
@@ -887,23 +887,12 @@ protected:
     }
   }
 
-  /*
-   * Move elements in the IJA and A arrays by n (to the right).
-   * Does not update row sizes.
-   */
-  void move_right(row_stored_nd_iterator position, size_t n) {
-    size_t sz = size();
-    for (size_t m = 0; m < sz - position.p(); ++m) {
-      //std::cerr << "moving from " << sz-1-m << " to " << sz+n-1-m << std::endl;
-      ija(sz+n-1-m) = ija(sz-1-m);
-      a(sz+n-1-m)   = a(sz-1-m);
-    }
-  }
-
 
   /*
    * Like move_right, but also involving a resize. This updates row sizes as well. This version also takes a plan for
    * multiple rows, and tries to do them all in one copy. It's used for multi-row slice-setting.
+   *
+   * This also differs from update_resize_move in that it resizes to the exact requested size instead of reserving space.
    */
   void update_resize_move_insert(size_t real_i, size_t real_j, size_t* lengths, D* const v, size_t v_size, multi_row_insertion_plan p) {
     size_t sz      = size(); // current size of the storage vectors
@@ -911,7 +900,7 @@ protected:
 
     if (new_cap > real_max_size()) {
       xfree(v);
-      rb_raise(rb_eStandardError, "insertion size exceeded maximum yale matrix size");
+      rb_raise(rb_eStandardError, "resize caused by insertion of size %d (on top of current size %lu) would have caused yale matrix size to exceed its maximum (%lu)", p.total_change, sz, real_max_size());
     }
 
     size_t* new_ija     = ALLOC_N( size_t,new_cap );
@@ -991,14 +980,14 @@ protected:
    */
   void update_resize_move(row_stored_nd_iterator position, size_t real_i, int n) {
     size_t sz      = size(); // current size of the storage vectors
-    size_t new_cap = capacity() * nm::yale_storage::GROWTH_CONSTANT;
+    size_t new_cap = n > 0 ? capacity() * nm::yale_storage::GROWTH_CONSTANT
+                           : capacity() / nm::yale_storage::GROWTH_CONSTANT;
     size_t max_cap = real_max_size();
 
     if (new_cap > max_cap) {
       new_cap = max_cap;
       if (sz + n > max_cap)
-        rb_raise(rb_eStandardError, "insertion size exceeded maximum yale matrix size");
-
+        rb_raise(rb_eStandardError, "resize caused by insertion/deletion of size %d (on top of current size %lu) would have caused yale matrix size to exceed its maximum (%lu)", n, sz, real_max_size());
     }
 
     if (new_cap < sz + n) new_cap = sz + n;
@@ -1014,6 +1003,7 @@ protected:
 
     // Now update row pointers following the changed row as we copy the additional values.
     for (size_t m = real_i + 1; m <= real_shape(0); ++m) {
+      std::cerr << "update_resize_move: changing ija[m] (m=" << m << ") from " << ija(m) << " to " << ija(m)+n << std::endl;
       new_ija[m]        = ija(m) + n;
       new_a[m]          = a(m);
     }
@@ -1024,11 +1014,18 @@ protected:
       new_a[m]          = a(m);
     }
 
+    std::cerr << "resize: position.p() = " << position.p() << ", end = " << position.end() << std::endl;
+
     // Copy all subsequent to insertion/removal site
-    for (size_t m = position.p(); m < sz; ++m) {
+    size_t m = position.p();
+    if (n < 0) m -= n;
+
+    for (; m < sz; ++m) {
+      std::cerr << "resize: moving from " << m << " to " << m+n << std::endl;
       new_ija[m+n]      = ija(m);
       new_a[m+n]        = a(m);
     }
+
 
     s->capacity = new_cap;
 
@@ -1039,13 +1036,36 @@ protected:
     s->a        = reinterpret_cast<void*>(new_a);
   }
 
+
+  /*
+   * Move elements in the IJA and A arrays by n (to the right).
+   * Does not update row sizes.
+   */
+/*  void move_right(row_stored_nd_iterator position, size_t n) {
+    size_t sz = size();
+    for (size_t m = sz; m >= position.p(); ++m) {
+      //std::cerr << "moving from " << sz-1-m << " to " << sz+n-1-m << std::endl;
+      ija(m+n) = ija(m);
+      a(m+n)   = a(m);
+    }
+  } */
+  void move_right(row_stored_nd_iterator position, size_t n) {
+    size_t sz = size();
+    for (size_t m = 0; m < sz - position.p(); ++m) {
+      //std::cerr << "moving from " << sz-1-m << " to " << sz+n-1-m << std::endl;
+      ija(sz+n-1-m) = ija(sz-1-m);
+      a(sz+n-1-m)   = a(sz-1-m);
+    }
+  }
+
   /*
    * Move elements in the IJA and A arrays by n (to the left). Here position gives
    * the location to move to, and they should come from n to the right.
    */
   void move_left(row_stored_nd_iterator position, size_t n) {
     size_t sz = size();
-    for (size_t m = sz; m > position.p() + n; --m) {   // work backwards
+    for (size_t m = position.p() + n; m < sz; ++m) {   // work backwards
+      std::cerr << "moving from " << m << " to " << m-n << std::endl;
       ija(m-n)      = ija(m);
       a(m-n)        = a(m);
     }
