@@ -82,8 +82,6 @@ describe "Set slice operation" do
         m = @m.clone
 
         step "set upper left-hand 2x2 corner to 100" do
-          binding.pry if stype == :list
-
           m[0..1,0..1] = 100
 
           if stype == :yale
@@ -108,7 +106,6 @@ describe "Set slice operation" do
 
         m = @m.clone
         step "set lower left-hand 2x2 corner to 100" do
-          binding.pry if stype == :list
           m[1..2,0..1] = 100
           m[1..2,0..1].should == slice_result_a
           m[0,0..1].should == @m[0,0..1]
@@ -122,11 +119,7 @@ describe "Set slice operation" do
 
         m = @m.clone
         step "set lower right-hand 2x2 corner to 100" do
-          require 'pry'
-          binding.pry if stype == :list
-
           m[1..2,1..2] = 100
-          #binding.pry if stype == :yale
           m[1..2,1..2].should == slice_result_a
           m[0,1..2].should == @m[0,1..2]
           m[1..2,0].should == @m[1..2,0]
@@ -152,9 +145,8 @@ describe "Set slice operation" do
       end
 
       example "set a range of values to a matrix's contents" do
-        pending("not yet implemented") if stype == :list
         x = NMatrix.new(:yale, 4, :int16)
-        x.extend NMatrix::YaleFunctions
+        x.extend NMatrix::YaleFunctions if stype == :yale
         x[1..3,1..3] = @m
         x.to_flat_array.should == [0,0,0,0, 0,0,1,2, 0,3,4,5, 0,6,7,8]
       end

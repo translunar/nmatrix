@@ -279,10 +279,8 @@ static bool slice_set(LIST_STORAGE* dest, LIST* l, size_t* coords, size_t* lengt
     // Make sure we have an element to work with
     if (!node) {
       if (!prev) {
-        std::cerr << "slice_set(" << n << "," << key << "): insert_first_list(priming)" << std::endl;
         node = insert_first_list(l, key, nm::list::create());
       } else {
-        std::cerr << "slice_set(" << n << "," << key << "): insert_after(priming)" << std::endl;
         node = insert_after(prev, key, nm::list::create());
       }
     }
@@ -291,14 +289,12 @@ static bool slice_set(LIST_STORAGE* dest, LIST* l, size_t* coords, size_t* lengt
 
     while (node) {
       // Recurse down into the list. If it returns true, it's empty, so we need to delete it.
-      std::cerr << "slice_set(" << n << "," << key << "): slice_set on node with key " << node->key << std::endl;
       bool remove_parent = slice_set(dest, reinterpret_cast<LIST*>(node->val), coords, lengths, n+1, v, v_size, v_offset);
 
       if (remove_parent) {
-        std::cerr << "slice_set(" << n << "," << key << "): remove_by_node" << std::endl;
         xfree(remove_by_node(l, prev, node));
-        if (prev) node = node_is_within_slice(prev->next, key-i, lengths[n]) ? prev->next : NULL;
-        else      node = node_is_within_slice(l->first,   key-i, lengths[n]) ? l->first   : NULL;
+        if (prev) node = prev->next ? prev->next : NULL;
+        else      node = l->first   ? l->first   : NULL;
       } else {  // move forward
         prev = node;
         node = node_is_within_slice(prev->next, key-i, lengths[n]) ? prev->next : NULL;
@@ -311,10 +307,8 @@ static bool slice_set(LIST_STORAGE* dest, LIST* l, size_t* coords, size_t* lengt
       // Now do we need to insert another node here? Or is there already one?
       if (!node) {
         if (!prev) {
-          std::cerr << "slice_set(" << n << "," << key << "): insert_first_list(loop)" << std::endl;
           node = insert_first_list(l, key, nm::list::create());
         } else {
-          std::cerr << "slice_set(" << n << "," << key << "): insert_after(loop)" << std::endl;
           node = insert_after(prev, key, nm::list::create());
         }
       }
@@ -329,42 +323,35 @@ static bool slice_set(LIST_STORAGE* dest, LIST* l, size_t* coords, size_t* lengt
       // Make sure we have an element to work with
       if (v_offset >= v_size) v_offset %= v_size;
 
-      std::cerr << "LEAF: looping " << i << ", " << key << std::endl;
-
       if (node) {
         if (node->key == key) {
           if (v[v_offset] == *reinterpret_cast<D*>(dest->default_val)) { // remove zero value
 
-            std::cerr << "\tremove_by_node" << std::endl;
-
             xfree(remove_by_node(l, (prev ? prev : l->first), node));
 
-            if (prev) node = node_is_within_slice(prev->next, key-i, lengths[n]) ? prev->next : NULL;
-            else      node = node_is_within_slice(l->first,   key-i, lengths[n]) ? l->first   : NULL;
+            if (prev) node = prev->next ? prev->next : NULL;
+            else      node = l->first   ? l->first   : NULL;
 
           } else { // edit directly
-            std::cerr << "\tdirect edit" << std::endl;
             *reinterpret_cast<D*>(node->val) = v[v_offset];
             prev = node;
-            node = node_is_within_slice(node->next, key-i, lengths[n]) ? node->next : NULL;
+            node = node->next ? node->next : NULL;
           }
         } else if (node->key > key) {
-          std::cerr << "\tnode->key[" << node->key << "] > key (insert)" << std::endl;
           D* nv = ALLOC(D); *nv = v[v_offset];
           if (prev) node = insert_after(prev, key, nv);
           else      node = insert_first_node(l, key, nv, sizeof(D));
 
           prev = node;
-          node = node_is_within_slice(prev->next, key-i, lengths[n]) ? prev->next : NULL;
+          node = prev->next ? prev->next : NULL;
         }
       } else { // no node -- insert a new one
-        std::cerr << "\t!node (insert)" << std::endl;
         D* nv = ALLOC(D); *nv = v[v_offset];
         if (prev) node = insert_after(prev, key, nv);
         else      node = insert_first_node(l, key, nv, sizeof(D));
 
         prev = node;
-        node = node_is_within_slice(prev->next, key-i, lengths[n]) ? prev->next : NULL;
+        node = prev->next ? prev->next : NULL;
       }
 
       ++i; ++key;

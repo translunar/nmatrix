@@ -933,7 +933,6 @@ protected:
 
       // Insert slice data for a single row.
       for (size_t j = 0; j < lengths[1]; ++j, ++v_offset) {
-        std::cerr << "    on j=" << j << " (real_j = " << real_j + j << ")" << std::endl;
         if (v_offset >= v_size) v_offset %= v_size;
 
         if (j + real_j == i + real_i) { // modify diagonal
