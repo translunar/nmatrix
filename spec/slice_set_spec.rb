@@ -57,11 +57,8 @@ describe "Set slice operation" do
         end
 
         if stype == :yale
+          n = @m.clone
           step "set a row of entries" do
-            n = @m.clone
-
-            require 'pry'
-            binding.pry
 
             n[0,0..2] = 0
             n[0,0..2].to_flat_array.should == [0,0,0]
@@ -99,9 +96,8 @@ describe "Set slice operation" do
         step "set upper left-hand 2x2 corner to 0" do
           m[0..1,0..1] = 0
           if stype == :yale
-            # Both of these are acceptable depending upon whether removal leads to a move
-            [[4,6,8,10,1,2,0,2,0,1],[4,5,6,8,2,2,0,1,nil,nil]].should include(m.yale_ija)
-            [[0,0,8,0,0,2,0,5,6,7],[0,0,8,0,2,5,6,7,nil,nil]].should  include(m.yale_a)
+            [4,5,6,8,2,2,0,1].should == m.yale_ija
+            [0,0,8,0,2,5,6,7].should == m.yale_a
           end
 
           m[0..1,0..1].should == slice_result_b
@@ -116,6 +112,8 @@ describe "Set slice operation" do
         end
 
         step "set lower left-hand 2x2 corner to 0" do
+          require 'pry'
+          binding.pry if stype == :yale
           m[1..2,0..1] = 0
           m[1..2,0..1].should == slice_result_b
         end

@@ -273,7 +273,7 @@ public:
   //template <typename = typename std::enable_if<!std::is_const<RefType>::value>::type>
   row_stored_nd_iterator erase(row_stored_nd_iterator position) {
     size_t sz = y.size();
-    if (y.capacity() / nm::yale_storage::GROWTH_CONSTANT <= sz - 1) {
+    if (sz - 1 <= y.capacity() / nm::yale_storage::GROWTH_CONSTANT) {
       y.update_resize_move(position, real_i(), -1);
     } else {
       std::cerr << "erase: calling move_left -1 on position " << position.p() << " end=" << position.end() << std::endl;

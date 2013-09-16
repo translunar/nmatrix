@@ -185,7 +185,7 @@ public:
 
     // Check that the right search point is valid. rflbp will check to make sure the left is valid relative to left.
     if (right > ija(real_shape(0))) {
-      right = ija(real_shape(0));
+      right = ija(real_shape(0))-1;
     }
     size_t result = real_find_left_boundary_pos(left, right, j + offset(1));
     return result;
@@ -275,7 +275,7 @@ public:
     std::vector<int>      change;
     int                   total_change; // the net change occurring
     size_t                num_changes;  // the total number of rows that need to change size
-    multi_row_insertion_plan(size_t rows_in_slice) : pos(rows_in_slice), change(rows_in_slice), total_change(0) { }
+    multi_row_insertion_plan(size_t rows_in_slice) : pos(rows_in_slice), change(rows_in_slice), total_change(0), num_changes(0) { }
 
     void add(size_t i, const std::pair<int,size_t>& change_and_pos) {
       pos[i]        = change_and_pos.second;
@@ -290,7 +290,7 @@ public:
    * Find all the information we need in order to modify multiple rows.
    */
   multi_row_insertion_plan insertion_plan(row_iterator i, size_t j, size_t* lengths, D* const v, size_t v_size) const {
-    multi_row_insertion_plan p(lengths[0] - i.i());
+    multi_row_insertion_plan p(lengths[0]);
 
     // v_offset is our offset in the array v. If the user wants to change two elements in each of three rows,
     // but passes an array of size 3, we need to know that the second insertion plan must start at position
@@ -298,8 +298,6 @@ public:
     size_t v_offset = 0;
     for (size_t m = 0; m < lengths[0]; ++m, ++i) {
       p.add(m, i.single_row_insertion_plan(j, lengths[1], v, v_size, v_offset));
-      v_offset      += lengths[1];
-      if (v_offset >= v_size) v_offset %= v_size; // start over in offsets if necessary
     }
 
     return p;
@@ -321,7 +319,7 @@ public:
     bool resize = false;
     size_t sz = size();
     if (p.num_changes > 1) resize = true; // TODO: There are surely better ways to do this, but I've gone for the low-hanging fruit
-    else if (sz + p.total_change > capacity() || sz + p.total_change < capacity() / nm::yale_storage::GROWTH_CONSTANT) resize = true;
+    else if (sz + p.total_change > capacity() || sz + p.total_change <= capacity() / nm::yale_storage::GROWTH_CONSTANT) resize = true;
 
     if (resize) {
       update_resize_move_insert(i.i() + offset(0), j + offset(1), lengths, v, v_size, p);
@@ -903,12 +901,15 @@ protected:
       rb_raise(rb_eStandardError, "resize caused by insertion of size %d (on top of current size %lu) would have caused yale matrix size to exceed its maximum (%lu)", p.total_change, sz, real_max_size());
     }
 
+    std::cerr << "update_resize_move_insert: allocating " << new_cap << std::endl;
+
     size_t* new_ija     = ALLOC_N( size_t,new_cap );
     D* new_a            = ALLOC_N( D,     new_cap );
 
     // Copy unchanged row pointers first.
     size_t m = 0;
     for (; m <= real_i; ++m) {
+      std::cerr << "copying unchanged row pointers: " << m << std::endl;
       new_ija[m]        = ija(m);
       new_a[m]          = a(m);
     }
@@ -916,9 +917,10 @@ protected:
     // Now copy unchanged locations in IJA and A.
     size_t q = real_shape(0)+1; // q is the copy-to position.
     size_t r = real_shape(0)+1; // r is the copy-from position.
-    for (; q < p.pos[0]; ++q) {
-      new_ija[q]        = ija(q);
-      new_a[q]          = a(q);
+    std::cerr << "copying exactly positions q,r=" << q << " up to p.pos[0]=" << p.pos[0] << std::endl;
+    for (; r < p.pos[0]; ++r, ++q) {
+      new_ija[q]        = ija(r);
+      new_a[q]          = a(r);
     }
 
     // For each pos and change in the slice, copy the information prior to the insertion point. Then insert the necessary
@@ -926,6 +928,9 @@ protected:
     size_t v_offset = 0;
     int accum = 0; // keep track of the total change as we go so we can update row information.
     for (size_t i = 0; i < lengths[0]; ++i, ++m) {
+      std::cerr << "looping for each row (i=" << i << ")" << std::endl;
+      std::cerr << "  copying exactly positions q=" << q << ",r=" << r << " up to p.pos[i=" << i << "]=" << p.pos[i];
+      std::cerr << "    which is actually real_i = " << real_i + i << std::endl;
       for (; r < p.pos[i]; ++r, ++q) {
         new_ija[q]      = ija(r);
         new_a[q]        = a(r);
@@ -933,6 +938,7 @@ protected:
 
       // Insert slice data for a single row.
       for (size_t j = 0; j < lengths[1]; ++j, ++v_offset) {
+        std::cerr << "    on j=" << j << " (real_j = " << real_j + j << ")" << std::endl;
         if (v_offset >= v_size) v_offset %= v_size;
 
         if (j + real_j == real_i) { // modify diagonal
@@ -948,18 +954,21 @@ protected:
 
       // Update the row pointer for the current row.
       accum                += p.change[i];
+      std::cerr << "  updating row " << m << " pointer, now " << ija(m) + accum << std::endl;
       new_ija[m]            = ija(m) + accum;
       new_a[m]              = a(m); // copy diagonal for this row
     }
 
     // Now copy everything subsequent to the last insertion point.
     for (; r < size(); ++r, ++q) {
+      std::cerr << "copying exactly positions q,r=" << q << " through p.pos[0]=" << p.pos[0] << std::endl;
       new_ija[q]            = ija(r);
       new_a[q]              = a(r);
     }
 
     // Update the remaining row pointers and copy remaining diagonals
     for (; m <= real_shape(0); ++m) {
+      std::cerr << "  updating remaining row " << m << " pointer, now " << ija(m) + accum << std::endl;
       new_ija[m]            = ija(m) + accum;
       new_a[m]              = a(m);
     }
