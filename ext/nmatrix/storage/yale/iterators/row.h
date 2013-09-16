@@ -361,7 +361,7 @@ public:
       if (jc + y.offset(1) != real_i()) { // diagonal    -- no nd_change here
         if (position.end()) {
           if (v[v_offset] != y.const_default_obj()) nd_change++; // insert
-        } if (position.j() != jc) { // not present -- do we need to add it?
+        } else if (position.j() != jc) { // not present -- do we need to add it?
           if (v[v_offset] != y.const_default_obj()) nd_change++;
         } else {  // position.j() == jc
           if (v[v_offset] == y.const_default_obj()) nd_change--;

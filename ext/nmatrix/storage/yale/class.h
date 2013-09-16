@@ -941,7 +941,7 @@ protected:
         std::cerr << "    on j=" << j << " (real_j = " << real_j + j << ")" << std::endl;
         if (v_offset >= v_size) v_offset %= v_size;
 
-        if (j + real_j == real_i) { // modify diagonal
+        if (j + real_j == i + real_i) { // modify diagonal
           new_a[real_i + i] = v[v_offset];
         } else if (v[v_offset] != const_default_obj()) {
           new_ija[q]        = j + real_j;
