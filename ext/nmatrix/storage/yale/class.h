@@ -343,30 +343,18 @@ public:
    * it.
    */
   void insert(SLICE* slice, VALUE right) {
-    D* v;
-    NMATRIX* ldtype_r = NULL;
 
-    size_t v_size = 1;
-    bool v_alloc = false;
-
+    std::pair<NMATRIX*,bool> nm_and_free =
+      interpret_arg_as_dense_nmatrix(right, dtype());
     // Map the data onto D* v
-    if (TYPE(right) == T_DATA && (RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete || RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete_ref)) {
 
-      if (NM_STYPE(right) != DENSE_STORE || NM_DTYPE(right) != dtype() || NM_SRC(right) != NM_STORAGE(right)) {
-        NMATRIX *r;
-        UnwrapNMatrix( right, r );
-        ldtype_r          = nm_cast_with_ctype_args(r, nm::DENSE_STORE, dtype(), NULL);
-        DENSE_STORAGE* s  = reinterpret_cast<DENSE_STORAGE*>(ldtype_r->storage);
-        v                 = reinterpret_cast<D*>(s->elements);
-        v_size            = nm_storage_count_max_elements(s);
-      } else {  // simple case -- right-hand matrix is dense and is not a reference and has same dtype
-        v      = reinterpret_cast<D*>(NM_DENSE_ELEMENTS(right));
-        v_size = NM_DENSE_COUNT(right);
-      }
-      // Do not set v_alloc = true for either of these. It is the responsibility of r/ldtype_r
+    D*     v;
+    size_t v_size = 1;
 
-    } else if (TYPE(right) == T_DATA) {
-      rb_raise(rb_eTypeError, "unrecognized type for slice assignment");
+    if (nm_and_free.first) {
+      DENSE_STORAGE* s = reinterpret_cast<DENSE_STORAGE*>(nm_and_free.first->storage);
+      v       = reinterpret_cast<D*>(s->elements);
+      v_size  = nm_storage_count_max_elements(s);
 
     } else if (TYPE(right) == T_ARRAY) {
       v_size = RARRAY_LEN(right);
@@ -374,7 +362,6 @@ public:
       for (size_t m = 0; m < v_size; ++m) {
         rubyval_to_cval(rb_ary_entry(right, m), s->dtype, &(v[m]));
       }
-      v_alloc = true;
     } else {
       v = reinterpret_cast<D*>(rubyobj_to_cval(right, dtype()));
     }
@@ -389,11 +376,11 @@ public:
       insert(i, slice->coords[1], slice->lengths, v, v_size);
     }
 
-    if (v_alloc)
+    // Only free v if it was allocated in this function.
+    if (nm_and_free.first && nm_and_free.second)
+      nm_delete(nm_and_free.first);
+    else
       xfree(v);
-
-    if (ldtype_r)
-      nm_delete(ldtype_r);
   }
 
 

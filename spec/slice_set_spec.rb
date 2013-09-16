@@ -145,7 +145,7 @@ describe "Set slice operation" do
       end
 
       example "set a range of values to a matrix's contents" do
-        pending("not yet implemented") unless stype == :yale
+        pending("not yet implemented") if stype == :list
         x = NMatrix.new(:yale, 4, :int16)
         x.extend NMatrix::YaleFunctions
         x[1..3,1..3] = @m

@@ -120,4 +120,8 @@ STORAGE*        nm_dense_storage_cast_copy(const STORAGE* rhs, nm::dtype_t new_d
 
 } // end of extern "C" block
 
+namespace nm {
+  std::pair<NMATRIX*,bool> interpret_arg_as_dense_nmatrix(VALUE right, nm::dtype_t dtype);
+} // end of namespace nm
+
 #endif // DENSE_H

@@ -126,7 +126,7 @@ protected:
 
 
 template <typename LDType, typename RDType>
-static LIST_STORAGE* cast_copy(const LIST_STORAGE* rhs, dtype_t new_dtype);
+static LIST_STORAGE* cast_copy(const LIST_STORAGE* rhs, nm::dtype_t new_dtype);
 
 template <typename LDType, typename RDType>
 static bool eqeq_r(RecurseData& left, RecurseData& right, const LIST* l, const LIST* r, size_t rec);
@@ -247,7 +247,7 @@ static void map_merged_stored_r(RecurseData& result, RecurseData& left, RecurseD
 }
 
 
-} // end of namespace list_storage
+}} // end of namespace list_storage
 
 extern "C" {
 
@@ -267,7 +267,7 @@ extern "C" {
  * Note: The pointers you pass in for shape and init_val become property of our
  * new storage. You don't need to free them, and you shouldn't re-use them.
  */
-LIST_STORAGE* nm_list_storage_create(dtype_t dtype, size_t* shape, size_t dim, void* init_val) {
+LIST_STORAGE* nm_list_storage_create(nm::dtype_t dtype, size_t* shape, size_t dim, void* init_val) {
   LIST_STORAGE* s = ALLOC( LIST_STORAGE );
 
   s->dim   = dim;
@@ -277,7 +277,7 @@ LIST_STORAGE* nm_list_storage_create(dtype_t dtype, size_t* shape, size_t dim, v
   s->offset = ALLOC_N(size_t, s->dim);
   memset(s->offset, 0, s->dim * sizeof(size_t));
 
-  s->rows  = list::create();
+  s->rows  = nm::list::create();
   s->default_val = init_val;
   s->count = 1;
   s->src = s;
@@ -292,7 +292,7 @@ void nm_list_storage_delete(STORAGE* s) {
   if (s) {
     LIST_STORAGE* storage = (LIST_STORAGE*)s;
     if (storage->count-- == 1) {
-      list::del( storage->rows, storage->dim - 1 );
+      nm::list::del( storage->rows, storage->dim - 1 );
 
       xfree(storage->shape);
       xfree(storage->offset);
@@ -322,9 +322,9 @@ void nm_list_storage_delete_ref(STORAGE* s) {
 void nm_list_storage_mark(STORAGE* storage_base) {
   LIST_STORAGE* storage = (LIST_STORAGE*)storage_base;
 
-  if (storage && storage->dtype == RUBYOBJ) {
+  if (storage && storage->dtype == nm::RUBYOBJ) {
     rb_gc_mark(*((VALUE*)(storage->default_val)));
-    list::mark(storage->rows, storage->dim - 1);
+    nm::list::mark(storage->rows, storage->dim - 1);
   }
 }
 
@@ -342,7 +342,7 @@ static NODE* list_storage_get_single_node(LIST_STORAGE* s, SLICE* slice)
   NODE*  n;
 
   for (r = 0; r < s->dim; r++) {
-    n = list::find(l, s->offset[r] + slice->coords[r]);
+    n = nm::list::find(l, s->offset[r] + slice->coords[r]);
     if (n)  l = reinterpret_cast<LIST*>(n->val);
     else return NULL;
   }
@@ -549,7 +549,7 @@ static LIST* slice_copy(const LIST_STORAGE* src, LIST* src_rows, size_t* coords,
   void *val = NULL;
   int key;
   
-  LIST* dst_rows = list::create();
+  LIST* dst_rows = nm::list::create();
   NODE* src_node = src_rows->first;
 
   while (src_node) {
@@ -563,10 +563,10 @@ static LIST* slice_copy(const LIST_STORAGE* src, LIST* src_rows, size_t* coords,
                           lengths,
                           n + 1    );
 
-        if (val) {  list::insert_copy(dst_rows, false, key, val, sizeof(LIST)); }
+        if (val) {  nm::list::insert_copy(dst_rows, false, key, val, sizeof(LIST)); }
       }
 
-      else list::insert_copy(dst_rows, false, key, src_node->val, DTYPE_SIZES[src->dtype]);
+      else nm::list::insert_copy(dst_rows, false, key, src_node->val, DTYPE_SIZES[src->dtype]);
     }
 
     src_node = src_node->next;
@@ -651,9 +651,9 @@ static void slice_set_single(LIST_STORAGE* dest, LIST* l, void* val, size_t* coo
       size_t key = i + dest->offset[n] + coords[n];
 
       if (!node) {
-        node = list::insert(l, false, key, list::create()); // try to insert list
+        node = nm::list::insert(l, false, key, nm::list::create()); // try to insert list
       } else if (!node->next || (node->next && node->next->key > key)) {
-        node = list::insert_after(node, key, list::create());
+        node = nm::list::insert_after(node, key, nm::list::create());
       } else {
         node = node->next; // correct rank already exists.
       }
@@ -667,9 +667,9 @@ static void slice_set_single(LIST_STORAGE* dest, LIST* l, void* val, size_t* coo
       size_t key = i + dest->offset[n] + coords[n];
 
       if (!node)  {
-        node = list::insert_copy(l, true, key, val, DTYPE_SIZES[dest->dtype]);
+        node = nm::list::insert_copy(l, true, key, val, DTYPE_SIZES[dest->dtype]);
       } else {
-        node = list::replace_insert_after(node, key, val, true, DTYPE_SIZES[dest->dtype]);
+        node = nm::list::replace_insert_after(node, key, val, true, DTYPE_SIZES[dest->dtype]);
       }
     }
   }
@@ -696,7 +696,7 @@ void nm_list_storage_set(VALUE left, SLICE* slice, VALUE right) {
 
     if (remove) {
       xfree(val);
-      list::remove_recursive(s->rows, slice->coords, s->offset, slice->lengths, 0, s->dim);
+      nm::list::remove_recursive(s->rows, slice->coords, s->offset, slice->lengths, 0, s->dim);
     } else {
       slice_set_single(s, s->rows, val, slice->coords, slice->lengths, 0);
       xfree(val);
@@ -723,11 +723,11 @@ NODE* nm_list_storage_insert(STORAGE* storage, SLICE* slice, void* val) {
 
   // drill down into the structure
   for (r = s->dim; r > 1; --r) {
-    n = list::insert(l, false, s->offset[s->dim - r] + slice->coords[s->dim - r], list::create());
+    n = nm::list::insert(l, false, s->offset[s->dim - r] + slice->coords[s->dim - r], nm::list::create());
     l = reinterpret_cast<LIST*>(n->val);
   }
 
-  return list::insert(l, true, s->offset[s->dim - r] + slice->coords[s->dim - r], val);
+  return nm::list::insert(l, true, s->offset[s->dim - r] + slice->coords[s->dim - r], val);
 }
 
 /*
@@ -739,7 +739,7 @@ void nm_list_storage_remove(STORAGE* storage, SLICE* slice) {
   // This returns a boolean, which will indicate whether s->rows is empty.
   // We can safely ignore it, since we never want to delete s->rows until
   // it's time to destroy the LIST_STORAGE object.
-  list::remove_recursive(s->rows, slice->coords, s->offset, slice->lengths, 0, s->dim);
+  nm::list::remove_recursive(s->rows, slice->coords, s->offset, slice->lengths, 0, s->dim);
 }
 
 ///////////
@@ -780,7 +780,7 @@ STORAGE* nm_list_storage_matrix_multiply(const STORAGE_PAIR& casted_storage, siz
  * List storage to Hash conversion. Uses Hashes with default values, so you can continue to pretend
  * it's a sparse matrix.
  */
-VALUE nm_list_storage_to_hash(const LIST_STORAGE* s, const dtype_t dtype) {
+VALUE nm_list_storage_to_hash(const LIST_STORAGE* s, const nm::dtype_t dtype) {
 
   // Get the default value for the list storage.
   VALUE default_value = rubyobj_from_cval(s->default_val, dtype).rval;
@@ -868,8 +868,8 @@ LIST_STORAGE* nm_list_storage_copy(const LIST_STORAGE* rhs)
 /*
  * List storage copy constructor C access with casting.
  */
-STORAGE* nm_list_storage_cast_copy(const STORAGE* rhs, dtype_t new_dtype, void* dummy) {
-  NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::list_storage::cast_copy, LIST_STORAGE*, const LIST_STORAGE* rhs, dtype_t new_dtype);
+STORAGE* nm_list_storage_cast_copy(const STORAGE* rhs, nm::dtype_t new_dtype, void* dummy) {
+  NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::list_storage::cast_copy, LIST_STORAGE*, const LIST_STORAGE* rhs, nm::dtype_t new_dtype);
 
   return (STORAGE*)ttable[new_dtype][rhs->dtype]((LIST_STORAGE*)rhs, new_dtype);
 }
@@ -892,7 +892,7 @@ STORAGE* nm_list_storage_copy_transposed(const STORAGE* rhs_base) {
 /////////////////////////
 
 
-
+namespace nm {
 namespace list_storage {
 
 
@@ -911,14 +911,14 @@ static LIST_STORAGE* cast_copy(const LIST_STORAGE* rhs, dtype_t new_dtype) {
   *default_val = *reinterpret_cast<RDType*>(rhs->default_val);
 
   LIST_STORAGE* lhs = nm_list_storage_create(new_dtype, shape, rhs->dim, default_val);
-  //lhs->rows         = list::create();
+  //lhs->rows         = nm::list::create();
 
   // TODO: Needs optimization. When matrix is reference it is copped twice.
   if (rhs->src == rhs) 
-    list::cast_copy_contents<LDType, RDType>(lhs->rows, rhs->rows, rhs->dim - 1);
+    nm::list::cast_copy_contents<LDType, RDType>(lhs->rows, rhs->rows, rhs->dim - 1);
   else {
     LIST_STORAGE *tmp = nm_list_storage_copy(rhs);
-    list::cast_copy_contents<LDType, RDType>(lhs->rows, tmp->rows, rhs->dim - 1);
+    nm::list::cast_copy_contents<LDType, RDType>(lhs->rows, tmp->rows, rhs->dim - 1);
     nm_list_storage_delete(tmp);
   }
 
