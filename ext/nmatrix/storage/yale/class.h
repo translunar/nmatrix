@@ -393,7 +393,7 @@ public:
       xfree(v);
 
     if (ldtype_r)
-      nm_dense_storage_delete(reinterpret_cast<STORAGE*>(ldtype_r));
+      nm_delete(ldtype_r);
   }
 
 
@@ -946,6 +946,7 @@ protected:
 
       // Insert slice data for a single row.
       for (size_t j = 0; j < lengths[1]; ++j, ++v_offset) {
+        std::cerr << "    on j=" << j << " (real_j = " << real_j + j << ")" << std::endl;
         if (v_offset >= v_size) v_offset %= v_size;
 
         if (j + real_j == i + real_i) { // modify diagonal
@@ -956,7 +957,7 @@ protected:
           ++q; // move on to next q location
         }
 
-        if (ija(r) == j + real_j) ++r; // move r forward if the column matches.
+        if (r < ija(real_shape(0)) && ija(r) == j + real_j) ++r; // move r forward if the column matches.
       }
 
       // Update the row pointer for the current row.
@@ -985,6 +986,7 @@ protected:
     s->ija      = new_ija;
     s->a        = reinterpret_cast<void*>(new_a);
   }
+
 
 
 
