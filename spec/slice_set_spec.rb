@@ -82,12 +82,15 @@ describe "Set slice operation" do
         m = @m.clone
 
         step "set upper left-hand 2x2 corner to 100" do
+          binding.pry if stype == :list
 
           m[0..1,0..1] = 100
+
           if stype == :yale
             m.yale_ija.should == [4,   6,   8,   10,   1,   2,   0,   2,  0,  1]
             m.yale_a.should   == [100, 100, 8,   0,   100,  2, 100,   5,  6,  7]
           end
+
           m[0..1,0..1].should == slice_result_a
           m[2,0..1].should == @m[2,0..1]
           m[0..1,2].should == @m[0..1,2]
@@ -105,6 +108,7 @@ describe "Set slice operation" do
 
         m = @m.clone
         step "set lower left-hand 2x2 corner to 100" do
+          binding.pry if stype == :list
           m[1..2,0..1] = 100
           m[1..2,0..1].should == slice_result_a
           m[0,0..1].should == @m[0,0..1]
@@ -118,6 +122,9 @@ describe "Set slice operation" do
 
         m = @m.clone
         step "set lower right-hand 2x2 corner to 100" do
+          require 'pry'
+          binding.pry if stype == :list
+
           m[1..2,1..2] = 100
           #binding.pry if stype == :yale
           m[1..2,1..2].should == slice_result_a

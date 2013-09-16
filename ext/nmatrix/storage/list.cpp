@@ -43,6 +43,7 @@
 
 #include "data/data.h"
 
+#include "dense.h"
 #include "common.h"
 #include "list.h"
 
@@ -56,6 +57,11 @@
 /*
  * Global Variables
  */
+
+
+extern "C" {
+static void slice_set_single(LIST_STORAGE* dest, LIST* l, void* val, size_t* coords, size_t* lengths, size_t n);
+}
 
 namespace nm { namespace list_storage {
 
@@ -244,6 +250,171 @@ static void map_merged_stored_r(RecurseData& result, RecurseData& left, RecurseD
       if (lcurr && lcurr->key - left.offset(rec) >= result.ref_shape(rec)) lcurr = NULL;
     }
   }
+}
+
+/*
+ * Recursive function, sets multiple values in a matrix from multiple source values. Also handles removal; returns true
+ * if the recursion results in an empty list at that level (which signals that the current parent should be removed).
+ */
+template <typename D>
+static bool slice_set(LIST_STORAGE* dest, LIST* l, size_t* coords, size_t* lengths, size_t n, D* v, size_t v_size, size_t& v_offset) {
+  using nm::list::node_is_within_slice;
+  using nm::list::remove_by_node;
+  using nm::list::find_preceding_from_list;
+  using nm::list::insert_first_list;
+  using nm::list::insert_first_node;
+  using nm::list::insert_after;
+  size_t* offsets = dest->offset;
+
+  // drill down into the structure
+  NODE* prev = find_preceding_from_list(l, coords[n] + offsets[n]);
+  NODE* node = NULL;
+  if (prev) node = prev->next && node_is_within_slice(prev->next, coords[n] + offsets[n], lengths[n]) ? prev->next : NULL;
+  else      node = node_is_within_slice(l->first, coords[n] + offsets[n], lengths[n]) ? l->first : NULL;
+
+  if (dest->dim - n > 1) {
+    size_t i    = 0;
+    size_t key  = i + offsets[n] + coords[n];
+
+    // Make sure we have an element to work with
+    if (!node) {
+      if (!prev) {
+        std::cerr << "slice_set(" << n << "," << key << "): insert_first_list(priming)" << std::endl;
+        node = insert_first_list(l, key, nm::list::create());
+      } else {
+        std::cerr << "slice_set(" << n << "," << key << "): insert_after(priming)" << std::endl;
+        node = insert_after(prev, key, nm::list::create());
+      }
+    }
+
+    // At this point, it's guaranteed that there is a list here matching key.
+
+    while (node) {
+      // Recurse down into the list. If it returns true, it's empty, so we need to delete it.
+      std::cerr << "slice_set(" << n << "," << key << "): slice_set on node with key " << node->key << std::endl;
+      bool remove_parent = slice_set(dest, reinterpret_cast<LIST*>(node->val), coords, lengths, n+1, v, v_size, v_offset);
+
+      if (remove_parent) {
+        std::cerr << "slice_set(" << n << "," << key << "): remove_by_node" << std::endl;
+        xfree(remove_by_node(l, prev, node));
+        if (prev) node = node_is_within_slice(prev->next, key-i, lengths[n]) ? prev->next : NULL;
+        else      node = node_is_within_slice(l->first,   key-i, lengths[n]) ? l->first   : NULL;
+      } else {  // move forward
+        prev = node;
+        node = node_is_within_slice(prev->next, key-i, lengths[n]) ? prev->next : NULL;
+      }
+
+      ++i; ++key;
+
+      if (i >= lengths[n]) break;
+
+      // Now do we need to insert another node here? Or is there already one?
+      if (!node) {
+        if (!prev) {
+          std::cerr << "slice_set(" << n << "," << key << "): insert_first_list(loop)" << std::endl;
+          node = insert_first_list(l, key, nm::list::create());
+        } else {
+          std::cerr << "slice_set(" << n << "," << key << "): insert_after(loop)" << std::endl;
+          node = insert_after(prev, key, nm::list::create());
+        }
+      }
+    }
+
+  } else {
+
+    size_t i    = 0;
+    size_t key  = i + offsets[n] + coords[n];
+
+    while (i < lengths[n]) {
+      // Make sure we have an element to work with
+      if (v_offset >= v_size) v_offset %= v_size;
+
+      std::cerr << "LEAF: looping " << i << ", " << key << std::endl;
+
+      if (node) {
+        if (node->key == key) {
+          if (v[v_offset] == *reinterpret_cast<D*>(dest->default_val)) { // remove zero value
+
+            std::cerr << "\tremove_by_node" << std::endl;
+
+            xfree(remove_by_node(l, (prev ? prev : l->first), node));
+
+            if (prev) node = node_is_within_slice(prev->next, key-i, lengths[n]) ? prev->next : NULL;
+            else      node = node_is_within_slice(l->first,   key-i, lengths[n]) ? l->first   : NULL;
+
+          } else { // edit directly
+            std::cerr << "\tdirect edit" << std::endl;
+            *reinterpret_cast<D*>(node->val) = v[v_offset];
+            prev = node;
+            node = node_is_within_slice(node->next, key-i, lengths[n]) ? node->next : NULL;
+          }
+        } else if (node->key > key) {
+          std::cerr << "\tnode->key[" << node->key << "] > key (insert)" << std::endl;
+          D* nv = ALLOC(D); *nv = v[v_offset];
+          if (prev) node = insert_after(prev, key, nv);
+          else      node = insert_first_node(l, key, nv, sizeof(D));
+
+          prev = node;
+          node = node_is_within_slice(prev->next, key-i, lengths[n]) ? prev->next : NULL;
+        }
+      } else { // no node -- insert a new one
+        std::cerr << "\t!node (insert)" << std::endl;
+        D* nv = ALLOC(D); *nv = v[v_offset];
+        if (prev) node = insert_after(prev, key, nv);
+        else      node = insert_first_node(l, key, nv, sizeof(D));
+
+        prev = node;
+        node = node_is_within_slice(prev->next, key-i, lengths[n]) ? prev->next : NULL;
+      }
+
+      ++i; ++key;
+    }
+  }
+
+  return (l->first) ? false : true;
+}
+
+
+template <typename D>
+void set(VALUE left, SLICE* slice, VALUE right) {
+  LIST_STORAGE* s = NM_STORAGE_LIST(left);
+
+  std::pair<NMATRIX*,bool> nm_and_free =
+    interpret_arg_as_dense_nmatrix(right, NM_DTYPE(left));
+
+  // Map the data onto D* v.
+  D*     v;
+  size_t v_size = 1;
+
+  if (nm_and_free.first) {
+    DENSE_STORAGE* t = reinterpret_cast<DENSE_STORAGE*>(nm_and_free.first->storage);
+    v                = reinterpret_cast<D*>(t->elements);
+    v_size           = nm_storage_count_max_elements(t);
+
+  } else if (TYPE(right) == T_ARRAY) {
+    v_size = RARRAY_LEN(right);
+    v      = ALLOC_N(D, v_size);
+    for (size_t m = 0; m < v_size; ++m) {
+      rubyval_to_cval(rb_ary_entry(right, m), s->dtype, &(v[m]));
+    }
+  } else {
+    v = reinterpret_cast<D*>(rubyobj_to_cval(right, NM_DTYPE(left)));
+  }
+
+  if (v_size == 1 && *v == *reinterpret_cast<D*>(s->default_val)) {
+    nm::list::remove_recursive(s->rows, slice->coords, s->offset, slice->lengths, 0, s->dim);
+  } else if (slice->single) {
+    slice_set_single(s, s->rows, reinterpret_cast<void*>(v), slice->coords, slice->lengths, 0);
+  } else {
+    size_t v_offset = 0;
+    slice_set<D>(s, s->rows, slice->coords, slice->lengths, 0, v, v_size, v_offset);
+  }
+
+
+  if (nm_and_free.first && nm_and_free.second)
+    nm_delete(nm_and_free.first);
+  else
+    xfree(v);
 }
 
 
@@ -673,35 +844,16 @@ static void slice_set_single(LIST_STORAGE* dest, LIST* l, void* val, size_t* coo
       }
     }
   }
-
 }
+
 
 
 /*
  * Set a value or values in a list matrix.
  */
 void nm_list_storage_set(VALUE left, SLICE* slice, VALUE right) {
-  LIST_STORAGE* s = NM_STORAGE_LIST(left);
-
-  if (TYPE(right) == T_DATA) {
-    if (RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete || RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete_ref) {
-      rb_raise(rb_eNotImpError, "this type of slicing not yet supported");
-    } else {
-      rb_raise(rb_eTypeError, "unrecognized type for slice assignment");
-    }
-  } else {
-    void* val = rubyobj_to_cval(right, s->dtype);
-
-    bool remove = !std::memcmp(val, s->default_val, s->dtype);
-
-    if (remove) {
-      xfree(val);
-      nm::list::remove_recursive(s->rows, slice->coords, s->offset, slice->lengths, 0, s->dim);
-    } else {
-      slice_set_single(s, s->rows, val, slice->coords, slice->lengths, 0);
-      xfree(val);
-    }
-  }
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::list_storage::set, void, VALUE, SLICE*, VALUE)
+  ttable[NM_DTYPE(left)](left, slice, right);
 }
 
 

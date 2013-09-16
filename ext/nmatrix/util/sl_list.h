@@ -79,10 +79,14 @@ void	mark(LIST* list, size_t recursions);
 
 NODE* insert(LIST* list, bool replace, size_t key, void* val);
 NODE* insert_copy(LIST *list, bool replace, size_t key, void *val, size_t size);
+NODE* insert_first_node(LIST* list, size_t key, void* val, size_t val_size);
+NODE* insert_first_list(LIST* list, size_t key, LIST* l);
 NODE* insert_after(NODE* node, size_t key, void* val);
 NODE* replace_insert_after(NODE* node, size_t key, void* val, bool copy, size_t copy_size);
 void* remove(LIST* list, size_t key);
+void* remove_by_node(LIST* list, NODE* prev, NODE* rm);
 bool remove_recursive(LIST* list, const size_t* coords, const size_t* offset, const size_t* lengths, size_t r, const size_t& dim);
+bool node_is_within_slice(NODE* n, size_t coord, size_t len);
 
 template <typename Type>
 inline NODE* insert_helper(LIST* list, NODE* node, size_t key, Type val) {
