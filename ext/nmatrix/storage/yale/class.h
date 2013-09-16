@@ -901,15 +901,12 @@ protected:
       rb_raise(rb_eStandardError, "resize caused by insertion of size %d (on top of current size %lu) would have caused yale matrix size to exceed its maximum (%lu)", p.total_change, sz, real_max_size());
     }
 
-    std::cerr << "update_resize_move_insert: allocating " << new_cap << std::endl;
-
     size_t* new_ija     = ALLOC_N( size_t,new_cap );
     D* new_a            = ALLOC_N( D,     new_cap );
 
     // Copy unchanged row pointers first.
     size_t m = 0;
     for (; m <= real_i; ++m) {
-      std::cerr << "copying unchanged row pointers: " << m << std::endl;
       new_ija[m]        = ija(m);
       new_a[m]          = a(m);
     }
@@ -917,7 +914,6 @@ protected:
     // Now copy unchanged locations in IJA and A.
     size_t q = real_shape(0)+1; // q is the copy-to position.
     size_t r = real_shape(0)+1; // r is the copy-from position.
-    std::cerr << "copying exactly positions q,r=" << q << " up to p.pos[0]=" << p.pos[0] << std::endl;
     for (; r < p.pos[0]; ++r, ++q) {
       new_ija[q]        = ija(r);
       new_a[q]          = a(r);
@@ -928,9 +924,6 @@ protected:
     size_t v_offset = 0;
     int accum = 0; // keep track of the total change as we go so we can update row information.
     for (size_t i = 0; i < lengths[0]; ++i, ++m) {
-      std::cerr << "looping for each row (i=" << i << ")" << std::endl;
-      std::cerr << "  copying exactly positions q=" << q << ",r=" << r << " up to p.pos[i=" << i << "]=" << p.pos[i];
-      std::cerr << "    which is actually real_i = " << real_i + i << std::endl;
       for (; r < p.pos[i]; ++r, ++q) {
         new_ija[q]      = ija(r);
         new_a[q]        = a(r);
@@ -938,7 +931,6 @@ protected:
 
       // Insert slice data for a single row.
       for (size_t j = 0; j < lengths[1]; ++j, ++v_offset) {
-        std::cerr << "    on j=" << j << " (real_j = " << real_j + j << ")" << std::endl;
         if (v_offset >= v_size) v_offset %= v_size;
 
         if (j + real_j == i + real_i) { // modify diagonal
@@ -954,21 +946,18 @@ protected:
 
       // Update the row pointer for the current row.
       accum                += p.change[i];
-      std::cerr << "  updating row " << m << " pointer, now " << ija(m) + accum << std::endl;
       new_ija[m]            = ija(m) + accum;
       new_a[m]              = a(m); // copy diagonal for this row
     }
 
     // Now copy everything subsequent to the last insertion point.
     for (; r < size(); ++r, ++q) {
-      std::cerr << "copying exactly positions q,r=" << q << " through p.pos[0]=" << p.pos[0] << std::endl;
       new_ija[q]            = ija(r);
       new_a[q]              = a(r);
     }
 
     // Update the remaining row pointers and copy remaining diagonals
     for (; m <= real_shape(0); ++m) {
-      std::cerr << "  updating remaining row " << m << " pointer, now " << ija(m) + accum << std::endl;
       new_ija[m]            = ija(m) + accum;
       new_a[m]              = a(m);
     }
@@ -1012,7 +1001,6 @@ protected:
 
     // Now update row pointers following the changed row as we copy the additional values.
     for (size_t m = real_i + 1; m <= real_shape(0); ++m) {
-      std::cerr << "update_resize_move: changing ija[m] (m=" << m << ") from " << ija(m) << " to " << ija(m)+n << std::endl;
       new_ija[m]        = ija(m) + n;
       new_a[m]          = a(m);
     }
@@ -1023,14 +1011,11 @@ protected:
       new_a[m]          = a(m);
     }
 
-    std::cerr << "resize: position.p() = " << position.p() << ", end = " << position.end() << std::endl;
-
     // Copy all subsequent to insertion/removal site
     size_t m = position.p();
     if (n < 0) m -= n;
 
     for (; m < sz; ++m) {
-      std::cerr << "resize: moving from " << m << " to " << m+n << std::endl;
       new_ija[m+n]      = ija(m);
       new_a[m+n]        = a(m);
     }
@@ -1050,18 +1035,9 @@ protected:
    * Move elements in the IJA and A arrays by n (to the right).
    * Does not update row sizes.
    */
-/*  void move_right(row_stored_nd_iterator position, size_t n) {
-    size_t sz = size();
-    for (size_t m = sz; m >= position.p(); ++m) {
-      //std::cerr << "moving from " << sz-1-m << " to " << sz+n-1-m << std::endl;
-      ija(m+n) = ija(m);
-      a(m+n)   = a(m);
-    }
-  } */
   void move_right(row_stored_nd_iterator position, size_t n) {
     size_t sz = size();
     for (size_t m = 0; m < sz - position.p(); ++m) {
-      //std::cerr << "moving from " << sz-1-m << " to " << sz+n-1-m << std::endl;
       ija(sz+n-1-m) = ija(sz-1-m);
       a(sz+n-1-m)   = a(sz-1-m);
     }
@@ -1074,7 +1050,6 @@ protected:
   void move_left(row_stored_nd_iterator position, size_t n) {
     size_t sz = size();
     for (size_t m = position.p() + n; m < sz; ++m) {   // work backwards
-      std::cerr << "moving from " << m << " to " << m-n << std::endl;
       ija(m-n)      = ija(m);
       a(m-n)        = a(m);
     }

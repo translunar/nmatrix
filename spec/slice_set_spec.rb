@@ -47,7 +47,6 @@ describe "Set slice operation" do
         end
 
         step "set and reset a single entry" do
-          #pending if stype == :yale
           n = @m.clone
           old_val = @m[0,0]
           @m[0,0] = 100
@@ -59,7 +58,6 @@ describe "Set slice operation" do
         if stype == :yale
           n = @m.clone
           step "set a row of entries" do
-
             n[0,0..2] = 0
             n[0,0..2].to_flat_array.should == [0,0,0]
             n[1,0..2].to_flat_array.should == [3,4,5]
@@ -73,7 +71,9 @@ describe "Set slice operation" do
           end
 
           step "reset both rows of entries" do
-
+            n[0,0..2] = [0,1,2]
+            n[2,0..2] = [6,7,8]
+            n.should == @m
           end
         end
 
@@ -112,8 +112,6 @@ describe "Set slice operation" do
         end
 
         step "set lower left-hand 2x2 corner to 0" do
-          require 'pry'
-          binding.pry if stype == :yale
           m[1..2,0..1] = 0
           m[1..2,0..1].should == slice_result_b
         end

@@ -253,11 +253,8 @@ public:
 
   row_stored_nd_iterator_T<D,RefType,YaleRef> ndfind(size_t j) {
     if (j == 0) return ndbegin();
-    std::cerr << "ndfind: p_first = " << p_first << " " << p_last << std::endl;
     size_t p = p_first > p_last ? p_first : y.real_find_left_boundary_pos(p_first, p_last, j + y.offset(1));
-    std::cerr << "ndfind(" << j << ")" << " = " << p << "\t(max_p = " << y.ija(y.real_shape(0)) << ")" << std::endl;
     row_stored_nd_iterator iter = row_stored_nd_iterator_T<D,RefType,YaleRef>(*this, p);
-    std::cerr << "iter.end = " << std::boolalpha << iter.end() << ", p = " << iter.p() << std::endl;
     return iter;
   }
 
@@ -276,7 +273,6 @@ public:
     if (sz - 1 <= y.capacity() / nm::yale_storage::GROWTH_CONSTANT) {
       y.update_resize_move(position, real_i(), -1);
     } else {
-      std::cerr << "erase: calling move_left -1 on position " << position.p() << " end=" << position.end() << std::endl;
       y.move_left(position, 1);
       y.update_real_row_sizes_from(real_i(), -1);
     }
@@ -353,8 +349,6 @@ public:
   int single_row_insertion_plan(row_stored_nd_iterator position, size_t jj, size_t length, D const* v, size_t v_size, size_t& v_offset) {
     int nd_change = 0;
 
-    std::cerr << "single_row_insertion_plan: length=" << length << std::endl;
-
     for (size_t jc = jj; jc < jj + length; ++jc, ++v_offset) {
       if (v_offset >= v_size) v_offset %= v_size; // reset v position.
 
@@ -370,8 +364,6 @@ public:
       }
 
     }
-
-    std::cerr << "\tnd_change=" << nd_change << std::endl;
     return nd_change;
   }
 
@@ -394,10 +386,6 @@ public:
   row_stored_nd_iterator insert(row_stored_nd_iterator position, size_t jj, size_t length, D const* v, size_t v_size, size_t& v_offset) {
     size_t tmp_v_offset = v_offset;
     int nd_change = single_row_insertion_plan(position, jj, length, v, v_size, tmp_v_offset);
-
-    std::cerr << "insert: at column " << jj << ", iterator p = " << position.p() << " end = " << std::boolalpha << position.end() << ", length = " << length << ", nd_change = " << nd_change << std::endl;
-    if (!position.end())
-      std::cerr << "\titerator j = " << position.j() << std::endl;
 
     // First record the position, just in case our iterator becomes invalid.
     size_t pp = position.p();
