@@ -331,7 +331,6 @@ extern "C" {
 static VALUE nm_init(int argc, VALUE* argv, VALUE nm);
 static VALUE nm_init_copy(VALUE copy, VALUE original);
 static VALUE nm_init_transposed(VALUE self);
-static VALUE nm_cast(VALUE self, VALUE new_stype_symbol, VALUE new_dtype_symbol, VALUE init);
 static VALUE nm_read(int argc, VALUE* argv, VALUE self);
 static VALUE nm_write(int argc, VALUE* argv, VALUE self);
 static VALUE nm_init_yale_from_old_yale(VALUE shape, VALUE dtype, VALUE ia, VALUE ja, VALUE a, VALUE from_dtype, VALUE nm);
@@ -1105,32 +1104,40 @@ static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
 
 
 /*
+ * Helper for nm_cast which uses the C types instead of the Ruby objects. Called by nm_cast.
+ */
+inline NMATRIX* nm_cast_with_ctype_args(NMATRIX* self, nm::stype_t new_stype, nm::dtype_t new_dtype, void* init_ptr) {
+  NMATRIX* lhs = ALLOC(NMATRIX);
+  lhs->stype   = new_stype;
+
+  // Copy the storage
+  CAST_TABLE(cast_copy);
+  lhs->storage = cast_copy[lhs->stype][self->stype](self->storage, new_dtype, init_ptr);
+
+  return lhs;
+}
+
+
+/*
  * call-seq:
  *     cast(stype) -> NMatrix
  *     cast(stype, dtype, sparse_basis) -> NMatrix
  *
  * Copy constructor for changing dtypes and stypes.
  */
-static VALUE nm_cast(VALUE self, VALUE new_stype_symbol, VALUE new_dtype_symbol, VALUE init) {
+VALUE nm_cast(VALUE self, VALUE new_stype_symbol, VALUE new_dtype_symbol, VALUE init) {
   nm::dtype_t new_dtype = nm_dtype_from_rbsymbol(new_dtype_symbol);
   nm::stype_t new_stype = nm_stype_from_rbsymbol(new_stype_symbol);
 
   CheckNMatrixType(self);
-
-  NMATRIX *lhs = ALLOC(NMATRIX),
-          *rhs;
-  lhs->stype = new_stype;
+  NMATRIX *rhs;
 
   UnwrapNMatrix( self, rhs );
 
   void* init_ptr = ALLOCA_N(char, DTYPE_SIZES[new_dtype]);
   rubyval_to_cval(init, new_dtype, init_ptr);
 
-  // Copy the storage
-  CAST_TABLE(cast_copy);
-  lhs->storage = cast_copy[lhs->stype][rhs->stype](rhs->storage, new_dtype, init_ptr);
-
-  return Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, lhs);
+  return Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, nm_cast_with_ctype_args(rhs, new_stype, new_dtype, init_ptr));
 }
 
 /*

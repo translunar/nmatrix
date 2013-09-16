@@ -362,7 +362,6 @@ public:
           ++position; // move iterator forward.
         }
       }
-
     }
     return nd_change;
   }
@@ -372,7 +371,7 @@ public:
    * the change amount. Don't use this one if you can help it because it requires a binary search of
    * the row.
    */
-  std::pair<int,size_t> single_row_insertion_plan(size_t jj, size_t length, D const* v, size_t v_size, size_t v_offset) {
+  std::pair<int,size_t> single_row_insertion_plan(size_t jj, size_t length, D const* v, size_t v_size, size_t& v_offset) {
     std::pair<int,size_t> result;
     row_stored_nd_iterator pos = ndfind(jj);
     result.first = single_row_insertion_plan(pos, jj, length, v, v_size, v_offset);

@@ -304,7 +304,8 @@ NM_DEF_STRUCT_POST(NMATRIX);  // };
 #define NM_SHAPE1(val)          (NM_STORAGE(val)->shape[1])
 #define NM_DEFAULT_VAL(val)     (NM_STORAGE_LIST(val)->default_val)
 
-#define NM_DENSE_COUNT(val)     (storage_count_max_elements(NM_STORAGE_DENSE(val)))
+#define NM_DENSE_COUNT(val)     (nm_storage_count_max_elements(NM_STORAGE_DENSE(val)))
+#define NM_DENSE_ELEMENTS(val)  (NM_STORAGE_DENSE(val)->elements)
 #define NM_SIZEOF_DTYPE(val)    (DTYPE_SIZES[NM_DTYPE(val)])
 #define NM_REF(val,slice)      (RefFuncs[NM_STYPE(val)]( NM_STORAGE(val), slice, NM_SIZEOF_DTYPE(val) ))
     
@@ -351,6 +352,8 @@ extern "C" {
 
   // Non-API functions needed by other cpp files.
 	NMATRIX* nm_create(nm::stype_t stype, STORAGE* storage);
+  NMATRIX* nm_cast_with_ctype_args(NMATRIX* self, nm::stype_t new_stype, nm::dtype_t new_dtype, void* init_ptr);
+	VALUE    nm_cast(VALUE self, VALUE new_stype_symbol, VALUE new_dtype_symbol, VALUE init);
 	void     nm_mark(NMATRIX* mat);
 	void     nm_delete(NMATRIX* mat);
 	void     nm_delete_ref(NMATRIX* mat);

@@ -29,6 +29,7 @@
 #ifndef YALE_CLASS_H
 # define YALE_CLASS_H
 
+#include "../dense.h"
 #include "math/transpose.h"
 
 namespace nm {
@@ -280,8 +281,8 @@ public:
     void add(size_t i, const std::pair<int,size_t>& change_and_pos) {
       pos[i]        = change_and_pos.second;
       change[i]     = change_and_pos.first;
-      total_change += change[i];
-      if (change[i] != 0) num_changes++;
+      total_change += change_and_pos.first;
+      if (change_and_pos.first != 0) num_changes++;
     }
   };
 
@@ -342,43 +343,57 @@ public:
    * it.
    */
   void insert(SLICE* slice, VALUE right) {
-    if (TYPE(right) == T_DATA) {
-      if (RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete || RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete_ref) {
-        rb_raise(rb_eNotImpError, "this type of slicing not yet supported");
-      } else {
-        rb_raise(rb_eTypeError, "unrecognized type for slice assignment");
+    D* v;
+    NMATRIX* ldtype_r = NULL;
+
+    size_t v_size = 1;
+    bool v_alloc = false;
+
+    // Map the data onto D* v
+    if (TYPE(right) == T_DATA && (RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete || RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete_ref)) {
+
+      if (NM_STYPE(right) != DENSE_STORE || NM_DTYPE(right) != dtype() || NM_SRC(right) != NM_STORAGE(right)) {
+        NMATRIX *r;
+        UnwrapNMatrix( right, r );
+        ldtype_r          = nm_cast_with_ctype_args(r, nm::DENSE_STORE, dtype(), NULL);
+        DENSE_STORAGE* s  = reinterpret_cast<DENSE_STORAGE*>(ldtype_r->storage);
+        v                 = reinterpret_cast<D*>(s->elements);
+        v_size            = nm_storage_count_max_elements(s);
+      } else {  // simple case -- right-hand matrix is dense and is not a reference and has same dtype
+        v      = reinterpret_cast<D*>(NM_DENSE_ELEMENTS(right));
+        v_size = NM_DENSE_COUNT(right);
       }
+      // Do not set v_alloc = true for either of these. It is the responsibility of r/ldtype_r
+
+    } else if (TYPE(right) == T_DATA) {
+      rb_raise(rb_eTypeError, "unrecognized type for slice assignment");
+
+    } else if (TYPE(right) == T_ARRAY) {
+      v_size = RARRAY_LEN(right);
+      v      = ALLOC_N(D, v_size);
+      for (size_t m = 0; m < v_size; ++m) {
+        rubyval_to_cval(rb_ary_entry(right, m), s->dtype, &(v[m]));
+      }
+      v_alloc = true;
     } else {
-
-      D* v;
-
-      size_t v_size = 1;
-      bool v_alloc = false;
-
-      // Map the data onto D* v
-      if (TYPE(right) == T_ARRAY) {
-        v_size = RARRAY_LEN(right);
-        v      = ALLOC_N(D, v_size);
-        for (size_t m = 0; m < v_size; ++m) {
-          rubyval_to_cval(rb_ary_entry(right, m), s->dtype, &(v[m]));
-        }
-        v_alloc = true;
-      } else {
-        v = reinterpret_cast<D*>(rubyobj_to_cval(right, dtype()));
-      }
-
-      row_iterator i = ribegin(slice->coords[0]);
-
-      if (slice->single || (slice->lengths[0] == 1 && slice->lengths[1] == 1)) { // single entry
-        i.insert(slice->coords[1], *v);
-      } else if (slice->lengths[0] == 1) { // single row, multiple entries
-        i.insert(slice->coords[1], slice->lengths[1], v, v_size);
-      } else { // multiple rows, unknown number of entries
-        insert(i, slice->coords[1], slice->lengths, v, v_size);
-      }
-
-      if (v_alloc) xfree(v);
+      v = reinterpret_cast<D*>(rubyobj_to_cval(right, dtype()));
     }
+
+    row_iterator i = ribegin(slice->coords[0]);
+
+    if (slice->single || (slice->lengths[0] == 1 && slice->lengths[1] == 1)) { // single entry
+      i.insert(slice->coords[1], *v);
+    } else if (slice->lengths[0] == 1) { // single row, multiple entries
+      i.insert(slice->coords[1], slice->lengths[1], v, v_size);
+    } else { // multiple rows, unknown number of entries
+      insert(i, slice->coords[1], slice->lengths, v, v_size);
+    }
+
+    if (v_alloc)
+      xfree(v);
+
+    if (ldtype_r)
+      nm_dense_storage_delete(reinterpret_cast<STORAGE*>(ldtype_r));
   }
 
 

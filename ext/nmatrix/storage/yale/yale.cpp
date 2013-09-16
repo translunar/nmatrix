@@ -373,7 +373,6 @@ template <typename DType>
 void set(VALUE left, SLICE* slice, VALUE right) {
   YALE_STORAGE* storage = NM_STORAGE_YALE(left);
   YaleStorage<DType> y(storage);
-
   y.insert(slice, right);
 }
 
