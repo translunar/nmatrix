@@ -43,7 +43,7 @@ describe "Slice operation" do
 
       if stype == :yale
         it "should binary search for the left boundary of a partial row of stored indices correctly" do
-          n = NMatrix.new(:yale, 10, :int32)
+          n = NMatrix.new(10, stype: :yale, dtype: :int32)
           n[3,0] = 1
           #n[3,2] = 2
           n[3,3] = 3
@@ -213,7 +213,7 @@ describe "Slice operation" do
       context "by reference" do
         it 'should return an NMatrix' do
           n = @m[0..1,0..1]
-          nm_eql(n, NMatrix.new([2,2], [0,1,3,4], :int32)).should be_true
+          nm_eql(n, NMatrix.new([2,2], [0,1,3,4], dtype: :int32)).should be_true
         end
 
         it 'should return a 2x2 matrix with refs to self elements' do
@@ -245,7 +245,7 @@ describe "Slice operation" do
 
         it 'should slice again' do
           n = @m[1..2, 1..2]
-          nm_eql(n[1,0..1], NVector.new(2, [7,8], :int32).transpose).should be_true
+          nm_eql(n[1,0..1], NVector.new(2, [7,8], dtype: :int32).transpose).should be_true
         end
 
         it 'should be correct slice for range 0..2 and 0...3' do
@@ -281,8 +281,8 @@ describe "Slice operation" do
                          MATRIX32A_ARRAY
                        end
 
-                n = NMatrix.new([4,3], nary, left_dtype)[1..3,1..2]
-                m = NMatrix.new([3,2], mary, right_dtype)[1..2,0..1]
+                n = NMatrix.new([4,3], nary, dtype: left_dtype)[1..3,1..2]
+                m = NMatrix.new([3,2], mary, dtype: right_dtype)[1..2,0..1]
 
                 r = n.dot m
                 r.shape.should eql([3,2])

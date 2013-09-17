@@ -85,7 +85,7 @@ module NMatrix::BLAS
         end
 
         n ||= transpose_b ? b.shape[0] : b.shape[1]
-        c		= NMatrix.new([m, n], a.dtype)
+        c		= NMatrix.new([m, n], dtype: a.dtype)
       end
 
       # I think these are independent of whether or not a transpose occurs.
@@ -150,7 +150,7 @@ module NMatrix::BLAS
         beta  = Complex(0.0, 0.0) if beta  == 0.0
       end
 
-      y ||= NMatrix.new([m, n], a.dtype)
+      y ||= NMatrix.new([m, n], dtype: a.dtype)
 
       ::NMatrix::BLAS.cblas_gemv(transpose_a, m, n, alpha, a, lda, x, incx, beta, y, incy)
 

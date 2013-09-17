@@ -325,6 +325,10 @@ NM_DEF_STRUCT_POST(NMATRIX);  // };
 #define NM_IsNVector(obj) \
   (rb_obj_is_kind_of(obj, cNVector) == Qtrue)
 
+#define RB_P(OBJ) \
+	rb_funcall(rb_stderr, rb_intern("print"), 1, rb_funcall(OBJ, rb_intern("object_id"), 0)); \
+	rb_funcall(rb_stderr, rb_intern("puts"), 1, rb_funcall(OBJ, rb_intern("inspect"), 0));
+
 
 #ifdef __cplusplus
 typedef VALUE (*METHOD)(...);

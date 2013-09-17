@@ -93,8 +93,8 @@ describe "math" do
                  MATRIX32A_ARRAY
                end
 
-        n = NMatrix.new([4,3], nary, left_dtype)
-        m = NMatrix.new([3,2], mary, right_dtype)
+        n = NMatrix.new([4,3], nary, dtype: left_dtype, stype: :dense)
+        m = NMatrix.new([3,2], mary, dtype: right_dtype, stype: :dense)
 
         m.shape[0].should == 3
         m.shape[1].should == 2
@@ -131,9 +131,9 @@ describe "math" do
       it "dense handles #{left_dtype.to_s} dot #{right_dtype.to_s} vector multiplication" do
         #STDERR.puts "dtype=#{dtype.to_s}"
         #STDERR.puts "2"
-        n = NMatrix.new([4,3], [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0], left_dtype)
+        n = NMatrix.new([4,3], [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0], dtype: left_dtype)
 
-        m = NVector.new(3, [2.0, 1.0, 0.0], right_dtype).transpose
+        m = NMatrix.new([3,1], [2.0, 1.0, 0.0], dtype: right_dtype)
 
         m.shape[0].should == 3
         m.shape[1].should == 1

@@ -29,14 +29,15 @@
 require File.join(File.dirname(__FILE__), "spec_helper.rb")
 
 describe NMatrix::BLAS do
+
   [:rational32, :rational64, :rational128, :float32, :float64, :complex64, :complex128].each do |dtype|
     context dtype do
       # This is not the same as "exposes cblas trsm", which would be for a version defined in blas.rb (which
       # would greatly simplify the calling of cblas_trsm in terms of arguments, and which would be accessible
       # as NMatrix::BLAS::trsm)
       it "exposes unfriendly cblas_trsm" do
-        a     = NMatrix.new(:dense, 3, [4,-1.quo(2), -3.quo(4), -2, 2, -1.quo(4), -4, -2, -1.quo(2)], dtype)
-        b     = NVector.new(3, [-1, 17, -9], dtype)
+        a     = NMatrix.new(:dense, 3, [4,-1.quo(2), -3.quo(4), -2, 2, -1.quo(4), -4, -2, -1.quo(2)], dtype: dtype)
+        b     = NMatrix.new([3,1], [-1, 17, -9], dtype: dtype)
         NMatrix::BLAS::cblas_trsm(:row, :right, :lower, :transpose, :nonunit, 1, 3, 1.0, a, 3, b, 3)
 
         # These test results all come from actually running a matrix through BLAS. We use them to ensure that NMatrix's
@@ -69,8 +70,8 @@ describe NMatrix::BLAS do
     context dtype do
 
       it "exposes cblas rot" do
-        x = NVector.new(5, [1,2,3,4,5], dtype)
-        y = NVector.new(5, [-5,-4,-3,-2,-1], dtype)
+        x = NMatrix.new([5,1], [1,2,3,4,5], dtype: dtype)
+        y = NVector.new([5,1], [-5,-4,-3,-2,-1], dtype: dtype)
         x, y = NMatrix::BLAS::rot(x, y, 1.quo(2), Math.sqrt(3).quo(2), -1)
 
         x[0].should be_within(1e-4).of(-0.3660254037844386)
@@ -114,7 +115,7 @@ describe NMatrix::BLAS do
       it "exposes gemm" do
         #STDERR.puts "dtype=#{dtype.to_s}"
         #STDERR.puts "1"
-        n = NMatrix.new([4,3], dtype)
+        n = NMatrix.new([4,3], dtype: dtype)
         n[0,0] = 14.0
         n[0,1] = 9.0
         n[0,2] = 3.0
@@ -128,7 +129,7 @@ describe NMatrix::BLAS do
         n[3,1] = 2.0
         n[3,2] = 3.0
 
-        m = NMatrix.new([3,2], dtype)
+        m = NMatrix.new([3,2], dtype: dtype)
 
         m[0,0] = 12.0
         m[0,1] = 25.0
@@ -155,20 +156,20 @@ describe NMatrix::BLAS do
       it "exposes gemv" do
         #a = NMatrix.random(3)
         #x = NVector.random(3)
-        a = NMatrix.new([4,3], [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0], :float64)
-        x = NVector.new(3, [2.0, 1.0, 0.0], :float64)
+        a = NMatrix.new([4,3], [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0], dtype: :float64)
+        x = NVector.new(3, [2.0, 1.0, 0.0], dtype: :float64)
 
         NMatrix::BLAS.gemv(a, x)
       end
 
       it "exposes asum" do
-        x = NVector.new(4, [1,2,3,4], :float64)
+        x = NVector.new(4, [1,2,3,4], dtype: :float64)
         NMatrix::BLAS.asum(x).should == 10.0
       end
 
 
       it "exposes nrm2" do
-        x = NVector.new(4, [2,-4,3,5], :float64)
+        x = NVector.new(4, [2,-4,3,5], dtype: :float64)
         NMatrix::BLAS.nrm2(x, 1, 3).should be_within(1e-10).of(5.385164807134504)
       end
 

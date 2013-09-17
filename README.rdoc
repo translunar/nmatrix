@@ -50,7 +50,7 @@ Carlos Agarie (@agarie) is currently working to improve the documentation. The b
 
 You can find the complete API documentation {on our website}[http://sciruby.com/nmatrix/docs/].
 
-== EXAMPLES
+== Examples
 
 Create a new NMatrix from a ruby array: 
 

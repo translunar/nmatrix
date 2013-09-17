@@ -28,6 +28,9 @@
 require File.dirname(__FILE__) + "/spec_helper.rb"
 
 describe NMatrix do
+  it "creates a matrix with the new constructor" do
+    n = NMatrix.new([2,2], [0,1,2,3], dtype: :int64)
+  end
 
   it "adequately requires information to access a single entry of a dense matrix" do
     n = NMatrix.new(:dense, 4, [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], :float64)
@@ -155,7 +158,7 @@ describe NMatrix do
   [:dense, :list, :yale].each do |storage_type|
     context storage_type do
     it "can be duplicated" do
-        n = NMatrix.new(storage_type, [2,3], storage_type == :yale ? :float64 : 1.1)
+        n = NMatrix.new([2,3], 1.1, stype: storage_type, dtype: :float64, default: 1.1)
         n.stype.should equal(storage_type)
 
         n[0,0] = 0.0
@@ -173,9 +176,9 @@ describe NMatrix do
       end
 
       it "enforces shape boundaries" do
-        expect { NMatrix.new(storage_type, [1,10], storage_type == :yale ? :int8 : 0)[-1,0] }.should raise_error
-        expect { NMatrix.new(storage_type, [1,10], storage_type == :yale ? :int8 : 0)[1,0]  }.should raise_error(RangeError)
-        expect { NMatrix.new(storage_type, [1,10], storage_type == :yale ? :int8 : 0)[0,10] }.should raise_error(RangeError)
+        expect { NMatrix.new([1,10], 0, dtype: :int8, stype: storage_type, default: 0)[-1,0] }.should raise_error
+        expect { NMatrix.new([1,10], 0, dtype: :int8, stype: storage_type, default: 0)[1,0]  }.should raise_error(RangeError)
+        expect { NMatrix.new([1,10], 0, dtype: :int8, stype: storage_type, default: 0)[0,10] }.should raise_error(RangeError)
       end
 
       it "sets and gets" do

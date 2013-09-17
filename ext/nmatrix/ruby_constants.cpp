@@ -35,7 +35,13 @@
  * Global Variables
  */
 
-ID	nm_rb_real,
+ID	nm_rb_dtype,
+    nm_rb_stype,
+
+    nm_rb_capacity,
+    nm_rb_default,
+
+    nm_rb_real,
 		nm_rb_imag,
 
 		nm_rb_numer,
@@ -93,6 +99,11 @@ VALUE cNMatrix,
  */
 
 void nm_init_ruby_constants(void) {
+  nm_rb_dtype             = rb_intern("dtype");
+  nm_rb_stype             = rb_intern("stype");
+
+  nm_rb_capacity          = rb_intern("capacity");
+  nm_rb_default           = rb_intern("default");
 
 	nm_rb_real							= rb_intern("real");
 	nm_rb_imag							= rb_intern("imag");

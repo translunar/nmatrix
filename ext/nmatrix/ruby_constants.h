@@ -38,7 +38,13 @@
  * Data
  */
 
-extern ID nm_rb_real,
+extern ID nm_rb_dtype,
+          nm_rb_stype,
+
+          nm_rb_capacity,
+          nm_rb_default,
+
+          nm_rb_real,
 					nm_rb_imag,
 		
 					nm_rb_numer,

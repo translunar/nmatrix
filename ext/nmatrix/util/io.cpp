@@ -157,7 +157,8 @@ nm::stype_t nm_stype_from_rbsymbol(VALUE sym) {
     }
   }
 
-  rb_raise(rb_eArgError, "Invalid storage type symbol specified");
+  VALUE str = rb_any_to_s(sym);
+  rb_raise(rb_eArgError, "invalid storage type symbol (:%s) specified", RSTRING_PTR(str));
   return nm::DENSE_STORE;
 }
 

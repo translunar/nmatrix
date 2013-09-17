@@ -455,6 +455,7 @@ class NMatrix
   #def __list_elementwise_add__ rhs
   #  self.__list_map_merged_stored__(rhs){ |l,r| l+r }.cast(self.stype, NMatrix.upcast(self.dtype, rhs.dtype))
   #end
+protected
 
   def inspect_helper #:nodoc:
     ary = []
@@ -485,6 +486,13 @@ class NMatrix
       ary << sect.to_a_rec(dimen+1)
     end
     ary
+  end
+
+
+  # NMatrix constructor helper for sparse matrices. Uses multi-slice-setting to initialize a matrix
+  # with a given array of initial values.
+  def __sparse_initial_set__(ary) #:nodoc:
+    self[0...self.shape[0],0...self.shape[1]] = ary
   end
 end
 

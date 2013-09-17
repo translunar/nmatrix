@@ -950,6 +950,120 @@ NMATRIX* nm_create(nm::stype_t stype, STORAGE* storage) {
 }
 
 /*
+ *
+ * Create a new NMatrix.
+ *
+ * == Arguments:
+ *
+ * * shape
+ * * initial value(s)
+ * * stype
+ * * dtype
+ * * default value
+ * * capacity
+ */
+static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
+  VALUE shape_ary, initial_ary, hash;
+  //VALUE shape_ary, default_val, capacity, initial_ary, dtype_sym, stype_sym;
+  // Mandatory args: shape, dtype, stype
+//#ifdef RUBY_2
+  rb_scan_args(argc, argv, "11:", &shape_ary, &initial_ary, &hash); // &stype_sym, &dtype_sym, &default_val, &capacity);
+//#else
+//  rb_scan_args(argc, argv, "12", &shape_ary, &initial_ary, &hash);
+//  if (!NIL_P(hash) && TYPE(hash) != T_HASH)
+//    rb_raise(rb_eArgError, "expected hash or nil for arg 2");
+//#endif
+  // Get the shape.
+  size_t  dim;
+  size_t* shape = interpret_shape(shape_ary, &dim);
+  void*   init;
+  void*   v = NULL;
+  size_t  v_size = 0;
+
+  nm::stype_t stype = nm::DENSE_STORE;
+  nm::dtype_t dtype = nm::RUBYOBJ;
+  VALUE dtype_sym = Qnil, stype_sym = Qnil, default_val_num = Qnil, capacity_num = Qnil;
+  size_t capacity = 0;
+  if (!NIL_P(hash)) {
+    dtype_sym       = rb_hash_aref(hash, ID2SYM(nm_rb_dtype));
+    stype_sym       = rb_hash_aref(hash, ID2SYM(nm_rb_stype));
+    capacity_num    = rb_hash_aref(hash, ID2SYM(nm_rb_capacity));
+    default_val_num = rb_hash_aref(hash, ID2SYM(nm_rb_default));
+  }
+
+  //     stype ||= :dense
+  stype = !NIL_P(stype_sym) ? nm_stype_from_rbsymbol(stype_sym) : nm::DENSE_STORE;
+
+  //     dtype ||= h[:dtype] || guess_dtype(initial_ary) || :object
+  if (NIL_P(initial_ary) && NIL_P(dtype_sym))
+    dtype = nm::RUBYOBJ;
+  else if (NIL_P(dtype_sym))
+    dtype = nm_dtype_guess(initial_ary);
+  else
+    dtype = nm_dtype_from_rbsymbol(dtype_sym);
+
+  //   if stype != :dense
+  //     if initial_ary.nil?
+  //       init = h[:default] || 0
+  //     elsif initial_ary.is_a?(Array)
+  //       init = initial_ary.size > 1 ? (h[:default] || 0) : initial_ary[0]
+  //     else
+  //       init = initial_ary # not an array, just a value
+  //     end
+  //   end
+  if (stype != nm::DENSE_STORE) {
+    if (!NIL_P(default_val_num))
+      init = rubyobj_to_cval(default_val_num, dtype);
+    else if (NIL_P(initial_ary))
+      init = NULL;
+    else if (TYPE(initial_ary) == T_ARRAY && RARRAY_LEN(initial_ary) == 1)
+      init = rubyobj_to_cval(rb_ary_entry(initial_ary, 0), dtype);
+    else
+      init = rubyobj_to_cval(initial_ary, dtype);
+  }
+
+  // capacity = h[:capacity] || 0
+  if (stype == nm::YALE_STORE) {
+    if (!NIL_P(capacity_num)) capacity = FIX2INT(capacity_num);
+  }
+
+  if (!NIL_P(initial_ary)) {
+    v = interpret_initial_value(initial_ary, dtype);
+
+    if (TYPE(initial_ary) == T_ARRAY) 	v_size = RARRAY_LEN(initial_ary);
+    else                                v_size = 1;
+  }
+
+	NMATRIX* nmatrix;
+  UnwrapNMatrix(self, nmatrix);
+
+  nmatrix->stype = stype;
+
+  switch (stype) {
+  	case nm::DENSE_STORE:
+  		nmatrix->storage = (STORAGE*)nm_dense_storage_create(dtype, shape, dim, v, v_size);
+  		break;
+
+  	case nm::LIST_STORE:
+  		nmatrix->storage = (STORAGE*)nm_list_storage_create(dtype, shape, dim, init);
+  		break;
+
+  	case nm::YALE_STORE:
+  		nmatrix->storage = (STORAGE*)nm_yale_storage_create(dtype, shape, dim, capacity);
+  		nm_yale_storage_init((YALE_STORAGE*)(nmatrix->storage), init);
+  		break;
+  }
+
+  // If we're not creating a dense, and an initial array was provided, use that and multi-slice-set
+  // to set the contents of the matrix right now.
+  //if (stype != nm::DENSE_STORE && TYPE(initial_ary) == T_ARRAY && RARRAY_LEN(initial_ary) > 1) {
+  //  rb_funcall(self, rb_intern("__sparse_initial_set__"), 1, initial_ary);
+  //}
+
+  return self;
+}
+
+/*
  * call-seq:
  *     new -> NMatrix
  *
@@ -1003,9 +1117,8 @@ NMATRIX* nm_create(nm::stype_t stype, STORAGE* storage) {
  */
 static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
 
-  if (argc < 2) {
-  	rb_raise(rb_eArgError, "Expected 2-4 arguments (or 7 for internal Yale creation)");
-  	return Qnil;
+  if (argc <= 3) { // Call the new constructor unless all four arguments are given (or the 7-arg version is given)
+  	return nm_init_new_version(argc, argv, nm);
   }
 
   /* First, determine stype (dense by default) */
@@ -1016,7 +1129,7 @@ static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
     stype = nm::DENSE_STORE;
 
   } else {
-  	// 0: String or Symbol
+    // 0: String or Symbol
     stype  = interpret_stype(argv[0]);
     offset = 1;
   }
@@ -2014,6 +2127,7 @@ nm::dtype_t nm_dtype_guess(VALUE v) {
     return nm_dtype_guess(RARRAY_PTR(v)[0]);
 
   default:
+    RB_P(v);
     rb_raise(rb_eArgError, "Unable to guess a data type from provided parameters; data type must be specified manually.");
   }
 }

@@ -32,9 +32,9 @@ describe NMatrix do
 
   context "yale" do
     before :each do
-      @n = NMatrix.new(:yale, 3, :int64)
+      @n = NMatrix.new(3, stype: :yale, dtype: :int64)
       @n.extend NMatrix::YaleFunctions
-      @m = NMatrix.new(:yale, 3, :int64)
+      @m = NMatrix.new(3, stype: :yale, dtype: :int64)
       @n[0,0] = 52
       @n[0,2] = 5
       @n[1,1] = 40
@@ -53,13 +53,13 @@ describe NMatrix do
       x[1,1].should == 40 * 3
       x[2,0].should == 6 * 3
 
-      r = NMatrix.new(:yale, 3, :int64)
+      r = NMatrix.new(3, stype: :yale, dtype: :int64)
       y = r + 3
       y[0,0].should == 3
     end
 
     it "should refuse to perform a dot operation on a yale with non-zero default" do
-      r = NMatrix.new(:yale, 3, :int64)
+      r = NMatrix.new(3, stype: :yale, dtype: :int64)
       y = r + 3
       expect { y.dot(r) }.to raise_error
       expect { r.dot(y) }.to raise_error
@@ -75,7 +75,7 @@ describe NMatrix do
 
     it "should perform element-wise multiplication" do
       r = NMatrix.new(:dense, 3, [0,0,-25,0,-1920,0,0,0,0], :int64).cast(:yale, :int64)
-      m = NMatrix.new(:yale, 2, :int64)
+      m = NMatrix.new(2, stype: :yale, dtype: :int64)
       (@n*@m).should == r
     end
 
@@ -85,7 +85,7 @@ describe NMatrix do
     end
 
     it "should perform element-wise modulo" do
-      m = NMatrix.new(:yale, 3, :int64) + 5
+      m = NMatrix.new(3, stype: :yale, dtype: :int64, default: 0) + 5
       (@n % m).should == NMatrix.new(:dense, 3, [2,0,0,0,0,0,1,0,0], :int64).cast(:yale, :int64)
     end
 
@@ -131,13 +131,13 @@ describe NMatrix do
       x[1,1].should == 40 * 3
       x[0,1].should == 0
 
-      r = NMatrix.new(:list, 3, 1)
+      r = NMatrix.new(3, stype: :list, default: 1)
       y = r + 3
       y[0,0].should == 4
     end
 
     it "should perform element-wise addition" do
-      r = NMatrix.new(:list, 2, 0, :int64)
+      r = NMatrix.new(2, stype: :list, dtype: :int64, default: 0)
       r[0,0] = 52
       r[1,1] = -8
       q = @n + @m

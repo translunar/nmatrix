@@ -145,7 +145,7 @@ describe "Set slice operation" do
       end
 
       example "set a range of values to a matrix's contents" do
-        x = NMatrix.new(:yale, 4, :int16)
+        x = NMatrix.new(4, stype: :yale, dtype: :int16)
         x.extend NMatrix::YaleFunctions if stype == :yale
         x[1..3,1..3] = @m
         x.to_flat_array.should == [0,0,0,0, 0,0,1,2, 0,3,4,5, 0,6,7,8]

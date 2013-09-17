@@ -404,6 +404,14 @@ void set(VALUE left, SLICE* slice, VALUE right) {
     xfree(v);
 }
 
+/*
+ * Used only to set a default initial value.
+ */
+template <typename D>
+void init_default(LIST_STORAGE* s) {
+  *reinterpret_cast<D*>(s->default_val) = 0;
+}
+
 
 }} // end of namespace list_storage
 
@@ -417,6 +425,7 @@ extern "C" {
 ////////////////
 // Lifecycle //
 ///////////////
+
 
 /*
  * Creates a list-of-lists(-of-lists-of-lists-etc) storage framework for a
@@ -436,7 +445,12 @@ LIST_STORAGE* nm_list_storage_create(nm::dtype_t dtype, size_t* shape, size_t di
   memset(s->offset, 0, s->dim * sizeof(size_t));
 
   s->rows  = nm::list::create();
-  s->default_val = init_val;
+  if (init_val)
+    s->default_val = init_val;
+  else {
+    DTYPE_TEMPLATE_TABLE(nm::list_storage::init_default, void, LIST_STORAGE*)
+    ttable[dtype](s);
+  }
   s->count = 1;
   s->src = s;
 

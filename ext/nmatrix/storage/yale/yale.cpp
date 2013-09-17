@@ -48,10 +48,6 @@
 #include <tuple>
 #include <queue>
 
-#define RB_P(OBJ) \
-	rb_funcall(rb_stderr, rb_intern("print"), 1, rb_funcall(OBJ, rb_intern("object_id"), 0)); \
-	rb_funcall(rb_stderr, rb_intern("puts"), 1, rb_funcall(OBJ, rb_intern("inspect"), 0));
-
 /*
  * Project Includes
  */

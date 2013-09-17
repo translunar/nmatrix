@@ -163,7 +163,7 @@ class NMatrix
       dtype = params.last.is_a?(Symbol) ? params.pop : :float64
       dim = params.first
 
-      NMatrix.new(dim, 1, dtype)
+      NMatrix.new(dim, 1, dtype: dtype)
     end
 
     ##
