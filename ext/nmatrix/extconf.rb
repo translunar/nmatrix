@@ -150,16 +150,17 @@ unless have_library("atlas")
   dir_config("atlas", idefaults[:atlas], ldefaults[:atlas])
 end
 
+# this needs to go before cblas.h checks -- on Ubuntu, the clapack in the
+# include path found for cblas.h doesn't seem to contain all the necessary 
+# functions
+have_header("clapack.h")
+
+# this ensures that we find the header on Ubuntu, where by default the library 
+# can be found but not the header
 unless have_header("cblas.h")
   find_header("cblas.h", *idefaults[:cblas])
 end
 
-unless have_header("clapack.h")
-  find_header("clapack.h", *idefaults[:clapack])
-end
-
-#find_library("lapack", "clapack_dgetrf")
-have_header("clapack.h")
 have_header("cblas.h")
 
 have_func("clapack_dgetrf", ["cblas.h", "clapack.h"])
@@ -168,7 +169,7 @@ have_func("dgesvd_", "clapack.h")
 
 have_func("cblas_dgemm", "cblas.h")
 
-
+#find_library("lapack", "clapack_dgetrf")
 #find_library("cblas", "cblas_dgemm")
 #find_library("atlas", "ATL_dgemmNN")
 
