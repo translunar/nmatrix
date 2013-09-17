@@ -455,7 +455,7 @@ void Init_nmatrix() {
   // Singleton Methods //
   ///////////////////////
 
-	rb_define_singleton_method(cNMatrix, "upcast", (METHOD)nm_upcast, 2);
+	rb_define_singleton_method(cNMatrix, "upcast", (METHOD)nm_upcast, 2); /* in ext/nmatrix/nmatrix.cpp */
 	rb_define_singleton_method(cNMatrix, "guess_dtype", (METHOD)nm_guess_dtype, 1);
 	rb_define_singleton_method(cNMatrix, "min_dtype", (METHOD)nm_min_dtype, 1);
 
@@ -954,17 +954,7 @@ NMATRIX* nm_create(nm::stype_t stype, STORAGE* storage) {
 }
 
 /*
- *
- * Create a new NMatrix.
- *
- * == Arguments:
- *
- * * shape
- * * initial value(s)
- * * stype
- * * dtype
- * * default value
- * * capacity
+ * @see nm_init
  */
 static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
   VALUE shape_ary, initial_ary, hash;
@@ -1099,49 +1089,33 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
 
 /*
  * call-seq:
- *     new -> NMatrix
+ *     new(shape) -> NMatrix
+ *     new(shape, initial_value) -> NMatrix
+ *     new(shape, initial_array) -> NMatrix
+ *     new(shape, initial_value, options) -> NMatrix
+ *     new(shape, initial_array, options) -> NMatrix
  *
  * Create a new NMatrix.
  *
- * There are several ways to do this. In every case, the constructor needs to know the dtype, the dimensions, the stype,
- * and either an initial capacity (:yale) or some number of initial values (:list needs exactly one initial value, but
- * :dense can accept an array). In many cases, the parameters can be guessed from other parameters.
+ * The only mandatory argument is shape, which may be a positive integer or an array of positive integers.
  *
- * Here is the full form for a :dense 3x4 :float64 matrix initialized to alternate the values 0.0, 1.0, and 2.0:
+ * It is recommended that you supply an initialization value or array of values. Without one, Yale and List matrices will
+ * be initialized to 0; and dense matrices will be undefined.
  *
- *     NMatrix.new(:dense, [3,4], [0.0, 1.0, 2.0], :float64)
+ * Additional options may be provided using keyword arguments. The keywords are +:dtype, +:stype+, +:capacity+, and
+ * +:default+. Only Yale uses a capacity argument, which is used to reserve the initial size of its storage vectors.
+ * List and Yale both accept a default value (which itself defaults to 0). This default is taken from the initial value
+ * if such a value is given; it is more likely to be required when an initial array is provided.
  *
- * Since :dense is the default, we can actually leave that out. Additionally, the constructor will parse 0.0 and
- * interpret that to be a :float64. So we can actually short-hand this as follows:
+ * The storage type, or stype, is used to specify whether we want a +:dense+, +:list+, or +:yale+ matrix; dense is the
+ * default.
  *
- *     NMatrix.new([3,4], [0.0,1,2])
+ * The data type, or dtype, can be one of: :byte, :int8, :int16, :int32, :int64, :float32, :float64, :complex64,
+ * :complex128, :rational128, or :object. The constructor will attempt to guess it from the initial value/array/default
+ * provided, if any. Otherwise, the default is :object, which stores any type of Ruby object.
  *
- * Note that :list and :yale matrices will not accept a default value array. For list storage, a single default value
- * is permissible, which will be treated as the background for the sparse matrix and defaults to 0:
- *
- *     NMatrix.new(:list, [3,4], 0)     # standard :int64 sparse matrix
- *     NMatrix.new(:list, [2,3], 1.0)   # :float64 sparse matrix: [[1,1,1],[1,1,1]] (no storage used)
- *     NMatrix.new(:list, [3,4], [0,1]) # undefined behavior, will probably fill matrix with 0. Avoid this.
- *
- * For Yale storage, the default value must always be 0. Thus, if you provide an initial value, it will be interpreted
- * as the initial matrix capacity.
- *
- *     NMatrix.new(:yale, [4,3], :rational128) # Use default initial capacity. Most common.
- *     NMatrix.new(:yale, [3,4], 1000) # Error! Needs a dtype!
- *     NMatrix.new(:yale, [3,4], 1000, :int64) # Silly! Why would a 3x4 sparse matrix need storage space of 1,000?
- *     NMatrix.new(:yale, [3,4], 0.0, :float64) # Totally ignores non-sensical 3rd arg and creates 7 storage instead.
- *     NMatrix.new(:yale, [3,4], 8, :rational128) # Initial capacity of 8 rationals.
- *
- * That leaves only two other notes. First of all, if your matrix is square, you don't need to type [3,3] for 3x3.
- * Instead, just do 3:
- *
- *     NMatrix.new(3, [0,1,2], :rational128)  # dense 3x3 rational matrix consisting of columns of 0s, 1s, and 2s
- *
- * Secondly, if you create a dense matrix without initial values, you may see unpredictable results! It'll fill the
- * matrix with whatever is already in memory, not with zeros.
- *
- *     NMatrix.new(:dense, 4, :int64)
- *        # => [8, 140486578196280, 0, 0]  [0, 0, 0, 0]  [0, 0, 0, 140486608794928]  [140486577962496, -4294967280, 1, 140734734392208]
+ * In addition to the above, there is a legacy constructor from the alpha version. To use that version, you must be
+ * providing exactly four arguments. It is now deprecated.
  *
  * There is one additional constructor for advanced users, which takes seven arguments and is only for creating Yale
  * matrices with known IA, JA, and A arrays. This is used primarily internally for IO, e.g., reading Matlab matrices,

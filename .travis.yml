@@ -3,6 +3,7 @@ env:
   - CPLUS_INCLUDE_PATH=/usr/include/atlas C_INCLUDE_PATH=/usr/include/atlas
 rvm:
   - "1.9.3"
+  - "2.0.0"
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq libatlas-base-dev

@@ -391,7 +391,7 @@
 
 === 0.0.9 / 2013-09-??
 
- * 6 major enhancements:
+ * 5 major enhancements:
 
    * Re-factored NMatrix constructor
 
@@ -404,8 +404,6 @@
 
    * Re-factored Yale into a more object-oriented and less confusing
      set of header files
-
-   * Began switch to YARD for documentation
 
    * Enabled Travis CI (by @cjfuller)
 
