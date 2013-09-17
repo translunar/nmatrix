@@ -151,9 +151,9 @@ class NMatrix
         # Build up the u and vt matrices
         m, n = matrix.shape
         dtype = matrix.dtype
-        s_matrix = NMatrix.new([1,matrix.shape.min], dtype)
-        u_matrix = NMatrix.new([m,m], dtype)
-        v_matrix = NMatrix.new([n,n], dtype)
+        s_matrix = NMatrix.new([1,matrix.shape.min], dtype: dtype)
+        u_matrix = NMatrix.new([m,m], dtype: dtype)
+        v_matrix = NMatrix.new([n,n], dtype: dtype)
         # test this
         s = gesvd(type, matrix, s_matrix, u_matrix, v_matrix)
 

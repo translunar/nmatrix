@@ -30,14 +30,15 @@ describe NMatrix do
   context :yale do
 
     it "compares two empty matrices" do
-      n = NMatrix.new(:yale, [4,4], :float64)
-      m = NMatrix.new(:yale, [4,4], :float64)
+      n = NMatrix.new(4, stype: :yale, dtype: :float64)
+      m = NMatrix.new(4, stype: :yale, dtype: :float64)
       n.should == m
     end
 
     it "compares two matrices following basic assignments" do
-      n = NMatrix.new(:yale, [2,2], :float64)
-      m = NMatrix.new(:yale, [2,2], :float64)
+      n = NMatrix.new(2, stype: :yale, dtype: :float64)
+      m = NMatrix.new(2, stype: :yale, dtype: :float64)
+
       m[0,0] = 1
       m[0,1] = 1
       n.should_not == m
@@ -48,16 +49,16 @@ describe NMatrix do
     end
 
     it "compares two matrices following elementwise operations" do
-      n = NMatrix.new(:yale, [2,2], :float64)
+      n = NMatrix.new(2, stype: :yale, dtype: :float64)
+      m = NMatrix.new(2, stype: :yale, dtype: :float64)
       n[0,1] = 1
-      m = NMatrix.new(:yale, [2,2], :float64)
       m[0,1] = -1
       x = n+m
-      (n+m).should == NMatrix.new(:yale, [2,2], :float64)
+      (n+m).should == NMatrix.new(2, 0.0, stype: :yale)
     end
 
     it "sets diagonal values" do
-      n = NMatrix.new(:yale, [2,3], :float64)
+      n = NMatrix.new([2,3], stype: :yale, dtype: :float64)
       n.extend(NMatrix::YaleFunctions)
       n[1,1] = 0.1
       n[0,0] = 0.2
@@ -65,7 +66,7 @@ describe NMatrix do
     end
 
     it "gets non-diagonal rows as hashes" do
-      n = NMatrix.new(:yale, [4,6], :float64)
+      n = NMatrix.new([4,6], stype: :yale, dtype: :float64)
       n.extend(NMatrix::YaleFunctions)
       n[0,0] = 0.1
       n[0,2] = 0.2
@@ -76,7 +77,7 @@ describe NMatrix do
     end
 
     it "gets non-diagonal occupied column indices for a given row" do
-      n = NMatrix.new(:yale, [4,6], :float64)
+      n = NMatrix.new([4,6], stype: :yale, dtype: :float64)
       n.extend(NMatrix::YaleFunctions)
       n[0,0] = 0.1
       n[0,2] = 0.2
@@ -87,7 +88,7 @@ describe NMatrix do
     end
 
     it "does not resize until necessary" do
-      n = NMatrix.new(:yale, [2,3], :float64)
+      n = NMatrix.new([2,3], stype: :yale, dtype: :float64)
       n.extend(NMatrix::YaleFunctions)
       n.yale_size.should == 3
       n.capacity.should == 5
@@ -100,7 +101,7 @@ describe NMatrix do
 
 
     it "sets when not resizing" do
-      n = NMatrix.new(:yale, [2,3], :float64)
+      n = NMatrix.new([2,3], stype: :yale, dtype: :float64)
       n.extend(NMatrix::YaleFunctions)
       n[0,0] = 0.1
       n[0,1] = 0.2
@@ -110,7 +111,7 @@ describe NMatrix do
     end
 
     it "sets when resizing" do
-      n = NMatrix.new(:yale, [2,3], :float64)
+      n = NMatrix.new([2,3], stype: :yale, dtype: :float64)
       n.extend(NMatrix::YaleFunctions)
       n[0,0] = 0.01
       n[1,1] = 0.1
@@ -128,7 +129,8 @@ describe NMatrix do
 
       associations = File.open('spec/nmatrix_yale_resize_test_associations.yaml') { |y| YAML::load(y) }
 
-      n = NMatrix.new(:yale, [618, 2801], associations.size, :byte)
+      n = NMatrix.new([618,2801], stype: :yale, dtype: :byte, capacity: associations.size)
+      #n = NMatrix.new(:yale, [618, 2801], associations.size, :byte)
 
       associations.each_pair do |j,i|
         n[i,j] = 1
@@ -141,7 +143,7 @@ describe NMatrix do
     end
 
     it "sets values within rows" do
-      n = NMatrix.new(:yale, [3,20], :float64)
+      n = NMatrix.new([3,20], stype: :yale, dtype: :float64)
       n.extend(NMatrix::YaleFunctions)
       n[2,1]   = 1.0
       n[2,0]   = 1.5
@@ -151,7 +153,7 @@ describe NMatrix do
     end
 
     it "gets values within rows" do
-      n = NMatrix.new(:yale, [3,20], :float64)
+      n = NMatrix.new([3,20], stype: :yale, dtype: :float64)
       n[2,1]   = 1.0
       n[2,0]   = 1.5
       n[2,15]  = 2.0
@@ -161,7 +163,7 @@ describe NMatrix do
     end
 
     it "sets values within large rows" do
-      n = NMatrix.new(:yale, [10,300], :float64)
+      n = NMatrix.new([10,300], stype: :yale, dtype: :float64)
       n.extend(NMatrix::YaleFunctions)
       n[5,1]   = 1.0
       n[5,0]   = 1.5
@@ -178,7 +180,7 @@ describe NMatrix do
     end
 
     it "gets values within large rows" do
-      n = NMatrix.new(:yale, [10,300], :float64)
+      n = NMatrix.new([10,300], stype: :yale, dtype: :float64)
       n.extend(NMatrix::YaleFunctions)
       n[5,1]   = 1.0
       n[5,0]   = 1.5
@@ -198,7 +200,7 @@ describe NMatrix do
     end
 
     it "dots two identical matrices" do
-      a = NMatrix.new(:yale, 4, :float64)
+      a = NMatrix.new(4, stype: :yale, dtype: :float64)
       a[0,1] = 4.0
       a[1,2] = 1.0
       a[1,3] = 1.0
@@ -207,26 +209,13 @@ describe NMatrix do
       b = a.dup
       c = a.dot b
 
-      c[0,0].should == 0.0
-      c[0,1].should == 0.0
-      c[0,2].should == 4.0
-      c[0,3].should == 4.0
-      c[1,0].should == 0.0
-      c[1,1].should == 2.0
-      c[1,2].should == 0.0
-      c[1,3].should == 0.0
-      c[2,0].should == 0.0
-      c[2,1].should == 0.0
-      c[2,2].should == 0.0
-      c[2,3].should == 0.0
-      c[3,0].should == 0.0
-      c[3,1].should == 0.0
-      c[3,2].should == 2.0
-      c[3,3].should == 2.0
+      d = NMatrix.new(4, [0,0,4,4, 0,2,0,0, 0,0,0,0, 0,0,2,2], dtype: :float64, stype: :yale)
+
+      c.should == d
     end
 
     it "dots two identical matrices where a positive and negative partial sum cancel on the diagonal" do
-      a = NMatrix.new(:yale, 4, :float64)
+      a = NMatrix.new(4, 0.0, stype: :yale)
 
       a[0,0] = 1.0
       a[0,1] = 4.0
@@ -238,23 +227,6 @@ describe NMatrix do
       b = a.dup
       c = a.dot b
 
-      #c[0,0].should == 1.0
-      #c[0,1].should == 4.0
-      #c[0,2].should == 8.0
-      #c[0,3].should == -16.0
-      #c[1,0].should == 0.0
-      #c[1,1].should == -16.0
-      #c[1,2].should == 0.0
-      #c[1,3].should == -16.0
-      #c[2,0].should == 0.0
-      #c[2,1].should == 0.0
-      #c[2,2].should == 0.0
-      #c[2,3].should == 0.0
-      #c[3,0].should == 0.0
-      #c[3,1].should == 0.0
-      #c[3,2].should == 8.0
-      #c[3,3].should == 0.0 # this is the positive and negative partial sum cancel
-
       c.extend(NMatrix::YaleFunctions)
 
       c.yale_ija.reject { |i| i.nil? }.should == [5,8,9,9,11,1,2,3,3,1,2]
@@ -263,8 +235,8 @@ describe NMatrix do
     end
 
     it "dots two vectors" do
-      n = NVector.new(:yale, [16,1], :int64)
-      m = NVector.new(:yale, [1,16], :int64)
+      n = NMatrix.new([16,1], 0, stype: :yale)
+      m = NMatrix.new([1,16], 0, stype: :yale)
 
       n[0] = m[0] = 1
       n[1] = m[1] = 2
@@ -296,7 +268,7 @@ describe NMatrix do
     end
 
     it "transposes" do
-      a = NMatrix.new(:yale, 4, :float64)
+      a = NMatrix.new(4, 0.0, stype: :yale)
       a[0,0] = 1.0
       a[0,1] = 4.0
       a[1,2] = 2.0

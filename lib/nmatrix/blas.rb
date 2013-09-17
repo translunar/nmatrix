@@ -107,9 +107,9 @@ module NMatrix::BLAS
 
     #
     # call-seq:
-    #     gemv(a, x) -> NVector
-    #     gemv(a, x, y) -> NVector
-    #     gemv(a, x, y, alpha, beta) -> NVector
+    #     gemv(a, x) -> NMatrix
+    #     gemv(a, x, y) -> NMatrix
+    #     gemv(a, x, y, alpha, beta) -> NMatrix
     #
     # Implements matrix-vector product via
     #   y = (alpha * A * x) + (beta * y)
@@ -159,29 +159,29 @@ module NMatrix::BLAS
 
     #
     # call-seq:
-    #     rot(x, y, c, s) -> [NVector, NVector]
+    #     rot(x, y, c, s) -> [NMatrix, NMatrix]
     #
     # Apply plane rotation.
     #
     # * *Arguments* :
-    #   - +x+ -> NVector
-    #   - +y+ -> NVector
+    #   - +x+ -> NMatrix
+    #   - +y+ -> NMatrix
     #   - +c+ -> cosine of the angle of rotation
     #   - +s+ -> sine of the angle of rotation
-    #   - +incx+ -> stride of NVector +x+
-    #   - +incy+ -> stride of NVector +y+
+    #   - +incx+ -> stride of NMatrix +x+
+    #   - +incy+ -> stride of NMatrix +y+
     #   - +n+ -> number of elements to consider in x and y
     #   - +in_place+ -> true if it's okay to modify the supplied +x+ and +y+ parameters directly; false if not. Default is false.
     # * *Returns* :
     #   - Array with the results, in the format [xx, yy]
     # * *Raises* :
-    #   - +ArgumentError+ -> Expected dense NVectors as first two arguments.
+    #   - +ArgumentError+ -> Expected dense NMatrices as first two arguments.
     #   - +ArgumentError+ -> NMatrix dtype mismatch.
     #   - +ArgumentError+ -> Need to supply n for non-standard incx, incy values.
     #
     def rot(x, y, c, s, incx = 1, incy = 1, n = nil, in_place=false)
-      raise(ArgumentError, 'Expected dense NMatrices as first two arguments.') unless x.is_a?(NMatrix) and y.is_a?(NMatrix) and x.stype == :dense and y.stype == :dense
-      raise(ArgumentError, 'NMatrix dtype mismatch.')													unless x.dtype == y.dtype
+      raise(ArgumentError, 'Expected dense NMatrices as first two arguments.')    unless x.is_a?(NMatrix) and y.is_a?(NMatrix) and x.stype == :dense and y.stype == :dense
+      raise(ArgumentError, 'NMatrix dtype mismatch.')													    unless x.dtype == y.dtype
       raise(ArgumentError, 'Need to supply n for non-standard incx, incy values') if n.nil? && incx != 1 && incx != -1 && incy != 1 && incy != -1
 
       n ||= [x.size/incx.abs, y.size/incy.abs].min
@@ -202,7 +202,7 @@ module NMatrix::BLAS
 
     #
     # call-seq:
-    #     rot!(x, y, c, s) -> [NVector, NVector]
+    #     rot!(x, y, c, s) -> [NMatrix, NMatrix]
     #
     # Apply plane rotation directly to +x+ and +y+.
     #
@@ -221,11 +221,11 @@ module NMatrix::BLAS
     # Since the givens rotation includes a square root, integers and rationals are disallowed.
     #
     # * *Arguments* :
-    #   - +ab+ -> NVector with two elements
+    #   - +ab+ -> NMatrix with two elements
     # * *Returns* :
     #   - Array with the results, in the format [cos(theta), sin(theta)]
     # * *Raises* :
-    #   - +ArgumentError+ -> Expected dense NVector of size 2
+    #   - +ArgumentError+ -> Expected dense NMatrix of size 2
     #
     def rotg(ab)
       raise(ArgumentError, "Expected dense NMatrix of shape [2,1] or [1,2]") unless ab.is_a?(NMatrix) && ab.stype == :dense && ab.size == 2
@@ -241,13 +241,13 @@ module NMatrix::BLAS
     # Calculate the sum of absolute values of the entries of a vector +x+ of size +n+
     #
     # * *Arguments* :
-    #   - +x+ -> an NVector (will also allow an NMatrix, but will treat it as if it's a vector )
+    #   - +x+ -> an NMatrix (will also allow an NMatrix, but will treat it as if it's a vector )
     #   - +incx+ -> the skip size (defaults to 1)
     #   - +n+ -> the size of +x+ (defaults to +x.size / incx+)
     # * *Returns* :
     #   - The sum
     # * *Raises* :
-    #   - +ArgumentError+ -> Expected dense NVector (or NMatrix on rare occasions) for arg 0
+    #   - +ArgumentError+ -> Expected dense NMatrix for arg 0
     #   - +RangeError+ -> n out of range
     #
     def asum(x, incx = 1, n = nil)
@@ -264,13 +264,13 @@ module NMatrix::BLAS
     # Calculate the 2-norm of a vector +x+ of size +n+
     #
     # * *Arguments* :
-    #   - +x+ -> an NVector (will also allow an NMatrix, but will treat it as if it's a vector )
+    #   - +x+ -> an NMatrix (will also allow an NMatrix, but will treat it as if it's a vector )
     #   - +incx+ -> the skip size (defaults to 1)
     #   - +n+ -> the size of +x+ (defaults to +x.size / incx+)
     # * *Returns* :
     #   - The 2-norm
     # * *Raises* :
-    #   - +ArgumentError+ -> Expected dense NVector (or NMatrix on rare occasions) for arg 0
+    #   - +ArgumentError+ -> Expected dense NMatrix for arg 0
     #   - +RangeError+ -> n out of range
     #
     def nrm2(x, incx = 1, n = nil)

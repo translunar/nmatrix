@@ -100,9 +100,9 @@ describe NMatrix::LAPACK do
 
       # Together, these calls are basically xGESV from LAPACK: http://www.netlib.org/lapack/double/dgesv.f
       it "exposes clapack getrs" do
-        a     = NMatrix.new(:dense, 3, [-2,4,-3,3,-2,1,0,-4,3], dtype)
+        a     = NMatrix.new(3, [-2,4,-3,3,-2,1,0,-4,3], dtype: dtype)
         ipiv  = NMatrix::LAPACK::clapack_getrf(:row, 3, 3, a, 3)
-        b     = NVector.new(3, [-1, 17, -9], dtype)
+        b     = NMatrix.new([3,1], [-1, 17, -9], dtype: dtype)
 
         NMatrix::LAPACK::clapack_getrs(:row, false, 3, 1, a, 3, ipiv, b, 3)
 
@@ -127,8 +127,6 @@ describe NMatrix::LAPACK do
 
       it "exposes lapack gesdd" do
         if [:float32, :float64].include? dtype
-          require 'pry'
-          binding.pry
           a = NMatrix.new([5,6], %w|8.79 9.93 9.83 5.45 3.16
                                     6.11 6.91 5.04 -0.27 7.98
                                     -9.15 -7.93 4.86 4.85 3.01

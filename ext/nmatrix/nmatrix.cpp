@@ -59,9 +59,13 @@ extern "C" {
 #include "ruby_constants.h"
 
 /*
- * Macros
+ * Ruby internals
  */
 
+
+/*
+ * Macros
+ */
 
 
 /*
@@ -343,7 +347,7 @@ static VALUE nm_effective_dim(VALUE self);
 static VALUE nm_dim(VALUE self);
 static VALUE nm_offset(VALUE self);
 static VALUE nm_shape(VALUE self);
-static VALUE nm_supershape(int argc, VALUE* argv, VALUE self);
+static VALUE nm_supershape(VALUE self);
 static VALUE nm_capacity(VALUE self);
 static VALUE nm_each_with_indices(VALUE nmatrix);
 static VALUE nm_each_stored_with_indices(VALUE nmatrix);
@@ -485,7 +489,7 @@ void Init_nmatrix() {
 	rb_define_protected_method(cNMatrix, "__list_to_hash__", (METHOD)nm_to_hash, 0); // handles list and dense, which are n-dimensional
 
 	rb_define_method(cNMatrix, "shape", (METHOD)nm_shape, 0);
-	rb_define_method(cNMatrix, "supershape", (METHOD)nm_supershape, -1);
+	rb_define_method(cNMatrix, "supershape", (METHOD)nm_supershape, 0);
 	rb_define_method(cNMatrix, "offset", (METHOD)nm_offset, 0);
 	rb_define_method(cNMatrix, "det_exact", (METHOD)nm_det_exact, 0);
 	rb_define_method(cNMatrix, "complex_conjugate!", (METHOD)nm_complex_conjugate_bang, 0);
@@ -1016,8 +1020,8 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
       init = rubyobj_to_cval(default_val_num, dtype);
     else if (NIL_P(initial_ary))
       init = NULL;
-    else if (TYPE(initial_ary) == T_ARRAY && RARRAY_LEN(initial_ary) == 1)
-      init = rubyobj_to_cval(rb_ary_entry(initial_ary, 0), dtype);
+    else if (TYPE(initial_ary) == T_ARRAY)
+      init = RARRAY_LEN(initial_ary) == 1 ? rubyobj_to_cval(rb_ary_entry(initial_ary, 0), dtype) : NULL;
     else
       init = rubyobj_to_cval(initial_ary, dtype);
   }
@@ -1032,6 +1036,16 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
 
     if (TYPE(initial_ary) == T_ARRAY) 	v_size = RARRAY_LEN(initial_ary);
     else                                v_size = 1;
+  }
+
+  // :object matrices MUST be initialized.
+  else if (stype == nm::DENSE_STORE && dtype == nm::RUBYOBJ) {
+    // Pretend [nil] was passed for RUBYOBJ.
+    v          = ALLOC(VALUE);
+    *(VALUE*)v = Qnil;
+
+    v_size = 1;
+
   }
 
 	NMATRIX* nmatrix;
@@ -1056,9 +1070,29 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
 
   // If we're not creating a dense, and an initial array was provided, use that and multi-slice-set
   // to set the contents of the matrix right now.
-  //if (stype != nm::DENSE_STORE && TYPE(initial_ary) == T_ARRAY && RARRAY_LEN(initial_ary) > 1) {
-  //  rb_funcall(self, rb_intern("__sparse_initial_set__"), 1, initial_ary);
-  //}
+  if (stype != nm::DENSE_STORE && v_size > 1) {
+    VALUE* slice_argv = ALLOCA_N(VALUE, dim);
+    size_t* tmp_shape = ALLOC_N(size_t, dim);
+    for (size_t m = 0; m < dim; ++m) {
+      slice_argv[m] = ID2SYM(nm_rb_mul); // :* -- full range
+      tmp_shape[m]  = shape[m];
+    }
+
+    SLICE* slice = get_slice(dim, dim, slice_argv, shape);
+    // Create a temporary dense matrix and use it to do a slice assignment on self.
+    NMATRIX* tmp          = nm_create(nm::DENSE_STORE, (STORAGE*)nm_dense_storage_create(dtype, tmp_shape, dim, v, v_size));
+    volatile VALUE rb_tmp = Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, tmp);
+    if (stype == nm::YALE_STORE)  nm_yale_storage_set(self, slice, rb_tmp);
+    else                          nm_list_storage_set(self, slice, rb_tmp);
+
+    free_slice(slice);
+
+    // We need to free v if it's not the same size as tmp -- because tmp will have made a copy instead.
+    if (nm_storage_count_max_elements(tmp->storage) != v_size)
+      xfree(v);
+
+    // nm_delete(tmp); // This seems to enrage the garbage collector (because rb_tmp is still available). It'd be better if we could force it to free immediately, but no sweat.
+  }
 
   return self;
 }
@@ -1765,24 +1799,15 @@ static VALUE nm_offset(VALUE self) {
 
 /*
  * call-seq:
- *     supershape(n) -> Array
  *     supershape -> Array
  *
- * Get the shape of a slice's nth-order parent. If the slice doesn't have n orders, returns the shape
- * of the original ancestor.
+ * Get the shape of a slice's parent.
  */
-static VALUE nm_supershape(int argc, VALUE* argv, VALUE self) {
-  VALUE n; rb_scan_args(argc, argv, "01", &n);
+static VALUE nm_supershape(VALUE self) {
 
   STORAGE* s   = NM_STORAGE(self);
   if (s->src == s) return nm_shape(self); // easy case (not a slice)
-  int order = n == Qnil ? 1 : FIX2INT(n);
-
-  if (order <= 0) rb_raise(rb_eRangeError, "expected argument to be positive");
-
-  for (; order > 0; --order) {
-    s = s->src; // proceed to next parent
-  }
+  else s = s->src;
 
   VALUE* shape = ALLOCA_N(VALUE, s->dim);
   for (size_t index = 0; index < s->dim; ++index)
@@ -2161,6 +2186,12 @@ static SLICE* get_slice(size_t dim, int argc, VALUE* arg, size_t* shape) {
       slice->lengths[r] = 1;
       t++;
 
+    } else if (SYMBOL_P(v) && rb_to_id(v) == nm_rb_mul) { // :* means the whole possible range
+
+      slice->coords[r]  = 0;
+      slice->lengths[r] = shape[r];
+      slice->single     = false;
+
     } else if (TYPE(arg[t]) == T_HASH) { // 3:5 notation (inclusive)
       VALUE begin_end   = rb_funcall(v, rb_intern("shift"), 0); // rb_hash_shift
       slice->coords[r]  = FIX2UINT(rb_ary_entry(begin_end, 0));
@@ -2250,15 +2281,14 @@ static void* interpret_initial_value(VALUE arg, nm::dtype_t dtype) {
 
   if (TYPE(arg) == T_ARRAY) {
   	// Array
-
-    init_val = ALLOC_N(int8_t, DTYPE_SIZES[dtype] * RARRAY_LEN(arg));
+    init_val = ALLOC_N(char, DTYPE_SIZES[dtype] * RARRAY_LEN(arg));
+    NM_CHECK_ALLOC(init_val);
     for (index = 0; index < RARRAY_LEN(arg); ++index) {
     	rubyval_to_cval(RARRAY_PTR(arg)[index], dtype, (char*)init_val + (index * DTYPE_SIZES[dtype]));
     }
 
   } else {
   	// Single value
-
     init_val = rubyobj_to_cval(arg, dtype);
   }
 

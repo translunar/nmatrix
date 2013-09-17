@@ -398,10 +398,12 @@ void set(VALUE left, SLICE* slice, VALUE right) {
   }
 
 
-  if (nm_and_free.first && nm_and_free.second)
-    nm_delete(nm_and_free.first);
-  else
-    xfree(v);
+  // Only free v if it was allocated in this function.
+  if (nm_and_free.first) {
+    if (nm_and_free.second) {
+      nm_delete(nm_and_free.first);
+    }
+  } else xfree(v);
 }
 
 /*
@@ -409,6 +411,7 @@ void set(VALUE left, SLICE* slice, VALUE right) {
  */
 template <typename D>
 void init_default(LIST_STORAGE* s) {
+  s->default_val = ALLOC(D);
   *reinterpret_cast<D*>(s->default_val) = 0;
 }
 

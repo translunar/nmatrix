@@ -65,6 +65,13 @@ class NMatrix
     def load_file(file_path)
       NMatrix::IO::Mat5Reader.new(File.open(file_path, 'rb')).to_ruby
     end
+
+    #
+    # Calculate the size of an NMatrix of a given shape.
+    def size(shape)
+      shape = [shape,shape] unless shape.is_a?(Array)
+      (0...shape.size).inject(1) { |x,i| x * shape[i] }
+    end
   end
 
   # TODO: Make this actually pretty.
@@ -76,7 +83,7 @@ class NMatrix
       longest = Array.new(self.shape[1], 0)
       self.each_column.with_index do |col, j|
         col.each do |elem|
-          elem_len   = elem.to_s.size
+          elem_len   = elem.inspect.size
           longest[j] = elem_len if longest[j] < elem_len
         end
       end
@@ -87,7 +94,7 @@ class NMatrix
             q.group(0, "\n  [\n", "  ]\n") do
               layer.each_row.with_index do |row,i|
                 q.group(0, "    [", "]\n") do
-                  q.seplist(self[i,0...self.shape[1],k].to_flat_array, lambda { q.text ", "}, :each_with_index) { |v,j| q.text v.to_s.rjust(longest[j]) }
+                  q.seplist(self[i,0...self.shape[1],k].to_flat_array, lambda { q.text ", "}, :each_with_index) { |v,j| q.text v.inspect.rjust(longest[j]) }
                 end
               end
             end
@@ -97,7 +104,7 @@ class NMatrix
         q.group(0, "\n[\n", "]") do
           self.each_row.with_index do |row,i|
             q.group(1, "  [", "]") do
-              q.seplist(self.dim > 2 ? row.to_a[0] : row.to_a, lambda { q.text ", " }, :each_with_index) { |v,j| q.text v.to_s.rjust(longest[j]) }
+              q.seplist(self.dim > 2 ? row.to_a[0] : row.to_a, lambda { q.text ", " }, :each_with_index) { |v,j| q.text v.inspect.rjust(longest[j]) }
             end
             q.breakable
           end
@@ -258,8 +265,7 @@ class NMatrix
   # Returns the total size of the NMatrix based on its shape.
   #
   def size
-    s = self.shape
-    (0...self.dimensions).inject(1) { |x,i| x * s[i] }
+    NMatrix.size(self.shape)
   end
 
 

@@ -20,9 +20,10 @@
 #
 # * https://github.com/SciRuby/sciruby/wiki/Contributor-Agreement
 #
-# == enum_spec.rb
+# == 01_enum_spec.rb
 #
-# Enumerator tests for NMatrix.
+# Enumerator tests for NMatrix. These should load early, as they
+# test functionality essential to matrix printing.
 #
 
 require File.dirname(__FILE__) + "/spec_helper.rb"

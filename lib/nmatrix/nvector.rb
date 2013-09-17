@@ -61,6 +61,8 @@ class NVector < NMatrix
       raise(ArgumentError, "shape must be a Fixnum or an Array of positive Fixnums where exactly one value is 1")
     end
 
+    warn "NVector is deprecated"
+
     super(stype, shape, *args)
   end
 

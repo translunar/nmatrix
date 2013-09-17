@@ -20,9 +20,10 @@
 #
 # * https://github.com/SciRuby/sciruby/wiki/Contributor-Agreement
 #
-# == nmatrix_spec.rb
+# == 00_nmatrix_spec.rb
 #
-# Basic tests for NMatrix.
+# Basic tests for NMatrix. These should load first, as they're
+# essential to NMatrix operation.
 #
 
 require File.dirname(__FILE__) + "/spec_helper.rb"
@@ -35,7 +36,7 @@ describe NMatrix do
   it "adequately requires information to access a single entry of a dense matrix" do
     n = NMatrix.new(:dense, 4, [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], :float64)
     n[0,0].should == 0
-    expect { n[0] }.should raise_error(ArgumentError)
+    expect { n[0] }.to raise_error(ArgumentError)
   end
 
   it "calculates exact determinants on small square matrices" do
@@ -44,7 +45,7 @@ describe NMatrix do
   end
 
   it "calculates determinants" do
-    m = NMatrix.new(:dense, 3, [-2,2,3,-1,1,3,2,0,-1])
+    m = NMatrix.new(3, [-2,2,3,-1,1,3,2,0,-1])
     m.det.should == 6
   end
 
@@ -77,12 +78,12 @@ describe NMatrix do
 
 
   it "fills dense Ruby object matrix with nil" do
-    n = NMatrix.new([4,3], :object)
+    n = NMatrix.new([4,3], dtype: :object)
     n[0,0].should == nil
   end
 
   it "fills dense with individual assignments" do
-    n = NMatrix.new([4,3], :float64)
+    n = NMatrix.new([4,3], dtype: :float64)
     n[0,0] = 14.0
     n[0,1] = 9.0
     n[0,2] = 3.0
@@ -128,7 +129,7 @@ describe NMatrix do
   end
 
   it "fills dense with a single mass assignment, with dtype specified" do
-    m = NMatrix.new([4,3], [14.0, 9.0, 3.0, 2.0, 11.0, 15.0, 0.0, 12.0, 17.0, 5.0, 2.0, 3.0], :float32)
+    m = NMatrix.new([4,3], [14.0, 9.0, 3.0, 2.0, 11.0, 15.0, 0.0, 12.0, 17.0, 5.0, 2.0, 3.0], dtype: :float32)
     m[0,0].should == 14.0
     m[0,1].should == 9.0
     m[0,2].should == 3.0
@@ -145,11 +146,11 @@ describe NMatrix do
 
 
   it "dense handles missing initialization value" do
-    n = NMatrix.new(3, :int8)
+    n = NMatrix.new(3, dtype: :int8)
     n.stype.should == :dense
     n.dtype.should == :int8
 
-    m = NMatrix.new(4, :float64)
+    m = NMatrix.new(4, dtype: :float64)
     m.stype.should == :dense
     m.dtype.should == :float64
   end
@@ -158,7 +159,7 @@ describe NMatrix do
   [:dense, :list, :yale].each do |storage_type|
     context storage_type do
     it "can be duplicated" do
-        n = NMatrix.new([2,3], 1.1, stype: storage_type, dtype: :float64, default: 1.1)
+        n = NMatrix.new([2,3], 1.1, stype: storage_type, dtype: :float64)
         n.stype.should equal(storage_type)
 
         n[0,0] = 0.0
@@ -176,13 +177,13 @@ describe NMatrix do
       end
 
       it "enforces shape boundaries" do
-        expect { NMatrix.new([1,10], 0, dtype: :int8, stype: storage_type, default: 0)[-1,0] }.should raise_error
-        expect { NMatrix.new([1,10], 0, dtype: :int8, stype: storage_type, default: 0)[1,0]  }.should raise_error(RangeError)
-        expect { NMatrix.new([1,10], 0, dtype: :int8, stype: storage_type, default: 0)[0,10] }.should raise_error(RangeError)
+        expect { NMatrix.new([1,10], 0, dtype: :int8, stype: storage_type, default: 0)[-1,0] }.to raise_error
+        expect { NMatrix.new([1,10], 0, dtype: :int8, stype: storage_type, default: 0)[1,0]  }.to raise_error(RangeError)
+        expect { NMatrix.new([1,10], 0, dtype: :int8, stype: storage_type, default: 0)[0,10] }.to raise_error(RangeError)
       end
 
       it "sets and gets" do
-        n = NMatrix.new(storage_type, 2, storage_type == :yale ? :int8 : 0)
+        n = NMatrix.new(2, 0, stype: storage_type, dtype: :int8)
         n[0,1] = 1
         n[0,0].should == 0
         n[1,0].should == 0
@@ -191,7 +192,7 @@ describe NMatrix do
       end
 
       it "sets and gets references" do
-        n = NMatrix.new(storage_type, 2, storage_type == :yale ? :int8 : 0)
+        n = NMatrix.new(2, stype: storage_type, dtype: :int8, default: 0)
         (n[0,1] = 1).should == 1
         n[0,1].should == 1
       end
@@ -205,7 +206,7 @@ describe NMatrix do
             if storage_type == :dense
               n = NMatrix.new(:dense, [3,3], [1,2,3,4,5,6,7,8,9], dtype)
             else
-              n = storage_type == :yale ? NMatrix.new(storage_type, [3,4], dtype) : NMatrix.new(storage_type, [3,4], 0, dtype)
+              n = NMatrix.new([3,4], 0, stype: storage_type, dtype: dtype)
               n[0,0] = 1
               n[0,1] = 2
               n[2,3] = 4
@@ -227,7 +228,7 @@ describe NMatrix do
           it "allows storage-based iteration of matrices" do
             STDERR.puts storage_type.inspect
             STDERR.puts dtype.inspect
-            n = storage_type == :yale ? NMatrix.new(storage_type, [3,3], dtype) : NMatrix.new(storage_type, [3,3], 0, dtype)
+            n = NMatrix.new([3,3], 0, stype: storage_type, dtype: dtype)
             n[0,0] = 1
             n[0,1] = 2
             n[2,0] = 5 if storage_type == :yale
@@ -267,19 +268,19 @@ describe NMatrix do
     # dense and list, not yale
     context "(storage: #{storage_type})" do
       it "gets default value" do
-        NMatrix.new(storage_type, 3, 0)[1,1].should   == 0
-        NMatrix.new(storage_type, 3, 0.1)[1,1].should == 0.1
-        NMatrix.new(storage_type, 3, 1)[1,1].should   == 1
+        NMatrix.new(3, 0, stype: storage_type)[1,1].should   == 0
+        NMatrix.new(3, 0.1, stype: storage_type)[1,1].should == 0.1
+        NMatrix.new(3, 1, stype: storage_type)[1,1].should   == 1
       end
 
       it "returns shape and dim" do
-        NMatrix.new(storage_type, [3,2,8], 0).shape.should == [3,2,8]
-        NMatrix.new(storage_type, [3,2,8], 0).dim.should  == 3
+        NMatrix.new([3,2,8], 0, stype: storage_type).shape.should == [3,2,8]
+        NMatrix.new([3,2,8], 0, stype: storage_type).dim.should  == 3
       end
 
       it "returns number of rows and columns" do
-        NMatrix.new(storage_type, [7, 4], 3).rows.should == 7
-        NMatrix.new(storage_type, [7, 4], 3).cols.should == 4
+        NMatrix.new([7, 4], 3, stype: storage_type).rows.should == 7
+        NMatrix.new([7, 4], 3, stype: storage_type).cols.should == 4
       end
     end unless storage_type == :yale
   end
@@ -287,7 +288,7 @@ describe NMatrix do
 
   it "handles dense construction" do
     NMatrix.new(3,0)[1,1].should == 0
-    lambda { NMatrix.new(3,:int8)[1,1] }.should_not raise_error
+    lambda { NMatrix.new(3,dtype: :int8)[1,1] }.should_not raise_error
   end
 
   it "calculates the complex conjugate in-place" do
@@ -297,7 +298,7 @@ describe NMatrix do
   end
 
   it "converts from list to yale properly" do
-    m = NMatrix.new(:list, 3, 0)
+    m = NMatrix.new(3, 0, stype: :list)
     m[0,2] = 333
     m[2,2] = 777
     n = m.cast(:yale, :int32)
@@ -346,13 +347,13 @@ describe NMatrix do
   [:list, :yale].each do |storage_type|
     context storage_type do
       it "should return the matrix being iterated over when each_stored_with_indices is called with a block" do
-        n = NMatrix.new(storage_type, [2,3], storage_type == :yale ? :float64 : 1.1)
+        n = NMatrix.new([2,3], 1.1, stype: storage_type, dtype: :float64, default: 0)
         val = (n.each_stored_with_indices { })
         val.should eq n
       end
 
       it "should return an enumerator when each_stored_with_indices is called without a block" do
-        n = NMatrix.new(storage_type, [2,3], storage_type == :yale ? :float64 : 1.1)
+        n = NMatrix.new([2,3], 1.1, stype: storage_type, dtype: :float64, default: 0)
         val = n.each_stored_with_indices
         val.should be_a Enumerator
       end
@@ -365,176 +366,4 @@ describe NMatrix do
     t.each { |x| x + 0 }
   end
 
-  context "mapping and reduction related functions" do
-
-    before :each do
-      @nm_1d = NMatrix[5.0,0.0,1.0,2.0,3.0]
-      @nm_2d = NMatrix[[0.0,1.0],[2.0,3.0]]
-    end
-
-    it "behaves like Enumerable#reduce with no argument to reduce" do
-      @nm_1d.reduce_along_dim(0) { |acc, el| acc + el }.to_f.should eq 11
-      @nm_2d.reduce_along_dim(1) { |acc, el| acc + el }.should eq NMatrix[[1, 5]]
-    end
-
-    it "should calculate the mean along the specified dimension" do
-      @nm_1d.mean.should eq NMatrix[2.2]
-      @nm_2d.mean.should eq NMatrix[[1.0,2.0]]
-    end
-
-    it "should calculate the minimum along the specified dimension" do
-      @nm_1d.min.should eq 0.0
-      @nm_2d.min.should eq NMatrix[[0.0, 1.0]]
-      @nm_2d.min(1).should eq NMatrix[[0.0], [2.0]]
-    end
-
-    it "should calculate the maximum along the specified dimension" do
-      @nm_1d.max.should eq 5.0
-      @nm_2d.max.should eq NMatrix[[2.0, 3.0]]
-    end
-
-    it "should calculate the variance along the specified dimension" do
-      @nm_1d.variance.should eq NMatrix[3.7]
-      @nm_2d.variance(1).should eq NMatrix[[0.5], [0.5]]
-    end
-
-    it "should calculate the sum along the specified dimension" do
-      @nm_1d.sum.should eq NMatrix[11]
-      @nm_2d.sum.should eq NMatrix[[2], [4]]
-    end
-
-    it "should calculate the standard deviation along the specified dimension" do
-      @nm_1d.std.should eq NMatrix[Math.sqrt(3.7)]
-      @nm_2d.std(1).should eq NMatrix[[Math.sqrt(0.5)], [Math.sqrt(0.5)]]
-    end
-
-    it "should raise an ArgumentError when any invalid dimension is provided" do
-      expect { @nm_1d.mean(3) }.to raise_exception(RangeError)
-    end
-
-    it "should convert to float if it contains only a single element" do
-      NMatrix[4.0].to_f.should eq 4.0
-      NMatrix[[[[4.0]]]].to_f.should eq 4.0
-    end
-
-    it "should raise an index error if it contains more than a single element" do
-      expect { @nm_1d.to_f }.to raise_error(IndexError)
-    end
-
-    it "should map a block to all elements" do
-      @nm_1d.map { |e| e ** 2 }.should eq NMatrix[25.0,0.0,1.0,4.0,9.0]
-      @nm_2d.map { |e| e ** 2 }.should eq NMatrix[[0.0,1.0],[4.0,9.0]]
-    end
-
-    it "should map! a block to all elements in place" do
-      fct = Proc.new { |e| e ** 2 }
-      expected1 = @nm_1d.map &fct
-      expected2 = @nm_2d.map &fct
-      @nm_1d.map! &fct
-      @nm_1d.should eq expected1
-      @nm_2d.map! &fct
-      @nm_2d.should eq expected2
-    end
-
-    it "should return an enumerator for map without a block" do
-      @nm_1d.map.should be_a Enumerator
-    end
-
-    it "should return an enumerator for reduce without a block" do
-      @nm_1d.reduce_along_dim(0).should be_a Enumerator
-    end
-
-    it "should return an enumerator for each_along_dim without a block" do
-      @nm_1d.each_along_dim(0).should be_a Enumerator
-    end
-
-    it "should iterate correctly for map without a block" do
-      en = @nm_1d.map
-      en.each { |e| e**2 }.should eq @nm_1d.map { |e| e**2 }
-      en = @nm_2d.map
-      en.each { |e| e**2 }.should eq @nm_2d.map { |e| e**2 }
-    end
-
-    it "should iterate correctly for reduce without a block" do
-      en = @nm_1d.reduce_along_dim(0, 1.0)
-      en.each { |a, e| a+e }.to_f.should eq 12
-      en = @nm_2d.reduce_along_dim(1, 1.0)
-      en.each { |a, e| a+e }.should eq NMatrix[[2.0],[6.0]]
-    end
-
-    it "should iterate correctly for each_along_dim without a block" do
-      res = NMatrix.zeros_like(@nm_1d[0...1])
-      en = @nm_1d.each_along_dim(0)
-      en.each { |e| res += e }
-      res.to_f.should eq 11
-
-      res = NMatrix.zeros_like (@nm_2d[0...2, 0])
-      en = @nm_2d.each_along_dim(1)
-      en.each { |e| res += e }
-      res.should eq NMatrix[[1.0], [5.0]]
-    end
-
-    it "should yield matrices of matching dtype for each_along_dim" do
-      m = NMatrix.new([2,3], [1,2,3,3,4,5], :complex128)
-      m.each_along_dim(1) do |sub_m|
-        sub_m.dtype.should eq :complex128
-      end
-    end
-
-    it "should reduce to a matrix of matching dtype for reduce_along_dim" do
-      m = NMatrix.new([2,3], [1,2,3,3,4,5], :complex128)
-      m.reduce_along_dim(1) do |acc, sub_m|
-        sub_m.dtype.should eq :complex128
-        acc
-      end
-
-      m = NMatrix.new([2,3], [1,2,3,3,4,5], :complex128)
-      m.reduce_along_dim(1, 0.0) do |acc, sub_m|
-        sub_m.dtype.should eq :complex128
-        acc
-      end
-    end
-
-    it "should allow overriding the dtype for reduce_along_dim" do
-      m = NMatrix[[1,2,3], [3,4,5], :complex128]
-      m.reduce_along_dim(1, 0.0, :float64) do |acc, sub_m|
-        acc.dtype.should eq :float64
-        acc
-      end
-
-      m = NMatrix[[1,2,3], [3,4,5], :complex128]
-      m.reduce_along_dim(1, nil, :float64) do |acc, sub_m|
-        acc.dtype.should eq :float64
-        acc
-      end
-    end
-
-    it "should convert integer dtypes to float when calculating mean" do
-      m = NMatrix[[1,2,3], [3,4,5], :int32]
-      m.mean(0).dtype.should eq :float64
-    end
-
-    it "should convert integer dtypes to float when calculating variance" do
-      m = NMatrix[[1,2,3], [3,4,5], :int32]
-      m.variance(0).dtype.should eq :float64
-    end
-
-    it "should convert integer dtypes to float when calculating standard deviation" do
-      m = NMatrix[[1,2,3], [3,4,5], :int32]
-      m.std(0).dtype.should eq :float64
-    end
-
-    context "_like constructors" do
-
-      it "should create an nmatrix of ones with dimensions and type the same as its argument" do
-        NMatrix.ones_like(@nm_1d).should eq NMatrix[1.0, 1.0, 1.0, 1.0, 1.0]
-        NMatrix.ones_like(@nm_2d).should eq NMatrix[[1.0, 1.0], [1.0, 1.0]]
-      end
-
-      it "should create an nmatrix of zeros with dimensions and type the same as its argument" do
-        NMatrix.zeros_like(@nm_1d).should eq NMatrix[0.0, 0.0, 0.0, 0.0, 0.0]
-        NMatrix.zeros_like(@nm_2d).should eq NMatrix[[0.0, 0.0], [0.0, 0.0]]
-      end
-    end
-  end
 end

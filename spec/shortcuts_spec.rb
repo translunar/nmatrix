@@ -27,6 +27,7 @@
 
 # Can we use require_relative here instead?
 require File.join(File.dirname(__FILE__), "spec_helper.rb")
+require 'pry'
 
 describe NMatrix do
 
@@ -89,26 +90,12 @@ describe NMatrix do
 
     2.times do |i|
       2.times do |j|
-        m[i, j].should == value
+        m[i,j].should == value
         value += 1
       end
     end
   end
 
-  it "seq() only accepts an integer or a 2-element array as dimension" do
-    m = NMatrix.seq([2, 2])
-    value = 0
-
-    2.times do |i|
-      2.times do |j|
-        m[i, j].should == value
-        value += 1
-      end
-    end
-
-    expect { NMatrix.seq([1, 2, 3]) }.to raise_error
-    expect { NMatrix.seq("not an array or integer") }.to raise_error
-  end
 
   it "indgen() creates a matrix of integers as well as seq()" do
     m = NMatrix.indgen(2) # 2x2 matrix.
@@ -186,6 +173,31 @@ describe NMatrix do
     m[3,3].should eq(arr[3])
   end
 
+  context "_like constructors" do
+    before :each do
+      STDERR.puts "starting GC"
+      GC.start
+      STDERR.puts "GC finished"
+      @nm_1d = NMatrix[5.0,0.0,1.0,2.0,3.0]
+      STDERR.puts "@nm_1d"
+      @nm_2d = NMatrix[[0.0,1.0],[2.0,3.0]]
+      STDERR.puts "@nm_2d"
+    end
+
+    it "should create an nmatrix of ones with dimensions and type the same as its argument" do
+      NMatrix.ones_like(@nm_1d).should eq NMatrix[1.0, 1.0, 1.0, 1.0, 1.0]
+      NMatrix.ones_like(@nm_2d).should eq NMatrix[[1.0, 1.0], [1.0, 1.0]]
+    end
+
+    it "should create an nmatrix of zeros with dimensions and type the same as its argument" do
+      STDERR.puts "A"
+      NMatrix.zeros_like(@nm_1d).should eq NMatrix[0.0, 0.0, 0.0, 0.0, 0.0]
+      STDERR.puts "B"
+      NMatrix.zeros_like(@nm_2d).should eq NMatrix[[0.0, 0.0], [0.0, 0.0]]
+      STDERR.puts "C"
+    end
+  end
+
 end
 
 describe "NVector" do
@@ -214,7 +226,7 @@ describe "NVector" do
 
   it "seq() creates a vector of integers, sequentially" do
     v = NVector.seq(7)
-    v.should == NVector.new(7, [0, 1, 2, 3, 4, 5, 6], :int64)
+    v.should == NMatrix.new([7,1], [0, 1, 2, 3, 4, 5, 6])
   end
 
   it "seq() only accepts integers as dimension" do
@@ -226,32 +238,32 @@ describe "NVector" do
 
   it "indgen() creates a vector of integers as well as seq()" do
     v = NVector.indgen(7)
-    v.should == NVector.new(7, [0, 1, 2, 3, 4, 5, 6], :int64)
+    v.should == NMatrix.new([7,1], [0, 1, 2, 3, 4, 5, 6])
   end
 
   it "findgen creates a vector of floats, sequentially" do
     v = NVector.findgen(2)
-    v.should == NVector.new(2, [0.0, 1.0], :float32)
+    v.should == NMatrix.new([2,1], [0.0, 1.0])
   end
 
   it "bindgen() creates a vector of bytes, sequentially" do
     v = NVector.bindgen(4)
-    v.should == NVector.new(4, [0, 1, 2, 3], :byte)
+    v.should == NMatrix.new([4,1], [0, 1, 2, 3], dtype: :byte)
   end
 
   it "cindgen() creates a vector of complexes, sequentially" do
     v = NVector.cindgen(2)
-    v.should == NVector.new(2, [Complex(0.0, 0.0), Complex(1.0, 0.0)], :complex64)
+    v.should == NMatrix.new([2,1], [Complex(0.0, 0.0), Complex(1.0, 0.0)], dtype: :complex64)
   end
 
   it "linspace() creates a vector with n values equally spaced between a and b" do
     v = NVector.linspace(0, 2, 5)
-    v.should == NVector.new(5, [0, 0.5, 1.0, 1.5, 2.0], :float64)
+    v.should == NMatrix.new([5,1], [0.0, 0.5, 1.0, 1.5, 2.0])
   end
 
   it "logspace() creates a vector with n values logarithmically spaced between decades 10^a and 10^b" do
     v = NVector.logspace(0, 3, 4)
-    v.should == NVector.new(4, [1, 10, 100, 1000], :float64)
+    v.should == NMatrix.new([4,1], [1.0, 10.0, 100.0, 1000.0])
   end
 end
 

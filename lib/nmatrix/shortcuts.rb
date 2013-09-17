@@ -70,7 +70,7 @@ class NMatrix
     #
     #   a = NMatrix[ 1,2,3,4 ]          =>  1.0  2.0  3.0  4.0
     #
-    #   a = NMatrix[ 1,2,3,4, :int32 ]  =>  1  2  3  4
+    #   a = NMatrix[ 1,2,3,4, dtype: :int32 ]  =>  1  2  3  4
     #
     #   a = NMatrix[ [1,2,3], [3,4,5] ] =>  1.0  2.0  3.0
     #                                       3.0  4.0  5.0
@@ -85,7 +85,7 @@ class NMatrix
     #   Ruby array:   a =  [ [1,2,3], [4,5,6] ]
     #
     def [](*params)
-      dtype = params.last.is_a?(Symbol) ? params.pop : nil
+      options = params.last.is_a?(Hash) ? params.pop : {}
 
       # First find the dimensions of the array.
       i = 0
@@ -101,22 +101,22 @@ class NMatrix
       #shape.unshift(1) if shape.size == 1
 
       # Then flatten the array.
-      NMatrix.new(shape, params.flatten, dtype)
+      NMatrix.new(shape, params.flatten, options)
     end
 
     #
     # call-seq:
-    #    zeros(size) -> NMatrix
-    #    zeros(size, dtype) -> NMatrix
-    #    zeros(stype, size, dtype) -> NMatrix
+    #    zeros(shape) -> NMatrix
+    #    zeros(shape, dtype: dtype) -> NMatrix
+    #    zeros(shape, dtype: dtype, stype: stype) -> NMatrix
     #
     # Creates a new matrix of zeros with the dimensions supplied as
     # parameters.
     #
     # * *Arguments* :
-    #   - +stype+ -> (optional) Default is +:dense+.
-    #   - +size+ -> Array (or integer for square matrix) specifying the dimensions.
+    #   - +shape+ -> Array (or integer for square matrix) specifying the dimensions.
     #   - +dtype+ -> (optional) Default is +:float64+
+    #   - +stype+ -> (optional) Default is +:dense+.
     # * *Returns* :
     #   - NMatrix filled with zeros.
     #
@@ -125,30 +125,26 @@ class NMatrix
     #   NMatrix.zeros(2) # =>  0.0   0.0
     #                          0.0   0.0
     #
-    #   NMatrix.zeros([2, 3], :int32) # =>  0  0  0
-    #                                       0  0  0
+    #   NMatrix.zeros([2, 3], dtype: :int32) # =>  0  0  0
+    #                                              0  0  0
     #
-    #   NMatrix.zeros(:list, [1, 5], :int32) # =>  0  0  0  0  0
+    #   NMatrix.zeros([1, 5], dtype: :int32) # =>  0  0  0  0  0
     #
-    def zeros(*params)
-      dtype = params.last.is_a?(Symbol) ? params.pop : :float64
-      stype = params.first.is_a?(Symbol) ? params.shift : :dense
-      dim = params.first
-
-      NMatrix.new(stype, dim, 0, dtype)
+    def zeros(shape, opts = {})
+      NMatrix.new(shape, 0, {:dtype => :float64}.merge(opts))
     end
     alias :zeroes :zeros
 
     #
     # call-seq:
-    #     ones(size) -> NMatrix
-    #     ones(size, dtype) -> NMatrix
+    #     ones(shape) -> NMatrix
+    #     ones(shape, dtype: dtype, stype: stype) -> NMatrix
     #
     # Creates a matrix filled with ones.
     #
     # * *Arguments* :
-    #   - +size+ -> Array (or integer for square matrix) specifying the dimensions.
-    #   - +dtype+ -> (optional) Default is +:float64+
+    #   - +shape+ -> Array (or integer for square matrix) specifying the shape.
+    #   - +opts+ -> (optional) Hash of options from NMatrix#initialize
     # * *Returns* :
     #   - NMatrix filled with ones.
     #
@@ -156,14 +152,11 @@ class NMatrix
     #
     #   NMatrix.ones([1, 3]) # =>  1.0   1.0   1.0
     #
-    #   NMatrix.ones([2, 3], :int32) # =>  1  1  1
-    #                                      1  1  1
+    #   NMatrix.ones([2, 3], dtype: :int32) # =>  1  1  1
+    #                                             1  1  1
     #
-    def ones(*params)
-      dtype = params.last.is_a?(Symbol) ? params.pop : :float64
-      dim = params.first
-
-      NMatrix.new(dim, 1, dtype: dtype)
+    def ones(shape, opts={})
+      NMatrix.new(shape, 1, {:dtype => :float64, :default => 1}.merge(opts))
     end
 
     ##
@@ -177,7 +170,7 @@ class NMatrix
     # @return [NMatrix] a new nmatrix filled with ones.
     #
     def ones_like(nm)
-      NMatrix.ones(nm.shape, nm.dtype)
+      NMatrix.ones(nm.shape, dtype: nm.dtype, stype: nm.stype, capacity: nm.capacity, default: 1)
     end
 
     ##
@@ -191,23 +184,23 @@ class NMatrix
     # @return [NMatrix] a new nmatrix filled with zeros.
     #
     def zeros_like(nm)
-      NMatrix.zeros(nm.stype, nm.shape, nm.dtype)
+      NMatrix.zeros(nm.shape, dtype: nm.dtype, stype: nm.stype, capacity: nm.capacity, default: 0)
     end
 
     #
     # call-seq:
-    #     eye(size) -> NMatrix
-    #     eye(size, dtype) -> NMatrix
-    #     eye(stype, size, dtype) -> NMatrix
+    #     eye(shape) -> NMatrix
+    #     eye(shape, dtype: dtype) -> NMatrix
+    #     eye(shape, stype: stype, dtype: dtype) -> NMatrix
     #
     # Creates an identity matrix (square matrix rank 2).
     #
     # * *Arguments* :
-    #   - +stype+ -> (optional) Default is +:dense+.
     #   - +size+ -> Array (or integer for square matrix) specifying the dimensions.
     #   - +dtype+ -> (optional) Default is +:float64+
+    #   - +stype+ -> (optional) Default is +:dense+.
     # * *Returns* :
-    #   - NMatrix filled with zeros.
+    #   - An identity matrix.
     #
     # Examples:
     #
@@ -215,22 +208,17 @@ class NMatrix
     #                          0.0   1.0   0.0
     #                          0.0   0.0   1.0
     #
-    #    NMatrix.eye(3, :int32) # =>   1   0   0
-    #                                  0   1   0
-    #                                  0   0   1
+    #    NMatrix.eye(3, dtype: :int32) # =>   1   0   0
+    #                                         0   1   0
+    #                                         0   0   1
     #
-    #    NMatrix.eye(:yale, 2, :int32) # =>   1   0
-    #                                         0   1
+    #    NMatrix.eye(2, dtype: :int32, stype: :yale) # =>   1   0
+    #                                                       0   1
     #
-    def eye(*params)
-      dtype = params.last.is_a?(Symbol) ? params.pop : :float64
-      stype = params.first.is_a?(Symbol) ? params.shift : :dense
-
-      dim = params.first
-
+    def eye(shape, opts={})
       # Fill the diagonal with 1's.
-      m = NMatrix.zeros(stype, dim, dtype)
-      (0...dim).each do |i|
+      m = NMatrix.zeros(shape, {:dtype => :float64}.merge(opts))
+      (0...m.shape[0]).each do |i|
         m[i, i] = 1
       end
 
@@ -240,16 +228,13 @@ class NMatrix
     #
     # call-seq:
     #     diagonals(array) -> NMatrix
-    #     diagonals(stype, array, dtype) -> NMatrix
-    #     diagonals(array, dtype) -> NMatrix
-    #     diagonals(stype, array) -> NMatrix
+    #     diagonals(array, dtype: dtype, stype: stype) -> NMatrix
     #
     # Creates a matrix filled with specified diagonals.
     #
     # * *Arguments* :
-    #   - +stype+ -> (optional) Storage type for the matrix (default is :dense)
     #   - +entries+ -> Array containing input values for diagonal matrix
-    #   - +dtype+ -> (optional) Default is based on values in supplied Array
+    #   - +options+ -> (optional) Hash with options for NMatrix#initialize
     # * *Returns* :
     #   - NMatrix filled with specified diagonal values.
     #
@@ -260,19 +245,17 @@ class NMatrix
     #                                      0.0 0.0 3.0 0.0
     #                                      0.0 0.0 0.0 4.0
     #
-    #   NMatrix.diagonal(:dense, [1,2,3,4], :int32) # => 1 0 0 0
-    #                                                    0 2 0 0
-    #                                                    0 0 3 0
-    #                                                    0 0 0 4
+    #   NMatrix.diagonal([1,2,3,4], dtype: :int32) # => 1 0 0 0
+    #                                                   0 2 0 0
+    #                                                   0 0 3 0
+    #                                                   0 0 0 4
     #
     #
-    def diagonal(*params)
-      dtype = params.last.is_a?(Symbol) ? params.pop : nil
-      stype = params.first.is_a?(Symbol) ? params.shift : :dense
-      ary   = params.shift
-
-      m = NMatrix.zeros(stype, ary.length, dtype || guess_dtype(ary[0]))
-      ary.each_with_index do |n, i|
+    def diagonal(entries, opts={})
+      m = NMatrix.zeros(entries.size,
+                        {:dtype => guess_dtype(entries[0]), :capacity => entries.size + 1}.merge(opts)
+                       )
+      entries.each_with_index do |n, i|
         m[i,i] = n
       end
       m
@@ -282,141 +265,121 @@ class NMatrix
 
     #
     # call-seq:
-    #     random(size) -> NMatrix
+    #     random(shape) -> NMatrix
     #
     # Creates a +:dense+ NMatrix with random numbers between 0 and 1 generated
     # by +Random::rand+. The parameter is the dimension of the matrix.
     #
     # * *Arguments* :
-    #   - +size+ -> Array (or integer for square matrix) specifying the dimensions.
+    #   - +shape+ -> Array (or integer for square matrix) specifying the dimensions.
     # * *Returns* :
-    #   - NMatrix filled with zeros.
+    #   - NMatrix filled with random values.
     #
     # Examples:
     #
     #   NMatrix.random([2, 2]) # => 0.4859439730644226   0.1783195585012436
     #                               0.23193766176700592  0.4503345191478729
     #
-    def random(size)
+    def random(shape, opts={})
       rng = Random.new
 
       random_values = []
 
       # Construct the values of the final matrix based on the dimension.
-      if size.is_a?(Integer)
-        (size * size - 1).times { |i| random_values << rng.rand }
-      else
-        # Dimensions given by an array. Get the product of the array elements
-        # and generate this number of random values.
-        size.reduce(1, :*).times { |i| random_values << rng.rand }
-      end
+      NMatrix.size(shape).times { |i| random_values << rng.rand }
 
-      NMatrix.new(:dense, size, random_values, :float64)
+      NMatrix.new(shape, random_values, {:dtype => :float64, :stype => :dense}.merge(opts))
     end
 
     #
     # call-seq:
-    #     seq(size) -> NMatrix
-    #     seq(size, dtype) -> NMatrix
+    #     seq(shape) -> NMatrix
+    #     seq(shape, options) -> NMatrix
     #
     # Creates a matrix filled with a sequence of integers starting at zero.
     #
     # * *Arguments* :
-    #   - +size+ -> Array (or integer for square matrix) specifying the dimensions.
-    #   - +dtype+ -> (optional) Default is +:float64+
+    #   - +shape+ -> Array (or integer for square matrix) specifying the dimensions.
+    #   - +options+ -> (optional) Options permissible for NMatrix#initialize
     # * *Returns* :
-    #   - NMatrix filled with zeros.
+    #   - NMatrix filled with values 0 through +size+.
     #
     # Examples:
     #
     #   NMatrix.seq(2) # =>   0   1
     #                 2   3
     #
-    #   NMatrix.seq([3, 3], :float32) # =>  0.0  1.0  2.0
+    #   NMatrix.seq([3, 3], dtype: :float32) # =>  0.0  1.0  2.0
     #                                       3.0  4.0  5.0
     #                                       6.0  7.0  8.0
     #
-    def seq(*params)
-      dtype = params.last.is_a?(Symbol) ? params.pop : nil
-      size = params.first
-
-      # Must provide the dimension as an Integer for a square matrix or as an
-      # 2 element array, e.g. [2,4].
-      unless size.is_a?(Integer) || (size.is_a?(Array) && size.size < 3)
-        raise ArgumentError, "seq() accepts only integers or 2-element arrays \
-as dimension."
-      end
+    def seq(shape, options={})
 
       # Construct the values of the final matrix based on the dimension.
-      if size.is_a?(Integer)
-        values = (0 .. (size * size - 1)).to_a
-      else
-        # Dimensions given by a 2 element array.
-        values = (0 .. (size.first * size.last - 1)).to_a
-      end
+      values = (0 ... NMatrix.size(shape)).to_a
 
       # It'll produce :int32, except if a dtype is provided.
-      NMatrix.new(:dense, size, values, dtype)
+      NMatrix.new(shape, values, {:stype => :dense}.merge(options))
     end
 
     #
     # call-seq:
     #     indgen(size) -> NMatrix
     #
-    # Returns an integer NMatrix. Equivalent to <tt>seq(n, :int32)</tt>.
+    # Returns an integer NMatrix. Equivalent to <tt>seq(n, dtype: :int32)</tt>.
     #
     # * *Arguments* :
-    #   - +size+ -> Size of the sequence.
+    #   - +shape+ -> Shape of the sequence.
     # * *Returns* :
     #   - NMatrix with dtype +:int32+.
     #
-    def indgen(size)
-      NMatrix.seq(size, :int32)
+    def indgen(shape)
+      NMatrix.seq(shape, dtype: :int32)
     end
 
     #
     # call-seq:
-    #     findgen(size) -> NMatrix
+    #     findgen(shape) -> NMatrix
     #
-    # Returns a float NMatrix. Equivalent to <tt>seq(n, :float32)</tt>.
+    # Returns a float NMatrix. Equivalent to <tt>seq(n, dtype: :float32)</tt>.
     #
     # * *Arguments* :
-    #   - +size+ -> Size of the sequence.
+    #   - +shape+ -> Shape of the sequence.
     # * *Returns* :
     #   - NMatrix with dtype +:float32+.
     #
-    def findgen(size)
-      NMatrix.seq(size, :float32)
+    def findgen(shape)
+      NMatrix.seq(shape, dtype: :float32)
     end
 
     #
     # call-seq:
     #     bindgen(size) -> NMatrix
     #
-    # Returns a byte NMatrix. Equivalent to <tt>seq(n, :byte)</tt>.
+    # Returns a byte NMatrix. Equivalent to <tt>seq(n, dtype: :byte)</tt>.
     #
     # * *Arguments* :
-    #   - +size+ -> Size of the sequence.
+    #   - +size+ -> Shape of the sequence.
     # * *Returns* :
     #   - NMatrix with dtype +:byte+.
     #
-    def bindgen(size)
-      NMatrix.seq(size, :byte)
+    def bindgen(shape)
+      NMatrix.seq(shape, dtype: :byte)
     end
 
     #
     # call-seq:
-    #     cindgen(size) -> NMatrix
+    #     cindgen(shape) -> NMatrix
     #
-    # Returns an complex NMatrix. Equivalent to <tt>seq(n, :complex64)</tt>.
+    # Returns a complex NMatrix. Equivalent to <tt>seq(n, dtype: :complex64)</tt>.
     #
     # * *Arguments* :
-    #   - +size+ -> Size of the sequence.
+    #   - +shape+ -> Shape of the sequence.
     # * *Returns* :
     #   - NMatrix with dtype +:complex64+.
     #
-    def cindgen(size)
-      NMatrix.seq(size, :complex64)
+    def cindgen(shape)
+      NMatrix.seq(shape, dtype: :complex64)
     end
 
   end
@@ -455,6 +418,8 @@ module NVector
         raise(ArgumentError, "shape must be a Fixnum or an Array of positive Fixnums where exactly one value is 1")
       end
 
+      warn "NVector is deprecated and not guaranteed to work any longer"
+
       NMatrix.new(stype, shape, *args)
     end
 
@@ -482,7 +447,7 @@ module NVector
     #                                  0
     #
     def zeros(size, dtype = :float64)
-      NVector.new(size, 0, dtype)
+      NMatrix.new([size,1], 0, dtype: dtype)
     end
     alias :zeroes :zeros
 
@@ -510,7 +475,7 @@ module NVector
     #                                 1
     #
     def ones(size, dtype = :float64)
-      NVector.new(size, 1, dtype)
+      NMatrix.new([size,1], 1, dtype: dtype)
     end
 
     #
@@ -522,7 +487,7 @@ module NVector
     #
     # * *Arguments* :
     #   - +size+ -> Array (or integer for square matrix) specifying the dimensions.
-    #   - +dtype+ -> (optional) Default is +:float64+.
+    #   - +opts+ -> (optional) NMatrix#initialize options
     # * *Returns* :
     #   - NVector filled with random numbers generated by the +Random+ class.
     #
@@ -531,13 +496,13 @@ module NVector
     #   NVector.rand(2) # =>  0.4859439730644226
     #                         0.1783195585012436
     #
-    def random(size)
+    def random(size, opts = {})
       rng = Random.new
 
       random_values = []
       size.times { |i| random_values << rng.rand }
 
-      NVector.new(size, random_values, :float64)
+      NMatrix.new([size,1], random_values, opts)
     end
 
     #
@@ -566,7 +531,7 @@ module NVector
     def seq(size, dtype = :int64)
       values = (0 ... size).to_a
 
-      NVector.new(size, values, dtype)
+      NMatrix.new([size,1], values, dtype: dtype)
     end
 
     #
@@ -665,8 +630,8 @@ module NVector
       step = (b - a) * (1.0 / (n - 1))
 
       # dtype = :float64 is used to prevent integer coercion.
-      result = NVector.seq(n, :float64) * NVector.new(n, step, :float64)
-      result += NVector.new(n, a, :float64)
+      result = NVector.seq(n, :float64) * NMatrix.new([n,1], step, dtype: :float64)
+      result += NMatrix.new([n,1], a, dtype: :float64)
       result
     end
 

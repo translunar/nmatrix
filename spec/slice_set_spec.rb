@@ -24,6 +24,7 @@
 #
 # Test of slice set operations.
 
+require 'pry'
 require File.dirname(__FILE__) + "/spec_helper.rb"
 
 describe "Set slice operation" do
@@ -36,7 +37,6 @@ describe "Set slice operation" do
       end
 
       example "set and unset a range of entries with single values" do
-        require 'pry'
 
         if stype == :yale
           step "verify correct arrangement of Yale IJA and A arrays" do

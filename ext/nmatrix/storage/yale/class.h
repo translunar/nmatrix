@@ -377,10 +377,11 @@ public:
     }
 
     // Only free v if it was allocated in this function.
-    if (nm_and_free.first && nm_and_free.second)
-      nm_delete(nm_and_free.first);
-    else
-      xfree(v);
+    if (nm_and_free.first) {
+      if (nm_and_free.second) {
+        nm_delete(nm_and_free.first);
+      }
+    } else xfree(v);
   }
 
 

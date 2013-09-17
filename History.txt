@@ -391,7 +391,13 @@
 
 === 0.0.9 / 2013-09-??
 
- * 4 major enhancements:
+ * 6 major enhancements:
+
+   * Re-factored NMatrix constructor
+
+   * Improved usability of NMatrix shortcut constructor options
+     (e.g., #zeros, #ones, #random, etc.) using new NMatrix
+     constructor
 
    * Left-assignment of slices for all matrix storage types (uses a
      dense cast, or accepts an array or single value)
@@ -403,7 +409,19 @@
 
    * Enabled Travis CI (by @cjfuller)
 
- * 0 minor enhancements:
+ * 3 minor enhancements:
 
- * 0 bug fixes:
+   * Renamed some specs in order to change their test order, so that
+     critical tests fail first (particularly in the case of
+     segmentation faults)
+
+   * Default dtype is now :object when no initial values are
+     specified
+
+   * Deprecated NVector#initialize and a number of other unnecessary
+     NVector functionality
+
+ * 1 bug fixes:
+
+   * nil values in matrices are now pretty printed as "nil"
 

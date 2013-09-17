@@ -20,17 +20,21 @@
 #
 # * https://github.com/SciRuby/sciruby/wiki/Contributor-Agreement
 #
-# == slice_spec.rb
+# == 02_slice_spec.rb
 #
-# Test of slice operations.
+# Test of slice operations. High priority tests since reference
+# slicing is needed for pretty_print.
 #
+require 'pry'
 require File.dirname(__FILE__) + "/spec_helper.rb"
 
 describe "Slice operation" do
+  include RSpec::Longrun::DSL
 
   [:dense, :list, :yale].each do |stype|
     context "for #{stype}" do
       before :each do
+        GC.start # don't have to do this, but it helps to make sure we've cleaned up our pointers properly.
         @m = create_matrix(stype)
       end
 
@@ -140,7 +144,7 @@ describe "Slice operation" do
       context "with copying" do
         it 'should return an NMatrix' do
           n = @m.slice(0..1,0..1)
-          nm_eql(n, NMatrix.new([2,2], [0,1,3,4], :int32)).should be_true
+          nm_eql(n, NMatrix.new([2,2], [0,1,3,4], dtype: :int32)).should be_true
         end
 
         it 'should return a copy of 2x2 matrix to self elements' do
@@ -338,19 +342,24 @@ describe "Slice operation" do
 
         end
 
-        it 'should be cleaned up by garbage collector without errors'  do
-          1.times do
-            n = @m[1..2,0..1]
+        example 'should be cleaned up by garbage collector without errors'  do
+          step "reference slice" do
+            1.times do
+              n = @m[1..2,0..1]
+            end
+            GC.start
           end
-          GC.start
-          @m.should == NMatrix.new(:dense, [3,3], (0..9).to_a, :int32).cast(stype, :int32)
-          n = nil
-          1.times do
-            m = NMatrix.new(:dense, [2,2], [1,2,3,4]).cast(stype, :int32)
-            n = m[0..1,0..1]
+
+          step "reference slice of casted-copy" do
+            @m.should == NMatrix.new([3,3], (0..9).to_a, dtype: :int32).cast(stype, :int32)
+            n = nil
+            1.times do
+              m = NMatrix.new([2,2], [1,2,3,4]).cast(stype, :int32)
+              n = m[0..1,0..1]
+            end
+            GC.start
+            n.should == NMatrix.new([2,2], [1,2,3,4]).cast(stype, :int32)
           end
-          GC.start
-          n.should == NMatrix.new(:dense, [2,2], [1,2,3,4]).cast(stype, :int32)
         end
 
         [:dense, :list, :yale].each do |cast_type|
