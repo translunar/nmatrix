@@ -55,7 +55,7 @@ You can find the complete API documentation {on our website}[http://sciruby.com/
 Create a new NMatrix from a ruby array: 
 
     >> require 'nmatrix'
-    >> NMatrix.new([2, 3], [0, 1, 2, 3, 4, 5], :int64).pp
+    >> NMatrix.new([2, 3], [0, 1, 2, 3, 4, 5], dtype: :int64).pp
       [0, 1, 2]
       [3, 4, 5]
     => nil

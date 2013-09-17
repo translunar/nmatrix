@@ -407,7 +407,7 @@
 
    * Enabled Travis CI (by @cjfuller)
 
- * 3 minor enhancements:
+ * 4 minor enhancements:
 
    * Renamed some specs in order to change their test order, so that
      critical tests fail first (particularly in the case of
@@ -418,6 +418,8 @@
 
    * Deprecated NVector#initialize and a number of other unnecessary
      NVector functionality
+
+   * Made Ubuntu compilation significantly easier (by @cjfuller)
 
  * 1 bug fixes:
 
