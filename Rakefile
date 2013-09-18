@@ -164,6 +164,7 @@ namespace :clean do
 end
 
 
+desc "Check the manifest for correctness"
 task :check_manifest do |task|
   manifest_files  = File.read("Manifest.txt").split
 
@@ -189,6 +190,12 @@ task :check_manifest do |task|
     STDERR.puts "Manifest looks good!"
   end
 
+end
+
+require "rdoc/task"
+RDoc::Task.new do |rdoc|
+  rdoc.main = "README.rdoc"
+  rdoc.rdoc_files.include(%w{README.rdoc History.txt LICENSE.txt CONTRIBUTING.md ext/nmatrix/binary_format.txt lib/nmatrix/**/*.rb ext/nmatrix/**/*.cpp ext/nmatrix/**/*.c ext/nmatrix/**/*.h})
 end
 
 # vim: syntax=ruby
