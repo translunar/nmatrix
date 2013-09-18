@@ -74,6 +74,10 @@ def create_conf_h(file) #:nodoc:
       hfile.puts "#define RUBY_2 1"
     end
 
+    if RUBY_VERSION < '1.9.3'
+      hfile.puts "#define OLD_RB_SCAN_ARGS"
+    end
+
     for line in $defs
       line =~ /^-D(.*)/
       hfile.printf "#define %s 1\n", $1
@@ -168,6 +172,8 @@ have_func("clapack_dgetri", ["cblas.h", "clapack.h"])
 have_func("dgesvd_", "clapack.h")
 
 have_func("cblas_dgemm", "cblas.h")
+
+#have_func("rb_scan_args", "ruby.h")
 
 #find_library("lapack", "clapack_dgetrf")
 #find_library("cblas", "cblas_dgemm")

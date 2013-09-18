@@ -658,13 +658,25 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
   VALUE shape_ary, initial_ary, hash;
   //VALUE shape_ary, default_val, capacity, initial_ary, dtype_sym, stype_sym;
   // Mandatory args: shape, dtype, stype
-//#ifdef RUBY_2
+  // FIXME: This is the one line of code standing between Ruby 1.9.2 and 1.9.3.
+#ifndef OLD_RB_SCAN_ARGS // Ruby 1.9.3 and higher
   rb_scan_args(argc, argv, "11:", &shape_ary, &initial_ary, &hash); // &stype_sym, &dtype_sym, &default_val, &capacity);
-//#else
-//  rb_scan_args(argc, argv, "12", &shape_ary, &initial_ary, &hash);
-//  if (!NIL_P(hash) && TYPE(hash) != T_HASH)
-//    rb_raise(rb_eArgError, "expected hash or nil for arg 2");
-//#endif
+#else // Ruby 1.9.2 and lower
+  if (argc == 3)
+    rb_scan_args(argc, argv, "12", &shape_ary, &initial_ary, &hash);
+  else if (argc == 2) {
+    VALUE unknown_arg;
+    rb_scan_args(argc, argv, "11", &shape_ary, &unknown_arg)
+    if (!NIL_P(unknown_arg) && HASH_P(unknown_arg)) {
+      hash        = unknown_arg;
+      initial_ary = Qnil;
+    } else {
+      inital_ary  = unknown_arg;
+      hash        = Qnil;
+    }
+  }
+#endif
+
   // Get the shape.
   size_t  dim;
   size_t* shape = interpret_shape(shape_ary, &dim);

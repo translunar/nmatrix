@@ -45,6 +45,7 @@ extern "C" {
 /*
  * Project Includes
  */
+#include "nmatrix_config.h"
 
 #include "types.h"
 #include "data/data.h"

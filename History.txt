@@ -391,39 +391,39 @@
 
 === 0.0.9 / 2013-09-18
 
- * 5 major enhancements:
+* 5 major enhancements:
 
-   * Re-factored NMatrix constructor
+  * Re-factored NMatrix constructor
 
-   * Improved usability of NMatrix shortcut constructor options
-     (e.g., #zeros, #ones, #random, etc.) using new NMatrix
-     constructor
+  * Improved usability of NMatrix shortcut constructor options
+    (e.g., #zeros, #ones, #random, etc.) using new NMatrix
+    constructor
 
-   * Left-assignment of slices for all matrix storage types (uses a
-     dense cast, or accepts an array or single value)
+  * Left-assignment of slices for all matrix storage types (uses a
+    dense cast, or accepts an array or single value)
 
-   * Re-factored Yale into a more object-oriented and less confusing
-     set of header files
+  * Re-factored Yale into a more object-oriented and less confusing
+    set of header files
 
-   * Enabled Travis CI (by @cjfuller)
+  * Enabled Travis CI (by @cjfuller)
 
- * 4 minor enhancements:
+* 4 minor enhancements:
 
-   * Renamed some specs in order to change their test order, so that
-     critical tests fail first (particularly in the case of
-     segmentation faults)
+  * Renamed some specs in order to change their test order, so that
+    critical tests fail first (particularly in the case of
+    segmentation faults)
 
-   * Default dtype is now :object when no initial values are
-     specified
+  * Default dtype is now :object when no initial values are
+    specified
 
-   * Deprecated NVector#initialize and a number of other unnecessary
-     NVector functionality
+  * Deprecated NVector#initialize and a number of other unnecessary
+    NVector functionality
 
-   * Made Ubuntu compilation significantly easier (by @cjfuller)
+  * Made Ubuntu compilation significantly easier (by @cjfuller)
 
- * 2 bug fixes:
+* 2 bug fixes:
 
-   * nil values in matrices are now pretty printed as "nil"
+  * nil values in matrices are now pretty printed as "nil"
 
-   * Casting from dense to Yale now properly accepts the default
+  * Casting from dense to Yale now properly accepts the default
      value option
