@@ -667,11 +667,11 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
   else if (argc == 2) {
     VALUE unknown_arg;
     rb_scan_args(argc, argv, "11", &shape_ary, &unknown_arg);
-    if (!NIL_P(unknown_arg) && TYPE(unknown_arg) == HASH_T) {
+    if (!NIL_P(unknown_arg) && TYPE(unknown_arg) == T_HASH) {
       hash        = unknown_arg;
       initial_ary = Qnil;
     } else {
-      inital_ary  = unknown_arg;
+      initial_ary  = unknown_arg;
       hash        = Qnil;
     }
   }
