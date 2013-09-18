@@ -421,7 +421,9 @@
 
    * Made Ubuntu compilation significantly easier (by @cjfuller)
 
- * 1 bug fixes:
+ * 2 bug fixes:
 
    * nil values in matrices are now pretty printed as "nil"
 
+   * Casting from dense to Yale now properly accepts the default
+     value option

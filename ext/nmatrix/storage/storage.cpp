@@ -478,7 +478,7 @@ namespace yale_storage { // FIXME: Move to yale.cpp
     LDType    L_INIT(0);
     if (init) {
       if (l_dtype == RUBYOBJ) L_INIT = *reinterpret_cast<VALUE*>(init);
-      else                    L_INIT = rubyobj_from_cval(init, rhs->dtype);
+      else                    L_INIT = *reinterpret_cast<LDType*>(init);
     }
     RDType R_INIT = static_cast<RDType>(L_INIT);
 

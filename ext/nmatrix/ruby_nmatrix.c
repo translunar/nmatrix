@@ -925,7 +925,7 @@ static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
 /*
  * Helper for nm_cast which uses the C types instead of the Ruby objects. Called by nm_cast.
  */
-inline NMATRIX* nm_cast_with_ctype_args(NMATRIX* self, nm::stype_t new_stype, nm::dtype_t new_dtype, void* init_ptr) {
+NMATRIX* nm_cast_with_ctype_args(NMATRIX* self, nm::stype_t new_stype, nm::dtype_t new_dtype, void* init_ptr) {
   NMATRIX* lhs = ALLOC(NMATRIX);
   lhs->stype   = new_stype;
 
@@ -939,8 +939,8 @@ inline NMATRIX* nm_cast_with_ctype_args(NMATRIX* self, nm::stype_t new_stype, nm
 
 /*
  * call-seq:
- *     cast(stype) -> NMatrix
- *     cast(stype, dtype, sparse_basis) -> NMatrix
+ *     cast_full(stype) -> NMatrix
+ *     cast_full(stype, dtype, sparse_basis) -> NMatrix
  *
  * Copy constructor for changing dtypes and stypes.
  */

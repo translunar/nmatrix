@@ -81,6 +81,7 @@ ext/nmatrix/nmatrix.cpp
 ext/nmatrix/nmatrix.h
 ext/nmatrix/ruby_constants.cpp
 ext/nmatrix/ruby_constants.h
+ext/nmatrix/ruby_nmatrix.c
 ext/nmatrix/types.h
 ext/nmatrix/extconf.rb
 
