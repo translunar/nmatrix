@@ -99,9 +99,9 @@ class NMatrix
 
   def alloc_svd_result
     [
-      NMatrix.new(self.shape[0], dtype: self.dtype, stype: :dense),
-      NMatrix.new([self.shape[0],1], dtype: self.dtype, stype: :dense),
-      NMatrix.new(self.shape[1], dtype: self.dtype, stype: :dense)
+      NMatrix.new(self.shape[0], dtype: self.dtype),
+      NMatrix.new([self.shape[0],1], dtype: self.dtype),
+      NMatrix.new(self.shape[1], dtype: self.dtype)
     ]
   end
 

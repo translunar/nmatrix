@@ -74,6 +74,10 @@ def create_conf_h(file) #:nodoc:
       hfile.puts "#define RUBY_2 1"
     end
 
+    if RUBY_VERSION < '1.9.3'
+      hfile.puts "#define OLD_RB_SCAN_ARGS"
+    end
+
     for line in $defs
       line =~ /^-D(.*)/
       hfile.printf "#define %s 1\n", $1
@@ -130,21 +134,37 @@ $srcs = [
 #   export CPLUS_INCLUDE_PATH=/usr/local/atlas/include
 # (substituting in the path of your cblas.h and clapack.h for the path I used). -- JW 8/27/12
 
+idefaults = {lapack: ["/usr/include/atlas"],
+             cblas: ["/usr/local/atlas/include", "/usr/include/atlas"],
+             atlas: ["/usr/local/atlas/include", "/usr/include/atlas"]}
 
-unless have_library("lapack") # && have_header("clapack.h")
-  dir_config("lapack", ["/usr/include/atlas"], ["/usr/local/lib", "/usr/local/atlas/lib"])
+ldefaults = {lapack: ["/usr/local/lib", "/usr/local/atlas/lib"],
+             cblas: ["/usr/local/lib", "/usr/local/atlas/lib"],
+             atlas: ["/usr/local/atlas/lib", "/usr/local/lib", "/usr/lib"]}
+
+unless have_library("lapack")
+  dir_config("lapack", idefaults[:lapack], ldefaults[:lapack])
 end
 
-unless have_library("cblas") # && have_header("cblas.h")
-  dir_config("cblas", ["/usr/local/atlas/include", "/usr/include/atlas"], ["/usr/local/lib", "/usr/local/atlas/lib"])
+unless have_library("cblas")
+  dir_config("cblas", idefaults[:cblas], ldefaults[:cblas])
 end
 
 unless have_library("atlas")
-  dir_config("atlas", ["/usr/local/atlas/include", "/usr/include/atlas"], ["/usr/local/atlas/lib", "/usr/local/lib", "/usr/lib"])
+  dir_config("atlas", idefaults[:atlas], ldefaults[:atlas])
 end
 
-#find_library("lapack", "clapack_dgetrf")
+# this needs to go before cblas.h checks -- on Ubuntu, the clapack in the
+# include path found for cblas.h doesn't seem to contain all the necessary 
+# functions
 have_header("clapack.h")
+
+# this ensures that we find the header on Ubuntu, where by default the library 
+# can be found but not the header
+unless have_header("cblas.h")
+  find_header("cblas.h", *idefaults[:cblas])
+end
+
 have_header("cblas.h")
 
 have_func("clapack_dgetrf", ["cblas.h", "clapack.h"])
@@ -153,7 +173,9 @@ have_func("dgesvd_", "clapack.h")
 
 have_func("cblas_dgemm", "cblas.h")
 
+#have_func("rb_scan_args", "ruby.h")
 
+#find_library("lapack", "clapack_dgetrf")
 #find_library("cblas", "cblas_dgemm")
 #find_library("atlas", "ATL_dgemmNN")
 
@@ -206,10 +228,10 @@ else
 end
 
 # For release, these next two should both be changed to -O3.
-#$CFLAGS += " -O3 " #" -O0 -g "
-$CFLAGS += " -static -O0 -g "
-#$CPPFLAGS += " -O3 -std=#{$CPP_STANDARD} " #" -O0 -g -std=#{$CPP_STANDARD} " #-fmax-errors=10 -save-temps
-$CPPFLAGS += " -static -O0 -g -std=#{$CPP_STANDARD} "
+$CFLAGS += " -O3 " #" -O0 -g "
+#$CFLAGS += " -static -O0 -g "
+$CPPFLAGS += " -O3 -std=#{$CPP_STANDARD} " #" -O0 -g -std=#{$CPP_STANDARD} " #-fmax-errors=10 -save-temps
+#$CPPFLAGS += " -static -O0 -g -std=#{$CPP_STANDARD} "
 
 CONFIG['warnflags'].gsub!('-Wshorten-64-to-32', '') # doesn't work except in Mac-patched gcc (4.2)
 CONFIG['warnflags'].gsub!('-Wdeclaration-after-statement', '')

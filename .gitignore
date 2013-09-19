@@ -20,13 +20,8 @@ spec/*.mtx
 *.log
 /tags
 *.gem
-
-ext/nmatrix/*.o
-ext/nmatrix/*.so
-ext/nmatrix/*.log
-ext/nmatrix/**/*.o
-ext/nmatrix/Makefile
-ext/nmatrix/**/Makefile
-ext/nmatrix/nmatrix_config.h
+html/
+doc/
+docs/
 pkg/
 .autotest

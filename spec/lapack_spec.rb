@@ -56,7 +56,7 @@ describe NMatrix::LAPACK do
   [:rational32, :rational64, :rational128, :float32, :float64, :complex64, :complex128].each do |dtype|
     context dtype do
       it "exposes clapack getrf" do
-        a = NMatrix.new(:dense, 3, [4,9,2,3,5,7,8,1,6], dtype)
+        a = NMatrix.new(3, [4,9,2,3,5,7,8,1,6], dtype: dtype)
         NMatrix::LAPACK::clapack_getrf(:row, 3, 3, a, 3)
 
         # delta varies for different dtypes
