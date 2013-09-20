@@ -426,4 +426,17 @@
   * nil values in matrices are now pretty printed as "nil"
 
   * Casting from dense to Yale now properly accepts the default
-     value option
+    value option
+
+=== 0.1.0-rc1
+
+* 1 major enhancements:
+
+* 1 minor enhancements:
+
+* 1 bug fixes:
+
+  * Spec revisions for lapack_gesdd and lapack_gesvd (by @ryanmt)
+
+  * Switched default optimization to -O2 to solve segfault problem
+    temporarily
