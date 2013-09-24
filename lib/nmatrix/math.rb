@@ -29,6 +29,65 @@
 #++
 
 class NMatrix
+
+  #
+  # Define the set of math methods present in the ruby core Math module for NMatrix objects.
+  # 
+  # Dtype is preserved, so integer types will produce integer results.
+  #
+  # Methods that do not return a single number (frexp and lgamma) are not implemented since
+  # this would break dtype preservation.
+  #
+  # The module is added as class methods of NMatrix, so use is, e.g.:
+  #
+  # a = N[0.0, 1.0, 2.0]
+  # >> puts N.sin(a)
+  # => [0.0, 0.8414709848078965, 0.9092974268256817]
+  #
+  module NMMath
+    METHODS_ARITY_2 = [:atan2, :ldexp, :hypot]
+    METHODS_ARITY_1 = [:cos, :sin, :tan, :acos, :asin, :atan, :cosh, :sinh, :tanh, :acosh,
+      :asinh, :atanh, :exp, :log2, :log10, :sqrt, :cbrt, :erf, :erfc, :gamma]
+
+    METHODS_ARITY_1.each do |meth|
+      define_method meth do |nm|
+        nm.map { |e| Math.send(meth, e) }
+      end
+    end
+
+    METHODS_ARITY_2.each do |meth|
+      define_method meth do |nm0, nm1|
+        nm_out = nm0.dup
+        nm0.each_with_indices do |a|
+          e = a[0]
+          i = a[1...a.length]
+          nm_out[*i] = Math.send(meth, e, nm1[*i]) 
+        end
+        nm_out
+      end
+    end
+
+    #
+    # call-seq:
+    #   log(nm) -> NMatrix
+    #   log(nm, base) -> NMatrix
+    #
+    # Calculates the natural logarithm elementwise of the supplied NMatrix.
+    # If a base is supplied, calculate the logarithm with that base.
+    #
+    # @param [NMatrix] nm  the NMatrix of which to calculate the log
+    # @param [Numeric] base the base of the logarithm (default: natural logarithm)
+    #
+    # @return [NMatrix] an NMatrix with log elements
+    #
+    def log(nm, base=Math::E)
+      nm.map { |e| Math.log(e, base) }
+    end
+
+  end
+
+  self.extend NMMath # add the Math functions as class methods of NMatrix
+
   #
   # call-seq:
   #     invert! -> NMatrix
