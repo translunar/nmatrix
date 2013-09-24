@@ -92,8 +92,9 @@ describe "math" do
           end
 
           it "should correctly apply elementtwise atan2" do
-            N.atan2(@m, @m).should eq N.new(@size, [0, Math::PI/4, Math::PI/4, Math::PI/4],
-                                            dtype: dtype, stype: :dense)
+            N.atan2(@m, @m*0+1).should eq N.new(@size, [0, 0.24497866312686414,
+                                                0.4636476090008061, 0.6435011087932844],
+                                                dtype: dtype, stype: :dense)
           end
         end
       end
