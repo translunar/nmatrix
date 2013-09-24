@@ -26,8 +26,7 @@
 # versions of unfriendly BLAS and LAPACK functions.
 #
 
-# Can we use require_relative here instead?
-require File.join(File.dirname(__FILE__), "spec_helper.rb")
+require 'spec_helper'
 
 describe "math" do
 
