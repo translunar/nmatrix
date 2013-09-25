@@ -32,71 +32,80 @@ describe "math" do
 
   context "elementwise math functions" do
 
-    [:byte,:int8,:int16,:int32,:int64,:float32,:float64,:rational64,:rational128].each do |dtype|
-      context dtype do
-        before :each do
-          @size = [2,2]
-          @m = NMatrix.seq(@size, dtype: dtype, stype: :dense)+1
-          @a = @m.to_a.flatten
-        end
+    [:dense,:list,:yale].each do |stype|
+      context stype do
 
-        NMatrix::NMMath::METHODS_ARITY_1.each do |meth|
-          #skip inverse regular trig functions
-          next if meth.to_s.start_with?('a') and (not meth.to_s.end_with?('h')) \
-            and NMatrix::NMMath::METHODS_ARITY_1.include?(
-              meth.to_s[1...meth.to_s.length].to_sym) 
-          next if meth == :atanh
-
-          it "should correctly apply elementwise #{meth}" do
-            # make sure the trig functions return a positive result when processing
-            # dtype byte or we run into trouble since byte is implemented unsigned
-            if dtype == :byte and [:sin, :cos, :tan].include? meth then
-              @m = NMatrix.new(@size, [0,1], dtype: dtype, stype: :dense)
+        [:int64,:float64,:rational128].each do |dtype|
+          context dtype do
+            before :each do
+              @size = [2,2]
+              @m = NMatrix.seq(@size, dtype: dtype, stype: stype)+1
               @a = @m.to_a.flatten
             end
 
-            N.send(meth, @m).should eq N.new(@size, @a.map{ |e| Math.send(meth, e) },
-                                             dtype: dtype, stype: :dense)
-          end
-        end
+            NMatrix::NMMath::METHODS_ARITY_1.each do |meth|
+              #skip inverse regular trig functions
+              next if meth.to_s.start_with?('a') and (not meth.to_s.end_with?('h')) \
+                and NMatrix::NMMath::METHODS_ARITY_1.include?(
+                  meth.to_s[1...meth.to_s.length].to_sym)
+              next if meth == :atanh
 
-        NMatrix::NMMath::METHODS_ARITY_2.each do |meth|
-          next if meth == :atan2
-          it "should correctly apply elementwise #{meth}" do 
-            N.send(meth, @m, @m).should eq N.new(@size, @a.map{ |e| Math.send(meth, e, e) },
-                                                 dtype: dtype, stype: :dense)
-          end
-        end
+              it "should correctly apply elementwise #{meth}" do
+                # make sure the trig functions return a positive result when processing
+                # dtype byte or we run into trouble since byte is implemented unsigned
+                if dtype == :byte and [:sin, :cos, :tan].include? meth then
+                  @m = NMatrix.new(@size, [0,1], dtype: dtype, stype: stype)
+                  @a = @m.to_a.flatten
+                end
 
-        it "should correctly apply elementwise natural log" do
-          N.log(@m).should eq N.new(@size, [0, Math.log(2), Math.log(3), Math.log(4)],
-                                    dtype: dtype, stype: :dense)
-        end
 
-        it "should correctly apply elementwise log with arbitrary base" do
-          N.log(@m, 3).should eq N.new(@size, [0, Math.log(2,3), 1, Math.log(4,3)],
-                                       dtype: dtype, stype: :dense)
-        end
+                @m.send(meth).should eq N.new(@size, @a.map{ |e| Math.send(meth, e) },
+                                                 dtype: :object, stype: stype)
+              end
+            end
 
-        context "inverse trig functions" do
-          before :each do
-            @m = NMatrix.seq(@size, dtype: dtype, stype: :dense)/4
-            @a = @m.to_a.flatten
-          end
-          [:asin, :acos, :atan, :atanh].each do |atf|
+            NMatrix::NMMath::METHODS_ARITY_2.each do |meth|
+              next if meth == :atan2
+              it "should correctly apply elementwise #{meth}" do
+                N.send(meth, @m, @m).should eq N.new(@size, @a.map{ |e| Math.send(meth, e, e) },
+                                                     dtype: :object, stype: stype)
+              end
+            end
 
-            it "should correctly apply elementwise #{atf}" do
-              N.send(atf, @m).should eq N.new(@size, @a.map{ |e| Math.send(atf, e) },
-                                              dtype: dtype, stype: :dense)
+            it "should correctly apply elementwise natural log" do
+              require 'pry'
+              binding.pry if dtype == :float64
+              N.log(@m).should eq N.new(@size, [0, Math.log(2), Math.log(3), Math.log(4)],
+                                        dtype: :object, stype: stype)
+            end
+
+            it "should correctly apply elementwise log with arbitrary base" do
+              N.log(@m, 3).should eq N.new(@size, [0, Math.log(2,3), 1, Math.log(4,3)],
+                                           dtype: :object, stype: stype)
+            end
+
+            context "inverse trig functions" do
+              before :each do
+                @m = NMatrix.seq(@size, dtype: dtype, stype: stype)/4
+                @a = @m.to_a.flatten
+              end
+              [:asin, :acos, :atan, :atanh].each do |atf|
+
+                it "should correctly apply elementwise #{atf}" do
+                  @m.send(atf).should eq N.new(@size, @a.map{ |e| Math.send(atf, e) },
+                                                  dtype: :object, stype: :dense)
+                end
+              end
+
+              it "should correctly apply elementtwise atan2" do
+                N.atan2(@m, @m*0+1).should eq N.new(@size, [0, 0.24497866312686414,
+                                                    0.4636476090008061, 0.6435011087932844],
+                                                    dtype: :object, stype: :dense)
+              end
             end
           end
-
-          it "should correctly apply elementtwise atan2" do
-            N.atan2(@m, @m*0+1).should eq N.new(@size, [0, 0.24497866312686414,
-                                                0.4636476090008061, 0.6435011087932844],
-                                                dtype: dtype, stype: :dense)
-          end
         end
+
       end
     end
   end
