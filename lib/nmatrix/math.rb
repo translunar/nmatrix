@@ -99,8 +99,8 @@ class NMatrix
 
   #
   # call-seq:
-  #     gesdd! -> [u, sigma, v_transpose]
-  #     gesdd! -> [u, sigma, v_conjugate_transpose] # complex
+  #     gesvd! -> [u, sigma, v_transpose]
+  #     gesvd! -> [u, sigma, v_conjugate_transpose] # complex
   #
   # Compute the singular value decomposition of a matrix using LAPACK's GESVD function. 
   # This is destructive, modifying the source NMatrix.  See also #gesdd.
