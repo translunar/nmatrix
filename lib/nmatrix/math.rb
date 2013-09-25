@@ -97,12 +97,19 @@ class NMatrix
     t.transpose
   end
 
-  def alloc_svd_result
-    [
-      NMatrix.new(self.shape[0], dtype: self.dtype),
-      NMatrix.new([self.shape[0],1], dtype: self.dtype),
-      NMatrix.new(self.shape[1], dtype: self.dtype)
-    ]
+  #
+  # call-seq:
+  #     gesdd! -> [u, sigma, v_transpose]
+  #     gesdd! -> [u, sigma, v_conjugate_transpose] # complex
+  #
+  # Compute the singular value decomposition of a matrix using LAPACK's GESVD function. 
+  # This is destructive, modifying the source NMatrix.  See also #gesdd.
+  #
+  # Optionally accepts a +workspace_size+ parameter, which will be honored only if it is larger than what LAPACK
+  # requires.
+  #
+  def gesvd!(workspace_size=1)
+    NMatrix::LAPACK::gesvd(self, workspace_size)
   end
 
   #
@@ -116,11 +123,25 @@ class NMatrix
   # requires.
   #
   def gesvd(workspace_size=1)
-    result = alloc_svd_result
-    NMatrix::LAPACK::lapack_gesvd(:a, :a, self.shape[0], self.shape[1], self, self.shape[0], result[1], result[0], self.shape[0], result[2], self.shape[1], workspace_size)
-    result
+    self.clone.gesvd!(workspace_size)
   end
 
+
+
+  #
+  # call-seq:
+  #     gesdd! -> [u, sigma, v_transpose]
+  #     gesdd! -> [u, sigma, v_conjugate_transpose] # complex
+  #
+  # Compute the singular value decomposition of a matrix using LAPACK's GESDD function. This uses a divide-and-conquer
+  # strategy. This is destructive, modifying the source NMatrix.  See also #gesvd.
+  #
+  # Optionally accepts a +workspace_size+ parameter, which will be honored only if it is larger than what LAPACK
+  # requires.
+  #
+  def gesdd!(workspace_size=1)
+    NMatrix::LAPACK::gesdd(self, workspace_size)
+  end
 
   #
   # call-seq:
@@ -134,11 +155,8 @@ class NMatrix
   # requires.
   #
   def gesdd(workspace_size=1)
-    result = alloc_svd_result
-    NMatrix::LAPACK::lapack_gesvd(:a, :a, self.shape[0], self.shape[1], self, self.shape[0], result[1], result[0], self.shape[0], result[2], self.shape[1], workspace_size)
-    result
+    self.clone.gesdd!(workspace_size)
   end
-
   #
   # call-seq:
   #     laswp!(ary) -> NMatrix
