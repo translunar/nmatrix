@@ -101,6 +101,7 @@ extern "C" {
   static VALUE nm_ia(VALUE self);
   static VALUE nm_ja(VALUE self);
   static VALUE nm_ija(int argc, VALUE* argv, VALUE self);
+  static VALUE nm_row_keys_intersection(VALUE m1, VALUE ii1, VALUE m2, VALUE ii2);
 
   static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self);
 
@@ -1035,6 +1036,12 @@ static VALUE each_with_indices(VALUE nm) {
   return nm;
 }
 
+template <typename D>
+static bool is_pos_default_value(YALE_STORAGE* s, size_t apos) {
+  YaleStorage<D> y(s);
+  return y.is_pos_default_value(apos);
+}
+
 
 } // end of namespace nm::yale_storage
 
@@ -1056,6 +1063,10 @@ void nm_init_yale_functions() {
 	 */
   cNMatrix_YaleFunctions = rb_define_module_under(cNMatrix, "YaleFunctions");
 
+  // Expert recommendation. Eventually this should go in a separate gem, or at least a separate module.
+  rb_define_method(cNMatrix_YaleFunctions, "yale_row_keys_intersection", (METHOD)nm_row_keys_intersection, 3);
+
+  // Debugging functions.
   rb_define_method(cNMatrix_YaleFunctions, "yale_ija", (METHOD)nm_ija, -1);
   rb_define_method(cNMatrix_YaleFunctions, "yale_a", (METHOD)nm_a, -1);
   rb_define_method(cNMatrix_YaleFunctions, "yale_size", (METHOD)nm_size, 0);
@@ -1433,6 +1444,83 @@ YALE_STORAGE* nm_yale_storage_create_from_old_yale(nm::dtype_t dtype, size_t* sh
 static VALUE nm_size(VALUE self) {
   YALE_STORAGE* s = (YALE_STORAGE*)(NM_SRC(self));
   return INT2FIX(nm::yale_storage::IJA(s)[s->shape[0]]);
+}
+
+
+/*
+ * Determine if some pos in the diagonal is the default. No bounds checking!
+ */
+static bool is_pos_default_value(YALE_STORAGE* s, size_t apos) {
+  DTYPE_TEMPLATE_TABLE(nm::yale_storage::is_pos_default_value, bool, YALE_STORAGE*, size_t)
+  return ttable[s->dtype](s, apos);
+}
+
+
+/*
+ * call-seq:
+ *     yale_nd_row_keys_intersection(i, m2, i2) -> Array
+ *
+ * This function is experimental.
+ *
+ * It finds the intersection of row i of the current matrix with row i2 of matrix m2.
+ * Both matrices must be Yale. They may not be slices.
+ *
+ * Only checks the stored indices; does not care about matrix default value.
+ */
+static VALUE nm_row_keys_intersection(VALUE m1, VALUE ii1, VALUE m2, VALUE ii2) {
+  if (NM_SRC(m1) != NM_STORAGE(m1) || NM_SRC(m2) != NM_STORAGE(m2))
+    rb_raise(rb_eNotImpError, "must be called on a real matrix and not a slice");
+
+  size_t i1 = FIX2INT(ii1),
+         i2 = FIX2INT(ii2);
+
+  YALE_STORAGE *s   = NM_STORAGE_YALE(m1),
+               *t   = NM_STORAGE_YALE(m2);
+
+  size_t pos1 = s->ija[i1],
+         pos2 = t->ija[i2];
+
+  size_t nextpos1 = s->ija[i1+1],
+         nextpos2 = t->ija[i2+1];
+
+  size_t diff1 = nextpos1 - pos1,
+         diff2 = nextpos2 - pos2;
+
+  // Does the diagonal have a nonzero in it?
+  bool diag1 = i1 < s->shape[0] && !is_pos_default_value(s, i1),
+       diag2 = i2 < t->shape[0] && !is_pos_default_value(t, i2);
+
+  // Reserve max(diff1,diff2) space -- that's the max intersection possible.
+  VALUE ret = rb_ary_new2(std::max(diff1,diff2));
+
+  // Handle once the special case where both have the diagonal in exactly
+  // the same place.
+  if (diag1 && diag2 && i1 == i2) {
+    rb_ary_push(ret, INT2FIX(i1));
+    diag1 = false; diag2 = false; // no need to deal with diagonals anymore.
+  }
+
+  // Now find the intersection.
+  for (size_t idx1 = pos1, idx2 = pos2; idx1 < nextpos1 && idx2 < nextpos2;) {
+    if (s->ija[idx1] == t->ija[idx2]) {
+      rb_ary_push(ret, INT2FIX(s->ija[idx1]));
+      ++idx1; ++idx2;
+    } else if (diag1 && i1 == t->ija[idx2]) {
+      rb_ary_push(ret, INT2FIX(i1));
+      diag1 = false;
+      ++idx2;
+    } else if (diag2 && i2 == s->ija[idx1]) {
+      rb_ary_push(ret, INT2FIX(i2));
+      diag2 = false;
+      ++idx1;
+    } else if (s->ija[idx1] < t->ija[idx2]) {
+      ++idx1;
+    } else { // s->ija[idx1] > t->ija[idx2]
+      ++idx2;
+    }
+  }
+
+  return ret;
 }
 
 

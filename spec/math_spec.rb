@@ -30,6 +30,9 @@
 require File.join(File.dirname(__FILE__), "spec_helper.rb")
 
 describe "math" do
+  after :each do
+    GC.start
+  end
 
   [:float32, :float64, :complex64, :complex128, :rational32, :rational64, :rational128].each do |dtype|
     context dtype do

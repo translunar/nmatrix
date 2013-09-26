@@ -102,7 +102,7 @@ if /cygwin|mingw/ =~ RUBY_PLATFORM
 end
 
 $DEBUG = true
-$CFLAGS = ["-Wall ",$CFLAGS].join(" ")
+$CFLAGS = ["-Wall -Werror=return-type",$CFLAGS].join(" ")
 
 $srcs = [
          'nmatrix.cpp',
@@ -181,6 +181,7 @@ have_func("cblas_dgemm", "cblas.h")
 
 # Order matters here: ATLAS has to go after LAPACK: http://mail.scipy.org/pipermail/scipy-user/2007-January/010717.html
 $libs += " -llapack -lcblas -latlas "
+$libs += " -lprofiler "
 
 $objs = %w{nmatrix ruby_constants data/data util/io math util/sl_list storage/common storage/storage storage/dense storage/yale/yale storage/list}.map { |i| i + ".o" }
 
@@ -228,10 +229,10 @@ else
 end
 
 # For release, these next two should both be changed to -O3.
-$CFLAGS += " -O2 " #" -O0 -g "
-#$CFLAGS += " -static -O0 -g "
-$CPPFLAGS += " -O2 -std=#{$CPP_STANDARD} " #" -O0 -g -std=#{$CPP_STANDARD} " #-fmax-errors=10 -save-temps
-#$CPPFLAGS += " -static -O0 -g -std=#{$CPP_STANDARD} "
+#$CFLAGS += " -O2 " #" -O0 -g "
+$CFLAGS += " -static -O0 -g -pg "
+#$CPPFLAGS += " -O2 -std=#{$CPP_STANDARD} " #" -O0 -g -std=#{$CPP_STANDARD} " #-fmax-errors=10 -save-temps
+$CPPFLAGS += " -static -O0 -g -pg -std=#{$CPP_STANDARD} "
 
 CONFIG['warnflags'].gsub!('-Wshorten-64-to-32', '') # doesn't work except in Mac-patched gcc (4.2)
 CONFIG['warnflags'].gsub!('-Wdeclaration-after-statement', '')

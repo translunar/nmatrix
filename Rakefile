@@ -41,18 +41,26 @@ BASEDIR = Pathname( __FILE__ ).dirname.relative_path_from( Pathname.pwd )
 SPECDIR = BASEDIR + 'spec'
 
 VALGRIND_OPTIONS = [
-        "--tool=memcheck",
-        #"--leak-check=yes",
-        "--num-callers=15",
-        #"--error-limit=no",
-        "--partial-loads-ok=yes",
-        "--undef-value-errors=no" #,
-        #"--dsymutil=yes"
+    "--tool=memcheck",
+    #"--leak-check=yes",
+    "--num-callers=15",
+    #"--error-limit=no",
+    "--partial-loads-ok=yes",
+    "--undef-value-errors=no" #,
+    #"--dsymutil=yes"
 ]
+
+CALLGRIND_OPTIONS = [
+    "--tool=callgrind",
+    "--dump-instr=yes",
+    "--simulate-cache=yes",
+    "--collect-jumps=yes"
+]
+
 VALGRIND_MEMORYFILL_OPTIONS = [
-        "--freelist-vol=100000000",
-        "--malloc-fill=6D",
-        "--free-fill=66 ",
+    "--freelist-vol=100000000",
+    "--malloc-fill=6D",
+    "--free-fill=66 ",
 ]
 
 GDB_OPTIONS = []
@@ -125,17 +133,25 @@ namespace :spec do
   desc "Run specs under cgdb."
   task :cgdb => [ :compile ] do |task|
     cmd = [ 'cgdb' ] + GDB_OPTIONS
-          cmd += [ '--args' ]
-          cmd += RSPEC_CMD
-          run( *cmd )
+    cmd += [ '--args' ]
+    cmd += RSPEC_CMD
+    run( *cmd )
   end
 
   desc "Run specs under Valgrind."
   task :valgrind => [ :compile ] do |task|
-          cmd = [ 'valgrind' ] + VALGRIND_OPTIONS
-          cmd += RSPEC_CMD
-          run( *cmd )
+    cmd = [ 'valgrind' ] + VALGRIND_OPTIONS
+    cmd += RSPEC_CMD
+    run( *cmd )
   end
+
+  desc "Run specs under Callgrind."
+  task :callgrind => [ :compile ] do |task|
+    cmd = [ 'valgrind' ] + CALLGRIND_OPTIONS
+    cmd += RSPEC_CMD
+    run( *cmd )
+  end
+
 end
 
 

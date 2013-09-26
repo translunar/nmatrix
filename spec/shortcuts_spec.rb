@@ -30,6 +30,9 @@ require File.join(File.dirname(__FILE__), "spec_helper.rb")
 require 'pry'
 
 describe NMatrix do
+  after :each do
+    GC.start
+  end
 
   it "zeros() creates a matrix of zeros" do
     m = NMatrix.zeros(3)

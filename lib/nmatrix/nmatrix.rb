@@ -76,7 +76,9 @@ class NMatrix
 
   # TODO: Make this actually pretty.
   def pretty_print(q) #:nodoc:
-    if self.dim > 3 || self.dim == 1
+    if self.shape[1] > 100
+      self.inspect.pretty_print(q)
+    elsif self.dim > 3 || self.dim == 1
       self.to_a.pretty_print(q)
     else
       # iterate through the whole matrix and find the longest number

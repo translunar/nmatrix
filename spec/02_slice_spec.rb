@@ -38,6 +38,10 @@ describe "Slice operation" do
         @m = create_matrix(stype)
       end
 
+      after :each do
+        GC.start
+      end
+
       it "should correctly return a row of a reference-slice" do
         @n = create_rectangular_matrix(stype)
         @m = @n[1..4,1..3]
@@ -317,6 +321,7 @@ describe "Slice operation" do
             end
 
             it "compares slices to scalars" do
+              binding.pry
               (@m[1, 0..2] > 2).each { |e| (e != 0).should be_true }
             end
 

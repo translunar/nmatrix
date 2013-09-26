@@ -29,6 +29,10 @@
 require File.dirname(__FILE__) + "/spec_helper.rb"
 
 describe NMatrix do
+  after :each do
+    GC.start
+  end
+
   it "creates a matrix with the new constructor" do
     n = NMatrix.new([2,2], [0,1,2,3], dtype: :int64)
   end
@@ -40,17 +44,18 @@ describe NMatrix do
   end
 
   it "calculates exact determinants on small square matrices" do
-    a = NMatrix.new(:dense, 2, [1,2,3,4], :int64)
-    a.det_exact.should == -2
+    NMatrix.new(2, [1,2,3,4], stype: :dense, dtype: :int64).det_exact.should == -2
   end
 
   it "calculates determinants" do
-    m = NMatrix.new(3, [-2,2,3,-1,1,3,2,0,-1])
-    m.det.should == 6
+    GC.disable
+    NMatrix.new(3, [-2,2,3,-1,1,3,2,0,-1], stype: :dense, dtype: :int64).det.should == 6
+    GC.enable
   end
 
   it "allows casting to Ruby objects" do
-    m = NMatrix.new(:dense, [3,3], [0,0,1,0,2,0,3,4,5], :int64)
+    binding.pry
+    m = NMatrix.new([3,3], [0,0,1,0,2,0,3,4,5], dtype: :int64, stype: :dense)
     n = m.cast(:dense, :object)
     n.should == m
   end

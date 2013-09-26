@@ -655,7 +655,7 @@ NMATRIX* nm_create(nm::stype_t stype, STORAGE* storage) {
  * @see nm_init
  */
 static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
-  VALUE shape_ary, initial_ary, hash;
+  volatile VALUE shape_ary, initial_ary, hash;
   //VALUE shape_ary, default_val, capacity, initial_ary, dtype_sym, stype_sym;
   // Mandatory args: shape, dtype, stype
   // FIXME: This is the one line of code standing between Ruby 1.9.2 and 1.9.3.
@@ -756,6 +756,12 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
   switch (stype) {
   	case nm::DENSE_STORE:
   		nmatrix->storage = (STORAGE*)nm_dense_storage_create(dtype, shape, dim, v, v_size);
+  		if (nm_storage_count_max_elements(nmatrix->storage) != v_size) {
+  		  std::cerr << "freeing dense elements pointer " << v << std::endl;
+  		  xfree(v);
+  		} else {
+  		  std::cerr << "passed off responsibility for v = " << v << " to new dense matrix" << std::endl;
+  		}
   		break;
 
   	case nm::LIST_STORE:
@@ -788,8 +794,10 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
     free_slice(slice);
 
     // We need to free v if it's not the same size as tmp -- because tmp will have made a copy instead.
-    if (nm_storage_count_max_elements(tmp->storage) != v_size)
+    if (nm_storage_count_max_elements(tmp->storage) != v_size) {
+      std::cerr << "freeing tmp elements pointer " << v << std::endl;
       xfree(v);
+    }
 
     // nm_delete(tmp); // This seems to enrage the garbage collector (because rb_tmp is still available). It'd be better if we could force it to free immediately, but no sweat.
   }
@@ -957,18 +965,20 @@ NMATRIX* nm_cast_with_ctype_args(NMATRIX* self, nm::stype_t new_stype, nm::dtype
  * Copy constructor for changing dtypes and stypes.
  */
 VALUE nm_cast(VALUE self, VALUE new_stype_symbol, VALUE new_dtype_symbol, VALUE init) {
+  volatile VALUE vself = self;
+
   nm::dtype_t new_dtype = nm_dtype_from_rbsymbol(new_dtype_symbol);
   nm::stype_t new_stype = nm_stype_from_rbsymbol(new_stype_symbol);
 
-  CheckNMatrixType(self);
+  CheckNMatrixType(vself);
   NMATRIX *rhs;
 
-  UnwrapNMatrix( self, rhs );
+  UnwrapNMatrix( vself, rhs );
 
   void* init_ptr = ALLOCA_N(char, DTYPE_SIZES[new_dtype]);
   rubyval_to_cval(init, new_dtype, init_ptr);
 
-  return Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, nm_cast_with_ctype_args(rhs, new_stype, new_dtype, init_ptr));
+  return Data_Wrap_Struct(CLASS_OF(vself), nm_mark, nm_delete, nm_cast_with_ctype_args(rhs, new_stype, new_dtype, init_ptr));
 }
 
 /*
@@ -1273,7 +1283,7 @@ static VALUE nm_read(int argc, VALUE* argv, VALUE self) {
   int ver  = major * 10000 + minor * 100 + release,
       fver = fmajor * 10000 + fminor * 100 + release;
   if (fver > ver && force == false) {
-    rb_raise(rb_eIOError, "File was created in newer version of NMatrix than current");
+    rb_raise(rb_eIOError, "File was created in newer version of NMatrix than current (%d.%d.%d)", fmajor, fminor, frelease);
   }
   if (null16 != 0) fprintf(stderr, "Warning: Expected zero padding was not zero\n");
 
@@ -2010,6 +2020,7 @@ static void* interpret_initial_value(VALUE arg, nm::dtype_t dtype) {
   if (TYPE(arg) == T_ARRAY) {
   	// Array
     init_val = ALLOC_N(char, DTYPE_SIZES[dtype] * RARRAY_LEN(arg));
+    std::cerr << "allocated init_val = " << init_val << std::endl;
     NM_CHECK_ALLOC(init_val);
     for (index = 0; index < RARRAY_LEN(arg); ++index) {
     	rubyval_to_cval(RARRAY_PTR(arg)[index], dtype, (char*)init_val + (index * DTYPE_SIZES[dtype]));
@@ -2144,15 +2155,16 @@ static VALUE matrix_multiply(NMATRIX* left, NMATRIX* right) {
  * Note: Currently only implemented for 2x2 and 3x3 matrices.
  */
 static VALUE nm_det_exact(VALUE self) {
-  if (NM_STYPE(self) != nm::DENSE_STORE) rb_raise(nm_eStorageTypeError, "can only calculate exact determinant for dense matrices");
+  volatile VALUE vself = self;
+  if (NM_STYPE(vself) != nm::DENSE_STORE) rb_raise(nm_eStorageTypeError, "can only calculate exact determinant for dense matrices");
 
-  if (NM_DIM(self) != 2 || NM_SHAPE0(self) != NM_SHAPE1(self)) return Qnil;
+  if (NM_DIM(vself) != 2 || NM_SHAPE0(vself) != NM_SHAPE1(vself)) return Qnil;
 
   // Calculate the determinant and then assign it to the return value
-  void* result = ALLOCA_N(char, DTYPE_SIZES[NM_DTYPE(self)]);
-  nm_math_det_exact(NM_SHAPE0(self), NM_STORAGE_DENSE(self)->elements, NM_SHAPE0(self), NM_DTYPE(self), result);
+  void* result = ALLOCA_N(char, DTYPE_SIZES[NM_DTYPE(vself)]);
+  nm_math_det_exact(NM_SHAPE0(vself), NM_STORAGE_DENSE(vself)->elements, NM_SHAPE0(vself), NM_DTYPE(vself), result);
 
-  return rubyobj_from_cval(result, NM_DTYPE(self)).rval;
+  return rubyobj_from_cval(result, NM_DTYPE(vself)).rval;
 }
 
 /////////////////

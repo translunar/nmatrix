@@ -72,6 +72,7 @@ public:
   inline const D& default_obj() const { return a(s->shape[0]); }
   inline const D& const_default_obj() const { return a(s->shape[0]); }
 
+
   /*
    * Return a Ruby VALUE representation of default_obj()
    */
@@ -97,6 +98,14 @@ public:
   inline size_t  capacity() const { return s->capacity;            }
   inline size_t  size() const { return ija(real_shape(0));         }
 
+
+  /*
+   * Returns true if the value at apos is the default value.
+   * Mainly used for determining if the diagonal contains zeros.
+   */
+  bool is_pos_default_value(size_t apos) const {
+    return (a(apos) == const_default_obj());
+  }
 
   /*
    * Given a size-2 array of size_t, representing the shape, determine
