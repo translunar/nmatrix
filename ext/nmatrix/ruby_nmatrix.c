@@ -756,12 +756,6 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
   switch (stype) {
   	case nm::DENSE_STORE:
   		nmatrix->storage = (STORAGE*)nm_dense_storage_create(dtype, shape, dim, v, v_size);
-  		if (nm_storage_count_max_elements(nmatrix->storage) != v_size) {
-  		  std::cerr << "freeing dense elements pointer " << v << std::endl;
-  		  xfree(v);
-  		} else {
-  		  std::cerr << "passed off responsibility for v = " << v << " to new dense matrix" << std::endl;
-  		}
   		break;
 
   	case nm::LIST_STORE:

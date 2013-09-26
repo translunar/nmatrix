@@ -1389,12 +1389,11 @@ void nm_yale_storage_init(YALE_STORAGE* s, void* init_val) {
  */
 void nm_yale_storage_mark(STORAGE* storage_base) {
   YALE_STORAGE* storage = (YALE_STORAGE*)storage_base;
-  size_t i;
 
   if (storage && storage->dtype == nm::RUBYOBJ) {
 
     VALUE* a = (VALUE*)(storage->a);
-    rb_gc_mark_locations(a, a + storage->capacity * sizeof(VALUE));
+    rb_gc_mark_locations(a, &(a[storage->capacity-1]));
   }
 }
 
@@ -1738,7 +1737,7 @@ static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self) {
   size_t i = FIX2INT(i_);
 
   YALE_STORAGE* s   = NM_STORAGE_YALE(self);
-  nm::dtype_t dtype = NM_DTYPE(self);
+  //nm::dtype_t dtype = NM_DTYPE(self);
 
   size_t pos = s->ija[i];
   size_t nextpos = s->ija[i+1];
@@ -1805,7 +1804,7 @@ VALUE nm_vector_set(int argc, VALUE* argv, VALUE self) { //, VALUE i_, VALUE jv,
   size_t vvlen = RARRAY_LEN(vv);
 
   if (len != vvlen)
-    rb_raise(rb_eArgError, "lengths must match between j array (%d) and value array (%d)", len, vvlen);
+    rb_raise(rb_eArgError, "lengths must match between j array (%u) and value array (%u)", len, vvlen);
 
   YALE_STORAGE* s   = NM_STORAGE_YALE(self);
   nm::dtype_t dtype = NM_DTYPE(self);

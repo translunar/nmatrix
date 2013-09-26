@@ -337,7 +337,7 @@ public:
 
       // Make the necessary modifications, which hopefully can be done in-place.
       size_t v_offset = 0;
-      int accum       = 0;
+      //int accum       = 0;
       for (size_t ii = 0; ii < lengths[0]; ++ii, ++i) {
         i.insert(row_stored_nd_iterator(i, p.pos[ii]), j, lengths[1], v, v_size, v_offset);
       }
@@ -664,7 +664,7 @@ public:
    */
   template <typename E, bool Yield=false>
   void copy(YALE_STORAGE& ns) const {
-    nm::dtype_t new_dtype = nm::ctype_to_dtype_enum<E>::value_type;
+    //nm::dtype_t new_dtype = nm::ctype_to_dtype_enum<E>::value_type;
     // get the default value for initialization (we'll re-use val for other copies after this)
     E val = static_cast<E>(const_default_obj());
 
@@ -703,7 +703,7 @@ public:
    */
   template <typename E, bool Yield = false>
   YALE_STORAGE* alloc_copy() const {
-    nm::dtype_t new_dtype = nm::ctype_to_dtype_enum<E>::value_type;
+    //nm::dtype_t new_dtype = nm::ctype_to_dtype_enum<E>::value_type;
 
     YALE_STORAGE* lhs;
     if (slice) {

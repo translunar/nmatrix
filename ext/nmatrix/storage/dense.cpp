@@ -294,8 +294,10 @@ void nm_dense_storage_mark(STORAGE* storage_base) {
   if (storage && storage->dtype == nm::RUBYOBJ) {
     VALUE* els = reinterpret_cast<VALUE*>(storage->elements);
 
-    rb_gc_mark_locations(els, els + nm_storage_count_max_elements(storage) * sizeof(VALUE));
-
+    if (els) {
+      std::cerr << "marking " << els << std::endl;
+      rb_gc_mark_locations(els, &(els[nm_storage_count_max_elements(storage)-1]));
+    }
   	//for (size_t index = nm_storage_count_max_elements(storage); index-- > 0;) {
     //  rb_gc_mark(els[index]);
     //}
