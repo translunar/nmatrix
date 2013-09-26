@@ -788,7 +788,8 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
     free_slice(slice);
 
     // We need to free v if it's not the same size as tmp -- because tmp will have made a copy instead.
-    if (nm_storage_count_max_elements(tmp->storage) != v_size) xfree(v);
+    //if (nm_storage_count_max_elements(tmp->storage) != v_size)
+    //  xfree(v);
 
     // nm_delete(tmp); // This seems to enrage the garbage collector (because rb_tmp is still available). It'd be better if we could force it to free immediately, but no sweat.
   }

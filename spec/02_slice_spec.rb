@@ -34,13 +34,13 @@ describe "Slice operation" do
   [:dense, :list, :yale].each do |stype|
     context "for #{stype}" do
       before :each do
-        GC.start # don't have to do this, but it helps to make sure we've cleaned up our pointers properly.
+        #GC.start # don't have to do this, but it helps to make sure we've cleaned up our pointers properly.
         @m = create_matrix(stype)
       end
 
-      after :each do
-        GC.start
-      end
+      #after :each do
+      #  GC.start
+      #end
 
       it "should correctly return a row of a reference-slice" do
         @n = create_rectangular_matrix(stype)

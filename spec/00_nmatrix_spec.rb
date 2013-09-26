@@ -29,9 +29,9 @@
 require File.dirname(__FILE__) + "/spec_helper.rb"
 
 describe NMatrix do
-  after :each do
-    GC.start
-  end
+  #after :each do
+  #  GC.start
+  #end
 
   it "creates a matrix with the new constructor" do
     n = NMatrix.new([2,2], [0,1,2,3], dtype: :int64)

@@ -29,9 +29,9 @@
 require File.join(File.dirname(__FILE__), "spec_helper.rb")
 
 describe NMatrix::LAPACK do
-  after :each do
-    GC.start
-  end
+  #after :each do
+  #  GC.start
+  #end
 
   # where integer math is allowed
   [:byte, :int8, :int16, :int32, :int64, :rational32, :rational64, :rational128, :float32, :float64, :complex64, :complex128].each do |dtype|

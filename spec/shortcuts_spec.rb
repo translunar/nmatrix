@@ -30,9 +30,9 @@ require File.join(File.dirname(__FILE__), "spec_helper.rb")
 require 'pry'
 
 describe NMatrix do
-  after :each do
-    GC.start
-  end
+  #after :each do
+  #  GC.start
+  #end
 
   it "zeros() creates a matrix of zeros" do
     m = NMatrix.zeros(3)
@@ -178,13 +178,8 @@ describe NMatrix do
 
   context "_like constructors" do
     before :each do
-      STDERR.puts "starting GC"
-      GC.start
-      STDERR.puts "GC finished"
       @nm_1d = NMatrix[5.0,0.0,1.0,2.0,3.0]
-      STDERR.puts "@nm_1d"
       @nm_2d = NMatrix[[0.0,1.0],[2.0,3.0]]
-      STDERR.puts "@nm_2d"
     end
 
     it "should create an nmatrix of ones with dimensions and type the same as its argument" do

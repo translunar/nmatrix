@@ -30,9 +30,9 @@ require File.dirname(__FILE__) + "/spec_helper.rb"
 describe "Set slice operation" do
   include RSpec::Longrun::DSL
 
-  after :each do
-    GC.start
-  end
+  #after :each do
+  #  GC.start
+  #end
 
   [:dense, :yale, :list].each do |stype|
     context "for #{stype}" do

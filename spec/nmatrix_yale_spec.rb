@@ -27,9 +27,9 @@
 require "./lib/nmatrix"
 
 describe NMatrix do
-  after :each do
-    GC.start
-  end
+  #after :each do
+  #  GC.start
+  #end
 
   context :yale do
 
@@ -295,7 +295,7 @@ describe NMatrix do
       b[3,3].should == 6.0
     end
 
-    it "correctly calculates the row key intersections of two matrices" do
+    it "calculates the row key intersections of two matrices" do
       a = NMatrix.new([3,9], [0,1], stype: :yale, dtype: :byte, default: 0)
       b = NMatrix.new([3,9], [0,0,1,0,1], stype: :yale, dtype: :byte, default: 0)
       a.extend NMatrix::YaleFunctions

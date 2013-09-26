@@ -27,9 +27,9 @@
 require "./lib/nmatrix"
 
 describe NMatrix::IO do
-  after :each do
-    GC.start
-  end
+  #after :each do
+  #  GC.start
+  #end
 
   it "repacks a string" do
     NMatrix::IO::Matlab.repack("hello", :miUINT8, :byte).should == "hello"

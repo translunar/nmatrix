@@ -443,7 +443,7 @@
 
   * Spec revisions for lapack_gesdd and lapack_gesvd (by @ryanmt)
 
-  * Fixed double-free problem (by @cjfuller)
+  * Fixed two double-free problems (by @cjfuller and @mohawkjohn)
 
   * Fixed contiguous array marking fencepost error
 
@@ -453,4 +453,4 @@
     problem that would likely have become a garbage collection error
     (if it wasn't already)
 
-  * Fixed -O3 optimization
+  * Fixed -O3 optimization problems

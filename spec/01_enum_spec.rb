@@ -37,9 +37,9 @@ describe "NMatrix enumeration for" do
         @m = @n[1..4,1..3]
       end
 
-      after :each do
-        GC.start
-      end
+      #after :each do
+      #  GC.start
+      #end
 
       if stype == :yale
         it "should iterate properly along each row of a slice" do

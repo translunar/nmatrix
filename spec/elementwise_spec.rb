@@ -29,9 +29,9 @@
 require File.join(File.dirname(__FILE__), "spec_helper.rb")
 
 describe NMatrix do
-  after :each do
-    GC.start
-  end
+  #after :each do
+  #  GC.start
+  #end
 
   context "yale" do
     before :each do
