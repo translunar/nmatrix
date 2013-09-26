@@ -1,4 +1,4 @@
-This version of SciRuby is licensed under the BSD 2-clause license.
+This version of NMatrix is licensed under the BSD 2-clause license.
 
 * http://sciruby.com
 * http://github.com/sciruby/sciruby/wiki/License
