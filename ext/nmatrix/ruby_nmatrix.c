@@ -1055,12 +1055,43 @@ static nm::symm_t interpret_symm(VALUE symm) {
 
 
 void read_padded_shape(std::ifstream& f, size_t dim, size_t* shape) {
-  nm::read_padded_shape(f, dim, shape);
+  size_t bytes_read = 0;
+
+  // Read shape
+  for (size_t i = 0; i < dim; ++i) {
+    size_t s;
+    f.read(reinterpret_cast<char*>(&s), sizeof(size_t));
+    shape[i] = s;
+
+    std::cerr << "shape(" << i << ")=" << s << std::endl;
+
+    bytes_read += sizeof(size_t);
+  }
+
+  // Ignore padding
+  f.ignore(bytes_read % 8);
 }
 
 
 void write_padded_shape(std::ofstream& f, size_t dim, size_t* shape) {
-  nm::write_padded_shape(f, dim, shape);
+  size_t bytes_written = 0;
+
+  // Write shape
+  for (size_t i = 0; i < dim; ++i) {
+    size_t s = shape[i];
+    std::cerr << "writing shape(" << i << ")=" << shape[i] << std::endl;
+    f.write(reinterpret_cast<const char*>(&s), sizeof(size_t));
+
+    bytes_written += sizeof(size_t);
+  }
+
+  // Pad with zeros
+  size_t zero = 0;
+  while (bytes_written % 8) {
+    f.write(reinterpret_cast<const char*>(&zero), sizeof(size_t));
+
+    bytes_written += sizeof(IType);
+  }
 }
 
 
@@ -1113,6 +1144,8 @@ static VALUE rb_get_errno_exc(const char* which) {
 static VALUE nm_write(int argc, VALUE* argv, VALUE self) {
   using std::ofstream;
 
+  std::cerr << "a" << std::endl;
+
   if (argc < 1 || argc > 2) {
     rb_raise(rb_eArgError, "Expected one or two arguments");
   }
@@ -1153,6 +1186,9 @@ static VALUE nm_write(int argc, VALUE* argv, VALUE self) {
   uint16_t major, minor, release, null16 = 0;
   get_version_info(major, minor, release);
 
+  std::cerr << "b" << std::endl;
+
+
   // WRITE FIRST 64-BIT BLOCK
   f.write(reinterpret_cast<const char*>(&major),   sizeof(uint16_t));
   f.write(reinterpret_cast<const char*>(&minor),   sizeof(uint16_t));
@@ -1168,19 +1204,26 @@ static VALUE nm_write(int argc, VALUE* argv, VALUE self) {
   f.write(reinterpret_cast<const char*>(&null16), sizeof(uint16_t));
   f.write(reinterpret_cast<const char*>(&dim), sizeof(uint16_t));
 
+  std::cerr << "c" << std::endl;
   // Write shape (in 64-bit blocks)
   write_padded_shape(f, nmatrix->storage->dim, nmatrix->storage->shape);
 
+  std::cerr << "d" << std::endl;
   if (nmatrix->stype == nm::DENSE_STORE) {
+    std::cerr << "e" << std::endl;
     write_padded_dense_elements(f, reinterpret_cast<DENSE_STORAGE*>(nmatrix->storage), symm_, nmatrix->storage->dtype);
+    std::cerr << "f" << std::endl;
   } else if (nmatrix->stype == nm::YALE_STORE) {
     YALE_STORAGE* s = reinterpret_cast<YALE_STORAGE*>(nmatrix->storage);
     uint32_t ndnz   = s->ndnz,
              length = nm_yale_storage_get_size(s);
+    std::cerr << "g" << std::endl;
     f.write(reinterpret_cast<const char*>(&ndnz),   sizeof(uint32_t));
     f.write(reinterpret_cast<const char*>(&length), sizeof(uint32_t));
 
+    std::cerr << "h" << std::endl;
     write_padded_yale_elements(f, s, length, symm_, s->dtype);
+    std::cerr << "i" << std::endl;
   }
 
   f.close();
@@ -1244,6 +1287,7 @@ static VALUE nm_read(int argc, VALUE* argv, VALUE self) {
   f.read(reinterpret_cast<char*>(&sm), sizeof(uint8_t));
   f.read(reinterpret_cast<char*>(&null16), sizeof(uint16_t));
   f.read(reinterpret_cast<char*>(&dim), sizeof(uint16_t));
+  std::cerr << "dim = " << dim << std::endl;
 
   if (null16 != 0) fprintf(stderr, "Warning: Expected zero padding was not zero\n");
   nm::stype_t stype = static_cast<nm::stype_t>(st);

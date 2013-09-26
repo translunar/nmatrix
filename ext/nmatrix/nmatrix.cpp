@@ -76,47 +76,6 @@ extern "C" {
 namespace nm {
 
   /*
-   * Read the shape from a matrix storage file, and ignore any padding.
-   *
-   * shape should already be allocated before calling this.
-   */
-  void read_padded_shape(std::ifstream& f, size_t dim, size_t* shape) {
-    size_t bytes_read = 0;
-
-    // Read shape
-    for (size_t i = 0; i < dim; ++i) {
-      IType s;
-      f.read(reinterpret_cast<char*>(&s), sizeof(IType));
-      shape[i] = s;
-
-      bytes_read += sizeof(IType);
-    }
-
-    // Ignore padding
-    f.ignore(bytes_read % 8);
-  }
-
-  void write_padded_shape(std::ofstream& f, size_t dim, size_t* shape) {
-    size_t bytes_written = 0;
-
-    // Write shape
-    for (size_t i = 0; i < dim; ++i) {
-      IType s = shape[i];
-      f.write(reinterpret_cast<const char*>(&s), sizeof(IType));
-
-      bytes_written += sizeof(IType);
-    }
-
-    // Pad with zeros
-    while (bytes_written % 8) {
-      IType zero = 0;
-      f.write(reinterpret_cast<const char*>(&zero), sizeof(IType));
-
-      bytes_written += sizeof(IType);
-    }
-  }
-
-  /*
    * This function is pulled out separately so it can be called for hermitian matrix writing, which also uses it.
    */
   template <typename DType>
@@ -191,6 +150,7 @@ namespace nm {
     if (symm == nm::NONSYMM) {
       // Easy. Simply read the whole elements array.
       size_t length = nm_storage_count_max_elements(reinterpret_cast<STORAGE*>(storage));
+      std::cerr << "nonsymm length=" << length << std::endl;
       f.read(reinterpret_cast<char*>(storage->elements), length * sizeof(DType) );
 
       bytes_read += length * sizeof(DType);
@@ -298,9 +258,11 @@ namespace nm {
     if (symm == nm::NONSYMM) {
       // Simply write the whole elements array.
       size_t length = nm_storage_count_max_elements(storage);
+      std::cerr << "write_padded_dense_elements: length=" << length << " *size=" << sizeof(DType) << std::endl;
       f.write(reinterpret_cast<const char*>(storage->elements), length * sizeof(DType));
 
       bytes_written += length * sizeof(DType);
+      std::cerr << "total bytes written: " << bytes_written << std::endl;
 
     } else if (symm == nm::LOWER) {
 

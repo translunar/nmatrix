@@ -220,10 +220,13 @@ DENSE_STORAGE* nm_dense_storage_create(nm::dtype_t dtype, size_t* shape, size_t 
   	s->elements = elements;
 
   } else {
+    std::cerr << "allocating " << DTYPE_SIZES[dtype]*count << "\tcount=" << count << "\tdtype_size=" << DTYPE_SIZES[dtype] << std::endl;
     s->elements = ALLOC_N(char, DTYPE_SIZES[dtype]*count);
+    std::cerr << "done" << std::endl;
 
     size_t copy_length = elements_length;
 
+    std::cerr << "elements_length = " << elements_length << std::endl;
     if (elements_length > 0) {
       // Repeat elements over and over again until the end of the matrix.
       for (size_t i = 0; i < count; i += elements_length) {
@@ -238,6 +241,7 @@ DENSE_STORAGE* nm_dense_storage_create(nm::dtype_t dtype, size_t* shape, size_t 
       // Get rid of the init_val.
       xfree(elements);
     }
+    std::cerr << "done copying" << std::endl;
   }
 
   return s;
