@@ -324,7 +324,7 @@ VALUE nm_dense_map_pair(VALUE self, VALUE right) {
   volatile VALUE* result_elem = reinterpret_cast<VALUE*>(result->elements);
 
   // FIXME: Determine if still needed now that result_elem is marked as volatile.
-  nm_register_values(reinterpret_cast<VALUE*>(result->elements), count);
+  //nm_register_values(reinterpret_cast<VALUE*>(result->elements), count);
 
   for (size_t k = 0; k < count; ++k) {
     nm_dense_storage_coords(result, k, coords);
@@ -338,12 +338,12 @@ VALUE nm_dense_map_pair(VALUE self, VALUE right) {
   }
 
   NMATRIX* m = nm_create(nm::DENSE_STORE, reinterpret_cast<STORAGE*>(result));
-  volatile VALUE rb_nm = Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, m);
+  /*volatile VALUE rb_nm =*/ return Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, m);
 
   // FIXME: Determine if still needed now that result_elem is marked as volatile.
-  nm_unregister_values(reinterpret_cast<VALUE*>(result->elements), count);
+  //nm_unregister_values(reinterpret_cast<VALUE*>(result->elements), count);
 
-  return rb_nm;
+  //return rb_nm;
 
 }
 
@@ -367,7 +367,7 @@ VALUE nm_dense_map(VALUE self) {
   DENSE_STORAGE* result = nm_dense_storage_create(nm::RUBYOBJ, shape_copy, s->dim, NULL, 0);
   volatile VALUE* result_elem = reinterpret_cast<VALUE*>(result->elements);
 
-  nm_register_values(reinterpret_cast<VALUE*>(result->elements), count);
+  //nm_register_values(reinterpret_cast<VALUE*>(result->elements), count);
 
   for (size_t k = 0; k < count; ++k) {
     nm_dense_storage_coords(result, k, coords);
@@ -377,11 +377,11 @@ VALUE nm_dense_map(VALUE self) {
   }
 
   NMATRIX* m = nm_create(nm::DENSE_STORE, reinterpret_cast<STORAGE*>(result));
-  volatile VALUE rb_nm = Data_Wrap_Struct(CLASS_OF(vself), nm_mark, nm_delete, m);
+  /*volatile VALUE rb_nm =*/ return Data_Wrap_Struct(CLASS_OF(vself), nm_mark, nm_delete, m);
 
-  nm_unregister_values(reinterpret_cast<VALUE*>(result->elements), count);
+  //nm_unregister_values(reinterpret_cast<VALUE*>(result->elements), count);
 
-  return rb_nm;
+  //return rb_nm;
 
 }
 

@@ -188,11 +188,8 @@ describe NMatrix do
     end
 
     it "should create an nmatrix of zeros with dimensions and type the same as its argument" do
-      STDERR.puts "A"
       NMatrix.zeros_like(@nm_1d).should eq NMatrix[0.0, 0.0, 0.0, 0.0, 0.0]
-      STDERR.puts "B"
       NMatrix.zeros_like(@nm_2d).should eq NMatrix[[0.0, 0.0], [0.0, 0.0]]
-      STDERR.puts "C"
     end
   end
 
