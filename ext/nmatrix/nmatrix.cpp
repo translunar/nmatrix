@@ -150,7 +150,6 @@ namespace nm {
     if (symm == nm::NONSYMM) {
       // Easy. Simply read the whole elements array.
       size_t length = nm_storage_count_max_elements(reinterpret_cast<STORAGE*>(storage));
-      std::cerr << "nonsymm length=" << length << std::endl;
       f.read(reinterpret_cast<char*>(storage->elements), length * sizeof(DType) );
 
       bytes_read += length * sizeof(DType);
@@ -258,11 +257,9 @@ namespace nm {
     if (symm == nm::NONSYMM) {
       // Simply write the whole elements array.
       size_t length = nm_storage_count_max_elements(storage);
-      std::cerr << "write_padded_dense_elements: length=" << length << " *size=" << sizeof(DType) << std::endl;
       f.write(reinterpret_cast<const char*>(storage->elements), length * sizeof(DType));
 
       bytes_written += length * sizeof(DType);
-      std::cerr << "total bytes written: " << bytes_written << std::endl;
 
     } else if (symm == nm::LOWER) {
 

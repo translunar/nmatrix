@@ -219,16 +219,12 @@ DENSE_STORAGE* nm_dense_storage_create(nm::dtype_t dtype, size_t* shape, size_t 
 
   if (elements_length == count) {
   	s->elements = elements;
-  	std::cerr << "re-used existing elements at " << s->elements << std::endl;
 
   } else {
-    std::cerr << "allocating " << DTYPE_SIZES[dtype]*count << "\tcount=" << count << "\tdtype_size=" << DTYPE_SIZES[dtype] << std::endl;
     s->elements = ALLOC_N(char, DTYPE_SIZES[dtype]*count);
-    std::cerr << "done (" << s->elements << ")" << std::endl;
 
     size_t copy_length = elements_length;
 
-    //std::cerr << "elements_length = " << elements_length << std::endl;
     if (elements_length > 0) {
       // Repeat elements over and over again until the end of the matrix.
       for (size_t i = 0; i < count; i += elements_length) {
@@ -243,7 +239,6 @@ DENSE_STORAGE* nm_dense_storage_create(nm::dtype_t dtype, size_t* shape, size_t 
       // Get rid of the init_val.
       xfree(elements);
     }
-    //std::cerr << "done copying" << std::endl;
   }
 
   return s;
@@ -262,7 +257,6 @@ void nm_dense_storage_delete(STORAGE* s) {
       xfree(storage->offset);
       xfree(storage->stride);
       if (storage->elements != NULL) {// happens with dummy objects
-        std::cerr << "nm_dense_storage_delete elements at " << storage->elements << std::endl;
         xfree(storage->elements);
       }
       xfree(storage);
@@ -295,7 +289,6 @@ void nm_dense_storage_mark(STORAGE* storage_base) {
     VALUE* els = reinterpret_cast<VALUE*>(storage->elements);
 
     if (els) {
-      std::cerr << "marking " << els << std::endl;
       rb_gc_mark_locations(els, &(els[nm_storage_count_max_elements(storage)-1]));
     }
   	//for (size_t index = nm_storage_count_max_elements(storage); index-- > 0;) {
@@ -840,7 +833,6 @@ DENSE_STORAGE* cast_copy(const DENSE_STORAGE* rhs, dtype_t new_dtype) {
       size_t* offset      = ALLOCA_N(size_t, rhs->dim);
       memset(offset, 0, sizeof(size_t) * rhs->dim);
 
-      std::cerr << "calling slice_copy" << std::endl;
       slice_copy(lhs, reinterpret_cast<const DENSE_STORAGE*>(rhs->src),
                  rhs->shape, 0,
                  nm_dense_storage_pos(rhs, offset), 0);
@@ -849,13 +841,9 @@ DENSE_STORAGE* cast_copy(const DENSE_STORAGE* rhs, dtype_t new_dtype) {
       RDType* rhs_els          = reinterpret_cast<RDType*>(rhs->elements);
       LDType* lhs_els          = reinterpret_cast<LDType*>(lhs->elements);
 
-      std::cerr << "direct copy of size " << count << " * dtype_size (" << lhs_els << ", " << rhs_els << ")" << std::endl;
-      for (size_t i = 0; i < count; ++i) {
-        std::cerr << "  i=" << i << std::endl;
+      for (size_t i = 0; i < count; ++i)
     	  lhs_els[i] = rhs_els[i];
-    	}
     }
-    std::cerr << "done with copy" << std::endl;
   }
 
   return lhs;

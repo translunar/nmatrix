@@ -428,15 +428,29 @@
   * Casting from dense to Yale now properly accepts the default
     value option
 
-=== 0.1.0-rc1
+=== 0.1.0.rc1
 
 * 1 major enhancements:
 
-* 1 minor enhancements:
+* 2 minor enhancements:
 
-* 1 bug fixes:
+  * User-friendly #gesvd and #gesdd updates (by @ryanmt)
+
+  * Added experimental #yale_row_key_intersection function for expert
+    recommendation problems
+
+* 7 bug fixes:
 
   * Spec revisions for lapack_gesdd and lapack_gesvd (by @ryanmt)
 
-  * Switched default optimization to -O2 to solve segfault problem
-    temporarily
+  * Fixed double-free problem (by @cjfuller)
+
+  * Fixed contiguous array marking fencepost error
+
+  * Fixed C/C++ API compatibility problem preventing rb/gsl linking
+
+  * Resolved a number of compiler warnings, including one return-type
+    problem that would likely have become a garbage collection error
+    (if it wasn't already)
+
+  * Fixed -O3 optimization

@@ -717,6 +717,7 @@ public:
 
       lhs               = YaleStorage<E>::create(xshape, reserve);
 
+      // FIXME: This should probably be a throw which gets caught outside of the object.
       if (lhs->capacity < reserve)
         rb_raise(nm_eStorageTypeError, "conversion failed; capacity of %lu requested, max allowable is %lu", reserve, lhs->capacity);
 

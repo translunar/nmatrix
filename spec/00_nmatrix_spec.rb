@@ -48,13 +48,10 @@ describe NMatrix do
   end
 
   it "calculates determinants" do
-    GC.disable
     NMatrix.new(3, [-2,2,3,-1,1,3,2,0,-1], stype: :dense, dtype: :int64).det.should == 6
-    GC.enable
   end
 
   it "allows casting to Ruby objects" do
-    binding.pry
     m = NMatrix.new([3,3], [0,0,1,0,2,0,3,4,5], dtype: :int64, stype: :dense)
     n = m.cast(:dense, :object)
     n.should == m

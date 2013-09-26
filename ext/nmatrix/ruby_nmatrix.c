@@ -788,10 +788,7 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
     free_slice(slice);
 
     // We need to free v if it's not the same size as tmp -- because tmp will have made a copy instead.
-    if (nm_storage_count_max_elements(tmp->storage) != v_size) {
-      std::cerr << "freeing tmp elements pointer " << v << std::endl;
-      xfree(v);
-    }
+    if (nm_storage_count_max_elements(tmp->storage) != v_size) xfree(v);
 
     // nm_delete(tmp); // This seems to enrage the garbage collector (because rb_tmp is still available). It'd be better if we could force it to free immediately, but no sweat.
   }
@@ -1067,8 +1064,6 @@ void read_padded_shape(std::ifstream& f, size_t dim, size_t* shape) {
     f.read(reinterpret_cast<char*>(&s), sizeof(size_t));
     shape[i] = s;
 
-    std::cerr << "shape(" << i << ")=" << s << std::endl;
-
     bytes_read += sizeof(size_t);
   }
 
@@ -1083,7 +1078,6 @@ void write_padded_shape(std::ofstream& f, size_t dim, size_t* shape) {
   // Write shape
   for (size_t i = 0; i < dim; ++i) {
     size_t s = shape[i];
-    std::cerr << "writing shape(" << i << ")=" << shape[i] << std::endl;
     f.write(reinterpret_cast<const char*>(&s), sizeof(size_t));
 
     bytes_written += sizeof(size_t);
@@ -1148,11 +1142,11 @@ static VALUE rb_get_errno_exc(const char* which) {
 static VALUE nm_write(int argc, VALUE* argv, VALUE self) {
   using std::ofstream;
 
-  std::cerr << "a" << std::endl;
 
   if (argc < 1 || argc > 2) {
     rb_raise(rb_eArgError, "Expected one or two arguments");
   }
+
   VALUE file = argv[0],
         symm = argc == 1 ? Qnil : argv[1];
 
@@ -1190,9 +1184,6 @@ static VALUE nm_write(int argc, VALUE* argv, VALUE self) {
   uint16_t major, minor, release, null16 = 0;
   get_version_info(major, minor, release);
 
-  std::cerr << "b" << std::endl;
-
-
   // WRITE FIRST 64-BIT BLOCK
   f.write(reinterpret_cast<const char*>(&major),   sizeof(uint16_t));
   f.write(reinterpret_cast<const char*>(&minor),   sizeof(uint16_t));
@@ -1208,26 +1199,19 @@ static VALUE nm_write(int argc, VALUE* argv, VALUE self) {
   f.write(reinterpret_cast<const char*>(&null16), sizeof(uint16_t));
   f.write(reinterpret_cast<const char*>(&dim), sizeof(uint16_t));
 
-  std::cerr << "c" << std::endl;
   // Write shape (in 64-bit blocks)
   write_padded_shape(f, nmatrix->storage->dim, nmatrix->storage->shape);
 
-  std::cerr << "d" << std::endl;
   if (nmatrix->stype == nm::DENSE_STORE) {
-    std::cerr << "e" << std::endl;
     write_padded_dense_elements(f, reinterpret_cast<DENSE_STORAGE*>(nmatrix->storage), symm_, nmatrix->storage->dtype);
-    std::cerr << "f" << std::endl;
   } else if (nmatrix->stype == nm::YALE_STORE) {
     YALE_STORAGE* s = reinterpret_cast<YALE_STORAGE*>(nmatrix->storage);
     uint32_t ndnz   = s->ndnz,
              length = nm_yale_storage_get_size(s);
-    std::cerr << "g" << std::endl;
     f.write(reinterpret_cast<const char*>(&ndnz),   sizeof(uint32_t));
     f.write(reinterpret_cast<const char*>(&length), sizeof(uint32_t));
 
-    std::cerr << "h" << std::endl;
     write_padded_yale_elements(f, s, length, symm_, s->dtype);
-    std::cerr << "i" << std::endl;
   }
 
   f.close();
@@ -1279,7 +1263,7 @@ static VALUE nm_read(int argc, VALUE* argv, VALUE self) {
   if (fver > ver && force == false) {
     rb_raise(rb_eIOError, "File was created in newer version of NMatrix than current (%d.%d.%d)", fmajor, fminor, frelease);
   }
-  if (null16 != 0) fprintf(stderr, "Warning: Expected zero padding was not zero\n");
+  if (null16 != 0) rb_warn("nm_read: Expected zero padding was not zero (0)\n");
 
   uint8_t dt, st, it, sm;
   uint16_t dim;
@@ -1291,9 +1275,8 @@ static VALUE nm_read(int argc, VALUE* argv, VALUE self) {
   f.read(reinterpret_cast<char*>(&sm), sizeof(uint8_t));
   f.read(reinterpret_cast<char*>(&null16), sizeof(uint16_t));
   f.read(reinterpret_cast<char*>(&dim), sizeof(uint16_t));
-  std::cerr << "dim = " << dim << std::endl;
 
-  if (null16 != 0) fprintf(stderr, "Warning: Expected zero padding was not zero\n");
+  if (null16 != 0) rb_warn("nm_read: Expected zero padding was not zero (1)");
   nm::stype_t stype = static_cast<nm::stype_t>(st);
   nm::dtype_t dtype = static_cast<nm::dtype_t>(dt);
   nm::symm_t  symm  = static_cast<nm::symm_t>(sm);
@@ -1423,7 +1406,7 @@ static VALUE nm_mset(int argc, VALUE* argv, VALUE self) {
   size_t dim = NM_DIM(self); // last arg is the value
 
   if ((size_t)(argc) > NM_DIM(self)+1) {
-    rb_raise(rb_eArgError, "wrong number of arguments (%d for %u)", argc, effective_dim(NM_STORAGE(self))+1);
+    rb_raise(rb_eArgError, "wrong number of arguments (%d for %lu)", argc, effective_dim(NM_STORAGE(self))+1);
   } else {
     SLICE* slice = get_slice(dim, argc-1, argv, NM_STORAGE(self)->shape);
 
@@ -1601,7 +1584,7 @@ static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(const STORAGE*
   STORAGE* s = NM_STORAGE(self);
 
   if (NM_DIM(self) < (size_t)(argc)) {
-    rb_raise(rb_eArgError, "wrong number of arguments (%d for %u)", argc, effective_dim(s));
+    rb_raise(rb_eArgError, "wrong number of arguments (%d for %lu)", argc, effective_dim(s));
   } else {
     SLICE* slice = get_slice(NM_DIM(self), argc, argv, s->shape);
 
@@ -1948,7 +1931,7 @@ static SLICE* get_slice(size_t dim, int argc, VALUE* arg, size_t* shape) {
     }
 
     if (slice->coords[r] > shape[r] || slice->coords[r] + slice->lengths[r] > shape[r])
-      rb_raise(rb_eRangeError, "slice is larger than matrix in dimension %u (slice component %u)", r, t);
+      rb_raise(rb_eRangeError, "slice is larger than matrix in dimension %lu (slice component %lu)", r, t);
   }
 
   return slice;
@@ -2014,7 +1997,6 @@ static void* interpret_initial_value(VALUE arg, nm::dtype_t dtype) {
   if (TYPE(arg) == T_ARRAY) {
   	// Array
     init_val = ALLOC_N(char, DTYPE_SIZES[dtype] * RARRAY_LEN(arg));
-    std::cerr << "allocated init_val = " << init_val << std::endl;
     NM_CHECK_ALLOC(init_val);
     for (index = 0; index < RARRAY_LEN(arg); ++index) {
     	rubyval_to_cval(RARRAY_PTR(arg)[index], dtype, (char*)init_val + (index * DTYPE_SIZES[dtype]));

@@ -321,7 +321,6 @@ describe "Slice operation" do
             end
 
             it "compares slices to scalars" do
-              binding.pry
               (@m[1, 0..2] > 2).each { |e| (e != 0).should be_true }
             end
 

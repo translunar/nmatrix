@@ -1804,7 +1804,7 @@ VALUE nm_vector_set(int argc, VALUE* argv, VALUE self) { //, VALUE i_, VALUE jv,
   size_t vvlen = RARRAY_LEN(vv);
 
   if (len != vvlen)
-    rb_raise(rb_eArgError, "lengths must match between j array (%u) and value array (%u)", len, vvlen);
+    rb_raise(rb_eArgError, "lengths must match between j array (%lu) and value array (%lu)", len, vvlen);
 
   YALE_STORAGE* s   = NM_STORAGE_YALE(self);
   nm::dtype_t dtype = NM_DTYPE(self);
