@@ -314,8 +314,8 @@ void nm_init_data() {
     nm::Rational32 x(obj);
     nm::Rational64 y(obj);
     nm::Rational128 z(obj);
-    nm::Complex64 a(obj);
-    nm::Complex128 b(obj);
+    volatile nm::Complex64 a(obj);
+    volatile nm::Complex128 b(obj);
 }
 
 
