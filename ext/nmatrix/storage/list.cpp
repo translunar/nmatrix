@@ -756,10 +756,9 @@ static LIST* slice_copy(const LIST_STORAGE* src, LIST* src_rows, size_t* coords,
 void* nm_list_storage_get(const STORAGE* storage, SLICE* slice) {
   LIST_STORAGE* s = (LIST_STORAGE*)storage;
   LIST_STORAGE* ns = NULL;
-  NODE* n;
 
   if (slice->single) {
-    n = list_storage_get_single_node(s, slice);
+    NODE* n = list_storage_get_single_node(s, slice);
     return (n ? n->val : s->default_val);
   } else {
     void *init_val = ALLOC_N(char, DTYPE_SIZES[s->dtype]);
@@ -782,11 +781,10 @@ void* nm_list_storage_get(const STORAGE* storage, SLICE* slice) {
 void* nm_list_storage_ref(const STORAGE* storage, SLICE* slice) {
   LIST_STORAGE* s = (LIST_STORAGE*)storage;
   LIST_STORAGE* ns = NULL;
-  NODE* n;
 
   //TODO: It needs a refactoring.
   if (slice->single) {
-    n = list_storage_get_single_node(s, slice); 
+    NODE* n = list_storage_get_single_node(s, slice);
     return (n ? n->val : s->default_val);
   } 
   else {

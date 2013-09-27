@@ -72,6 +72,7 @@ public:
   inline const D& default_obj() const { return a(s->shape[0]); }
   inline const D& const_default_obj() const { return a(s->shape[0]); }
 
+
   /*
    * Return a Ruby VALUE representation of default_obj()
    */
@@ -97,6 +98,14 @@ public:
   inline size_t  capacity() const { return s->capacity;            }
   inline size_t  size() const { return ija(real_shape(0));         }
 
+
+  /*
+   * Returns true if the value at apos is the default value.
+   * Mainly used for determining if the diagonal contains zeros.
+   */
+  bool is_pos_default_value(size_t apos) const {
+    return (a(apos) == const_default_obj());
+  }
 
   /*
    * Given a size-2 array of size_t, representing the shape, determine
@@ -328,7 +337,7 @@ public:
 
       // Make the necessary modifications, which hopefully can be done in-place.
       size_t v_offset = 0;
-      int accum       = 0;
+      //int accum       = 0;
       for (size_t ii = 0; ii < lengths[0]; ++ii, ++i) {
         i.insert(row_stored_nd_iterator(i, p.pos[ii]), j, lengths[1], v, v_size, v_offset);
       }
@@ -655,7 +664,7 @@ public:
    */
   template <typename E, bool Yield=false>
   void copy(YALE_STORAGE& ns) const {
-    nm::dtype_t new_dtype = nm::ctype_to_dtype_enum<E>::value_type;
+    //nm::dtype_t new_dtype = nm::ctype_to_dtype_enum<E>::value_type;
     // get the default value for initialization (we'll re-use val for other copies after this)
     E val = static_cast<E>(const_default_obj());
 
@@ -694,7 +703,7 @@ public:
    */
   template <typename E, bool Yield = false>
   YALE_STORAGE* alloc_copy() const {
-    nm::dtype_t new_dtype = nm::ctype_to_dtype_enum<E>::value_type;
+    //nm::dtype_t new_dtype = nm::ctype_to_dtype_enum<E>::value_type;
 
     YALE_STORAGE* lhs;
     if (slice) {
@@ -708,6 +717,7 @@ public:
 
       lhs               = YaleStorage<E>::create(xshape, reserve);
 
+      // FIXME: This should probably be a throw which gets caught outside of the object.
       if (lhs->capacity < reserve)
         rb_raise(nm_eStorageTypeError, "conversion failed; capacity of %lu requested, max allowable is %lu", reserve, lhs->capacity);
 

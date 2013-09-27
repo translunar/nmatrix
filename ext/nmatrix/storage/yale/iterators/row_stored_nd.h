@@ -87,6 +87,7 @@ public:
     if (&r != &(rhs.r))
       throw std::logic_error("can't assign iterator from another row iterator");
     p_ = rhs.p_;
+    return *this;
   }
 
   virtual size_t p() const { return p_; }

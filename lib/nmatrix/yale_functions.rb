@@ -81,7 +81,7 @@ module NMatrix::YaleFunctions
   # Returns the diagonal and non-digonal column indices stored in a given row.
   def yale_ja_d_keys_at i
     ary = yale_nd_row(i, :keys)
-    return ary if i >= self.shape[1] || self[i,i].nil? || self[i,i] == 0
+    return ary if i >= self.shape[1] || self[i,i] == self.default_value
     ary << i
   end
   alias :yale_row_as_array :yale_ja_d_keys_at
@@ -112,7 +112,7 @@ module NMatrix::YaleFunctions
   # Returns the diagonal and non-diagonal column indices and entries stored in a given row.
   def yale_row_as_hash i
     h = yale_nd_row(i, :hash)
-    return h if i >= self.shape[1] || self[i,i].nil? || self[i,i] == 0
+    return h if i >= self.shape[1] || self[i,i] == self.default_value
     h[i] = self[i,i]
   end
 end

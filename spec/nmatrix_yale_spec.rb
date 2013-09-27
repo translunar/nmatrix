@@ -27,6 +27,10 @@
 require "./lib/nmatrix"
 
 describe NMatrix do
+  #after :each do
+  #  GC.start
+  #end
+
   context :yale do
 
     it "compares two empty matrices" do
@@ -289,6 +293,21 @@ describe NMatrix do
       b[1,3].should == 5.0
       b[2,3].should == 0.0
       b[3,3].should == 6.0
+    end
+
+    it "calculates the row key intersections of two matrices" do
+      a = NMatrix.new([3,9], [0,1], stype: :yale, dtype: :byte, default: 0)
+      b = NMatrix.new([3,9], [0,0,1,0,1], stype: :yale, dtype: :byte, default: 0)
+      a.extend NMatrix::YaleFunctions
+      b.extend NMatrix::YaleFunctions
+
+      (0...3).each do |ai|
+        (0...3).each do |bi|
+          STDERR.puts (a.yale_ja_d_keys_at(ai) & b.yale_ja_d_keys_at(bi)).inspect
+          (a.yale_ja_d_keys_at(ai) & b.yale_ja_d_keys_at(bi)).should == a.yale_row_keys_intersection(ai, b, bi)
+        end
+      end
+
     end
   end
 end

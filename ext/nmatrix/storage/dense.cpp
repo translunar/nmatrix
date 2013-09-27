@@ -156,10 +156,11 @@ namespace nm { namespace dense_storage {
     }
 
     // Only free v if it was allocated in this function.
-    if (nm_and_free.first && nm_and_free.second)
-      nm_delete(nm_and_free.first);
-    else
-      xfree(v);
+    if (nm_and_free.first) {
+      if (nm_and_free.second) {
+        nm_delete(nm_and_free.first);
+      }
+    } else xfree(v);
   }
 
 }} // end of namespace nm::dense_storage
@@ -255,8 +256,9 @@ void nm_dense_storage_delete(STORAGE* s) {
       xfree(storage->shape);
       xfree(storage->offset);
       xfree(storage->stride);
-      if (storage->elements != NULL) // happens with dummy objects
+      if (storage->elements != NULL) {// happens with dummy objects
         xfree(storage->elements);
+      }
       xfree(storage);
     }
   }
@@ -286,8 +288,9 @@ void nm_dense_storage_mark(STORAGE* storage_base) {
   if (storage && storage->dtype == nm::RUBYOBJ) {
     VALUE* els = reinterpret_cast<VALUE*>(storage->elements);
 
-    rb_gc_mark_locations(els, els + nm_storage_count_max_elements(storage) * sizeof(VALUE));
-
+    if (els) {
+      rb_gc_mark_locations(els, &(els[nm_storage_count_max_elements(storage)-1]));
+    }
   	//for (size_t index = nm_storage_count_max_elements(storage); index-- > 0;) {
     //  rb_gc_mark(els[index]);
     //}
@@ -318,9 +321,10 @@ VALUE nm_dense_map_pair(VALUE self, VALUE right) {
   size_t count = nm_storage_count_max_elements(s);
 
   DENSE_STORAGE* result = nm_dense_storage_create(nm::RUBYOBJ, shape_copy, s->dim, NULL, 0);
-  VALUE* result_elem = reinterpret_cast<VALUE*>(result->elements);
+  volatile VALUE* result_elem = reinterpret_cast<VALUE*>(result->elements);
 
-  nm_register_values(result_elem, count);
+  // FIXME: Determine if still needed now that result_elem is marked as volatile.
+  //nm_register_values(reinterpret_cast<VALUE*>(result->elements), count);
 
   for (size_t k = 0; k < count; ++k) {
     nm_dense_storage_coords(result, k, coords);
@@ -334,11 +338,12 @@ VALUE nm_dense_map_pair(VALUE self, VALUE right) {
   }
 
   NMATRIX* m = nm_create(nm::DENSE_STORE, reinterpret_cast<STORAGE*>(result));
-  VALUE rb_nm = Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, m);
+  /*volatile VALUE rb_nm =*/ return Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, m);
 
-  nm_unregister_values(result_elem, count);
+  // FIXME: Determine if still needed now that result_elem is marked as volatile.
+  //nm_unregister_values(reinterpret_cast<VALUE*>(result->elements), count);
 
-  return rb_nm;
+  //return rb_nm;
 
 }
 
@@ -346,9 +351,10 @@ VALUE nm_dense_map_pair(VALUE self, VALUE right) {
  * map enumerator for dense matrices.
  */
 VALUE nm_dense_map(VALUE self) {
-  DENSE_STORAGE *s = NM_STORAGE_DENSE(self);
+  volatile VALUE vself = self;
+  DENSE_STORAGE *s = NM_STORAGE_DENSE(vself);
 
-  RETURN_SIZED_ENUMERATOR(self, 0, 0, nm_enumerator_length);
+  RETURN_SIZED_ENUMERATOR(vself, 0, 0, nm_enumerator_length);
 
   size_t* coords = ALLOCA_N(size_t, s->dim);
   memset(coords, 0, sizeof(size_t) * s->dim);
@@ -359,23 +365,23 @@ VALUE nm_dense_map(VALUE self) {
   size_t count = nm_storage_count_max_elements(s);
 
   DENSE_STORAGE* result = nm_dense_storage_create(nm::RUBYOBJ, shape_copy, s->dim, NULL, 0);
-  VALUE* result_elem = reinterpret_cast<VALUE*>(result->elements);
+  volatile VALUE* result_elem = reinterpret_cast<VALUE*>(result->elements);
 
-  nm_register_values(result_elem, count);
+  //nm_register_values(reinterpret_cast<VALUE*>(result->elements), count);
 
   for (size_t k = 0; k < count; ++k) {
     nm_dense_storage_coords(result, k, coords);
     size_t s_index = nm_dense_storage_pos(s, coords);
 
-    result_elem[k] = rb_yield(NM_DTYPE(self) == nm::RUBYOBJ ? reinterpret_cast<VALUE*>(s->elements)[s_index] : rubyobj_from_cval((char*)(s->elements) + s_index*DTYPE_SIZES[NM_DTYPE(self)], NM_DTYPE(self)).rval);
+    result_elem[k] = rb_yield(NM_DTYPE(vself) == nm::RUBYOBJ ? reinterpret_cast<VALUE*>(s->elements)[s_index] : rubyobj_from_cval((char*)(s->elements) + s_index*DTYPE_SIZES[NM_DTYPE(self)], NM_DTYPE(self)).rval);
   }
 
   NMATRIX* m = nm_create(nm::DENSE_STORE, reinterpret_cast<STORAGE*>(result));
-  VALUE rb_nm = Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, m);
+  /*volatile VALUE rb_nm =*/ return Data_Wrap_Struct(CLASS_OF(vself), nm_mark, nm_delete, m);
 
-  nm_unregister_values(result_elem, count);
+  //nm_unregister_values(reinterpret_cast<VALUE*>(result->elements), count);
 
-  return rb_nm;
+  //return rb_nm;
 
 }
 
@@ -832,10 +838,11 @@ DENSE_STORAGE* cast_copy(const DENSE_STORAGE* rhs, dtype_t new_dtype) {
                  nm_dense_storage_pos(rhs, offset), 0);
 
     } else {              // Make a regular copy.
-      RDType*	rhs_els         = reinterpret_cast<RDType*>(rhs->elements);
-      LDType* lhs_els	        = reinterpret_cast<LDType*>(lhs->elements);
+      RDType* rhs_els          = reinterpret_cast<RDType*>(rhs->elements);
+      LDType* lhs_els          = reinterpret_cast<LDType*>(lhs->elements);
 
-    	while (count-- > 0)     		lhs_els[count] = rhs_els[count];
+      for (size_t i = 0; i < count; ++i)
+    	  lhs_els[i] = rhs_els[i];
     }
   }
 

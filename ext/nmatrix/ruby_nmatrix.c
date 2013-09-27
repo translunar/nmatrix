@@ -655,7 +655,7 @@ NMATRIX* nm_create(nm::stype_t stype, STORAGE* storage) {
  * @see nm_init
  */
 static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
-  VALUE shape_ary, initial_ary, hash;
+  volatile VALUE shape_ary, initial_ary, hash;
   //VALUE shape_ary, default_val, capacity, initial_ary, dtype_sym, stype_sym;
   // Mandatory args: shape, dtype, stype
   // FIXME: This is the one line of code standing between Ruby 1.9.2 and 1.9.3.
@@ -788,8 +788,8 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
     free_slice(slice);
 
     // We need to free v if it's not the same size as tmp -- because tmp will have made a copy instead.
-    if (nm_storage_count_max_elements(tmp->storage) != v_size)
-      xfree(v);
+    //if (nm_storage_count_max_elements(tmp->storage) != v_size)
+    //  xfree(v);
 
     // nm_delete(tmp); // This seems to enrage the garbage collector (because rb_tmp is still available). It'd be better if we could force it to free immediately, but no sweat.
   }
@@ -957,18 +957,20 @@ NMATRIX* nm_cast_with_ctype_args(NMATRIX* self, nm::stype_t new_stype, nm::dtype
  * Copy constructor for changing dtypes and stypes.
  */
 VALUE nm_cast(VALUE self, VALUE new_stype_symbol, VALUE new_dtype_symbol, VALUE init) {
+  volatile VALUE vself = self;
+
   nm::dtype_t new_dtype = nm_dtype_from_rbsymbol(new_dtype_symbol);
   nm::stype_t new_stype = nm_stype_from_rbsymbol(new_stype_symbol);
 
-  CheckNMatrixType(self);
+  CheckNMatrixType(vself);
   NMATRIX *rhs;
 
-  UnwrapNMatrix( self, rhs );
+  UnwrapNMatrix( vself, rhs );
 
   void* init_ptr = ALLOCA_N(char, DTYPE_SIZES[new_dtype]);
   rubyval_to_cval(init, new_dtype, init_ptr);
 
-  return Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, nm_cast_with_ctype_args(rhs, new_stype, new_dtype, init_ptr));
+  return Data_Wrap_Struct(CLASS_OF(vself), nm_mark, nm_delete, nm_cast_with_ctype_args(rhs, new_stype, new_dtype, init_ptr));
 }
 
 /*
@@ -1055,12 +1057,40 @@ static nm::symm_t interpret_symm(VALUE symm) {
 
 
 void read_padded_shape(std::ifstream& f, size_t dim, size_t* shape) {
-  nm::read_padded_shape(f, dim, shape);
+  size_t bytes_read = 0;
+
+  // Read shape
+  for (size_t i = 0; i < dim; ++i) {
+    size_t s;
+    f.read(reinterpret_cast<char*>(&s), sizeof(size_t));
+    shape[i] = s;
+
+    bytes_read += sizeof(size_t);
+  }
+
+  // Ignore padding
+  f.ignore(bytes_read % 8);
 }
 
 
 void write_padded_shape(std::ofstream& f, size_t dim, size_t* shape) {
-  nm::write_padded_shape(f, dim, shape);
+  size_t bytes_written = 0;
+
+  // Write shape
+  for (size_t i = 0; i < dim; ++i) {
+    size_t s = shape[i];
+    f.write(reinterpret_cast<const char*>(&s), sizeof(size_t));
+
+    bytes_written += sizeof(size_t);
+  }
+
+  // Pad with zeros
+  size_t zero = 0;
+  while (bytes_written % 8) {
+    f.write(reinterpret_cast<const char*>(&zero), sizeof(size_t));
+
+    bytes_written += sizeof(IType);
+  }
 }
 
 
@@ -1113,9 +1143,11 @@ static VALUE rb_get_errno_exc(const char* which) {
 static VALUE nm_write(int argc, VALUE* argv, VALUE self) {
   using std::ofstream;
 
+
   if (argc < 1 || argc > 2) {
     rb_raise(rb_eArgError, "Expected one or two arguments");
   }
+
   VALUE file = argv[0],
         symm = argc == 1 ? Qnil : argv[1];
 
@@ -1230,9 +1262,9 @@ static VALUE nm_read(int argc, VALUE* argv, VALUE self) {
   int ver  = major * 10000 + minor * 100 + release,
       fver = fmajor * 10000 + fminor * 100 + release;
   if (fver > ver && force == false) {
-    rb_raise(rb_eIOError, "File was created in newer version of NMatrix than current");
+    rb_raise(rb_eIOError, "File was created in newer version of NMatrix than current (%d.%d.%d)", fmajor, fminor, frelease);
   }
-  if (null16 != 0) fprintf(stderr, "Warning: Expected zero padding was not zero\n");
+  if (null16 != 0) rb_warn("nm_read: Expected zero padding was not zero (0)\n");
 
   uint8_t dt, st, it, sm;
   uint16_t dim;
@@ -1245,7 +1277,7 @@ static VALUE nm_read(int argc, VALUE* argv, VALUE self) {
   f.read(reinterpret_cast<char*>(&null16), sizeof(uint16_t));
   f.read(reinterpret_cast<char*>(&dim), sizeof(uint16_t));
 
-  if (null16 != 0) fprintf(stderr, "Warning: Expected zero padding was not zero\n");
+  if (null16 != 0) rb_warn("nm_read: Expected zero padding was not zero (1)");
   nm::stype_t stype = static_cast<nm::stype_t>(st);
   nm::dtype_t dtype = static_cast<nm::dtype_t>(dt);
   nm::symm_t  symm  = static_cast<nm::symm_t>(sm);
@@ -1375,7 +1407,7 @@ static VALUE nm_mset(int argc, VALUE* argv, VALUE self) {
   size_t dim = NM_DIM(self); // last arg is the value
 
   if ((size_t)(argc) > NM_DIM(self)+1) {
-    rb_raise(rb_eArgError, "wrong number of arguments (%d for %u)", argc, effective_dim(NM_STORAGE(self))+1);
+    rb_raise(rb_eArgError, "wrong number of arguments (%d for %lu)", argc, effective_dim(NM_STORAGE(self))+1);
   } else {
     SLICE* slice = get_slice(dim, argc-1, argv, NM_STORAGE(self)->shape);
 
@@ -1553,7 +1585,7 @@ static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(const STORAGE*
   STORAGE* s = NM_STORAGE(self);
 
   if (NM_DIM(self) < (size_t)(argc)) {
-    rb_raise(rb_eArgError, "wrong number of arguments (%d for %u)", argc, effective_dim(s));
+    rb_raise(rb_eArgError, "wrong number of arguments (%d for %lu)", argc, effective_dim(s));
   } else {
     SLICE* slice = get_slice(NM_DIM(self), argc, argv, s->shape);
 
@@ -1900,7 +1932,7 @@ static SLICE* get_slice(size_t dim, int argc, VALUE* arg, size_t* shape) {
     }
 
     if (slice->coords[r] > shape[r] || slice->coords[r] + slice->lengths[r] > shape[r])
-      rb_raise(rb_eRangeError, "slice is larger than matrix in dimension %u (slice component %u)", r, t);
+      rb_raise(rb_eRangeError, "slice is larger than matrix in dimension %lu (slice component %lu)", r, t);
   }
 
   return slice;
@@ -2100,15 +2132,16 @@ static VALUE matrix_multiply(NMATRIX* left, NMATRIX* right) {
  * Note: Currently only implemented for 2x2 and 3x3 matrices.
  */
 static VALUE nm_det_exact(VALUE self) {
-  if (NM_STYPE(self) != nm::DENSE_STORE) rb_raise(nm_eStorageTypeError, "can only calculate exact determinant for dense matrices");
+  volatile VALUE vself = self;
+  if (NM_STYPE(vself) != nm::DENSE_STORE) rb_raise(nm_eStorageTypeError, "can only calculate exact determinant for dense matrices");
 
-  if (NM_DIM(self) != 2 || NM_SHAPE0(self) != NM_SHAPE1(self)) return Qnil;
+  if (NM_DIM(vself) != 2 || NM_SHAPE0(vself) != NM_SHAPE1(vself)) return Qnil;
 
   // Calculate the determinant and then assign it to the return value
-  void* result = ALLOCA_N(char, DTYPE_SIZES[NM_DTYPE(self)]);
-  nm_math_det_exact(NM_SHAPE0(self), NM_STORAGE_DENSE(self)->elements, NM_SHAPE0(self), NM_DTYPE(self), result);
+  void* result = ALLOCA_N(char, DTYPE_SIZES[NM_DTYPE(vself)]);
+  nm_math_det_exact(NM_SHAPE0(vself), NM_STORAGE_DENSE(vself)->elements, NM_SHAPE0(vself), NM_DTYPE(vself), result);
 
-  return rubyobj_from_cval(result, NM_DTYPE(self)).rval;
+  return rubyobj_from_cval(result, NM_DTYPE(vself)).rval;
 }
 
 /////////////////
