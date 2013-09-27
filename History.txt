@@ -454,3 +454,7 @@
     (if it wasn't already)
 
   * Fixed -O3 optimization problems
+
+  * Restored NMatrix#asum, #nrm2, #binned_sorted_indices,
+    #sorted_indices which were inadvertantly removed by NVector
+    deprecation; have not tested

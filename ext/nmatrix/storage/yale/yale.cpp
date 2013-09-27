@@ -1490,7 +1490,7 @@ static VALUE nm_row_keys_intersection(VALUE m1, VALUE ii1, VALUE m2, VALUE ii2) 
        diag2 = i2 < t->shape[0] && !is_pos_default_value(t, i2);
 
   // Reserve max(diff1,diff2) space -- that's the max intersection possible.
-  VALUE ret = rb_ary_new2(std::max(diff1,diff2));
+  VALUE ret = rb_ary_new2(std::max(diff1,diff2)+1);
 
   // Handle once the special case where both have the diagonal in exactly
   // the same place.
@@ -1500,7 +1500,8 @@ static VALUE nm_row_keys_intersection(VALUE m1, VALUE ii1, VALUE m2, VALUE ii2) 
   }
 
   // Now find the intersection.
-  for (size_t idx1 = pos1, idx2 = pos2; idx1 < nextpos1 && idx2 < nextpos2;) {
+  size_t idx1 = pos1, idx2 = pos2;
+  while (idx1 < nextpos1 && idx2 < nextpos2) {
     if (s->ija[idx1] == t->ija[idx2]) {
       rb_ary_push(ret, INT2FIX(s->ija[idx1]));
       ++idx1; ++idx2;
@@ -1517,6 +1518,18 @@ static VALUE nm_row_keys_intersection(VALUE m1, VALUE ii1, VALUE m2, VALUE ii2) 
     } else { // s->ija[idx1] > t->ija[idx2]
       ++idx2;
     }
+  }
+
+  // Past the end of row i2's stored entries; need to try to find diagonal
+  if (diag2 && idx1 < nextpos1) {
+    idx1 = nm::yale_storage::binary_search_left_boundary(s, idx1, nextpos1, i2);
+    if (s->ija[idx1] == i2) rb_ary_push(ret, INT2FIX(i2));
+  }
+
+  // Find the diagonal, if possible, in the other one.
+  if (diag1 && idx2 < nextpos2) {
+    idx2 = nm::yale_storage::binary_search_left_boundary(t, idx2, nextpos2, i1);
+    if (t->ija[idx2] == i1) rb_ary_push(ret, INT2FIX(i1));
   }
 
   return ret;
