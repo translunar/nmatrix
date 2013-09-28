@@ -1752,6 +1752,10 @@ static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self) {
   YALE_STORAGE* s   = NM_STORAGE_YALE(self);
   //nm::dtype_t dtype = NM_DTYPE(self);
 
+  if (i >= s->shape[0]) {
+    rb_raise(rb_eRangeError, "out of range (%lu >= %lu)", i, s->shape[0]);
+  }
+
   size_t pos = s->ija[i];
   size_t nextpos = s->ija[i+1];
   size_t diff = nextpos - pos;

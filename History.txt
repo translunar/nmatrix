@@ -458,3 +458,6 @@
   * Restored NMatrix#asum, #nrm2, #binned_sorted_indices,
     #sorted_indices which were inadvertantly removed by NVector
     deprecation; have not tested
+
+  * Experimental #yale_nd_row and functions which call it now checks
+    range of argument to prevent segfault
