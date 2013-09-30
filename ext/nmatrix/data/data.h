@@ -55,6 +55,7 @@ namespace nm {
 	const int NUM_DTYPES = 13;
 	const int NUM_ITYPES = 4;
 	const int NUM_EWOPS = 12;
+	const int NUM_UNARYOPS = 17;
 	const int NUM_NONCOMP_EWOPS = 6;
 
   enum ewop_t {
@@ -72,9 +73,30 @@ namespace nm {
     EW_GEQ
   };
 
+  enum unaryop_t {
+    UNARY_SIN,
+    UNARY_COS,
+    UNARY_TAN,
+    UNARY_ASIN,
+    UNARY_ACOS,
+    UNARY_ATAN,
+    UNARY_SINH,
+    UNARY_COSH,
+    UNARY_TANH,
+    UNARY_ASINH,
+    UNARY_ACOSH,
+    UNARY_ATANH,
+    UNARY_EXP,
+    UNARY_LOG,
+    UNARY_LOG2,
+    UNARY_LOG10,
+    UNARY_SQRT
+  };
+
   // element-wise and scalar operators
   extern const char* const  EWOP_OPS[nm::NUM_EWOPS];
   extern const std::string  EWOP_NAMES[nm::NUM_EWOPS];
+  extern const std::string  UNARYOPS[nm::NUM_UNARYOPS];
 
 
 } // end of namespace nm

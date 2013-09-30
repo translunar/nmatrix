@@ -73,6 +73,14 @@ namespace nm {
     "geq"
   };
 
+  const std::string UNARYOPS[nm::NUM_UNARYOPS] = {
+    "sin", "cos", "tan",
+    "asin", "acos", "atan",
+    "sinh", "cosh", "tanh",
+    "asinh", "acosh", "atanh",
+    "exp", "log", "log2", "log10", "sqrt"
+  };
+
 
   template <typename Type>
   Complex<Type>::Complex(const RubyObject& other) {
