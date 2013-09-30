@@ -86,7 +86,7 @@ class NMatrix
 
   end
 
-  self.extend NMMath # add the Math functions as class methods of NMatrix
+  # self.extend NMMath # add the Math functions as class methods of NMatrix
 
   #
   # call-seq:
@@ -486,6 +486,38 @@ class NMatrix
     end.cast(self.stype, abs_dtype)
   end
 
+
+  #
+  # call-seq:
+  #     absolute_sum -> Numeric
+  #
+  # == Arguments
+  #   - +incx+ -> the skip size (defaults to 1, no skip)
+  #   - +n+ -> the number of elements to include
+  #
+  # Return the sum of the contents of the vector. This is the BLAS asum routine.
+  def asum incx=1, n=nil
+    return method_missing(:asum, incx, n) unless vector?
+    NMatrix::BLAS::asum(self, incx, self.size / incx)
+  end
+  alias :absolute_sum :asum
+
+  #
+  # call-seq:
+  #     norm2 -> Numeric
+  #
+  # == Arguments
+  #   - +incx+ -> the skip size (defaults to 1, no skip)
+  #   - +n+ -> the number of elements to include
+  #
+  # Return the 2-norm of the vector. This is the BLAS nrm2 routine.
+  def nrm2 incx=1, n=nil
+    return method_missing(:nrm2, incx, n) unless vector?
+    NMatrix::BLAS::nrm2(self, incx, self.size / incx)
+  end
+  alias :norm2 :nrm2
+
+
   alias :permute_columns  :laswp
   alias :permute_columns! :laswp!
 
@@ -513,6 +545,87 @@ protected
       self.__dense_map__ { |l| l.send(op,rhs) }.cast(stype, NMatrix.upcast(dtype, NMatrix.min_dtype(rhs)))
     end
   end
+
+  # These don't actually take an argument -- they're called reverse-polish style on the matrix.
+  # This group always gets casted to float64.
+  %i{log log2 log10 sqrt}.each do |ewop|
+    define_method("__list_unary_#{ewop}__") do
+      self.__list_map_stored__(nil) { |l| Math.send(ewop, l) }.cast(stype, NMatrix.upcast(dtype, :float64))
+    end
+    define_method("__yale_unary_#{ewop}__") do
+      self.__yale_map_stored__ { |l| Math.send(ewop, l) }.cast(stype, NMatrix.upcast(dtype, :float64))
+    end
+    define_method("__dense_unary_#{ewop}__") do
+      self.__dense_map__ { |l| Math.send(ewop, l) }.cast(stype, NMatrix.upcast(dtype, :float64))
+    end
+  end
+
+  # These don't actually take an argument -- they're called reverse-polish style on the matrix.
+  # FIXME: Unclear how these should be cast, too busy to think about it right now.
+  %i{sin cos tan acos asin atan cosh sinh tanh acosh asinh atanh exp}.each do |ewop|
+    define_method("__list_unary_#{ewop}__") do
+      self.__list_map_stored__(nil) { |l| Math.send(ewop, l) } #.cast(stype, NMatrix.upcast(dtype, :float64))
+    end
+    define_method("__yale_unary_#{ewop}__") do
+      self.__yale_map_stored__ { |l| Math.send(ewop, l) } #.cast(stype, NMatrix.upcast(dtype, :float64))
+    end
+    define_method("__dense_unary_#{ewop}__") do
+      self.__dense_map__ { |l| Math.send(ewop, l) } #.cast(stype, NMatrix.upcast(dtype, :float64))
+    end
+  end
+
+  # These take two arguments. One might be a matrix, and one might be a scalar.=
+=begin
+  %i{atan2 ldexp hypot}.each do |ewop|
+    define_method("__list_elementwise_#{ewop}__") do |rhs,order|
+      if order
+        rhs.__list_map_merged_stored__(self, nil) { |r,l| Math.send(ewop,l,r) }
+      else
+        self.__list_map_merged_stored__(rhs, nil) { |l,r| Math.send(ewop,l,r) }
+      end.cast(stype, NMatrix.upcast(dtype, rhs.dtype))
+    end
+
+    define_method("__dense_elementwise_#{ewop}__") do |rhs,order|
+      if order
+        rhs.__dense_map_pair__(self) { |r,l| Math.send(ewop,l,r) }
+      else
+        self.__dense_map_pair__(rhs) { |l,r| Math.send(ewop,l,r) }
+      end.cast(stype, NMatrix.upcast(dtype, rhs.dtype))
+    end
+
+    define_method("__yale_elementwise_#{ewop}__") do |rhs,order|
+      if order
+        rhs.__yale_map_merged_stored__(self, nil) { |r,l| Math.send(ewop,l,r) }
+      else
+        self.__yale_map_merged_stored__(rhs, nil) { |l,r| Math.send(ewop,l,r) }
+      end.cast(stype, NMatrix.upcast(dtype, rhs.dtype))
+    end
+
+    define_method("__list_scalar_#{ewop}__") do |rhs,order|
+      if order
+        rhs.__list_map_stored__ { |r| Math.send(ewop, self, r) }
+      else
+        self.__list_map_stored__ { |l| Math.send(ewop, l, rhs) }
+      end.cast(stype, NMatrix.upcast(dtype, NMatrix.min_dtype(rhs)))
+    end
+
+    define_method("__yale_scalar_#{ewop}__") do |rhs,order|
+      if order
+        rhs.__yale_map_stored__ { |r| Math.send(ewop, self, r) }
+      else
+        self.__yale_map_stored__ { |l| Math.send(ewop, l, rhs) }
+      end.cast(stype, NMatrix.upcast(dtype, NMatrix.min_dtype(rhs)))
+    end
+
+    define_method("__dense_scalar_#{ewop}__") do |rhs,order|
+      if order
+        rhs.__dense_map__ { |r| Math.send(ewop, self, r) }
+      else
+        self.__dense_map__ { |l| Math.send(ewop, l, rhs) }
+      end.cast(stype, NMatrix.upcast(dtype, NMatrix.min_dtype(rhs)))
+    end
+  end
+=end
 
   # Equality operators do not involve a cast. We want to get back matrices of TrueClass and FalseClass.
   {eqeq: :==, neq: :!=, lt: :<, gt: :>, leq: :<=, geq: :>=}.each_pair do |ewop, op|

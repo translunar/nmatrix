@@ -73,6 +73,14 @@ namespace nm {
     "geq"
   };
 
+  const std::string UNARYOPS[nm::NUM_UNARYOPS] = {
+    "sin", "cos", "tan",
+    "asin", "acos", "atan",
+    "sinh", "cosh", "tanh",
+    "asinh", "acosh", "atanh",
+    "exp", "log", "log2", "log10", "sqrt"
+  };
+
 
   template <typename Type>
   Complex<Type>::Complex(const RubyObject& other) {
@@ -314,8 +322,8 @@ void nm_init_data() {
     nm::Rational32 x(obj);
     nm::Rational64 y(obj);
     nm::Rational128 z(obj);
-    nm::Complex64 a(obj);
-    nm::Complex128 b(obj);
+    volatile nm::Complex64 a(obj);
+    volatile nm::Complex128 b(obj);
 }
 
 

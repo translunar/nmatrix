@@ -159,68 +159,6 @@ class NVector < NMatrix
     min_so_far
   end
 
-  #
-  # call-seq:
-  #     absolute_sum -> Numeric
-  #
-  # == Arguments
-  #   - +incx+ -> the skip size (defaults to 1, no skip)
-  #   - +n+ -> the number of elements to include
-  #
-  # Return the sum of the contents of the vector. This is the BLAS asum routine.
-  def asum incx=1, n=nil
-    NMatrix::BLAS::asum(self, incx, self.size / incx)
-  end
-  alias :absolute_sum :asum
-
-  #
-  # call-seq:
-  #     norm2 -> Numeric
-  #
-  # == Arguments
-  #   - +incx+ -> the skip size (defaults to 1, no skip)
-  #   - +n+ -> the number of elements to include
-  #
-  # Return the 2-norm of the vector. This is the BLAS nrm2 routine.
-  def nrm2 incx=1, n=nil
-    NMatrix::BLAS::nrm2(self, incx, self.size / incx)
-  end
-  alias :norm2 :nrm2
-
-
-  #
-  # call-seq:
-  #     sorted_indices -> Array
-  #
-  # Returns an array of the indices ordered by value sorted.
-  #
-  def sorted_indices
-    ary = self.to_a
-    ary.each_index.sort_by { |i| ary[i] }  # from: http://stackoverflow.com/a/17841159/170300
-  end
-
-  #
-  # call-seq:
-  #     binned_sorted_indices -> Array
-  #
-  # Returns an array of arrays of indices ordered by value sorted. Functions basically like +sorted_indices+, but
-  # groups indices together for those values that are the same.
-  #
-  def binned_sorted_indices
-    ary = self.to_a
-    ary2 = []
-    last_bin = ary.each_index.sort_by { |i| [ary[i]] }.inject([]) do |result, element|
-      if result.empty? || ary[result[-1]] == ary[element]
-        result << element
-      else
-        ary2 << result
-        [element]
-      end
-    end
-    ary2 << last_bin unless last_bin.empty?
-    ary2
-  end
-
 
   # TODO: Make this actually pretty.
   def pretty_print(q = nil) #:nodoc:
