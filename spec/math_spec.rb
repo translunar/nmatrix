@@ -54,37 +54,38 @@ describe "math" do
               next if meth == :atanh
 
               it "should correctly apply elementwise #{meth}" do
-                # make sure the trig functions return a positive result when processing
-                # dtype byte or we run into trouble since byte is implemented unsigned
-                if dtype == :byte and [:sin, :cos, :tan].include? meth then
-                  @m = NMatrix.new(@size, [0,1], dtype: dtype, stype: stype)
-                  @a = @m.to_a.flatten
-                end
-
 
                 @m.send(meth).should eq N.new(@size, @a.map{ |e| Math.send(meth, e) },
-                                                 dtype: :object, stype: stype)
+                                                 dtype: :float64, stype: stype)
               end
             end
 
             NMatrix::NMMath::METHODS_ARITY_2.each do |meth|
               next if meth == :atan2
               it "should correctly apply elementwise #{meth}" do
-                N.send(meth, @m, @m).should eq N.new(@size, @a.map{ |e| Math.send(meth, e, e) },
-                                                     dtype: :object, stype: stype)
+                @m.send(meth, @m).should eq N.new(@size, @a.map{ |e|
+                                                     Math.send(meth, e, e) },
+                                                     dtype: :float64, 
+                                                     stype: stype)
+              end
+
+              it "should correctly apply elementwise #{meth} with a scalar first arg" do
+                Math.send(meth, 1, @m).should eq N.new(@size, @a.map { |e| Math.send(meth, 1, e) }, dtype: :float64, stype: stype)
+              end
+
+              it "should correctly apply elementwise #{meth} with a scalar second arg" do
+                @m.send(meth, 1).should eq N.new(@size, @a.map { |e| Math.send(meth, e, 1) }, dtype: :float64, stype: stype)
               end
             end
 
             it "should correctly apply elementwise natural log" do
-              require 'pry'
-              binding.pry if dtype == :float64
-              N.log(@m).should eq N.new(@size, [0, Math.log(2), Math.log(3), Math.log(4)],
-                                        dtype: :object, stype: stype)
+              @m.log.should eq N.new(@size, [0, Math.log(2), Math.log(3), Math.log(4)],
+                                        dtype: :float64, stype: stype)
             end
 
             it "should correctly apply elementwise log with arbitrary base" do
-              N.log(@m, 3).should eq N.new(@size, [0, Math.log(2,3), 1, Math.log(4,3)],
-                                           dtype: :object, stype: stype)
+              @m.log(3).should eq N.new(@size, [0, Math.log(2,3), 1, Math.log(4,3)],
+                                           dtype: :float64, stype: stype)
             end
 
             context "inverse trig functions" do
@@ -95,15 +96,23 @@ describe "math" do
               [:asin, :acos, :atan, :atanh].each do |atf|
 
                 it "should correctly apply elementwise #{atf}" do
-                  @m.send(atf).should eq N.new(@size, @a.map{ |e| Math.send(atf, e) },
-                                                  dtype: :object, stype: :dense)
+                  @m.send(atf).should eq N.new(@size, 
+                                               @a.map{ |e| Math.send(atf, e) },
+                                               dtype: :float64, stype: stype)
                 end
               end
 
               it "should correctly apply elementtwise atan2" do
-                N.atan2(@m, @m*0+1).should eq N.new(@size, [0, 0.24497866312686414,
-                                                    0.4636476090008061, 0.6435011087932844],
-                                                    dtype: :object, stype: :dense)
+                @m.atan2(@m*0+1).should eq N.new(@size, 
+                  @a.map { |e| Math.send(:atan2, e, 1) }, dtype: :float64, stype: stype)
+              end
+
+              it "should correctly apply elementwise atan2 with a scalar first arg" do
+                Math.atan2(1, @m).should eq N.new(@size, @a.map { |e| Math.send(:atan2, 1, e) }, dtype: :float64, stype: stype)
+              end
+
+              it "should correctly apply elementwise atan2 with a scalar second arg" do
+                  @m.atan2(1).should eq N.new(@size, @a.map { |e| Math.send(:atan2, e, 1) }, dtype: :float64, stype: stype)
               end
             end
           end

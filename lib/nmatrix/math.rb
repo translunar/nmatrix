@@ -30,63 +30,11 @@
 
 class NMatrix
 
-  #
-  # Define the set of math methods present in the ruby core Math module for NMatrix objects.
-  # 
-  # Dtype is preserved, so integer types will produce integer results.
-  #
-  # Methods that do not return a single number (frexp and lgamma) are not implemented since
-  # this would break dtype preservation.
-  #
-  # The module is added as class methods of NMatrix, so use is, e.g.:
-  #
-  # a = N[0.0, 1.0, 2.0]
-  # >> puts N.sin(a)
-  # => [0.0, 0.8414709848078965, 0.9092974268256817]
-  #
   module NMMath
     METHODS_ARITY_2 = [:atan2, :ldexp, :hypot]
     METHODS_ARITY_1 = [:cos, :sin, :tan, :acos, :asin, :atan, :cosh, :sinh, :tanh, :acosh,
       :asinh, :atanh, :exp, :log2, :log10, :sqrt, :cbrt, :erf, :erfc, :gamma]
-
-    METHODS_ARITY_1.each do |meth|
-      define_method meth do |nm|
-        nm.map { |e| Math.send(meth, e) }
-      end
-    end
-
-    METHODS_ARITY_2.each do |meth|
-      define_method meth do |nm0, nm1|
-        nm_out = nm0.dup
-        nm0.each_with_indices do |a|
-          e = a[0]
-          i = a[1...a.length]
-          nm_out[*i] = Math.send(meth, e, nm1[*i]) 
-        end
-        nm_out
-      end
-    end
-
-    #
-    # call-seq:
-    #   log(nm) -> NMatrix
-    #   log(nm, base) -> NMatrix
-    #
-    # Calculates the natural logarithm elementwise of the supplied NMatrix.
-    # If a base is supplied, calculate the logarithm with that base.
-    #
-    # @param [NMatrix] nm  the NMatrix of which to calculate the log
-    # @param [Numeric] base the base of the logarithm (default: natural logarithm)
-    #
-    # @return [NMatrix] an NMatrix with log elements
-    #
-    def log(nm, base=Math::E)
-      nm.map { |e| Math.log(e, base) }
-    end
-
   end
-
-  # self.extend NMMath # add the Math functions as class methods of NMatrix
 
   #
   # call-seq:
@@ -548,7 +496,7 @@ protected
 
   # These don't actually take an argument -- they're called reverse-polish style on the matrix.
   # This group always gets casted to float64.
-  %i{log log2 log10 sqrt}.each do |ewop|
+  %i{log2 log10 sqrt sin cos tan acos asin atan cosh sinh tanh acosh asinh atanh exp erf erfc gamma cbrt}.each do |ewop|
     define_method("__list_unary_#{ewop}__") do
       self.__list_map_stored__(nil) { |l| Math.send(ewop, l) }.cast(stype, NMatrix.upcast(dtype, :float64))
     end
@@ -560,72 +508,71 @@ protected
     end
   end
 
-  # These don't actually take an argument -- they're called reverse-polish style on the matrix.
-  # FIXME: Unclear how these should be cast, too busy to think about it right now.
-  %i{sin cos tan acos asin atan cosh sinh tanh acosh asinh atanh exp}.each do |ewop|
-    define_method("__list_unary_#{ewop}__") do
-      self.__list_map_stored__(nil) { |l| Math.send(ewop, l) } #.cast(stype, NMatrix.upcast(dtype, :float64))
-    end
-    define_method("__yale_unary_#{ewop}__") do
-      self.__yale_map_stored__ { |l| Math.send(ewop, l) } #.cast(stype, NMatrix.upcast(dtype, :float64))
-    end
-    define_method("__dense_unary_#{ewop}__") do
-      self.__dense_map__ { |l| Math.send(ewop, l) } #.cast(stype, NMatrix.upcast(dtype, :float64))
-    end
+  # log takes an optional single argument, the base.  Default to natural log.
+  def __list_unary_log__(base)
+    self.__list_map_stored__(nil) { |l| Math.log(l, base) }.cast(stype, NMatrix.upcast(dtype, :float64))
   end
 
-  # These take two arguments. One might be a matrix, and one might be a scalar.=
-=begin
+  def __yale_unary_log__(base)
+    self.__yale_map_stored__ { |l| Math.log(l, base) }.cast(stype, NMatrix.upcast(dtype, :float64))
+  end
+
+  def __dense_unary_log__(base)
+    self.__dense_map__ { |l| Math.log(l, base) }.cast(stype, NMatrix.upcast(dtype, :float64))
+  end
+
+  # These take two arguments. One might be a matrix, and one might be a scalar.
+  # See also monkeys.rb, which contains Math module patches to let the first
+  # arg be a scalar
   %i{atan2 ldexp hypot}.each do |ewop|
     define_method("__list_elementwise_#{ewop}__") do |rhs,order|
-      if order
-        rhs.__list_map_merged_stored__(self, nil) { |r,l| Math.send(ewop,l,r) }
+      if order then
+        self.__list_map_merged_stored__(rhs, nil) { |r,l| Math.send(ewop,l,r) }
       else
         self.__list_map_merged_stored__(rhs, nil) { |l,r| Math.send(ewop,l,r) }
-      end.cast(stype, NMatrix.upcast(dtype, rhs.dtype))
+      end.cast(stype, NMatrix.upcast(dtype, :float64))
     end
 
-    define_method("__dense_elementwise_#{ewop}__") do |rhs,order|
-      if order
-        rhs.__dense_map_pair__(self) { |r,l| Math.send(ewop,l,r) }
+    define_method("__dense_elementwise_#{ewop}__") do |rhs, order|
+      if order then
+        self.__dense_map_pair__(rhs) { |r,l| Math.send(ewop,l,r) }
       else
         self.__dense_map_pair__(rhs) { |l,r| Math.send(ewop,l,r) }
-      end.cast(stype, NMatrix.upcast(dtype, rhs.dtype))
+      end.cast(stype, NMatrix.upcast(dtype, :float64))
     end
 
-    define_method("__yale_elementwise_#{ewop}__") do |rhs,order|
-      if order
-        rhs.__yale_map_merged_stored__(self, nil) { |r,l| Math.send(ewop,l,r) }
+    define_method("__yale_elementwise_#{ewop}__") do |rhs, order|
+      if order then
+        self.__yale_map_merged_stored__(rhs, nil) { |r,l| Math.send(ewop,l,r) }
       else
         self.__yale_map_merged_stored__(rhs, nil) { |l,r| Math.send(ewop,l,r) }
-      end.cast(stype, NMatrix.upcast(dtype, rhs.dtype))
+      end.cast(stype, NMatrix.upcast(dtype, :float64))
     end
 
     define_method("__list_scalar_#{ewop}__") do |rhs,order|
-      if order
-        rhs.__list_map_stored__ { |r| Math.send(ewop, self, r) }
+      if order then
+        self.__list_map_stored__(nil) { |l| Math.send(ewop, rhs, l) }
       else
-        self.__list_map_stored__ { |l| Math.send(ewop, l, rhs) }
-      end.cast(stype, NMatrix.upcast(dtype, NMatrix.min_dtype(rhs)))
+        self.__list_map_stored__(nil) { |l| Math.send(ewop, l, rhs) }
+      end.cast(stype, NMatrix.upcast(dtype, :float64))
     end
 
     define_method("__yale_scalar_#{ewop}__") do |rhs,order|
-      if order
-        rhs.__yale_map_stored__ { |r| Math.send(ewop, self, r) }
+      if order then
+        self.__yale_map_stored__ { |l| Math.send(ewop, rhs, l) }
       else
         self.__yale_map_stored__ { |l| Math.send(ewop, l, rhs) }
-      end.cast(stype, NMatrix.upcast(dtype, NMatrix.min_dtype(rhs)))
+      end.cast(stype, NMatrix.upcast(dtype, :float64))
     end
 
     define_method("__dense_scalar_#{ewop}__") do |rhs,order|
       if order
-        rhs.__dense_map__ { |r| Math.send(ewop, self, r) }
+        self.__dense_map__ { |l| Math.send(ewop, rhs, l) }
       else
         self.__dense_map__ { |l| Math.send(ewop, l, rhs) }
-      end.cast(stype, NMatrix.upcast(dtype, NMatrix.min_dtype(rhs)))
+      end.cast(stype, NMatrix.upcast(dtype, :float64))
     end
   end
-=end
 
   # Equality operators do not involve a cast. We want to get back matrices of TrueClass and FalseClass.
   {eqeq: :==, neq: :!=, lt: :<, gt: :>, leq: :<=, geq: :>=}.each_pair do |ewop, op|

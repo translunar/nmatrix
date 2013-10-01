@@ -80,12 +80,22 @@ static VALUE nm_unary_##name(VALUE self) {  \
   return unary_op(nm::UNARY_##oper, self);  \
 }
 
+#define DEF_NONCOM_ELEMENTWISE_RUBY_ACCESSOR(oper, name) \
+static VALUE nm_noncom_ew_##name(int argc, VALUE* argv, VALUE self) { \
+  if (argc > 1) { \
+    return noncom_elementwise_op(nm::NONCOM_EW_##oper, self, argv[0], argv[1]); \
+  } else { \
+    return noncom_elementwise_op(nm::NONCOM_EW_##oper, self, argv[0], Qfalse); \
+  } \
+}
+
 
 /*
  * Macro declares a corresponding accessor function prototype for some element-wise operation.
  */
 #define DECL_ELEMENTWISE_RUBY_ACCESSOR(name)    static VALUE nm_ew_##name(VALUE left_val, VALUE right_val);
 #define DECL_UNARY_RUBY_ACCESSOR(name)          static VALUE nm_unary_##name(VALUE self);
+#define DECL_NONCOM_ELEMENTWISE_RUBY_ACCESSOR(name)    static VALUE nm_noncom_ew_##name(int argc, VALUE* argv, VALUE self);
 
 DECL_ELEMENTWISE_RUBY_ACCESSOR(add)
 DECL_ELEMENTWISE_RUBY_ACCESSOR(subtract)
@@ -112,16 +122,23 @@ DECL_UNARY_RUBY_ACCESSOR(asinh)
 DECL_UNARY_RUBY_ACCESSOR(acosh)
 DECL_UNARY_RUBY_ACCESSOR(atanh)
 DECL_UNARY_RUBY_ACCESSOR(exp)
-DECL_UNARY_RUBY_ACCESSOR(log)
 DECL_UNARY_RUBY_ACCESSOR(log2)
 DECL_UNARY_RUBY_ACCESSOR(log10)
 DECL_UNARY_RUBY_ACCESSOR(sqrt)
-//DECL_ELEMENTWISE_RUBY_ACCESSOR(atan2)
-//DECL_ELEMENTWISE_RUBY_ACCESSOR(ldexp)
-//DECL_ELEMENTWISE_RUBY_ACCESSOR(hypot)
+DECL_UNARY_RUBY_ACCESSOR(erf)
+DECL_UNARY_RUBY_ACCESSOR(erfc)
+DECL_UNARY_RUBY_ACCESSOR(cbrt)
+DECL_UNARY_RUBY_ACCESSOR(gamma)
+DECL_NONCOM_ELEMENTWISE_RUBY_ACCESSOR(atan2)
+DECL_NONCOM_ELEMENTWISE_RUBY_ACCESSOR(ldexp)
+DECL_NONCOM_ELEMENTWISE_RUBY_ACCESSOR(hypot)
+
+//log can be unary, but also take a base argument, as with Math.log
+static VALUE nm_unary_log(int argc, VALUE* argv, VALUE self);
 
 static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val);
 static VALUE unary_op(nm::unaryop_t op, VALUE self);
+static VALUE noncom_elementwise_op(nm::noncom_ewop_t op, VALUE self, VALUE other, VALUE orderflip);
 
 static VALUE nm_symmetric(VALUE self);
 static VALUE nm_hermitian(VALUE self);
@@ -245,6 +262,10 @@ void Init_nmatrix() {
   rb_define_method(cNMatrix, "**",    (METHOD)nm_ew_power,    1);
   rb_define_method(cNMatrix, "%",     (METHOD)nm_ew_mod,      1);
 
+  rb_define_method(cNMatrix, "atan2", (METHOD)nm_noncom_ew_atan2, -1);
+  rb_define_method(cNMatrix, "ldexp", (METHOD)nm_noncom_ew_ldexp, -1);
+  rb_define_method(cNMatrix, "hypot", (METHOD)nm_noncom_ew_hypot, -1);
+
   rb_define_method(cNMatrix, "sin",   (METHOD)nm_unary_sin,   0);
   rb_define_method(cNMatrix, "cos",   (METHOD)nm_unary_cos,   0);
   rb_define_method(cNMatrix, "tan",   (METHOD)nm_unary_tan,   0);
@@ -258,11 +279,14 @@ void Init_nmatrix() {
   rb_define_method(cNMatrix, "acosh", (METHOD)nm_unary_acosh, 0);
   rb_define_method(cNMatrix, "atanh", (METHOD)nm_unary_atanh, 0);
   rb_define_method(cNMatrix, "exp",   (METHOD)nm_unary_exp,   0);
-  rb_define_method(cNMatrix, "log",   (METHOD)nm_unary_log,   0);
   rb_define_method(cNMatrix, "log2",  (METHOD)nm_unary_log2,  0);
   rb_define_method(cNMatrix, "log10", (METHOD)nm_unary_log10, 0);
   rb_define_method(cNMatrix, "sqrt",  (METHOD)nm_unary_sqrt,  0);
-
+  rb_define_method(cNMatrix, "erf",   (METHOD)nm_unary_erf,   0);
+  rb_define_method(cNMatrix, "erfc",  (METHOD)nm_unary_erfc,  0);
+  rb_define_method(cNMatrix, "cbrt",  (METHOD)nm_unary_cbrt,  0);
+  rb_define_method(cNMatrix, "gamma", (METHOD)nm_unary_gamma, 0);
+  rb_define_method(cNMatrix, "log",   (METHOD)nm_unary_log,  -1);
 
 	rb_define_method(cNMatrix, "=~", (METHOD)nm_ew_eqeq, 1);
 	rb_define_method(cNMatrix, "!~", (METHOD)nm_ew_neq, 1);
@@ -659,10 +683,40 @@ DEF_UNARY_RUBY_ACCESSOR(ASINH, asinh)
 DEF_UNARY_RUBY_ACCESSOR(ACOSH, acosh)
 DEF_UNARY_RUBY_ACCESSOR(ATANH, atanh)
 DEF_UNARY_RUBY_ACCESSOR(EXP, exp)
-DEF_UNARY_RUBY_ACCESSOR(LOG, log)
 DEF_UNARY_RUBY_ACCESSOR(LOG2, log2)
 DEF_UNARY_RUBY_ACCESSOR(LOG10, log10)
 DEF_UNARY_RUBY_ACCESSOR(SQRT, sqrt)
+DEF_UNARY_RUBY_ACCESSOR(ERF, erf)
+DEF_UNARY_RUBY_ACCESSOR(ERFC, erfc)
+DEF_UNARY_RUBY_ACCESSOR(CBRT, cbrt)
+DEF_UNARY_RUBY_ACCESSOR(GAMMA, gamma)
+
+DEF_NONCOM_ELEMENTWISE_RUBY_ACCESSOR(ATAN2, atan2)
+DEF_NONCOM_ELEMENTWISE_RUBY_ACCESSOR(LDEXP, ldexp)
+DEF_NONCOM_ELEMENTWISE_RUBY_ACCESSOR(HYPOT, hypot)
+
+static VALUE nm_unary_log(int argc, VALUE* argv, VALUE self) {
+  const double default_log_base = exp(1.0);
+  NMATRIX* left;
+  UnwrapNMatrix(self, left);
+  std::string sym;
+
+  switch(left->stype) {
+  case nm::DENSE_STORE:
+    sym = "__dense_unary_log__";
+    break;
+  case nm::YALE_STORE:
+    sym = "__yale_unary_log__";
+    break;
+  case nm::LIST_STORE:
+    sym = "__list_unary_log__";
+    break;
+  }
+  if (argc > 0) { //supplied a base
+    return rb_funcall(self, rb_intern(sym.c_str()), 1, argv[0]);
+  }
+  return rb_funcall(self, rb_intern(sym.c_str()), 1, nm::RubyObject(default_log_base).rval);
+}
 
 //DEF_ELEMENTWISE_RUBY_ACCESSOR(ATAN2, atan2)
 //DEF_ELEMENTWISE_RUBY_ACCESSOR(LDEXP, ldexp)
@@ -1733,6 +1787,16 @@ static VALUE unary_op(nm::unaryop_t op, VALUE self) {
   return rb_funcall(self, rb_intern(sym.c_str()), 0);
 }
 
+static void check_dims_and_shape(VALUE left_val, VALUE right_val) {
+    // Check that the left- and right-hand sides have the same dimensionality.
+    if (NM_DIM(left_val) != NM_DIM(right_val)) {
+      rb_raise(rb_eArgError, "The left- and right-hand sides of the operation must have the same dimensionality.");
+    }
+    // Check that the left- and right-hand sides have the same shape.
+    if (memcmp(&NM_SHAPE(left_val, 0), &NM_SHAPE(right_val, 0), sizeof(size_t) * NM_DIM(left_val)) != 0) {
+      rb_raise(rb_eArgError, "The left- and right-hand sides of the operation must have the same shape.");
+    }
+}
 
 static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
 
@@ -1762,15 +1826,7 @@ static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
 
   } else {
 
-    // Check that the left- and right-hand sides have the same dimensionality.
-    if (NM_DIM(left_val) != NM_DIM(right_val)) {
-      rb_raise(rb_eArgError, "The left- and right-hand sides of the operation must have the same dimensionality.");
-    }
-
-    // Check that the left- and right-hand sides have the same shape.
-    if (memcmp(&NM_SHAPE(left_val, 0), &NM_SHAPE(right_val, 0), sizeof(size_t) * NM_DIM(left_val)) != 0) {
-      rb_raise(rb_eArgError, "The left- and right-hand sides of the operation must have the same shape.");
-    }
+    check_dims_and_shape(left_val, right_val);
 
     NMATRIX* right;
     UnwrapNMatrix(right_val, right);
@@ -1799,6 +1855,65 @@ static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val) {
   }
 
 	return Data_Wrap_Struct(CLASS_OF(left_val), nm_mark, nm_delete, result);
+}
+
+static VALUE noncom_elementwise_op(nm::noncom_ewop_t op, VALUE self, VALUE other, VALUE flip) {
+
+  NMATRIX* self_nm;
+  NMATRIX* result;
+
+  CheckNMatrixType(self);
+  UnwrapNMatrix(self, self_nm);
+
+  if (TYPE(other) != T_DATA || (RDATA(other)->dfree != (RUBY_DATA_FUNC)nm_delete && RDATA(other)->dfree != (RUBY_DATA_FUNC)nm_delete_ref)) {
+    // This is a matrix-scalar element-wise operation.
+    std::string sym;
+    switch(self_nm->stype) {
+    case nm::DENSE_STORE:
+      sym = "__dense_scalar_" + nm::NONCOM_EWOP_NAMES[op] + "__";
+      break;
+    case nm::YALE_STORE:
+      sym = "__yale_scalar_" + nm::NONCOM_EWOP_NAMES[op] + "__";
+      break;
+    case nm::LIST_STORE:
+      sym = "__list_scalar_" + nm::NONCOM_EWOP_NAMES[op] + "__";
+      break;
+    default:
+      rb_raise(rb_eNotImpError, "unknown storage type requested scalar element-wise operation");
+    }
+    return rb_funcall(self, rb_intern(sym.c_str()), 2, other, flip);
+
+  } else {
+
+    check_dims_and_shape(self, other);
+
+    NMATRIX* other_nm;
+    UnwrapNMatrix(other, other_nm);
+
+    if (self_nm->stype == other_nm->stype) {
+      std::string sym;
+
+      switch(self_nm->stype) {
+      case nm::DENSE_STORE:
+        sym = "__dense_elementwise_" + nm::NONCOM_EWOP_NAMES[op] + "__";
+        break;
+      case nm::YALE_STORE:
+        sym = "__yale_elementwise_" + nm::NONCOM_EWOP_NAMES[op] + "__";
+        break;
+      case nm::LIST_STORE:
+        sym = "__list_elementwise_" + nm::NONCOM_EWOP_NAMES[op] + "__";
+        break;
+      default:
+        rb_raise(rb_eNotImpError, "unknown storage type requested element-wise operation");
+      }
+      return rb_funcall(self, rb_intern(sym.c_str()), 2, other, flip);
+
+    } else {
+      rb_raise(rb_eArgError, "Element-wise operations are not currently supported between matrices with differing stypes.");
+    }
+  }
+
+  return Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, result);
 }
 
 /*
