@@ -496,7 +496,7 @@ protected
 
   # These don't actually take an argument -- they're called reverse-polish style on the matrix.
   # This group always gets casted to float64.
-  %i{log2 log10 sqrt sin cos tan acos asin atan cosh sinh tanh acosh asinh atanh exp erf erfc gamma cbrt}.each do |ewop|
+  [:log2, :log10, :sqrt, :sin, :cos, :tan, :acos, :asin, :atan, :cosh, :sinh, :tanh, :acosh, :asinh, :atanh, :exp, :erf, :erfc, :gamma, :cbrt].each do |ewop|
     define_method("__list_unary_#{ewop}__") do
       self.__list_map_stored__(nil) { |l| Math.send(ewop, l) }.cast(stype, NMatrix.upcast(dtype, :float64))
     end
@@ -524,7 +524,7 @@ protected
   # These take two arguments. One might be a matrix, and one might be a scalar.
   # See also monkeys.rb, which contains Math module patches to let the first
   # arg be a scalar
-  %i{atan2 ldexp hypot}.each do |ewop|
+  [:atan2, :ldexp, :hypot].each do |ewop|
     define_method("__list_elementwise_#{ewop}__") do |rhs,order|
       if order then
         self.__list_map_merged_stored__(rhs, nil) { |r,l| Math.send(ewop,l,r) }
