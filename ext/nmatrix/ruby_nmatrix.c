@@ -2138,6 +2138,7 @@ static SLICE* get_slice(size_t dim, int argc, VALUE* arg, size_t* shape) {
       slice->coords[r]  = 0;
       slice->lengths[r] = shape[r];
       slice->single     = false;
+      t++;
 
     } else if (TYPE(arg[t]) == T_HASH) { // 3:5 notation (inclusive)
       VALUE begin_end   = rb_funcall(v, rb_intern("shift"), 0); // rb_hash_shift

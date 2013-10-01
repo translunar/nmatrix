@@ -260,6 +260,10 @@ describe "Slice operation" do
           @m[0..2,0..2].should == @m[0...3,0...3]
         end
 
+        it 'should correctly handle :* slice notation' do
+          @m[:*,0].should eq @m[0...@m.shape[0], 0]
+        end
+
         if stype == :dense
           [:byte,:int8,:int16,:int32,:int64,:float32,:float64,:rational64,:rational128].each do |left_dtype|
             [:byte,:int8,:int16,:int32,:int64,:float32,:float64,:rational64,:rational128].each do |right_dtype|
