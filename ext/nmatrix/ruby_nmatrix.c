@@ -1174,9 +1174,9 @@ static void get_version_info(uint16_t& major, uint16_t& minor, uint16_t& release
   VALUE  min    = rb_funcall(ary[1], rb_intern("to_i"), 0);
   VALUE  rel    = rb_funcall(ary[2], rb_intern("to_i"), 0);
 
-  major   = static_cast<uint16_t>(nm::RubyObject(maj));
-  minor   = static_cast<uint16_t>(nm::RubyObject(min));
-  release = static_cast<uint16_t>(nm::RubyObject(rel));
+  major   = FIX2INT(maj);
+  minor   = FIX2INT(min);
+  release = FIX2INT(rel);
 }
 
 
@@ -1411,7 +1411,7 @@ static VALUE nm_read(int argc, VALUE* argv, VALUE self) {
   int ver  = major * 10000 + minor * 100 + release,
       fver = fmajor * 10000 + fminor * 100 + release;
   if (fver > ver && force == false) {
-    rb_raise(rb_eIOError, "File was created in newer version of NMatrix than current (%d.%d.%d)", fmajor, fminor, frelease);
+    rb_raise(rb_eIOError, "File was created in newer version of NMatrix than current (%u.%u.%u)", fmajor, fminor, frelease);
   }
   if (null16 != 0) rb_warn("nm_read: Expected zero padding was not zero (0)\n");
 
