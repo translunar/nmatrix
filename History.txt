@@ -461,3 +461,5 @@
 
   * Experimental #yale_nd_row and functions which call it now checks
     range of argument to prevent segfault
+
+  * Fixed :* shortcut for a full list dimension (by @cjfuller)
