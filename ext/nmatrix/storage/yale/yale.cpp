@@ -209,8 +209,8 @@ YALE_STORAGE* create_from_old_yale(dtype_t dtype, size_t* shape, char* r_ia, cha
   s->ndnz     = ndnz;
 
   // Setup IJA and A arrays
-  s->ija = ALLOC_N( IType, s->capacity );
-  s->a   = ALLOC_N( LDType, s->capacity );
+  s->ija = NM_ALLOC_N( IType, s->capacity );
+  s->a   = NM_ALLOC_N( LDType, s->capacity );
   IType* ijl    = reinterpret_cast<IType*>(s->ija);
   LDType* al    = reinterpret_cast<LDType*>(s->a);
 
@@ -459,8 +459,8 @@ static void vector_grow(YALE_STORAGE* s) {
 
   if (new_capacity > max_capacity) new_capacity = max_capacity;
 
-  IType* new_ija      = ALLOC_N(IType, new_capacity);
-  void* new_a         = ALLOC_N(char, DTYPE_SIZES[s->dtype] * new_capacity);
+  IType* new_ija      = NM_ALLOC_N(IType, new_capacity);
+  void* new_a         = NM_ALLOC_N(char, DTYPE_SIZES[s->dtype] * new_capacity);
 
   IType* old_ija      = s->ija;
   void* old_a         = s->a;
@@ -499,10 +499,10 @@ static char vector_insert_resize(YALE_STORAGE* s, size_t current_size, size_t po
   	new_capacity = current_size + n;
 
   // Allocate the new vectors.
-  IType* new_ija     = ALLOC_N( IType, new_capacity );
+  IType* new_ija     = NM_ALLOC_N( IType, new_capacity );
   NM_CHECK_ALLOC(new_ija);
 
-  DType* new_a       = ALLOC_N( DType, new_capacity );
+  DType* new_a       = NM_ALLOC_N( DType, new_capacity );
   NM_CHECK_ALLOC(new_a);
 
   IType* old_ija     = reinterpret_cast<IType*>(s->ija);
@@ -1406,12 +1406,12 @@ void nm_yale_storage_mark(STORAGE* storage_base) {
 static YALE_STORAGE* alloc(nm::dtype_t dtype, size_t* shape, size_t dim) {
   YALE_STORAGE* s;
 
-  s = ALLOC( YALE_STORAGE );
+  s = NM_ALLOC( YALE_STORAGE );
 
   s->ndnz        = 0;
   s->dtype       = dtype;
   s->shape       = shape;
-  s->offset      = ALLOC_N(size_t, dim);
+  s->offset      = NM_ALLOC_N(size_t, dim);
   for (size_t i = 0; i < dim; ++i)
     s->offset[i] = 0;
   s->dim         = dim;
@@ -1551,7 +1551,7 @@ static VALUE nm_a(int argc, VALUE* argv, VALUE self) {
   size_t size = nm_yale_storage_get_size(s);
 
   if (idx == Qnil) {
-    VALUE* vals = ALLOCA_N(VALUE, size);
+    VALUE* vals = NM_ALLOCA_N(VALUE, size);
 
     if (NM_DTYPE(self) == nm::RUBYOBJ) {
       for (size_t i = 0; i < size; ++i) {
@@ -1591,7 +1591,7 @@ static VALUE nm_d(int argc, VALUE* argv, VALUE self) {
   YALE_STORAGE* s = reinterpret_cast<YALE_STORAGE*>(NM_SRC(self));
 
   if (idx == Qnil) {
-    VALUE* vals = ALLOCA_N(VALUE, s->shape[0]);
+    VALUE* vals = NM_ALLOCA_N(VALUE, s->shape[0]);
 
     if (NM_DTYPE(self) == nm::RUBYOBJ) {
       for (size_t i = 0; i < s->shape[0]; ++i) {
@@ -1623,7 +1623,7 @@ static VALUE nm_lu(VALUE self) {
 
   size_t size = nm_yale_storage_get_size(s);
 
-  VALUE* vals = ALLOCA_N(VALUE, size - s->shape[0] - 1);
+  VALUE* vals = NM_ALLOCA_N(VALUE, size - s->shape[0] - 1);
 
   if (NM_DTYPE(self) == nm::RUBYOBJ) {
     for (size_t i = 0; i < size - s->shape[0] - 1; ++i) {
@@ -1653,7 +1653,7 @@ static VALUE nm_lu(VALUE self) {
 static VALUE nm_ia(VALUE self) {
   YALE_STORAGE* s = reinterpret_cast<YALE_STORAGE*>(NM_SRC(self));
 
-  VALUE* vals = ALLOCA_N(VALUE, s->shape[0] + 1);
+  VALUE* vals = NM_ALLOCA_N(VALUE, s->shape[0] + 1);
 
   for (size_t i = 0; i < s->shape[0] + 1; ++i) {
     vals[i] = INT2FIX(s->ija[i]);
@@ -1674,7 +1674,7 @@ static VALUE nm_ja(VALUE self) {
 
   size_t size = nm_yale_storage_get_size(s);
 
-  VALUE* vals = ALLOCA_N(VALUE, size - s->shape[0] - 1);
+  VALUE* vals = NM_ALLOCA_N(VALUE, size - s->shape[0] - 1);
 
   for (size_t i = 0; i < size - s->shape[0] - 1; ++i) {
     vals[i] = INT2FIX(s->ija[s->shape[0] + 1 + i]);
@@ -1704,7 +1704,7 @@ static VALUE nm_ija(int argc, VALUE* argv, VALUE self) {
 
   if (idx == Qnil) {
 
-    VALUE* vals = ALLOCA_N(VALUE, size);
+    VALUE* vals = NM_ALLOCA_N(VALUE, size);
 
     for (size_t i = 0; i < size; ++i) {
       vals[i] = INT2FIX(s->ija[i]);
@@ -1830,8 +1830,8 @@ VALUE nm_vector_set(int argc, VALUE* argv, VALUE self) { //, VALUE i_, VALUE jv,
   size_t pos = s->ija[i];
 
   // Allocate the j array and the values array
-  size_t* j  = ALLOCA_N(size_t, len);
-  void* vals = ALLOCA_N(char, DTYPE_SIZES[dtype] * len);
+  size_t* j  = NM_ALLOCA_N(size_t, len);
+  void* vals = NM_ALLOCA_N(char, DTYPE_SIZES[dtype] * len);
 
   // Copy array contents
   for (size_t idx = 0; idx < len; ++idx) {

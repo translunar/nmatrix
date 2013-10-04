@@ -317,7 +317,7 @@ nm::RubyObject rubyobj_from_cval(void* val, nm::dtype_t dtype) {
  */
 void* rubyobj_to_cval(VALUE val, nm::dtype_t dtype) {
   size_t size =  DTYPE_SIZES[dtype];
-  void* ret_val = ALLOC_N(char, size);
+  void* ret_val = NM_ALLOC_N(char, size);
 
   rubyval_to_cval(val, dtype, ret_val);
 

@@ -95,7 +95,7 @@ public:
   }
 
   size_t* copy_alloc_shape() const {
-    size_t* new_shape = ALLOC_N(size_t, ref->dim);
+    size_t* new_shape = NM_ALLOC_N(size_t, ref->dim);
     memcpy(new_shape, shape_, sizeof(size_t)*ref->dim);
     return new_shape;
   }
@@ -382,7 +382,7 @@ static bool slice_set(LIST_STORAGE* dest, LIST* l, size_t* coords, size_t* lengt
             node = node->next ? node->next : NULL;
           }
         } else if (node->key > key) {
-          D* nv = ALLOC(D); *nv = v[v_offset];
+          D* nv = NM_ALLOC(D); *nv = v[v_offset];
           if (prev) node = insert_after(prev, key, nv);
           else      node = insert_first_node(l, key, nv, sizeof(D));
 
@@ -390,7 +390,7 @@ static bool slice_set(LIST_STORAGE* dest, LIST* l, size_t* coords, size_t* lengt
           node = prev->next ? prev->next : NULL;
         }
       } else { // no node -- insert a new one
-        D* nv = ALLOC(D); *nv = v[v_offset];
+        D* nv = NM_ALLOC(D); *nv = v[v_offset];
         if (prev) node = insert_after(prev, key, nv);
         else      node = insert_first_node(l, key, nv, sizeof(D));
 
@@ -424,7 +424,7 @@ void set(VALUE left, SLICE* slice, VALUE right) {
 
   } else if (TYPE(right) == T_ARRAY) {
     v_size = RARRAY_LEN(right);
-    v      = ALLOC_N(D, v_size);
+    v      = NM_ALLOC_N(D, v_size);
     for (size_t m = 0; m < v_size; ++m) {
       rubyval_to_cval(rb_ary_entry(right, m), s->dtype, &(v[m]));
     }
@@ -455,7 +455,7 @@ void set(VALUE left, SLICE* slice, VALUE right) {
  */
 template <typename D>
 void init_default(LIST_STORAGE* s) {
-  s->default_val = ALLOC(D);
+  s->default_val = NM_ALLOC(D);
   *reinterpret_cast<D*>(s->default_val) = 0;
 }
 
@@ -482,13 +482,13 @@ extern "C" {
  * new storage. You don't need to free them, and you shouldn't re-use them.
  */
 LIST_STORAGE* nm_list_storage_create(nm::dtype_t dtype, size_t* shape, size_t dim, void* init_val) {
-  LIST_STORAGE* s = ALLOC( LIST_STORAGE );
+  LIST_STORAGE* s = NM_ALLOC( LIST_STORAGE );
 
   s->dim   = dim;
   s->shape = shape;
   s->dtype = dtype;
 
-  s->offset = ALLOC_N(size_t, s->dim);
+  s->offset = NM_ALLOC_N(size_t, s->dim);
   memset(s->offset, 0, s->dim * sizeof(size_t));
 
   s->rows  = nm::list::create();
@@ -730,7 +730,7 @@ VALUE nm_list_map_stored(VALUE left, VALUE init) {
   if (init == Qnil) init = rb_yield_values(1, sdata.init_obj());
 
 	// Allocate a new shape array for the resulting matrix.
-  void* init_val = ALLOC(VALUE);
+  void* init_val = NM_ALLOC(VALUE);
   memcpy(init_val, &init, sizeof(VALUE));
 
   NMATRIX* result = nm_create(nm::LIST_STORE, nm_list_storage_create(nm::RUBYOBJ, sdata.copy_alloc_shape(), s->dim, init_val));
@@ -781,7 +781,7 @@ VALUE nm_list_map_merged_stored(VALUE left, VALUE right, VALUE init) {
   if (init == Qnil) init = rb_yield_values(2, sdata.init_obj(), tdata.init_obj());
 
 	// Allocate a new shape array for the resulting matrix.
-  void* init_val = ALLOC(VALUE);
+  void* init_val = NM_ALLOC(VALUE);
   memcpy(init_val, &init, sizeof(VALUE));
 
   NMATRIX* result = nm_create(nm::LIST_STORE, nm_list_storage_create(nm::RUBYOBJ, sdata.copy_alloc_shape(), s->dim, init_val));
@@ -842,10 +842,10 @@ void* nm_list_storage_get(const STORAGE* storage, SLICE* slice) {
     NODE* n = list_storage_get_single_node(s, slice);
     return (n ? n->val : s->default_val);
   } else {
-    void *init_val = ALLOC_N(char, DTYPE_SIZES[s->dtype]);
+    void *init_val = NM_ALLOC_N(char, DTYPE_SIZES[s->dtype]);
     memcpy(init_val, s->default_val, DTYPE_SIZES[s->dtype]);
 
-    size_t *shape = ALLOC_N(size_t, s->dim);
+    size_t *shape = NM_ALLOC_N(size_t, s->dim);
     memcpy(shape, slice->lengths, sizeof(size_t) * s->dim);
 
     ns = nm_list_storage_create(s->dtype, shape, s->dim, init_val);
@@ -869,12 +869,12 @@ void* nm_list_storage_ref(const STORAGE* storage, SLICE* slice) {
     return (n ? n->val : s->default_val);
   } 
   else {
-    ns              = ALLOC( LIST_STORAGE );
+    ns              = NM_ALLOC( LIST_STORAGE );
     
     ns->dim         = s->dim;
     ns->dtype       = s->dtype;
-    ns->offset      = ALLOC_N(size_t, ns->dim);
-    ns->shape       = ALLOC_N(size_t, ns->dim);
+    ns->offset      = NM_ALLOC_N(size_t, ns->dim);
+    ns->shape       = NM_ALLOC_N(size_t, ns->dim);
 
     for (size_t i = 0; i < ns->dim; ++i) {
       ns->offset[i] = slice->coords[i] + s->offset[i];
@@ -1087,10 +1087,10 @@ size_t nm_list_storage_count_nd_elements(const LIST_STORAGE* s) {
 
 LIST_STORAGE* nm_list_storage_copy(const LIST_STORAGE* rhs)
 {
-  size_t *shape = ALLOC_N(size_t, rhs->dim);
+  size_t *shape = NM_ALLOC_N(size_t, rhs->dim);
   memcpy(shape, rhs->shape, sizeof(size_t) * rhs->dim);
   
-  void *init_val = ALLOC_N(char, DTYPE_SIZES[rhs->dtype]);
+  void *init_val = NM_ALLOC_N(char, DTYPE_SIZES[rhs->dtype]);
   memcpy(init_val, rhs->default_val, DTYPE_SIZES[rhs->dtype]);
 
   LIST_STORAGE* lhs = nm_list_storage_create(rhs->dtype, shape, rhs->dim, init_val);
@@ -1138,11 +1138,11 @@ template <typename LDType, typename RDType>
 static LIST_STORAGE* cast_copy(const LIST_STORAGE* rhs, dtype_t new_dtype) {
 
   // allocate and copy shape
-  size_t* shape = ALLOC_N(size_t, rhs->dim);
+  size_t* shape = NM_ALLOC_N(size_t, rhs->dim);
   memcpy(shape, rhs->shape, rhs->dim * sizeof(size_t));
 
   // copy default value
-  LDType* default_val = ALLOC_N(LDType, 1);
+  LDType* default_val = NM_ALLOC_N(LDType, 1);
   *default_val = *reinterpret_cast<RDType*>(rhs->default_val);
 
   LIST_STORAGE* lhs = nm_list_storage_create(new_dtype, shape, rhs->dim, default_val);

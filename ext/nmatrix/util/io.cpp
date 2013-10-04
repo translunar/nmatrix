@@ -75,7 +75,7 @@ template <typename DType, typename MDType>
 char* matlab_cstring_to_dtype_string(size_t& result_len, const char* str, size_t bytes) {
 
   result_len   = sizeof(DType) * bytes / sizeof(MDType);
-  char* result = ALLOC_N(char, result_len);
+  char* result = NM_ALLOC_N(char, result_len);
 
   if (bytes % sizeof(MDType) != 0) {
     rb_raise(rb_eArgError, "the given string does not divide evenly for the given MATLAB dtype");
@@ -246,7 +246,7 @@ static VALUE nm_rbstring_merge(VALUE self, VALUE rb_real, VALUE rb_imaginary, VA
   char *real        = RSTRING_PTR(rb_real),
        *imag        = RSTRING_PTR(rb_imaginary);
 
-  char* merge       = ALLOCA_N(char, RSTRING_LEN(rb_real)*2);
+  char* merge       = NM_ALLOCA_N(char, RSTRING_LEN(rb_real)*2);
 
   size_t merge_pos  = 0;
 

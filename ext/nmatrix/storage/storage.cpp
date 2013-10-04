@@ -89,7 +89,7 @@ template <typename LDType, typename RDType>
 DENSE_STORAGE* create_from_list_storage(const LIST_STORAGE* rhs, dtype_t l_dtype) {
 
   // allocate and copy shape
-  size_t* shape = ALLOC_N(size_t, rhs->dim);
+  size_t* shape = NM_ALLOC_N(size_t, rhs->dim);
   memcpy(shape, rhs->shape, rhs->dim * sizeof(size_t));
 
   DENSE_STORAGE* lhs = nm_dense_storage_create(l_dtype, shape, rhs->dim, NULL, 0);
@@ -132,7 +132,7 @@ DENSE_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype
   RDType* rhs_a   = reinterpret_cast<RDType*>(reinterpret_cast<YALE_STORAGE*>(rhs->src)->a);
 
   // Allocate and set shape.
-  size_t* shape = ALLOC_N(size_t, rhs->dim);
+  size_t* shape = NM_ALLOC_N(size_t, rhs->dim);
   shape[0] = rhs->shape[0];
   shape[1] = rhs->shape[1];
 
@@ -262,12 +262,12 @@ static bool cast_copy_contents_dense(LIST* lhs, const RDType* rhs, RDType* zero,
 template <typename LDType, typename RDType>
 LIST_STORAGE* create_from_dense_storage(const DENSE_STORAGE* rhs, dtype_t l_dtype, void* init) {
 
-  LDType* l_default_val = ALLOC_N(LDType, 1);
-  RDType* r_default_val = ALLOCA_N(RDType, 1); // clean up when finished with this function
+  LDType* l_default_val = NM_ALLOC_N(LDType, 1);
+  RDType* r_default_val = NM_ALLOCA_N(RDType, 1); // clean up when finished with this function
 
   // allocate and copy shape and coords
-  size_t *shape  = ALLOC_N(size_t, rhs->dim),
-         *coords = ALLOC_N(size_t, rhs->dim);
+  size_t *shape  = NM_ALLOC_N(size_t, rhs->dim),
+         *coords = NM_ALLOC_N(size_t, rhs->dim);
 
   memcpy(shape, rhs->shape, rhs->dim * sizeof(size_t));
   memset(coords, 0, rhs->dim * sizeof(size_t));
@@ -314,14 +314,14 @@ LIST_STORAGE* create_from_dense_storage(const DENSE_STORAGE* rhs, dtype_t l_dtyp
 template <typename LDType, typename RDType>
 LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype) {
   // allocate and copy shape
-  size_t *shape = ALLOC_N(size_t, rhs->dim);
+  size_t *shape = NM_ALLOC_N(size_t, rhs->dim);
   shape[0] = rhs->shape[0]; shape[1] = rhs->shape[1];
 
   RDType* rhs_a    = reinterpret_cast<RDType*>(reinterpret_cast<YALE_STORAGE*>(rhs->src)->a);
   RDType R_ZERO    = rhs_a[ rhs->src->shape[0] ];
 
   // copy default value from the zero location in the Yale matrix
-  LDType* default_val = ALLOC_N(LDType, 1);
+  LDType* default_val = NM_ALLOC_N(LDType, 1);
   *default_val        = static_cast<LDType>(R_ZERO);
 
   LIST_STORAGE* lhs = nm_list_storage_create(l_dtype, shape, rhs->dim, default_val);
@@ -360,7 +360,7 @@ LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype)
         // Is there a nonzero diagonal item between the previously added item and the current one?
         if (rj > ri && add_diag) {
           // Allocate and copy insertion value
-          insert_val  = ALLOC_N(LDType, 1);
+          insert_val  = NM_ALLOC_N(LDType, 1);
           *insert_val = static_cast<LDType>(rhs_a[ri]);
 
           // Insert the item in the list at the appropriate location.
@@ -375,7 +375,7 @@ LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype)
         }
 
         // now allocate and add the current item
-        insert_val  = ALLOC_N(LDType, 1);
+        insert_val  = NM_ALLOC_N(LDType, 1);
         *insert_val = static_cast<LDType>(rhs_a[ija]);
 
         if (last_added)    	last_added = list::insert_after(last_added, j, insert_val);
@@ -387,7 +387,7 @@ LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype)
       if (add_diag) {
 
       	// still haven't added the diagonal.
-        insert_val         = ALLOC_N(LDType, 1);
+        insert_val         = NM_ALLOC_N(LDType, 1);
         *insert_val        = static_cast<LDType>(rhs_a[ri]);
 
         // insert the item in the list at the appropriate location
@@ -429,7 +429,7 @@ static bool cast_copy_contents_dense(LIST* lhs, const RDType* rhs, RDType* zero,
       	// is not zero
 
         // Create a copy of our value that we will insert in the list
-        LDType* insert_value = ALLOC_N(LDType, 1);
+        LDType* insert_value = NM_ALLOC_N(LDType, 1);
         *insert_value        = static_cast<LDType>(rhs[pos]);
 
         if (!lhs->first)    prev = list::insert(lhs, false, coords[dim-1-recursions], insert_value);
@@ -495,7 +495,7 @@ namespace yale_storage { // FIXME: Move to yale.cpp
     }
 
     // Copy shape for yale construction
-    size_t* shape = ALLOC_N(size_t, 2);
+    size_t* shape = NM_ALLOC_N(size_t, 2);
     shape[0] = rhs->shape[0];
     shape[1] = rhs->shape[1];
 
@@ -559,7 +559,7 @@ namespace yale_storage { // FIXME: Move to yale.cpp
 
     size_t ndnz = nm_list_storage_count_nd_elements(rhs);
     // Copy shape for yale construction
-    size_t* shape = ALLOC_N(size_t, 2);
+    size_t* shape = NM_ALLOC_N(size_t, 2);
     shape[0] = rhs->shape[0];
     shape[1] = rhs->shape[1];
 

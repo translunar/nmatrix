@@ -357,9 +357,9 @@ void Init_nmatrix() {
  * Slice constructor.
  */
 static SLICE* alloc_slice(size_t dim) {
-  SLICE* slice = ALLOC(SLICE);
-  slice->coords = ALLOC_N(size_t, dim);
-  slice->lengths = ALLOC_N(size_t, dim);
+  SLICE* slice = NM_ALLOC(SLICE);
+  slice->coords = NM_ALLOC_N(size_t, dim);
+  slice->lengths = NM_ALLOC_N(size_t, dim);
   return slice;
 }
 
@@ -378,7 +378,7 @@ static void free_slice(SLICE* slice) {
  * Allocator.
  */
 static VALUE nm_alloc(VALUE klass) {
-  NMATRIX* mat = ALLOC(NMATRIX);
+  NMATRIX* mat = NM_ALLOC(NMATRIX);
   mat->storage = NULL;
 
   // DO NOT MARK This STRUCT. It has no storage allocated, and no stype, so mark will do an invalid something.
@@ -792,7 +792,7 @@ static VALUE nm_complex_conjugate_bang(VALUE self) {
  * need to worry about deleting it.
  */
 NMATRIX* nm_create(nm::stype_t stype, STORAGE* storage) {
-  NMATRIX* mat = ALLOC(NMATRIX);
+  NMATRIX* mat = NM_ALLOC(NMATRIX);
 
   mat->stype   = stype;
   mat->storage = storage;
@@ -890,7 +890,7 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
   // :object matrices MUST be initialized.
   else if (stype == nm::DENSE_STORE && dtype == nm::RUBYOBJ) {
     // Pretend [nil] was passed for RUBYOBJ.
-    v          = ALLOC(VALUE);
+    v          = NM_ALLOC(VALUE);
     *(VALUE*)v = Qnil;
 
     v_size = 1;
@@ -920,8 +920,8 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
   // If we're not creating a dense, and an initial array was provided, use that and multi-slice-set
   // to set the contents of the matrix right now.
   if (stype != nm::DENSE_STORE && v_size > 1) {
-    VALUE* slice_argv = ALLOCA_N(VALUE, dim);
-    size_t* tmp_shape = ALLOC_N(size_t, dim);
+    VALUE* slice_argv = NM_ALLOCA_N(VALUE, dim);
+    size_t* tmp_shape = NM_ALLOC_N(size_t, dim);
     for (size_t m = 0; m < dim; ++m) {
       slice_argv[m] = ID2SYM(nm_rb_mul); // :* -- full range
       tmp_shape[m]  = shape[m];
@@ -1044,7 +1044,7 @@ static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
     	 */
       if (dtype == nm::RUBYOBJ) {
       	// Pretend [nil] was passed for RUBYOBJ.
-      	init_val = ALLOC(VALUE);
+      	init_val = NM_ALLOC(VALUE);
         *(VALUE*)init_val = Qnil;
 
         init_val_len = 1;
@@ -1053,7 +1053,7 @@ static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
       	init_val = NULL;
       }
     } else if (stype == nm::LIST_STORE) {
-    	init_val = ALLOC_N(char, DTYPE_SIZES[dtype]);
+    	init_val = NM_ALLOC_N(char, DTYPE_SIZES[dtype]);
       std::memset(init_val, 0, DTYPE_SIZES[dtype]);
     }
   }
@@ -1087,7 +1087,7 @@ static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
  * Helper for nm_cast which uses the C types instead of the Ruby objects. Called by nm_cast.
  */
 NMATRIX* nm_cast_with_ctype_args(NMATRIX* self, nm::stype_t new_stype, nm::dtype_t new_dtype, void* init_ptr) {
-  NMATRIX* lhs = ALLOC(NMATRIX);
+  NMATRIX* lhs = NM_ALLOC(NMATRIX);
   lhs->stype   = new_stype;
 
   // Copy the storage
@@ -1116,7 +1116,7 @@ VALUE nm_cast(VALUE self, VALUE new_stype_symbol, VALUE new_dtype_symbol, VALUE 
 
   UnwrapNMatrix( vself, rhs );
 
-  void* init_ptr = ALLOCA_N(char, DTYPE_SIZES[new_dtype]);
+  void* init_ptr = NM_ALLOCA_N(char, DTYPE_SIZES[new_dtype]);
   rubyval_to_cval(init, new_dtype, init_ptr);
 
   return Data_Wrap_Struct(CLASS_OF(vself), nm_mark, nm_delete, nm_cast_with_ctype_args(rhs, new_stype, new_dtype, init_ptr));
@@ -1433,7 +1433,7 @@ static VALUE nm_read(int argc, VALUE* argv, VALUE self) {
   //nm::itype_t itype = static_cast<nm::itype_t>(it);
 
   // READ NEXT FEW 64-BIT BLOCKS
-  size_t* shape = ALLOC_N(size_t, dim);
+  size_t* shape = NM_ALLOC_N(size_t, dim);
   read_padded_shape(f, dim, shape);
 
   STORAGE* s;
@@ -1636,7 +1636,7 @@ static VALUE nm_shape(VALUE self) {
   STORAGE* s   = NM_STORAGE(self);
 
   // Copy elements into a VALUE array and then use those to create a Ruby array with rb_ary_new4.
-  VALUE* shape = ALLOCA_N(VALUE, s->dim);
+  VALUE* shape = NM_ALLOCA_N(VALUE, s->dim);
   for (size_t index = 0; index < s->dim; ++index)
     shape[index] = INT2FIX(s->shape[index]);
 
@@ -1654,7 +1654,7 @@ static VALUE nm_offset(VALUE self) {
   STORAGE* s   = NM_STORAGE(self);
 
   // Copy elements into a VALUE array and then use those to create a Ruby array with rb_ary_new4.
-  VALUE* offset = ALLOCA_N(VALUE, s->dim);
+  VALUE* offset = NM_ALLOCA_N(VALUE, s->dim);
   for (size_t index = 0; index < s->dim; ++index)
     offset[index] = INT2FIX(s->offset[index]);
 
@@ -1674,7 +1674,7 @@ static VALUE nm_supershape(VALUE self) {
   if (s->src == s) return nm_shape(self); // easy case (not a slice)
   else s = s->src;
 
-  VALUE* shape = ALLOCA_N(VALUE, s->dim);
+  VALUE* shape = NM_ALLOCA_N(VALUE, s->dim);
   for (size_t index = 0; index < s->dim; ++index)
     shape[index] = INT2FIX(s->shape[index]);
 
@@ -1750,7 +1750,7 @@ static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(const STORAGE*
 
     } else {
 
-      NMATRIX* mat  = ALLOC(NMATRIX);
+      NMATRIX* mat  = NM_ALLOC(NMATRIX);
       mat->stype    = NM_STYPE(self);
       mat->storage  = (STORAGE*)((*slice_func)( s, slice ));
 
@@ -1987,7 +1987,7 @@ nm::dtype_t nm_dtype_min_fixnum(int64_t v) {
  * Helper for nm_dtype_min(), handling rationals.
  */
 nm::dtype_t nm_dtype_min_rational(VALUE vv) {
-  nm::Rational128* v = ALLOCA_N(nm::Rational128, 1);
+  nm::Rational128* v = NM_ALLOCA_N(nm::Rational128, 1);
   rubyval_to_cval(vv, nm::RATIONAL128, v);
 
   int64_t i = std::max(std::abs(v->n), v->d);
@@ -2229,7 +2229,7 @@ static void* interpret_initial_value(VALUE arg, nm::dtype_t dtype) {
 
   if (TYPE(arg) == T_ARRAY) {
   	// Array
-    init_val = ALLOC_N(char, DTYPE_SIZES[dtype] * RARRAY_LEN(arg));
+    init_val = NM_ALLOC_N(char, DTYPE_SIZES[dtype] * RARRAY_LEN(arg));
     NM_CHECK_ALLOC(init_val);
     for (index = 0; index < RARRAY_LEN(arg); ++index) {
     	rubyval_to_cval(RARRAY_PTR(arg)[index], dtype, (char*)init_val + (index * DTYPE_SIZES[dtype]));
@@ -2254,7 +2254,7 @@ static size_t* interpret_shape(VALUE arg, size_t* dim) {
 
   if (TYPE(arg) == T_ARRAY) {
     *dim = RARRAY_LEN(arg);
-    shape = ALLOC_N(size_t, *dim);
+    shape = NM_ALLOC_N(size_t, *dim);
 
     for (size_t index = 0; index < *dim; ++index) {
       shape[index] = FIX2UINT( RARRAY_PTR(arg)[index] );
@@ -2262,7 +2262,7 @@ static size_t* interpret_shape(VALUE arg, size_t* dim) {
 
   } else if (FIXNUM_P(arg)) {
     *dim = 2;
-    shape = ALLOC_N(size_t, *dim);
+    shape = NM_ALLOC_N(size_t, *dim);
 
     shape[0] = FIX2UINT(arg);
     shape[1] = FIX2UINT(arg);
@@ -2322,7 +2322,7 @@ static VALUE matrix_multiply(NMATRIX* left, NMATRIX* right) {
   // Make sure both of our matrices are of the correct type.
   STORAGE_PAIR casted = binary_storage_cast_alloc(left, right);
 
-  size_t*  resulting_shape   = ALLOC_N(size_t, 2);
+  size_t*  resulting_shape   = NM_ALLOC_N(size_t, 2);
   resulting_shape[0] = left->storage->shape[0];
   resulting_shape[1] = right->storage->shape[1];
 
@@ -2370,7 +2370,7 @@ static VALUE nm_det_exact(VALUE self) {
   if (NM_DIM(vself) != 2 || NM_SHAPE0(vself) != NM_SHAPE1(vself)) return Qnil;
 
   // Calculate the determinant and then assign it to the return value
-  void* result = ALLOCA_N(char, DTYPE_SIZES[NM_DTYPE(vself)]);
+  void* result = NM_ALLOCA_N(char, DTYPE_SIZES[NM_DTYPE(vself)]);
   nm_math_det_exact(NM_SHAPE0(vself), NM_STORAGE_DENSE(vself)->elements, NM_SHAPE0(vself), NM_DTYPE(vself), result);
 
   return rubyobj_from_cval(result, NM_DTYPE(vself)).rval;
@@ -2399,18 +2399,18 @@ VALUE rb_nmatrix_dense_create(nm::dtype_t dtype, size_t* shape, size_t dim, void
   // Do not allow a dim of 1. Treat it as a column or row matrix.
   if (dim == 1) {
     nm_dim				= 2;
-    shape_copy		= ALLOC_N(size_t, nm_dim);
+    shape_copy		= NM_ALLOC_N(size_t, nm_dim);
     shape_copy[0]	= shape[0];
     shape_copy[1]	= 1;
 
   } else {
     nm_dim			= dim;
-    shape_copy	= ALLOC_N(size_t, nm_dim);
+    shape_copy	= NM_ALLOC_N(size_t, nm_dim);
     memcpy(shape_copy, shape, sizeof(size_t)*nm_dim);
   }
 
   // Copy elements
-  void* elements_copy = ALLOC_N(char, DTYPE_SIZES[dtype]*length);
+  void* elements_copy = NM_ALLOC_N(char, DTYPE_SIZES[dtype]*length);
   memcpy(elements_copy, elements, DTYPE_SIZES[dtype]*length);
 
   // allocate and create the matrix and its storage

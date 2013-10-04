@@ -53,6 +53,8 @@
 	#endif
 #endif
 
+#include "nm_memory.h"
+
 /*
  * Macros
  */

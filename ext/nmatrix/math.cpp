@@ -503,8 +503,8 @@ static VALUE nm_cblas_rotg(VALUE self, VALUE ab) {
     return Qnil;
 
   } else {
-    void *pC = ALLOCA_N(char, DTYPE_SIZES[dtype]),
-         *pS = ALLOCA_N(char, DTYPE_SIZES[dtype]);
+    void *pC = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]),
+         *pS = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
 
     // extract A and B from the NVector (first two elements)
     void* pA = NM_STORAGE_DENSE(ab)->elements;
@@ -575,18 +575,18 @@ static VALUE nm_cblas_rot(VALUE self, VALUE n, VALUE x, VALUE incx, VALUE y, VAL
 
     // We need to ensure the cosine and sine arguments are the correct dtype -- which may differ from the actual dtype.
     if (dtype == nm::COMPLEX64) {
-      pC = ALLOCA_N(float,1);
-      pS = ALLOCA_N(float,1);
+      pC = NM_ALLOCA_N(float,1);
+      pS = NM_ALLOCA_N(float,1);
       rubyval_to_cval(c, nm::FLOAT32, pC);
       rubyval_to_cval(s, nm::FLOAT32, pS);
     } else if (dtype == nm::COMPLEX128) {
-      pC = ALLOCA_N(double,1);
-      pS = ALLOCA_N(double,1);
+      pC = NM_ALLOCA_N(double,1);
+      pS = NM_ALLOCA_N(double,1);
       rubyval_to_cval(c, nm::FLOAT64, pC);
       rubyval_to_cval(s, nm::FLOAT64, pS);
     } else {
-      pC = ALLOCA_N(char, DTYPE_SIZES[dtype]);
-      pS = ALLOCA_N(char, DTYPE_SIZES[dtype]);
+      pC = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
+      pS = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
       rubyval_to_cval(c, dtype, pC);
       rubyval_to_cval(s, dtype, pS);
     }
@@ -646,7 +646,7 @@ static VALUE nm_cblas_nrm2(VALUE self, VALUE n, VALUE x, VALUE incx) {
     if      (dtype == nm::COMPLEX64)  rdtype = nm::FLOAT32;
     else if (dtype == nm::COMPLEX128) rdtype = nm::FLOAT64;
 
-    void *Result = ALLOCA_N(char, DTYPE_SIZES[rdtype]);
+    void *Result = NM_ALLOCA_N(char, DTYPE_SIZES[rdtype]);
 
     ttable[dtype](FIX2INT(n), NM_STORAGE_DENSE(x)->elements, FIX2INT(incx), Result);
 
@@ -698,7 +698,7 @@ static VALUE nm_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx) {
   if      (dtype == nm::COMPLEX64)  rdtype = nm::FLOAT32;
   else if (dtype == nm::COMPLEX128) rdtype = nm::FLOAT64;
 
-  void *Result = ALLOCA_N(char, DTYPE_SIZES[rdtype]);
+  void *Result = NM_ALLOCA_N(char, DTYPE_SIZES[rdtype]);
 
   ttable[dtype](FIX2INT(n), NM_STORAGE_DENSE(x)->elements, FIX2INT(incx), Result);
 
@@ -743,8 +743,8 @@ static VALUE nm_cblas_gemm(VALUE self,
 
   nm::dtype_t dtype = NM_DTYPE(a);
 
-  void *pAlpha = ALLOCA_N(char, DTYPE_SIZES[dtype]),
-       *pBeta  = ALLOCA_N(char, DTYPE_SIZES[dtype]);
+  void *pAlpha = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]),
+       *pBeta  = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
   rubyval_to_cval(alpha, dtype, pAlpha);
   rubyval_to_cval(beta, dtype, pBeta);
 
@@ -788,8 +788,8 @@ static VALUE nm_cblas_gemv(VALUE self,
 
   nm::dtype_t dtype = NM_DTYPE(a);
 
-  void *pAlpha = ALLOCA_N(char, DTYPE_SIZES[dtype]),
-       *pBeta  = ALLOCA_N(char, DTYPE_SIZES[dtype]);
+  void *pAlpha = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]),
+       *pBeta  = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
   rubyval_to_cval(alpha, dtype, pAlpha);
   rubyval_to_cval(beta, dtype, pBeta);
 
@@ -825,7 +825,7 @@ static VALUE nm_cblas_trsm(VALUE self,
   if (!ttable[dtype]) {
     rb_raise(nm_eDataTypeError, "this matrix operation undefined for integer matrices");
   } else {
-    void *pAlpha = ALLOCA_N(char, DTYPE_SIZES[dtype]);
+    void *pAlpha = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
     rubyval_to_cval(alpha, dtype, pAlpha);
 
     ttable[dtype](blas_order_sym(order), blas_side_sym(side), blas_uplo_sym(uplo), blas_transpose_sym(trans_a), blas_diag_sym(diag), FIX2INT(m), FIX2INT(n), pAlpha, NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), NM_STORAGE_DENSE(b)->elements, FIX2INT(ldb));
@@ -865,7 +865,7 @@ static VALUE nm_cblas_trmm(VALUE self,
   if (!ttable[dtype]) {
     rb_raise(nm_eDataTypeError, "this matrix operation not yet defined for non-BLAS dtypes");
   } else {
-    void *pAlpha = ALLOCA_N(char, DTYPE_SIZES[dtype]);
+    void *pAlpha = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
     rubyval_to_cval(alpha, dtype, pAlpha);
 
     ttable[dtype](blas_order_sym(order), blas_side_sym(side), blas_uplo_sym(uplo), blas_transpose_sym(trans_a), blas_diag_sym(diag), FIX2INT(m), FIX2INT(n), pAlpha, NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), NM_STORAGE_DENSE(b)->elements, FIX2INT(ldb));
@@ -903,8 +903,8 @@ static VALUE nm_cblas_syrk(VALUE self,
   if (!ttable[dtype]) {
     rb_raise(nm_eDataTypeError, "this matrix operation undefined for integer matrices");
   } else {
-    void *pAlpha = ALLOCA_N(char, DTYPE_SIZES[dtype]),
-         *pBeta = ALLOCA_N(char, DTYPE_SIZES[dtype]);
+    void *pAlpha = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]),
+         *pBeta = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
     rubyval_to_cval(alpha, dtype, pAlpha);
     rubyval_to_cval(beta, dtype, pBeta);
 
@@ -984,12 +984,12 @@ static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE
 
     // only need rwork for complex matrices
     int rwork_size  = (dtype == nm::COMPLEX64 || dtype == nm::COMPLEX128) ? 5 * min_mn : 0;
-    void* rwork     = rwork_size > 0 ? ALLOCA_N(char, DTYPE_SIZES[dtype] * rwork_size) : NULL;
+    void* rwork     = rwork_size > 0 ? NM_ALLOCA_N(char, DTYPE_SIZES[dtype] * rwork_size) : NULL;
     int work_size   = FIX2INT(lwork);
 
     // ignore user argument for lwork if it's too small.
     work_size       = NM_MAX((dtype == nm::COMPLEX64 || dtype == nm::COMPLEX128 ? 2 * min_mn + max_mn : NM_MAX(3*min_mn + max_mn, 5*min_mn)), work_size);
-    void* work      = ALLOCA_N(char, DTYPE_SIZES[dtype] * work_size);
+    void* work      = NM_ALLOCA_N(char, DTYPE_SIZES[dtype] * work_size);
 
     int info = gesvd_table[dtype](JOBU, JOBVT, M, N, NM_STORAGE_DENSE(a)->elements, FIX2INT(lda),
       NM_STORAGE_DENSE(s)->elements, NM_STORAGE_DENSE(u)->elements, FIX2INT(ldu), NM_STORAGE_DENSE(vt)->elements, FIX2INT(ldvt),
@@ -1046,7 +1046,7 @@ static VALUE nm_lapack_gesdd(VALUE self, VALUE jobz, VALUE m, VALUE n, VALUE a, 
     int work_size = FIX2INT(lwork); // Make sure we allocate enough work, regardless of the user request.
     if (dtype == nm::COMPLEX64 || dtype == nm::COMPLEX128) {
       int rwork_size = min_mn * (JOBZ == 'N' ? 5 : NM_MAX(5*min_mn + 7, 2*max_mn + 2*min_mn + 1));
-      rwork = ALLOCA_N(char, DTYPE_SIZES[dtype] * rwork_size);
+      rwork = NM_ALLOCA_N(char, DTYPE_SIZES[dtype] * rwork_size);
 
       if (JOBZ == 'N')      work_size = NM_MAX(work_size, 3*min_mn + NM_MAX(max_mn, 6*min_mn));
       else if (JOBZ == 'O') work_size = NM_MAX(work_size, 3*min_mn*min_mn + NM_MAX(max_mn, 5*min_mn*min_mn + 4*min_mn));
@@ -1056,8 +1056,8 @@ static VALUE nm_lapack_gesdd(VALUE self, VALUE jobz, VALUE m, VALUE n, VALUE a, 
       else if (JOBZ == 'O') work_size = NM_MAX(work_size, 2*min_mn*min_mn + max_mn + 2*min_mn);
       else                  work_size = NM_MAX(work_size, min_mn*min_mn + max_mn + 2*min_mn);
     }
-    void* work  = ALLOCA_N(char, DTYPE_SIZES[dtype] * work_size);
-    int* iwork  = ALLOCA_N(int, 8*min_mn);
+    void* work  = NM_ALLOCA_N(char, DTYPE_SIZES[dtype] * work_size);
+    int* iwork  = NM_ALLOCA_N(int, 8*min_mn);
 
     int info = gesdd_table[dtype](JOBZ, M, N, NM_STORAGE_DENSE(a)->elements, FIX2INT(lda),
       NM_STORAGE_DENSE(s)->elements, NM_STORAGE_DENSE(u)->elements, FIX2INT(ldu), NM_STORAGE_DENSE(vt)->elements, FIX2INT(ldvt),
@@ -1114,7 +1114,7 @@ static VALUE nm_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_right,
 
     // only need rwork for complex matrices (wi == Qnil for complex)
     int rwork_size  = dtype == nm::COMPLEX64 || dtype == nm::COMPLEX128 ? N * DTYPE_SIZES[dtype] : 0; // 2*N*floattype for complex only, otherwise 0
-    void* rwork     = rwork_size > 0 ? ALLOCA_N(char, rwork_size) : NULL;
+    void* rwork     = rwork_size > 0 ? NM_ALLOCA_N(char, rwork_size) : NULL;
     int work_size   = FIX2INT(lwork);
     void* work;
 
@@ -1123,7 +1123,7 @@ static VALUE nm_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_right,
     // if work size is 0 or -1, query.
     if (work_size <= 0) {
       work_size = -1;
-      work = ALLOC_N(char, DTYPE_SIZES[dtype]); //2*N * DTYPE_SIZES[dtype]);
+      work = NM_ALLOC_N(char, DTYPE_SIZES[dtype]); //2*N * DTYPE_SIZES[dtype]);
       info = geev_table[dtype](JOBVL, JOBVR, N, A, FIX2INT(lda), WR, WI, VL, FIX2INT(ldvl), VR, FIX2INT(ldvr), work, work_size, rwork);
       work_size = (int)(dtype == nm::COMPLEX64 || dtype == nm::FLOAT32 ? reinterpret_cast<float*>(work)[0] : reinterpret_cast<double*>(work)[0]);
       // line above is basically: work_size = (int)(work[0]); // now have new work_size
@@ -1140,7 +1140,7 @@ static VALUE nm_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_right,
     }
 
     // Allocate work array for actual run
-    work = ALLOCA_N(char, work_size * DTYPE_SIZES[dtype]);
+    work = NM_ALLOCA_N(char, work_size * DTYPE_SIZES[dtype]);
 
     // Perform the actual calculation.
     info = geev_table[dtype](JOBVL, JOBVR, N, A, FIX2INT(lda), WR, WI, VL, FIX2INT(ldvl), VR, FIX2INT(ldvr), work, work_size, rwork);
@@ -1158,7 +1158,7 @@ static VALUE nm_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_right,
 static VALUE nm_clapack_scal(VALUE self, VALUE n, VALUE scale, VALUE vector, VALUE incx) {
   nm::dtype_t dtype = NM_DTYPE(vector);
 
-  void* da      = ALLOCA_N(char, DTYPE_SIZES[dtype]);
+  void* da      = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
   rubyval_to_cval(scale, dtype, da);
 
   NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::clapack_scal, void, const int n, const void* da, void* dx, const int incx);
@@ -1251,7 +1251,7 @@ static VALUE nm_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a
 
   // Allocate the pivot index array, which is of size MIN(M, N).
   size_t ipiv_size = std::min(M,N);
-  int* ipiv = ALLOCA_N(int, ipiv_size);
+  int* ipiv = NM_ALLOCA_N(int, ipiv_size);
 
   if (!ttable[NM_DTYPE(a)]) {
     rb_raise(nm_eDataTypeError, "this matrix operation undefined for integer matrices");
@@ -1343,7 +1343,7 @@ static VALUE nm_clapack_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VAL
   if (TYPE(ipiv) != T_ARRAY) {
     rb_raise(rb_eArgError, "ipiv must be of type Array");
   } else {
-    ipiv_ = ALLOCA_N(int, RARRAY_LEN(ipiv));
+    ipiv_ = NM_ALLOCA_N(int, RARRAY_LEN(ipiv));
     for (int index = 0; index < RARRAY_LEN(ipiv); ++index) {
       ipiv_[index] = FIX2INT( RARRAY_PTR(ipiv)[index] );
     }
@@ -1437,7 +1437,7 @@ static VALUE nm_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE l
   if (TYPE(ipiv) != T_ARRAY) {
     rb_raise(rb_eArgError, "ipiv must be of type Array");
   } else {
-    ipiv_ = ALLOCA_N(int, RARRAY_LEN(ipiv));
+    ipiv_ = NM_ALLOCA_N(int, RARRAY_LEN(ipiv));
     for (int index = 0; index < RARRAY_LEN(ipiv); ++index) {
       ipiv_[index] = FIX2INT( RARRAY_PTR(ipiv)[index] );
     }
@@ -1534,7 +1534,7 @@ static VALUE nm_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1,
   if (TYPE(ipiv) != T_ARRAY) {
     rb_raise(rb_eArgError, "ipiv must be of type Array");
   } else {
-    ipiv_ = ALLOCA_N(int, RARRAY_LEN(ipiv));
+    ipiv_ = NM_ALLOCA_N(int, RARRAY_LEN(ipiv));
     for (int index = 0; index < RARRAY_LEN(ipiv); ++index) {
       ipiv_[index] = FIX2INT( RARRAY_PTR(ipiv)[index] );
     }

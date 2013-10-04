@@ -367,7 +367,7 @@ public:
 
     } else if (TYPE(right) == T_ARRAY) {
       v_size = RARRAY_LEN(right);
-      v      = ALLOC_N(D, v_size);
+      v      = NM_ALLOC_N(D, v_size);
       for (size_t m = 0; m < v_size; ++m) {
         rubyval_to_cval(rb_ary_entry(right, m), s->dtype, &(v[m]));
       }
@@ -502,11 +502,11 @@ public:
    * directly into a YaleStorage<D> class.
    */
   YALE_STORAGE* alloc_ref(SLICE* slice) {
-    YALE_STORAGE* ns  = ALLOC( YALE_STORAGE );
+    YALE_STORAGE* ns  = NM_ALLOC( YALE_STORAGE );
 
     ns->dim           = s->dim;
-    ns->offset        = ALLOC_N(size_t, ns->dim);
-    ns->shape         = ALLOC_N(size_t, ns->dim);
+    ns->offset        = NM_ALLOC_N(size_t, ns->dim);
+    ns->shape         = NM_ALLOC_N(size_t, ns->dim);
 
     for (size_t d = 0; d < ns->dim; ++d) {
       ns->offset[d]   = slice->coords[d]  + offset(d);
@@ -531,12 +531,12 @@ public:
    * Allocates and initializes the basic struct (but not IJA or A vectors).
    */
   static YALE_STORAGE* alloc(size_t* shape, size_t dim = 2) {
-    YALE_STORAGE* s = ALLOC( YALE_STORAGE );
+    YALE_STORAGE* s = NM_ALLOC( YALE_STORAGE );
 
     s->ndnz         = 0;
     s->dtype        = dtype();
     s->shape        = shape;
-    s->offset       = ALLOC_N(size_t, dim);
+    s->offset       = NM_ALLOC_N(size_t, dim);
     for (size_t d = 0; d < dim; ++d)
       s->offset[d]  = 0;
     s->dim          = dim;
@@ -565,8 +565,8 @@ public:
       s->capacity = reserve;
     }
 
-    s->ija = ALLOC_N( size_t, s->capacity );
-    s->a   = ALLOC_N( D,      s->capacity );
+    s->ija = NM_ALLOC_N( size_t, s->capacity );
+    s->a   = NM_ALLOC_N( D,      s->capacity );
 
     return s;
   }
@@ -617,14 +617,14 @@ public:
    template <typename E>
    YALE_STORAGE* alloc_basic_copy(size_t new_capacity, size_t new_ndnz) const {
      nm::dtype_t new_dtype = nm::ctype_to_dtype_enum<E>::value_type;
-     YALE_STORAGE* lhs     = ALLOC( YALE_STORAGE );
+     YALE_STORAGE* lhs     = NM_ALLOC( YALE_STORAGE );
      lhs->dim              = s->dim;
-     lhs->shape            = ALLOC_N( size_t, lhs->dim );
+     lhs->shape            = NM_ALLOC_N( size_t, lhs->dim );
 
      lhs->shape[0]         = shape(0);
      lhs->shape[1]         = shape(1);
 
-     lhs->offset           = ALLOC_N( size_t, lhs->dim );
+     lhs->offset           = NM_ALLOC_N( size_t, lhs->dim );
 
      lhs->offset[0]        = 0;
      lhs->offset[1]        = 0;
@@ -632,8 +632,8 @@ public:
      lhs->capacity         = new_capacity;
      lhs->dtype            = new_dtype;
      lhs->ndnz             = new_ndnz;
-     lhs->ija              = ALLOC_N( size_t, new_capacity );
-     lhs->a                = ALLOC_N( E,      new_capacity );
+     lhs->ija              = NM_ALLOC_N( size_t, new_capacity );
+     lhs->a                = NM_ALLOC_N( E,      new_capacity );
      lhs->src              = lhs;
      lhs->count            = 1;
 
@@ -707,7 +707,7 @@ public:
 
     YALE_STORAGE* lhs;
     if (slice) {
-      size_t* xshape    = ALLOC_N(size_t, 2);
+      size_t* xshape    = NM_ALLOC_N(size_t, 2);
       xshape[0]         = shape(0);
       xshape[1]         = shape(1);
       size_t ndnz       = count_copy_ndnz();
@@ -753,7 +753,7 @@ public:
       rb_raise(rb_eNotImpError, "please make a copy before transposing");
     } else {
       // Copy the structure and setup the IJA structure.
-      size_t* xshape    = ALLOC_N(size_t, 2);
+      size_t* xshape    = NM_ALLOC_N(size_t, 2);
       xshape[0]         = shape(1);
       xshape[1]         = shape(0);
 
@@ -824,7 +824,7 @@ public:
            t_ndnz   = t.count_copy_ndnz();
     size_t reserve  = shape(0) + std::max(s_ndnz, t_ndnz) + 1;
 
-    size_t* xshape  = ALLOC_N(size_t, 2);
+    size_t* xshape  = NM_ALLOC_N(size_t, 2);
     xshape[0]       = shape(0);
     xshape[1]       = shape(1);
 
@@ -914,8 +914,8 @@ protected:
       rb_raise(rb_eStandardError, "resize caused by insertion of size %d (on top of current size %lu) would have caused yale matrix size to exceed its maximum (%lu)", p.total_change, sz, real_max_size());
     }
 
-    size_t* new_ija     = ALLOC_N( size_t,new_cap );
-    D* new_a            = ALLOC_N( D,     new_cap );
+    size_t* new_ija     = NM_ALLOC_N( size_t,new_cap );
+    D* new_a            = NM_ALLOC_N( D,     new_cap );
 
     // Copy unchanged row pointers first.
     size_t m = 0;
@@ -1004,8 +1004,8 @@ protected:
 
     if (new_cap < sz + n) new_cap = sz + n;
 
-    size_t* new_ija     = ALLOC_N( size_t,new_cap );
-    D* new_a            = ALLOC_N( D,     new_cap );
+    size_t* new_ija     = NM_ALLOC_N( size_t,new_cap );
+    D* new_a            = NM_ALLOC_N( D,     new_cap );
 
     // Copy unchanged row pointers first.
     for (size_t m = 0; m <= real_i; ++m) {
