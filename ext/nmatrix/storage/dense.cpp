@@ -160,7 +160,7 @@ namespace nm { namespace dense_storage {
       if (nm_and_free.second) {
         nm_delete(nm_and_free.first);
       }
-    } else xfree(v);
+    } else NM_FREE(v);
   }
 
 }} // end of namespace nm::dense_storage
@@ -237,7 +237,7 @@ DENSE_STORAGE* nm_dense_storage_create(nm::dtype_t dtype, size_t* shape, size_t 
       }
 
       // Get rid of the init_val.
-      xfree(elements);
+      NM_FREE(elements);
     }
   }
 
@@ -253,13 +253,13 @@ void nm_dense_storage_delete(STORAGE* s) {
   if (s) {
     DENSE_STORAGE* storage = (DENSE_STORAGE*)s;
     if(storage->count-- == 1) {
-      xfree(storage->shape);
-      xfree(storage->offset);
-      xfree(storage->stride);
+      NM_FREE(storage->shape);
+      NM_FREE(storage->offset);
+      NM_FREE(storage->stride);
       if (storage->elements != NULL) {// happens with dummy objects
-        xfree(storage->elements);
+        NM_FREE(storage->elements);
       }
-      xfree(storage);
+      NM_FREE(storage);
     }
   }
 }
@@ -272,9 +272,9 @@ void nm_dense_storage_delete_ref(STORAGE* s) {
   if (s) {
     DENSE_STORAGE* storage = (DENSE_STORAGE*)s;
     nm_dense_storage_delete( reinterpret_cast<STORAGE*>(storage->src) );
-    xfree(storage->shape);
-    xfree(storage->offset);
-    xfree(storage);
+    NM_FREE(storage->shape);
+    NM_FREE(storage->offset);
+    NM_FREE(storage);
   }
 }
 

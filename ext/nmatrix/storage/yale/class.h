@@ -390,7 +390,7 @@ public:
       if (nm_and_free.second) {
         nm_delete(nm_and_free.first);
       }
-    } else xfree(v);
+    } else NM_FREE(v);
   }
 
 
@@ -498,7 +498,7 @@ public:
    * Allocate a reference pointing to s. Note that even if +this+ is a reference,
    * we can create a reference within it.
    *
-   * Note: Make sure you xfree() the result of this call. You can't just cast it
+   * Note: Make sure you NM_FREE() the result of this call. You can't just cast it
    * directly into a YaleStorage<D> class.
    */
   YALE_STORAGE* alloc_ref(SLICE* slice) {
@@ -642,7 +642,7 @@ public:
 
 
   /*
-   * Make a full matrix structure copy (entries remain uninitialized). Remember to xfree()!
+   * Make a full matrix structure copy (entries remain uninitialized). Remember to NM_FREE()!
    */
   template <typename E>
   YALE_STORAGE* alloc_struct_copy(size_t new_capacity) const {
@@ -697,7 +697,7 @@ public:
 
 
   /*
-   * Allocate a casted copy of this matrix/reference. Remember to xfree() the result!
+   * Allocate a casted copy of this matrix/reference. Remember to NM_FREE() the result!
    *
    * If Yield is true, E must be nm::RubyObject, and it will call an rb_yield upon the stored value.
    */
@@ -742,7 +742,7 @@ public:
    * Allocate a transposed copy of the matrix
    */
   /*
-   * Allocate a casted copy of this matrix/reference. Remember to xfree() the result!
+   * Allocate a casted copy of this matrix/reference. Remember to NM_FREE() the result!
    *
    * If Yield is true, E must be nm::RubyObject, and it will call an rb_yield upon the stored value.
    */
@@ -910,7 +910,7 @@ protected:
     size_t new_cap = sz + p.total_change;
 
     if (new_cap > real_max_size()) {
-      xfree(v);
+      NM_FREE(v);
       rb_raise(rb_eStandardError, "resize caused by insertion of size %d (on top of current size %lu) would have caused yale matrix size to exceed its maximum (%lu)", p.total_change, sz, real_max_size());
     }
 
@@ -977,8 +977,8 @@ protected:
 
     s->capacity = new_cap;
 
-    xfree(s->ija);
-    xfree(s->a);
+    NM_FREE(s->ija);
+    NM_FREE(s->a);
 
     s->ija      = new_ija;
     s->a        = reinterpret_cast<void*>(new_a);
@@ -1037,8 +1037,8 @@ protected:
 
     s->capacity = new_cap;
 
-    xfree(s->ija);
-    xfree(s->a);
+    NM_FREE(s->ija);
+    NM_FREE(s->a);
 
     s->ija      = new_ija;
     s->a        = reinterpret_cast<void*>(new_a);

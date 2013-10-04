@@ -223,7 +223,7 @@ static VALUE nm_rbstring_matlab_repack(VALUE self, VALUE str, VALUE from, VALUE 
 
   // Encode as 8-bit ASCII with a length -- don't want to hiccup on \0
   VALUE result = rb_str_new(repacked_data, repacked_data_length);
-  xfree(repacked_data); // Don't forget to free what we allocated!
+  NM_FREE(repacked_data); // Don't forget to free what we allocated!
 
   return result;
 }

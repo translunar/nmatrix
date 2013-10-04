@@ -77,18 +77,18 @@ void del(LIST* list, size_t recursions) {
 
     if (recursions == 0) {
       //fprintf(stderr, "    free_val: %p\n", curr->val);
-      xfree(curr->val);
+      NM_FREE(curr->val);
       
     } else {
       //fprintf(stderr, "    free_list: %p\n", list);
       del((LIST*)curr->val, recursions - 1);
     }
 
-    xfree(curr);
+    NM_FREE(curr);
     curr = next;
   }
   //fprintf(stderr, "    free_list: %p\n", list);
-  xfree(list);
+  NM_FREE(list);
 }
 
 /*
@@ -187,11 +187,11 @@ NODE* insert(LIST* list, bool replace, size_t key, void* val) {
   if (ins->key == key) {
     // key already exists
     if (replace) {
-      xfree(ins->val);
+      NM_FREE(ins->val);
       ins->val = val;
       
     } else {
-    	xfree(val);
+    	NM_FREE(val);
     }
     
     return ins;
@@ -231,7 +231,7 @@ NODE* replace_insert_after(NODE* node, size_t key, void* val, bool copy, size_t 
     // Should we copy into the current one or free and insert?
     if (copy) memcpy(node->next->val, val, copy_size);
     else {
-      xfree(node->next->val);
+      NM_FREE(node->next->val);
       node->next->val = val;
     }
 
@@ -272,7 +272,7 @@ void* remove_by_node(LIST* list, NODE* prev, NODE* rm) {
   else        prev->next  = rm->next;
 
   void* val   = rm->val;
-  xfree(rm);
+  NM_FREE(rm);
 
   return val;
 }
@@ -296,7 +296,7 @@ void* remove_by_key(LIST* list, size_t key) {
     rm  = list->first;
     
     list->first = rm->next;
-    xfree(rm);
+    NM_FREE(rm);
     
     return val;
   }
@@ -313,7 +313,7 @@ void* remove_by_key(LIST* list, size_t key) {
 
     // get the value and free the memory for the node
     val = rm->val;
-    xfree(rm);
+    NM_FREE(rm);
 
     return val;
   }
@@ -348,7 +348,7 @@ bool remove_recursive(LIST* list, const size_t* coords, const size_t* offsets, c
 
       if (remove_parent) { // now empty -- so remove the sub-list
 //        std::cerr << r << ": removing parent list at " << n->key << std::endl;
-        xfree(remove_by_node(list, prev, n));
+        NM_FREE(remove_by_node(list, prev, n));
 
         if (prev) n  = prev->next && node_is_within_slice(prev->next, coords[r] + offsets[r], lengths[r]) ? prev->next : NULL;
         else      n  = node_is_within_slice(list->first, coords[r] + offsets[r], lengths[r]) ? list->first : NULL;
@@ -367,7 +367,7 @@ bool remove_recursive(LIST* list, const size_t* coords, const size_t* offsets, c
 
     while (n) {
 //      std::cerr << r << ": removing node at " << n->key << std::endl;
-      xfree(remove_by_node(list, prev, n));
+      NM_FREE(remove_by_node(list, prev, n));
 
       if (prev) n  = prev->next && node_is_within_slice(prev->next, coords[r] + offsets[r], lengths[r]) ? prev->next : NULL;
       else      n  = node_is_within_slice(list->first, coords[r] + offsets[r], lengths[r]) ? list->first : NULL;

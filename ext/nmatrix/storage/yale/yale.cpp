@@ -470,8 +470,8 @@ static void vector_grow(YALE_STORAGE* s) {
 
   s->capacity         = new_capacity;
 
-  xfree(old_ija);
-  xfree(old_a);
+  NM_FREE(old_ija);
+  NM_FREE(old_a);
 
   s->ija         = new_ija;
   s->a           = new_a;
@@ -535,8 +535,8 @@ static char vector_insert_resize(YALE_STORAGE* s, size_t current_size, size_t po
 
   s->capacity = new_capacity;
 
-  xfree(s->ija);
-  xfree(s->a);
+  NM_FREE(s->ija);
+  NM_FREE(s->a);
 
   s->ija = new_ija;
   s->a   = reinterpret_cast<void*>(new_a);
@@ -1183,7 +1183,7 @@ void* nm_yale_storage_get(const STORAGE* storage, SLICE* slice) {
 
     YALE_STORAGE* ns = slice_copy_table[casted_storage->dtype][casted_storage->dtype](ref);
 
-    xfree(ref);
+    NM_FREE(ref);
 
     return ns;
   }
@@ -1350,11 +1350,11 @@ void nm_yale_storage_delete(STORAGE* s) {
   if (s) {
     YALE_STORAGE* storage = (YALE_STORAGE*)s;
     if (storage->count-- == 1) {
-      xfree(storage->shape);
-      xfree(storage->offset);
-      xfree(storage->ija);
-      xfree(storage->a);
-      xfree(storage);
+      NM_FREE(storage->shape);
+      NM_FREE(storage->offset);
+      NM_FREE(storage->ija);
+      NM_FREE(storage->a);
+      NM_FREE(storage);
     }
   }
 }
@@ -1366,9 +1366,9 @@ void nm_yale_storage_delete_ref(STORAGE* s) {
   if (s) {
     YALE_STORAGE* storage = (YALE_STORAGE*)s;
     nm_yale_storage_delete( reinterpret_cast<STORAGE*>(storage->src) );
-    xfree(storage->shape);
-    xfree(storage->offset);
-    xfree(s);
+    NM_FREE(storage->shape);
+    NM_FREE(storage->offset);
+    NM_FREE(s);
   }
 }
 

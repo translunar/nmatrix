@@ -1127,7 +1127,7 @@ static VALUE nm_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_right,
       info = geev_table[dtype](JOBVL, JOBVR, N, A, FIX2INT(lda), WR, WI, VL, FIX2INT(ldvl), VR, FIX2INT(ldvr), work, work_size, rwork);
       work_size = (int)(dtype == nm::COMPLEX64 || dtype == nm::FLOAT32 ? reinterpret_cast<float*>(work)[0] : reinterpret_cast<double*>(work)[0]);
       // line above is basically: work_size = (int)(work[0]); // now have new work_size
-      xfree(work);
+      NM_FREE(work);
       if (info == 0)
         rb_warn("geev: calculated optimal lwork of %d; to eliminate this message, use a positive value for lwork (at least 2*shape[i])", work_size);
       else return INT2FIX(info); // error of some kind on query!

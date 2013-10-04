@@ -368,9 +368,9 @@ static SLICE* alloc_slice(size_t dim) {
  * Slice destructor.
  */
 static void free_slice(SLICE* slice) {
-  xfree(slice->coords);
-  xfree(slice->lengths);
-  xfree(slice);
+  NM_FREE(slice->coords);
+  NM_FREE(slice->lengths);
+  NM_FREE(slice);
 }
 
 
@@ -437,7 +437,7 @@ void nm_delete(NMATRIX* mat) {
   };
   ttable[mat->stype](mat->storage);
 
-  xfree(mat);
+  NM_FREE(mat);
 }
 
 /*
@@ -451,7 +451,7 @@ void nm_delete_ref(NMATRIX* mat) {
   };
   ttable[mat->stype](mat->storage);
 
-  xfree(mat);
+  NM_FREE(mat);
 }
 
 /*
@@ -938,7 +938,7 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
 
     // We need to free v if it's not the same size as tmp -- because tmp will have made a copy instead.
     //if (nm_storage_count_max_elements(tmp->storage) != v_size)
-    //  xfree(v);
+    //  NM_FREE(v);
 
     // nm_delete(tmp); // This seems to enrage the garbage collector (because rb_tmp is still available). It'd be better if we could force it to free immediately, but no sweat.
   }

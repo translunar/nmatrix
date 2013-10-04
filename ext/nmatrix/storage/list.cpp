@@ -336,7 +336,7 @@ static bool slice_set(LIST_STORAGE* dest, LIST* l, size_t* coords, size_t* lengt
       bool remove_parent = slice_set(dest, reinterpret_cast<LIST*>(node->val), coords, lengths, n+1, v, v_size, v_offset);
 
       if (remove_parent) {
-        xfree(remove_by_node(l, prev, node));
+        NM_FREE(remove_by_node(l, prev, node));
         if (prev) node = prev->next ? prev->next : NULL;
         else      node = l->first   ? l->first   : NULL;
       } else {  // move forward
@@ -371,7 +371,7 @@ static bool slice_set(LIST_STORAGE* dest, LIST* l, size_t* coords, size_t* lengt
         if (node->key == key) {
           if (v[v_offset] == *reinterpret_cast<D*>(dest->default_val)) { // remove zero value
 
-            xfree(remove_by_node(l, (prev ? prev : l->first), node));
+            NM_FREE(remove_by_node(l, (prev ? prev : l->first), node));
 
             if (prev) node = prev->next ? prev->next : NULL;
             else      node = l->first   ? l->first   : NULL;
@@ -447,7 +447,7 @@ void set(VALUE left, SLICE* slice, VALUE right) {
     if (nm_and_free.second) {
       nm_delete(nm_and_free.first);
     }
-  } else xfree(v);
+  } else NM_FREE(v);
 }
 
 /*
@@ -513,10 +513,10 @@ void nm_list_storage_delete(STORAGE* s) {
     if (storage->count-- == 1) {
       nm::list::del( storage->rows, storage->dim - 1 );
 
-      xfree(storage->shape);
-      xfree(storage->offset);
-      xfree(storage->default_val);
-      xfree(s);
+      NM_FREE(storage->shape);
+      NM_FREE(storage->offset);
+      NM_FREE(storage->default_val);
+      NM_FREE(s);
     }
   }
 }
@@ -529,9 +529,9 @@ void nm_list_storage_delete_ref(STORAGE* s) {
     LIST_STORAGE* storage = (LIST_STORAGE*)s;
 
     nm_list_storage_delete( reinterpret_cast<STORAGE*>(storage->src ) );
-    xfree(storage->shape);
-    xfree(storage->offset);
-    xfree(s);
+    NM_FREE(storage->shape);
+    NM_FREE(storage->offset);
+    NM_FREE(s);
   }
 }
 
