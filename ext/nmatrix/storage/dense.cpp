@@ -297,6 +297,20 @@ void nm_dense_storage_mark(STORAGE* storage_base) {
   }
 }
 
+void nm_dense_storage_register(STORAGE* s) {
+  DENSE_STORAGE* storage = reinterpret_cast<DENSE_STORAGE*>(s);
+  if (storage->dtype == nm::RUBYOBJ && storage->elements) {
+    nm_register_values(reinterpret_cast<VALUE*>(storage->elements), nm_storage_count_max_elements(storage));
+  }
+}
+
+void nm_dense_storage_unregister(STORAGE* s) {
+  DENSE_STORAGE* storage = reinterpret_cast<DENSE_STORAGE*>(s);
+  if (storage->dtype == nm::RUBYOBJ && storage->elements) {
+    nm_unregister_values(reinterpret_cast<VALUE*>(storage->elements), nm_storage_count_max_elements(storage));
+  }
+}
+
 ///////////////
 // Accessors //
 ///////////////

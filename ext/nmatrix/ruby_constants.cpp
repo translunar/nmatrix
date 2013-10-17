@@ -89,6 +89,8 @@ VALUE cNMatrix,
 			cNMatrix_YaleFunctions,
 			cNMatrix_BLAS,
 			cNMatrix_LAPACK,
+
+      cNMatrix_GC_holder,
 			
 			nm_eDataTypeError,
       nm_eConvergenceError,

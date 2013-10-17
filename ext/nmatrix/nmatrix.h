@@ -280,6 +280,17 @@ NM_DEF_STRUCT_PRE(NMATRIX);   // struct NMATRIX {
   NM_DECL_STRUCT(STORAGE*, storage);  // STORAGE* storage;  // Pointer to storage struct.
 NM_DEF_STRUCT_POST(NMATRIX);  // };
 
+/* Structs for dealing with VALUEs in use so that they don't get GC'd */
+
+typedef struct __NM_GC_LL_NODE {
+  VALUE val;
+  __NM_GC_LL_NODE* next;
+} nm_gc_ll_node;
+
+typedef struct __NM_GC_HOLDER {
+  __NM_GC_LL_NODE* start;
+} nm_gc_holder;
+
 #define NM_MAX_RANK 15
 
 #define UnwrapNMatrix(obj,var)  Data_Get_Struct(obj, NMATRIX, var)
@@ -363,9 +374,16 @@ extern "C" {
 	void     nm_mark(NMATRIX* mat);
 	void     nm_delete(NMATRIX* mat);
 	void     nm_delete_ref(NMATRIX* mat);
-  void     nm_mark(NMATRIX* mat);
   void     nm_register_values(VALUE* vals, size_t n);
   void     nm_unregister_values(VALUE* vals, size_t n);
+  void     nm_register_value(VALUE val);
+  void     nm_unregister_value(VALUE val);
+  void     nm_register_storage(nm::stype_t stype, STORAGE* storage);
+  void     nm_unregister_storage(nm::stype_t stype, STORAGE* storage);
+  void     nm_register_nmatrix(NMATRIX* nmatrix);
+  void     nm_unregister_nmatrix(NMATRIX* nmatrix);
+  void     __nm_initialize_value_container();
+  void     __nm_mark_value_container(nm_gc_holder* holder);
 
 #ifdef __cplusplus
 }

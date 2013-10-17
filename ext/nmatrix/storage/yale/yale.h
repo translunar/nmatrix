@@ -89,7 +89,9 @@ extern "C" {
   void          nm_yale_storage_delete_ref(STORAGE* s);
   void					nm_yale_storage_init(YALE_STORAGE* s, void* default_val);
   void					nm_yale_storage_mark(STORAGE*);
-
+  void          nm_yale_storage_register(STORAGE* s);
+  void          nm_yale_storage_unregister(STORAGE* s);
+  
   ///////////////
   // Accessors //
   ///////////////

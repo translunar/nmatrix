@@ -547,6 +547,14 @@ void nm_list_storage_mark(STORAGE* storage_base) {
   }
 }
 
+void nm_list_storage_register(STORAGE* s) {
+  //TODO
+}
+
+void nm_list_storage_unregister(STORAGE* s) {
+  //TODO
+}
+
 ///////////////
 // Accessors //
 ///////////////
