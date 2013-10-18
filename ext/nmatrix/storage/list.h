@@ -73,8 +73,8 @@ extern "C" {
   void					nm_list_storage_delete(STORAGE* s);
   void					nm_list_storage_delete_ref(STORAGE* s);
   void					nm_list_storage_mark(STORAGE*);
-  void          nm_list_storage_register(STORAGE* s);
-  void          nm_list_storage_unregister(STORAGE* s);
+  void          nm_list_storage_register(const STORAGE* s);
+  void          nm_list_storage_unregister(const STORAGE* s);
 
   ///////////////
   // Accessors //

@@ -123,14 +123,14 @@ namespace nm {
   };
 
 #define STYPE_REGISTER_TABLE(name)              \
-  static void (*(name)[nm::NUM_STYPES])(STORAGE*) = { \
+  static void (*(name)[nm::NUM_STYPES])(const STORAGE*) = { \
     nm_dense_storage_register,                  \
     nm_list_storage_register,                   \
     nm_yale_storage_register                    \
   };
 
 #define STYPE_UNREGISTER_TABLE(name)              \
-  static void (*(name)[nm::NUM_STYPES])(STORAGE*) = { \
+  static void (*(name)[nm::NUM_STYPES])(const STORAGE*) = { \
     nm_dense_storage_unregister,                \
     nm_list_storage_unregister,                 \
     nm_yale_storage_unregister                  \

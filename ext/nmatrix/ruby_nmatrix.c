@@ -540,12 +540,12 @@ void nm_unregister_value(VALUE val) {
   }
 }
 
-void nm_register_storage(nm::stype_t stype, STORAGE* storage) {
+void nm_register_storage(nm::stype_t stype, const STORAGE* storage) {
   STYPE_REGISTER_TABLE(ttable);
   ttable[stype](storage);
 }
 
-void nm_unregister_storage(nm::stype_t stype, STORAGE* storage) {
+void nm_unregister_storage(nm::stype_t stype, const STORAGE* storage) {
   STYPE_UNREGISTER_TABLE(ttable)
   ttable[stype](storage);
 }

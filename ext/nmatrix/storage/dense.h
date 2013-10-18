@@ -73,8 +73,8 @@ DENSE_STORAGE*	nm_dense_storage_create(nm::dtype_t dtype, size_t* shape, size_t 
 void						nm_dense_storage_delete(STORAGE* s);
 void						nm_dense_storage_delete_ref(STORAGE* s);
 void						nm_dense_storage_mark(STORAGE*);
-void            nm_dense_storage_register(STORAGE* s);
-void            nm_dense_storage_unregister(STORAGE* s);
+void            nm_dense_storage_register(const STORAGE* s);
+void            nm_dense_storage_unregister(const STORAGE* s);
 
 
 ///////////////

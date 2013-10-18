@@ -378,8 +378,8 @@ extern "C" {
   void     nm_unregister_values(VALUE* vals, size_t n);
   void     nm_register_value(VALUE val);
   void     nm_unregister_value(VALUE val);
-  void     nm_register_storage(nm::stype_t stype, STORAGE* storage);
-  void     nm_unregister_storage(nm::stype_t stype, STORAGE* storage);
+  void     nm_register_storage(nm::stype_t stype, const STORAGE* storage);
+  void     nm_unregister_storage(nm::stype_t stype, const STORAGE* storage);
   void     nm_register_nmatrix(NMATRIX* nmatrix);
   void     nm_unregister_nmatrix(NMATRIX* nmatrix);
   void     __nm_initialize_value_container();

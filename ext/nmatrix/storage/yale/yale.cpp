@@ -1397,11 +1397,11 @@ void nm_yale_storage_mark(STORAGE* storage_base) {
   }
 }
 
-void nm_yale_storage_register(STORAGE* s) {
+void nm_yale_storage_register(const STORAGE* s) {
   //TODO
 }
 
-void nm_yale_storage_unregister(STORAGE* s) {
+void nm_yale_storage_unregister(const STORAGE* s) {
   //TODO
 }
 
