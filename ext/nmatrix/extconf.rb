@@ -205,7 +205,9 @@ def find_newer_gplusplus #:nodoc:
 end
 
 def gplusplus_version #:nodoc:
-  `LANG="en_US" #{CONFIG['CXX']} -v 2>&1`.lines.to_a.last.match(/gcc\sversion\s(\d\.\d.\d)/).captures.first
+  version_match = `LANG="en_US" #{CONFIG['CXX']} -v 2>&1`.lines.to_a.last.match(/gcc\sversion\s(\d\.\d.\d)/)
+  raise("unable to determine g++ version (match to get version was nil)") if version_match.nil?
+  version_match.captures.first
 end
 
 
