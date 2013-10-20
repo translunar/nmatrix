@@ -132,8 +132,6 @@ namespace nm { namespace dense_storage {
     std::pair<NMATRIX*,bool> nm_and_free =
       interpret_arg_as_dense_nmatrix(right, NM_DTYPE(left));
 
-    nm_register_nmatrix(nm_and_free.first);
-
     // Map the data onto D* v.
     D*     v;
     size_t v_size = 1;
@@ -144,6 +142,8 @@ namespace nm { namespace dense_storage {
       v_size           = nm_storage_count_max_elements(t);
 
     } else if (TYPE(right) == T_ARRAY) {
+      nm_register_nmatrix(nm_and_free.first);
+      
       v_size = RARRAY_LEN(right);
       v      = NM_ALLOC_N(D, v_size);
       if (NM_DTYPE(left) == nm::RUBYOBJ)
@@ -157,6 +157,8 @@ namespace nm { namespace dense_storage {
         nm_unregister_values(reinterpret_cast<VALUE*>(v), v_size);
 
     } else {
+      nm_register_nmatrix(nm_and_free.first);
+
       v = reinterpret_cast<D*>(rubyobj_to_cval(right, NM_DTYPE(left)));
     }
 
@@ -172,11 +174,12 @@ namespace nm { namespace dense_storage {
       if (nm_and_free.second) {
         nm_delete(nm_and_free.first);
       }
-    } else NM_FREE(v);
-
+    } else {
+      NM_FREE(v);
+      nm_unregister_nmatrix(nm_and_free.first);
+    }
     nm_unregister_value(left);
     nm_unregister_value(right);
-    nm_unregister_nmatrix(nm_and_free.first);
 
   }
 
@@ -346,14 +349,13 @@ void nm_dense_storage_unregister(const STORAGE* s) {
  */
 VALUE nm_dense_map_pair(VALUE self, VALUE right) {
 
+  RETURN_SIZED_ENUMERATOR(self, 0, 0, nm_enumerator_length);
+
   nm_register_value(self);
   nm_register_value(right);
 
   DENSE_STORAGE *s = NM_STORAGE_DENSE(self),
                 *t = NM_STORAGE_DENSE(right);
-
-  //FIXME: return_sized_enumerator will leak registered self and right
-  RETURN_SIZED_ENUMERATOR(self, 0, 0, nm_enumerator_length);
 
   size_t* coords = NM_ALLOCA_N(size_t, s->dim);
   memset(coords, 0, sizeof(size_t) * s->dim);
@@ -394,12 +396,12 @@ VALUE nm_dense_map_pair(VALUE self, VALUE right) {
  * map enumerator for dense matrices.
  */
 VALUE nm_dense_map(VALUE self) {
+
+  RETURN_SIZED_ENUMERATOR(self, 0, 0, nm_enumerator_length);
+
   nm_register_value(self);
 
   DENSE_STORAGE *s = NM_STORAGE_DENSE(self);
-
-  //FIXME: return_sized_enumerator will leak registered self
-  RETURN_SIZED_ENUMERATOR(self, 0, 0, nm_enumerator_length);
 
   size_t* coords = NM_ALLOCA_N(size_t, s->dim);
   memset(coords, 0, sizeof(size_t) * s->dim);
@@ -436,11 +438,12 @@ VALUE nm_dense_map(VALUE self) {
  * each_with_indices iterator for dense matrices.
  */
 VALUE nm_dense_each_with_indices(VALUE nmatrix) {
+
+  RETURN_SIZED_ENUMERATOR(nmatrix, 0, 0, nm_enumerator_length); // fourth argument only used by Ruby2+
+
   nm_register_value(nmatrix);
 
   DENSE_STORAGE* s = NM_STORAGE_DENSE(nmatrix);
-
-  RETURN_SIZED_ENUMERATOR(nmatrix, 0, 0, nm_enumerator_length); // fourth argument only used by Ruby2+
 
   // Create indices and initialize them to zero
   size_t* coords = NM_ALLOCA_N(size_t, s->dim);
@@ -485,10 +488,10 @@ VALUE nm_dense_each_with_indices(VALUE nmatrix) {
  * containing other types of data.
  */
 VALUE nm_dense_each(VALUE nmatrix) {
+  RETURN_SIZED_ENUMERATOR(nmatrix, 0, 0, nm_enumerator_length);
+
   nm_register_value(nmatrix);
   DENSE_STORAGE* s = NM_STORAGE_DENSE(nmatrix);
-
-  RETURN_SIZED_ENUMERATOR(nmatrix, 0, 0, nm_enumerator_length);
 
   size_t* temp_coords = NM_ALLOCA_N(size_t, s->dim);
   size_t sliced_index;

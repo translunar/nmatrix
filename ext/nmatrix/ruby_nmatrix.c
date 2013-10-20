@@ -490,6 +490,10 @@ void nm_unregister_values(VALUE* values, size_t n) {
 static VALUE* gc_value_holder = NULL;
 static nm_gc_holder* gc_value_holder_struct = NULL;
 
+#ifdef DEBUG
+static int register_count = 0;
+#endif
+
 void __nm_mark_value_container(nm_gc_holder* gc_value_holder_struct) {
   if (gc_value_holder_struct && gc_value_holder_struct->start) {
     nm_gc_ll_node* curr = gc_value_holder_struct->start;
@@ -518,6 +522,9 @@ void nm_register_value(VALUE val) {
   to_insert->val = val;
   to_insert->next = gc_value_holder_struct->start;
   gc_value_holder_struct->start = to_insert;
+  #ifdef DEBUG
+  std::cout << "register count: " << ++register_count << std::endl;
+  #endif
 }
 
 void nm_unregister_value(VALUE val) {
@@ -531,6 +538,9 @@ void nm_unregister_value(VALUE val) {
         } else {
           gc_value_holder_struct->start = curr->next;
         }
+        #ifdef DEBUG
+        std::cout << "decr. register count: " << --register_count << std::endl;
+        #endif
         NM_FREE(curr);
         break;
       }
@@ -546,7 +556,7 @@ void nm_register_storage(nm::stype_t stype, const STORAGE* storage) {
 }
 
 void nm_unregister_storage(nm::stype_t stype, const STORAGE* storage) {
-  STYPE_UNREGISTER_TABLE(ttable)
+  STYPE_UNREGISTER_TABLE(ttable);
   ttable[stype](storage);
 }
 
@@ -1122,6 +1132,8 @@ static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
   nm_register_value(nm);
 
   if (argc <= 3) { // Call the new constructor unless all four arguments are given (or the 7-arg version is given)
+    nm_unregister_values(argv, argc);
+    nm_unregister_value(nm);
   	return nm_init_new_version(argc, argv, nm);
   }
 
@@ -1141,6 +1153,8 @@ static VALUE nm_init(int argc, VALUE* argv, VALUE nm) {
   // If there are 7 arguments and Yale, refer to a different init function with fewer sanity checks.
   if (argc == 7) {
   	if (stype == nm::YALE_STORE) {
+      nm_unregister_values(argv, argc);
+      nm_unregister_value(nm);
 			return nm_init_yale_from_old_yale(argv[1], argv[2], argv[3], argv[4], argv[5], argv[6], nm);
 
 		} else {
@@ -1304,7 +1318,11 @@ static VALUE nm_init_copy(VALUE copy, VALUE original) {
 
   CheckNMatrixType(original);
 
-  if (copy == original) return copy;
+  if (copy == original) {
+    nm_unregister_value(copy);
+    nm_unregister_value(original);
+    return copy;
+  }
 
   UnwrapNMatrix( original, rhs );
   UnwrapNMatrix( copy,     lhs );
