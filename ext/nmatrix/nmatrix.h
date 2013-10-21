@@ -283,7 +283,8 @@ NM_DEF_STRUCT_POST(NMATRIX);  // };
 /* Structs for dealing with VALUEs in use so that they don't get GC'd */
 
 typedef struct __NM_GC_LL_NODE {
-  VALUE val;
+  VALUE* val;
+  size_t n;
   __NM_GC_LL_NODE* next;
 } nm_gc_ll_node;
 
@@ -376,8 +377,8 @@ extern "C" {
 	void     nm_delete_ref(NMATRIX* mat);
   void     nm_register_values(VALUE* vals, size_t n);
   void     nm_unregister_values(VALUE* vals, size_t n);
-  void     nm_register_value(VALUE val);
-  void     nm_unregister_value(VALUE val);
+  void     nm_register_value(VALUE& val);
+  void     nm_unregister_value(VALUE& val);
   void     nm_register_storage(nm::stype_t stype, const STORAGE* storage);
   void     nm_unregister_storage(nm::stype_t stype, const STORAGE* storage);
   void     nm_register_nmatrix(NMATRIX* nmatrix);

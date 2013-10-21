@@ -463,32 +463,11 @@ void nm_delete_ref(NMATRIX* mat) {
   NM_FREE(mat);
 }
 
-/*
- * Register the addresses of an array of VALUEs with the gc to avoid collection
- * while using them internally.
- */
-void nm_register_values(VALUE* values, size_t n) {
-  if (values) {
-    for (size_t i = n; i-- > 0;) {
-      rb_gc_register_address(values + i);
-    }
-  }
-}
 
-/*
- * Unregister the addresses of an array of VALUEs with the gc to allow normal
- * garbage collection to occur again.
- */
-void nm_unregister_values(VALUE* values, size_t n) {
-  if (values) {
-    for (size_t i = n; i-- > 0;) {
-      rb_gc_unregister_address(values + i);
-    }
-  }
-}
 
 static VALUE* gc_value_holder = NULL;
 static nm_gc_holder* gc_value_holder_struct = NULL;
+static nm_gc_holder* allocated_pool = NULL;
 
 #ifdef DEBUG
 static int register_count = 0;
@@ -498,7 +477,7 @@ void __nm_mark_value_container(nm_gc_holder* gc_value_holder_struct) {
   if (gc_value_holder_struct && gc_value_holder_struct->start) {
     nm_gc_ll_node* curr = gc_value_holder_struct->start;
     while (curr) {
-      rb_gc_mark(curr->val);
+      rb_gc_mark_locations(curr->val, curr->val + curr->n);
       curr = curr->next;
     }
   }
@@ -507,47 +486,72 @@ void __nm_mark_value_container(nm_gc_holder* gc_value_holder_struct) {
 void __nm_initialize_value_container() {
   if (gc_value_holder == NULL) {
     gc_value_holder_struct = NM_ALLOC(nm_gc_holder);
+    allocated_pool = NM_ALLOC(nm_gc_holder);
     gc_value_holder = NM_ALLOC(VALUE);
     gc_value_holder_struct->start = NULL;
+    allocated_pool->start = NULL;
     *gc_value_holder = Data_Wrap_Struct(cNMatrix_GC_holder, __nm_mark_value_container, NULL, gc_value_holder_struct);
     nm_register_values(gc_value_holder, 1);
   }
 }
 
-void nm_register_value(VALUE val) {
+/*
+ * Register the addresses of an array of VALUEs with the gc to avoid collection
+ * while using them internally.
+ */
+void nm_register_values(VALUE* values, size_t n) {
   if (!gc_value_holder_struct)
     __nm_initialize_value_container();
-
-  nm_gc_ll_node* to_insert = NM_ALLOC(nm_gc_ll_node);
-  to_insert->val = val;
-  to_insert->next = gc_value_holder_struct->start;
-  gc_value_holder_struct->start = to_insert;
-  #ifdef DEBUG
-  std::cout << "register count: " << ++register_count << std::endl;
-  #endif
+  if (values) {
+    nm_gc_ll_node* to_insert = NULL;
+    if (allocated_pool->start) {
+      to_insert = allocated_pool->start;
+      allocated_pool->start = to_insert->next;
+    } else {
+      to_insert = NM_ALLOC(nm_gc_ll_node);
+    }
+    to_insert->val = values;
+    to_insert->n = n;
+    to_insert->next = gc_value_holder_struct->start;
+    gc_value_holder_struct->start = to_insert;
+  }
 }
 
-void nm_unregister_value(VALUE val) {
-  if (gc_value_holder_struct) {
-    nm_gc_ll_node* curr = gc_value_holder_struct->start;
-    nm_gc_ll_node* last = NULL;
-    while (curr) {
-      if (curr->val == val) {
-        if (last) {
-          last->next = curr->next;
-        } else {
-          gc_value_holder_struct->start = curr->next;
+/*
+ * Unregister the addresses of an array of VALUEs with the gc to allow normal
+ * garbage collection to occur again.
+ */
+void nm_unregister_values(VALUE* values, size_t n) {
+  if (values) {
+    if (gc_value_holder_struct) {
+      nm_gc_ll_node* curr = gc_value_holder_struct->start;
+      nm_gc_ll_node* last = NULL;
+      while (curr) {
+        if (curr->val == values) {
+          if (last) {
+            last->next = curr->next;
+          } else {
+            gc_value_holder_struct->start = curr->next;
+          }
+          curr->next = allocated_pool->start;
+          curr->val = NULL;
+          curr->n = 0;
+          allocated_pool->start = curr;
+          break;
         }
-        #ifdef DEBUG
-        std::cout << "decr. register count: " << --register_count << std::endl;
-        #endif
-        NM_FREE(curr);
-        break;
+        last = curr;
+        curr = curr->next;
       }
-      last = curr;
-      curr = curr->next;
     }
   }
+}
+
+void nm_register_value(VALUE& val) {
+  nm_register_values(&val, 1);
+}
+
+void nm_unregister_value(VALUE& val) {
+  nm_unregister_values(&val, 1);
 }
 
 void nm_register_storage(nm::stype_t stype, const STORAGE* storage) {
