@@ -296,6 +296,7 @@ static void map_merged_stored_r(RecurseData& result, RecurseData& left, RecurseD
   }
 }
 
+
 /*
  * Recursive function, sets multiple values in a matrix from multiple source values. Also handles removal; returns true
  * if the recursion results in an empty list at that level (which signals that the current parent should be removed).
@@ -382,7 +383,7 @@ static bool slice_set(LIST_STORAGE* dest, LIST* l, size_t* coords, size_t* lengt
             node = node->next ? node->next : NULL;
           }
         } else if (node->key > key) {
-          D* nv = ALLOC(D); *nv = v[v_offset];
+          D* nv = ALLOC(D); *nv = v[v_offset++];
           if (prev) node = insert_after(prev, key, nv);
           else      node = insert_first_node(l, key, nv, sizeof(D));
 
@@ -390,7 +391,7 @@ static bool slice_set(LIST_STORAGE* dest, LIST* l, size_t* coords, size_t* lengt
           node = prev->next ? prev->next : NULL;
         }
       } else { // no node -- insert a new one
-        D* nv = ALLOC(D); *nv = v[v_offset];
+        D* nv = ALLOC(D); *nv = v[v_offset++];
         if (prev) node = insert_after(prev, key, nv);
         else      node = insert_first_node(l, key, nv, sizeof(D));
 
