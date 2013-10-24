@@ -397,7 +397,7 @@ class NMatrix
   # @see #inject_rank
   #
   def std(dimen=0)
-    variance(dimen).map! { |e| Math.sqrt(e) }
+    variance(dimen).sqrt
   end
 
 
