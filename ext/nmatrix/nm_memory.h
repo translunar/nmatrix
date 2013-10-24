@@ -45,4 +45,6 @@
 
 #define NM_FREE(var) (xfree(var))
 
+#define NM_ALLOC_NONRUBY(type) ((type*) malloc(sizeof(type)))
+
 #endif

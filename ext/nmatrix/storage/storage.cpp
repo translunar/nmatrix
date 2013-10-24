@@ -237,7 +237,7 @@ static void cast_copy_list_contents(LDType* lhs, const LIST* rhs, RDType* defaul
  */
 template <typename LDType,typename RDType>
 static void cast_copy_list_default(LDType* lhs, RDType* default_val, size_t& pos, const size_t* shape, size_t dim, size_t max_elements, size_t recursions) {
-	for (size_t i = 0; i < shape[dim - 1 - recursions]; ++i, ++pos) {
+  for (size_t i = 0; i < shape[dim - 1 - recursions]; ++i, ++pos) {
 
     if (recursions == 0)    lhs[pos] = static_cast<LDType>(*default_val);
     else                  	cast_copy_list_default<LDType,RDType>(lhs, default_val, pos, shape, dim, max_elements, recursions-1);

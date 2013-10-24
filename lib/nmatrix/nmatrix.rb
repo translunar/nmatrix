@@ -76,7 +76,7 @@ class NMatrix
 
   # TODO: Make this actually pretty.
   def pretty_print(q) #:nodoc:
-    if self.shape[1] > 100
+    if self.shape.size > 1 and self.shape[1] > 100
       self.inspect.pretty_print(q)
     elsif self.dim > 3 || self.dim == 1
       self.to_a.pretty_print(q)

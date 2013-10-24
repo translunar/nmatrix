@@ -485,9 +485,9 @@ void __nm_mark_value_container(nm_gc_holder* gc_value_holder_struct) {
 
 void __nm_initialize_value_container() {
   if (gc_value_holder == NULL) {
-    gc_value_holder_struct = NM_ALLOC(nm_gc_holder);
-    allocated_pool = NM_ALLOC(nm_gc_holder);
-    gc_value_holder = NM_ALLOC(VALUE);
+    gc_value_holder_struct = NM_ALLOC_NONRUBY(nm_gc_holder);
+    allocated_pool = NM_ALLOC_NONRUBY(nm_gc_holder);
+    gc_value_holder = NM_ALLOC_NONRUBY(VALUE);
     gc_value_holder_struct->start = NULL;
     allocated_pool->start = NULL;
     *gc_value_holder = Data_Wrap_Struct(cNMatrix_GC_holder, __nm_mark_value_container, NULL, gc_value_holder_struct);
@@ -508,7 +508,7 @@ void nm_register_values(VALUE* values, size_t n) {
       to_insert = allocated_pool->start;
       allocated_pool->start = to_insert->next;
     } else {
-      to_insert = NM_ALLOC(nm_gc_ll_node);
+      to_insert = NM_ALLOC_NONRUBY(nm_gc_ll_node);
     }
     to_insert->val = values;
     to_insert->n = n;

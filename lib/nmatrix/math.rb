@@ -304,8 +304,8 @@ class NMatrix
       reduce_dtype = :float64
     end
     inject_rank(dimen, 0.0, reduce_dtype) do |mean, sub_mat|
-      mean + sub_mat/shape[dimen]
-    end
+      mean + sub_mat
+    end / shape[dimen]
   end
 
   ##
@@ -475,7 +475,7 @@ protected
   # your own code.
   {add: :+, sub: :-, mul: :*, div: :/, pow: :**, mod: :%}.each_pair do |ewop, op|
     define_method("__list_elementwise_#{ewop}__") do |rhs|
-      self.__list_map_merged_stored__(rhs, nil) { |l,r| l.send(op,r) }.cast(stype, NMatrix.upcast(dtype, rhs.dtype))
+      self.__list_map_merged_stored__(rhs, 0.0) { |l,r| l.send(op,r) }.cast(stype, NMatrix.upcast(dtype, rhs.dtype))
     end
     define_method("__dense_elementwise_#{ewop}__") do |rhs|
       self.__dense_map_pair__(rhs) { |l,r| l.send(op,r) }.cast(stype, NMatrix.upcast(dtype, rhs.dtype))

@@ -34,18 +34,22 @@ describe "Statistical functions" do
     [:dense, :yale, :list].each do |stype|
       context "on #{stype} matrices" do 
         before :each do
-          @nm_1d = NMatrix[5.0,0.0,1.0,2.0,3.0, stype: stype] unless stype == :yale
-          @nm_2d = NMatrix[[0.0,1.0],[2.0,3.0], stype: stype]
+          @nm_1d = NMatrix.new([5], [5.0,0.0,1.0,2.0,3.0], stype: stype) unless stype == :yale
+          @nm_2d = NMatrix.new([2,2], [0.0, 1.0, 2.0, 3.0], stype: stype)
         end
 
         it "behaves like Enumerable#reduce with no argument to reduce" do
           @nm_1d.reduce_along_dim(0) { |acc, el| acc + el }.to_f.should eq 11 unless stype == :yale
-          @nm_2d.reduce_along_dim(1) { |acc, el| acc + el }.should eq NMatrix[[1, 5], stype: stype]
+          @nm_2d.reduce_along_dim(1) { |acc, el| acc + el }.should eq NMatrix.new([2,1], [1.0, 5.0], stype: stype)
         end
 
         it "should calculate the mean along the specified dimension" do
-          @nm_1d.mean.should eq NMatrix[2.2, stype: stype] unless stype == :yale
+          unless stype == :yale then
+            puts @nm_1d.mean
+            @nm_1d.mean.should eq NMatrix.new([1], [2.2], stype: stype, dtype: :float64)
+          end
           @nm_2d.mean.should eq NMatrix[[1.0,2.0], stype: stype]
+          @nm_2d.mean(1).should eq NMatrix[[0.5], [2.5], stype: stype]
         end
 
         it "should calculate the minimum along the specified dimension" do
@@ -65,8 +69,8 @@ describe "Statistical functions" do
         end
 
         it "should calculate the sum along the specified dimension" do
-          @nm_1d.sum.should eq NMatrix[11, stype: stype] unless stype == :yale
-          @nm_2d.sum.should eq NMatrix[[2], [4], stype: stype]
+          @nm_1d.sum.should eq NMatrix[11.0, stype: stype] unless stype == :yale
+          @nm_2d.sum.should eq NMatrix[[2.0, 4.0], stype: stype]
         end
 
         it "should calculate the standard deviation along the specified dimension" do

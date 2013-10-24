@@ -34,7 +34,7 @@
  */
 
 #include <stdlib.h>
-
+#include <list>
 /*
  * Project Includes
  */
@@ -73,8 +73,14 @@ extern "C" {
   void					nm_list_storage_delete(STORAGE* s);
   void					nm_list_storage_delete_ref(STORAGE* s);
   void					nm_list_storage_mark(STORAGE*);
+  void          __nm_list_storage_unregister_temp_value_list(std::list<VALUE>& temp_vals);
+  void		__nm_list_storage_unregister_temp_list_list(std::list<LIST*>& temp_vals, size_t recursions);
   void          nm_list_storage_register(const STORAGE* s);
   void          nm_list_storage_unregister(const STORAGE* s);
+  void          nm_list_storage_register_list(const LIST* l, size_t recursions);
+  void          nm_list_storage_unregister_list(const LIST* l, size_t recursions);
+  void          nm_list_storage_register_node(const NODE* n);
+  void          nm_list_storage_unregister_node(const NODE* n);
 
   ///////////////
   // Accessors //
