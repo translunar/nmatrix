@@ -341,7 +341,7 @@ static void map_merged_stored_r(RecurseData& result, RecurseData& left, RecurseD
         key   = lcurr->key - left.offset(rec);
         lcurr = lcurr->next;
       } else if (!lcurr || (rcurr && (rcurr->key - right.offset(rec) < lcurr->key - left.offset(rec)))) {
-        val   = rb_yield_values(2, left.init_obj(), rubyobj_from_cval(rcurr->val, right.dtype()).rval);
+	val   = rb_yield_values(2, left.init_obj(), rubyobj_from_cval(rcurr->val, right.dtype()).rval);
         key   = rcurr->key - right.offset(rec);
         rcurr = rcurr->next;
       } else { // == and both present
