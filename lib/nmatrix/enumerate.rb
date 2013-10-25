@@ -86,10 +86,18 @@ class NMatrix
   #
   def map!
     return enum_for(:map!) unless block_given?
+    iterated = false
     self.each_stored_with_indices do |e, *i|
+      iterated = true
       self[*i] = (yield e)
     end
-    self
+    #HACK: if there's a single element in a non-dense matrix, it won't iterate and
+    #won't change the default value; this ensures that it does get changed.
+    unless iterated then
+      self.each_with_indices do |e, *i|
+        self[*i] = (yield e)
+      end
+    end
   end
 
 

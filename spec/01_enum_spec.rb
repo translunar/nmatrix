@@ -182,7 +182,17 @@ describe "NMatrix enumeration for" do
 
       end
 
+      if stype == :list or stype == :dense then
+        it "should correctly map to a matrix with a single element" do 
+          nm = N.new([1], [2.0], stype: stype)
+          nm.map { |e| e**2 }.should eq N.new([1], [4.0], stype: stype)
+        end
 
+        it "should correctly map to a matrix with multiple elements" do
+          nm = N.new([2], [2.0, 2.0], stype: stype)
+          nm.map { |e| e**2 }.should eq N.new([2], [4.0, 4.0], stype: stype)
+        end
+      end
     end
   end
 end
