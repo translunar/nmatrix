@@ -368,9 +368,13 @@ YALE_STORAGE* ref(YALE_STORAGE* s, SLICE* slice) {
  */
 template <typename DType>
 void set(VALUE left, SLICE* slice, VALUE right) {
+  nm_register_value(left);
+  nm_register_value(right);
   YALE_STORAGE* storage = NM_STORAGE_YALE(left);
   YaleStorage<DType> y(storage);
   y.insert(slice, right);
+  nm_unregister_value(right);
+  nm_unregister_value(left);
 }
 
 ///////////
@@ -453,7 +457,7 @@ static void vector_grow(YALE_STORAGE* s) {
   if (s != s->src) {
     throw; // need to correct this quickly.
   }
-
+  nm_yale_storage_register(s);
   size_t new_capacity = s->capacity * GROWTH_CONSTANT;
   size_t max_capacity = YaleStorage<uint8_t>::max_size(s->shape);
 
@@ -470,11 +474,18 @@ static void vector_grow(YALE_STORAGE* s) {
 
   s->capacity         = new_capacity;
 
+  if (s->dtype == nm::RUBYOBJ)
+    nm_yale_storage_register_a(new_a, s->capacity * DTYPE_SIZES[s->dtype]);
+
   NM_FREE(old_ija);
+  nm_yale_storage_unregister(s);
   NM_FREE(old_a);
+  if (s->dtype == nm::RUBYOBJ)
+    nm_yale_storage_unregister_a(new_a, s->capacity * DTYPE_SIZES[s->dtype]);
 
   s->ija         = new_ija;
   s->a           = new_a;
+
 }
 
 
@@ -497,6 +508,8 @@ static char vector_insert_resize(YALE_STORAGE* s, size_t current_size, size_t po
 
   if (new_capacity < current_size + n)
   	new_capacity = current_size + n;
+
+  nm_yale_storage_register(s);
 
   // Allocate the new vectors.
   IType* new_ija     = NM_ALLOC_N( IType, new_capacity );
@@ -534,9 +547,15 @@ static char vector_insert_resize(YALE_STORAGE* s, size_t current_size, size_t po
   }
 
   s->capacity = new_capacity;
+  if (s->dtype == nm::RUBYOBJ)
+    nm_yale_storage_register_a(new_a, new_capacity);
 
   NM_FREE(s->ija);
+  nm_yale_storage_unregister(s);
   NM_FREE(s->a);
+  
+  if (s->dtype == nm::RUBYOBJ)
+    nm_yale_storage_unregister_a(new_a, new_capacity);
 
   s->ija = new_ija;
   s->a   = reinterpret_cast<void*>(new_a);
@@ -567,12 +586,11 @@ static char vector_insert(YALE_STORAGE* s, size_t pos, size_t* j, void* val_, si
   DType* a   = reinterpret_cast<DType*>(s->a);
 
   if (size + n > s->capacity) {
-  	vector_insert_resize<DType>(s, size, pos, j, n, struct_only);
+    vector_insert_resize<DType>(s, size, pos, j, n, struct_only);
 
     // Need to get the new locations for ija and a.
   	ija = s->ija;
     a   = reinterpret_cast<DType*>(s->a);
-
   } else {
     /*
      * No resize required:
@@ -674,6 +692,8 @@ static STORAGE* matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resu
   YALE_STORAGE *left  = (YALE_STORAGE*)(casted_storage.left),
                *right = (YALE_STORAGE*)(casted_storage.right);
 
+  nm_yale_storage_register(left);
+  nm_yale_storage_register(right);
   // We can safely get dtype from the casted matrices; post-condition of binary_storage_cast_alloc is that dtype is the
   // same for left and right.
   // int8_t dtype = left->dtype;
@@ -705,6 +725,8 @@ static STORAGE* matrix_multiply(const STORAGE_PAIR& casted_storage, size_t* resu
   // Sort the columns
   nm::math::smmp_sort_columns<DType>(result->shape[0], ija, ija, reinterpret_cast<DType*>(result->a));
 
+  nm_yale_storage_unregister(right);
+  nm_yale_storage_unregister(left);
   return reinterpret_cast<STORAGE*>(result);
 }
 
@@ -918,8 +940,12 @@ static VALUE map_stored(VALUE self) {
   YALE_STORAGE* s = NM_STORAGE_YALE(self);
   YaleStorage<D> y(s);
   RETURN_SIZED_ENUMERATOR(self, 0, 0, nm_yale_stored_enumerator_length);
+  nm_yale_storage_register(s);
   YALE_STORAGE* r = y.template alloc_copy<nm::RubyObject, true>();
+  nm_yale_storage_register(r);
   NMATRIX* m      = nm_create(nm::YALE_STORE, reinterpret_cast<STORAGE*>(r));
+  nm_yale_storage_unregister(r);
+  nm_yale_storage_unregister(s);
   return Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, m);
 }
 
@@ -946,6 +972,8 @@ static VALUE each_stored_with_indices(VALUE nm) {
   // If we don't have a block, return an enumerator.
   RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_yale_stored_enumerator_length);
 
+  nm_yale_storage_register(s);
+
   for (typename YaleStorage<DType>::const_stored_diagonal_iterator d = y.csdbegin(); d != y.csdend(); ++d) {
     rb_yield_values(3, ~d, d.rb_i(), d.rb_j());
   }
@@ -955,6 +983,8 @@ static VALUE each_stored_with_indices(VALUE nm) {
       rb_yield_values(3, ~jt, it.rb_i(), jt.rb_j());
     }
   }
+
+  nm_yale_storage_unregister(s);
 
   return nm;
 }
@@ -970,10 +1000,14 @@ static VALUE stored_diagonal_each_with_indices(VALUE nm) {
 
   // If we don't have a block, return an enumerator.
   RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_yale_stored_diagonal_length); // FIXME: need diagonal length
+  
+  nm_yale_storage_register(s);
 
   for (typename YaleStorage<DType>::const_stored_diagonal_iterator d = y.csdbegin(); d != y.csdend(); ++d) {
     rb_yield_values(3, ~d, d.rb_i(), d.rb_j());
   }
+
+  nm_yale_storage_unregister(s);
 
   return nm;
 }
@@ -990,11 +1024,15 @@ static VALUE stored_nondiagonal_each_with_indices(VALUE nm) {
   // If we don't have a block, return an enumerator.
   RETURN_SIZED_ENUMERATOR(nm, 0, 0, 0); // FIXME: need diagonal length
 
+  nm_yale_storage_register(s);
+
   for (typename YaleStorage<DType>::const_row_iterator it = y.cribegin(); it != y.criend(); ++it) {
     for (auto jt = it.ndbegin(); jt != it.ndend(); ++jt) {
       rb_yield_values(3, ~jt, it.rb_i(), jt.rb_j());
     }
   }
+
+  nm_yale_storage_unregister(s);
 
   return nm;
 }
@@ -1011,11 +1049,15 @@ static VALUE each_ordered_stored_with_indices(VALUE nm) {
   // If we don't have a block, return an enumerator.
   RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_yale_stored_enumerator_length);
 
+  nm_yale_storage_register(s);
+
   for (typename YaleStorage<DType>::const_row_iterator it = y.cribegin(); it != y.criend(); ++it) {
     for (auto jt = it.begin(); jt != it.end(); ++jt) {
       rb_yield_values(3, ~jt, it.rb_i(), jt.rb_j());
     }
   }
+
+  nm_yale_storage_unregister(s);
 
   return nm;
 }
@@ -1029,9 +1071,13 @@ static VALUE each_with_indices(VALUE nm) {
   // If we don't have a block, return an enumerator.
   RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_yale_enumerator_length);
 
+  nm_yale_storage_register(s);
+
   for (typename YaleStorage<DType>::const_iterator iter = y.cbegin(); iter != y.cend(); ++iter) {
     rb_yield_values(3, ~iter, iter.rb_i(), iter.rb_j());
   }
+
+  nm_yale_storage_unregister(s);
 
   return nm;
 }
@@ -1173,7 +1219,7 @@ void* nm_yale_storage_get(const STORAGE* storage, SLICE* slice) {
 
     return elem_copy_table[casted_storage->dtype](casted_storage, slice);
   } else {
-
+    nm_yale_storage_register(casted_storage);
     //return reinterpret_cast<void*>(nm::YaleStorage<nm::dtype_enum_T<storage->dtype>::type>(casted_storage).alloc_ref(slice));
     NAMED_DTYPE_TEMPLATE_TABLE(ref_table, nm::yale_storage::ref, YALE_STORAGE*, YALE_STORAGE* storage, SLICE* slice)
 
@@ -1184,6 +1230,8 @@ void* nm_yale_storage_get(const STORAGE* storage, SLICE* slice) {
     YALE_STORAGE* ns = slice_copy_table[casted_storage->dtype][casted_storage->dtype](ref);
 
     NM_FREE(ref);
+
+    nm_yale_storage_unregister(casted_storage);
 
     return ns;
   }
@@ -1397,12 +1445,26 @@ void nm_yale_storage_mark(STORAGE* storage_base) {
   }
 }
 
+void nm_yale_storage_register_a(void* a, size_t size) {
+  nm_register_values(reinterpret_cast<VALUE*>(a), size);
+}
+
+void nm_yale_storage_unregister_a(void* a, size_t size) {
+  nm_unregister_values(reinterpret_cast<VALUE*>(a), size);
+}
+
 void nm_yale_storage_register(const STORAGE* s) {
-  //TODO
+  const YALE_STORAGE* y = reinterpret_cast<const YALE_STORAGE*>(s);
+  if (y->dtype == nm::RUBYOBJ) {
+    nm_register_values(reinterpret_cast<VALUE*>(y->a), nm::yale_storage::get_size(y));
+  }
 }
 
 void nm_yale_storage_unregister(const STORAGE* s) {
-  //TODO
+  const YALE_STORAGE* y = reinterpret_cast<const YALE_STORAGE*>(s);
+  if (y->dtype == nm::RUBYOBJ) {
+    nm_unregister_values(reinterpret_cast<VALUE*>(y->a), nm::yale_storage::get_size(y));
+  }
 }
 
 /*
@@ -1476,6 +1538,9 @@ static bool is_pos_default_value(YALE_STORAGE* s, size_t apos) {
 static VALUE nm_row_keys_intersection(VALUE m1, VALUE ii1, VALUE m2, VALUE ii2) {
   if (NM_SRC(m1) != NM_STORAGE(m1) || NM_SRC(m2) != NM_STORAGE(m2))
     rb_raise(rb_eNotImpError, "must be called on a real matrix and not a slice");
+  
+  nm_register_value(m1);
+  nm_register_value(m2);
 
   size_t i1 = FIX2INT(ii1),
          i2 = FIX2INT(ii2);
@@ -1539,6 +1604,9 @@ static VALUE nm_row_keys_intersection(VALUE m1, VALUE ii1, VALUE m2, VALUE ii2) 
     if (t->ija[idx2] == i1) rb_ary_push(ret, INT2FIX(i1));
   }
 
+  nm_unregister_value(m1);
+  nm_unregister_value(m2);
+
   return ret;
 }
 
@@ -1558,8 +1626,12 @@ static VALUE nm_a(int argc, VALUE* argv, VALUE self) {
   size_t size = nm_yale_storage_get_size(s);
 
   if (idx == Qnil) {
+
+    nm_yale_storage_register(s);
     VALUE* vals = NM_ALLOCA_N(VALUE, size);
 
+    nm_register_values(vals, size); // TODO: is this ok?  I think since now doing anything with the individual values is deferred until GC, this should work.
+    
     if (NM_DTYPE(self) == nm::RUBYOBJ) {
       for (size_t i = 0; i < size; ++i) {
         vals[i] = reinterpret_cast<VALUE*>(s->a)[i];
@@ -1574,6 +1646,8 @@ static VALUE nm_a(int argc, VALUE* argv, VALUE self) {
     for (size_t i = size; i < s->capacity; ++i)
       rb_ary_push(ary, Qnil);
 
+    nm_unregister_values(vals, size);
+    nm_yale_storage_unregister(s);
     return ary;
   } else {
     size_t index = FIX2INT(idx);
@@ -1598,7 +1672,10 @@ static VALUE nm_d(int argc, VALUE* argv, VALUE self) {
   YALE_STORAGE* s = reinterpret_cast<YALE_STORAGE*>(NM_SRC(self));
 
   if (idx == Qnil) {
+    nm_yale_storage_register(s);
     VALUE* vals = NM_ALLOCA_N(VALUE, s->shape[0]);
+
+    nm_register_values(vals, s->shape[0]); //TODO: is this ok?  I think since now doing anything with the individual values is deferred until GC, this should work.
 
     if (NM_DTYPE(self) == nm::RUBYOBJ) {
       for (size_t i = 0; i < s->shape[0]; ++i) {
@@ -1609,6 +1686,8 @@ static VALUE nm_d(int argc, VALUE* argv, VALUE self) {
         vals[i] = rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype]*i, s->dtype).rval;
       }
     }
+    nm_unregister_values(vals, s->shape[0]);
+    nm_yale_storage_unregister(s);
 
     return rb_ary_new4(s->shape[0], vals);
   } else {
@@ -1630,7 +1709,11 @@ static VALUE nm_lu(VALUE self) {
 
   size_t size = nm_yale_storage_get_size(s);
 
+  nm_yale_storage_register(s);
+
   VALUE* vals = NM_ALLOCA_N(VALUE, size - s->shape[0] - 1);
+
+  nm_register_values(vals, size - s->shape[0] - 1); //TODO: is this ok?  I think since now doing anything with the individual values is deferred until GC, this should work.
 
   if (NM_DTYPE(self) == nm::RUBYOBJ) {
     for (size_t i = 0; i < size - s->shape[0] - 1; ++i) {
@@ -1647,6 +1730,9 @@ static VALUE nm_lu(VALUE self) {
   for (size_t i = size; i < s->capacity; ++i)
     rb_ary_push(ary, Qnil);
 
+  nm_unregister_values(vals, size - s->shape[0] - 1);
+  nm_yale_storage_unregister(s);
+
   return ary;
 }
 
@@ -1660,11 +1746,15 @@ static VALUE nm_lu(VALUE self) {
 static VALUE nm_ia(VALUE self) {
   YALE_STORAGE* s = reinterpret_cast<YALE_STORAGE*>(NM_SRC(self));
 
+  nm_yale_storage_register(s);
+
   VALUE* vals = NM_ALLOCA_N(VALUE, s->shape[0] + 1);
 
   for (size_t i = 0; i < s->shape[0] + 1; ++i) {
     vals[i] = INT2FIX(s->ija[i]);
   }
+
+  nm_yale_storage_unregister(s);
 
   return rb_ary_new4(s->shape[0]+1, vals);
 }
@@ -1681,7 +1771,11 @@ static VALUE nm_ja(VALUE self) {
 
   size_t size = nm_yale_storage_get_size(s);
 
+  nm_yale_storage_register(s);
+
   VALUE* vals = NM_ALLOCA_N(VALUE, size - s->shape[0] - 1);
+
+  nm_register_values(vals, size - s->shape[0] - 1);
 
   for (size_t i = 0; i < size - s->shape[0] - 1; ++i) {
     vals[i] = INT2FIX(s->ija[s->shape[0] + 1 + i]);
@@ -1691,6 +1785,9 @@ static VALUE nm_ja(VALUE self) {
 
   for (size_t i = size; i < s->capacity; ++i)
     rb_ary_push(ary, Qnil);
+
+  nm_unregister_values(vals, size - s->shape[0] - 1);
+  nm_yale_storage_unregister(s);
 
   return ary;
 }
@@ -1711,7 +1808,11 @@ static VALUE nm_ija(int argc, VALUE* argv, VALUE self) {
 
   if (idx == Qnil) {
 
+    nm_register_value(self);
+
     VALUE* vals = NM_ALLOCA_N(VALUE, size);
+
+    nm_register_values(vals, size);
 
     for (size_t i = 0; i < size; ++i) {
       vals[i] = INT2FIX(s->ija[i]);
@@ -1721,6 +1822,9 @@ static VALUE nm_ija(int argc, VALUE* argv, VALUE self) {
 
     for (size_t i = size; i < s->capacity; ++i)
       rb_ary_push(ary, Qnil);
+
+    nm_unregister_values(vals, size);
+    nm_unregister_value(self);
 
     return ary;
 
@@ -1747,6 +1851,8 @@ static VALUE nm_ija(int argc, VALUE* argv, VALUE self) {
 static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self) {
   if (NM_SRC(self) != NM_STORAGE(self))
     rb_raise(rb_eNotImpError, "must be called on a real matrix and not a slice");
+  
+  nm_register_value(self);
 
   VALUE i_, as;
   rb_scan_args(argc, argv, "11", &i_, &as);
@@ -1760,12 +1866,16 @@ static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self) {
   //nm::dtype_t dtype = NM_DTYPE(self);
 
   if (i >= s->shape[0]) {
+    nm_unregister_value(self);
     rb_raise(rb_eRangeError, "out of range (%lu >= %lu)", i, s->shape[0]);
   }
 
   size_t pos = s->ija[i];
   size_t nextpos = s->ija[i+1];
   size_t diff = nextpos - pos;
+
+  nm_register_value(i_);
+  nm_register_value(as);
 
   VALUE ret;
   if (keys) {
@@ -1782,7 +1892,9 @@ static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self) {
       rb_hash_aset(ret, INT2FIX(s->ija[idx]), rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype]*idx, s->dtype).rval);
     }
   }
-
+  nm_unregister_value(as);
+  nm_unregister_value(i_);
+  nm_unregister_value(self);
   return ret;
 }
 
@@ -1819,7 +1931,8 @@ VALUE nm_vector_set(int argc, VALUE* argv, VALUE self) { //, VALUE i_, VALUE jv,
 
   if (NM_SRC(self) != NM_STORAGE(self))
     rb_raise(rb_eNotImpError, "must be called on a real matrix and not a slice");
-
+  
+  nm_register_value(self);
   // i, jv, vv are mandatory; pos is optional; thus "31"
   VALUE i_, jv, vv, pos_;
   rb_scan_args(argc, argv, "31", &i_, &jv, &vv, &pos_);
@@ -1829,6 +1942,11 @@ VALUE nm_vector_set(int argc, VALUE* argv, VALUE self) { //, VALUE i_, VALUE jv,
 
   if (len != vvlen)
     rb_raise(rb_eArgError, "lengths must match between j array (%lu) and value array (%lu)", len, vvlen);
+
+  nm_register_value(i_);
+  nm_register_value(jv);
+  nm_register_value(vv);
+  nm_register_value(pos_);
 
   YALE_STORAGE* s   = NM_STORAGE_YALE(self);
   nm::dtype_t dtype = NM_DTYPE(self);
@@ -1849,6 +1967,12 @@ VALUE nm_vector_set(int argc, VALUE* argv, VALUE self) { //, VALUE i_, VALUE jv,
   nm_yale_storage_vector_insert(s, pos, j, vals, len, false, dtype);
   nm_yale_storage_increment_ia_after(s, s->shape[0], i, len);
   s->ndnz += len;
+
+  nm_unregister_value(pos_);
+  nm_unregister_value(vv);
+  nm_unregister_value(jv);
+  nm_unregister_value(i_);
+  nm_unregister_value(self);
 
   // Return the updated position
   pos += len;

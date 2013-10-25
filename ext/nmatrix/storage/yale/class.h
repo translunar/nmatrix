@@ -31,6 +31,7 @@
 
 #include "../dense.h"
 #include "math/transpose.h"
+#include "yale.h"
 
 namespace nm {
 
@@ -353,6 +354,8 @@ public:
    */
   void insert(SLICE* slice, VALUE right) {
 
+    nm_register_value(right);
+
     std::pair<NMATRIX*,bool> nm_and_free =
       interpret_arg_as_dense_nmatrix(right, dtype());
     // Map the data onto D* v
@@ -368,9 +371,16 @@ public:
     } else if (TYPE(right) == T_ARRAY) {
       v_size = RARRAY_LEN(right);
       v      = NM_ALLOC_N(D, v_size);
+      if (dtype() == nm::RUBYOBJ) {
+	nm_register_values(reinterpret_cast<VALUE*>(v), v_size);
+      }
       for (size_t m = 0; m < v_size; ++m) {
         rubyval_to_cval(rb_ary_entry(right, m), s->dtype, &(v[m]));
       }
+      if (dtype() == nm::RUBYOBJ) {
+	nm_unregister_values(reinterpret_cast<VALUE*>(v), v_size);
+      }
+
     } else {
       v = reinterpret_cast<D*>(rubyobj_to_cval(right, dtype()));
     }
@@ -391,6 +401,8 @@ public:
         nm_delete(nm_and_free.first);
       }
     } else NM_FREE(v);
+
+    nm_unregister_value(right);
   }
 
 
@@ -674,6 +686,7 @@ public:
 
     E* ns_a    = reinterpret_cast<E*>(ns.a);
     size_t sz  = shape(0) + 1; // current used size of ns
+    nm_yale_storage_register(&ns);
 
     // FIXME: If diagonals line up, it's probably faster to do this with stored diagonal and stored non-diagonal iterators
     for (const_row_iterator it = cribegin(); it != criend(); ++it) {
@@ -690,6 +703,7 @@ public:
       }
       ns.ija[it.i()+1]  = sz;
     }
+    nm_yale_storage_unregister(&ns);
 
     //ns.ija[shape(0)] = sz;                // indicate end of last row
     ns.ndnz          = sz - shape(0) - 1; // update ndnz count
@@ -728,10 +742,15 @@ public:
       lhs               = alloc_struct_copy<E>(s->capacity);
 
       E* la = reinterpret_cast<E*>(lhs->a);
+
+      nm_yale_storage_register(lhs);
       for (size_t m = 0; m < size(); ++m) {
-        if (Yield) la[m] = rb_yield(nm::yale_storage::nm_rb_dereference(a(m)));
+        if (Yield) {
+	  la[m] = rb_yield(nm::yale_storage::nm_rb_dereference(a(m)));
+	}
         else       la[m] = static_cast<E>(a(m));
       }
+      nm_yale_storage_unregister(lhs);
 
     }
 
@@ -818,7 +837,9 @@ public:
   VALUE map_merged_stored(VALUE klass, nm::YaleStorage<E>& t, VALUE r_init) const {
     VALUE s_init    = const_default_value(),
           t_init    = t.const_default_value();
-
+    nm_register_value(r_init);
+    nm_register_value(s_init);
+    nm_register_value(t_init);
     // Make a reasonable approximation of the resulting capacity
     size_t s_ndnz   = count_copy_ndnz(),
            t_ndnz   = t.count_copy_ndnz();
@@ -830,8 +851,11 @@ public:
 
     YALE_STORAGE* rs= YaleStorage<nm::RubyObject>::create(xshape, reserve);
 
-    if (r_init == Qnil)
+    if (r_init == Qnil) {
+      nm_unregister_value(r_init);
       r_init       = rb_yield_values(2, s_init, t_init);
+      nm_register_value(r_init);
+    }
 
     nm::RubyObject r_init_obj(r_init);
 
@@ -841,8 +865,18 @@ public:
     VALUE result   = Data_Wrap_Struct(klass, nm_mark, nm_delete, m);
 
     // No obvious, efficient way to pass a length function as the fourth argument here:
+    nm_unregister_value(r_init);
+    nm_unregister_value(s_init);
+    nm_unregister_value(t_init);
+
     RETURN_SIZED_ENUMERATOR(result, 0, 0, 0);
 
+    nm_register_value(s_init); //FIXME: these are unregistered and reregistered in order to avoid leaking in the case where an enumerator is returned.  Surely there is a better way.
+    nm_register_value(t_init);
+
+
+
+    nm_register_value(result);
     // Create an object for us to iterate over.
     YaleStorage<nm::RubyObject> r(rs);
 
@@ -883,6 +917,9 @@ public:
         //RB_P(rb_funcall(result, rb_intern("yale_ija"), 0));
       }
     }
+    nm_unregister_value(result);
+    nm_unregister_value(t_init);
+    nm_unregister_value(s_init);
 
     return result;
   }
@@ -912,6 +949,10 @@ protected:
     if (new_cap > real_max_size()) {
       NM_FREE(v);
       rb_raise(rb_eStandardError, "resize caused by insertion of size %d (on top of current size %lu) would have caused yale matrix size to exceed its maximum (%lu)", p.total_change, sz, real_max_size());
+    }
+
+    if (s->dtype == nm::RUBYOBJ) {
+      nm_register_values(reinterpret_cast<VALUE*>(v), v_size);
     }
 
     size_t* new_ija     = NM_ALLOC_N( size_t,new_cap );
@@ -979,6 +1020,10 @@ protected:
 
     NM_FREE(s->ija);
     NM_FREE(s->a);
+
+    if (s->dtype == nm::RUBYOBJ) {
+      nm_unregister_values(reinterpret_cast<VALUE*>(v), v_size);
+    }   
 
     s->ija      = new_ija;
     s->a        = reinterpret_cast<void*>(new_a);

@@ -91,7 +91,9 @@ extern "C" {
   void					nm_yale_storage_mark(STORAGE*);
   void          nm_yale_storage_register(const STORAGE* s);
   void          nm_yale_storage_unregister(const STORAGE* s);
-  
+  void		nm_yale_storage_register_a(void* a, size_t size);
+  void		nm_yale_storage_unregister_a(void* a, size_t size); 
+    
   ///////////////
   // Accessors //
   ///////////////

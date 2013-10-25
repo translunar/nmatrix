@@ -87,7 +87,7 @@ static void cast_copy_list_default(LDType* lhs, RDType* default_val, size_t& pos
  */
 template <typename LDType, typename RDType>
 DENSE_STORAGE* create_from_list_storage(const LIST_STORAGE* rhs, dtype_t l_dtype) {
-
+  nm_list_storage_register(rhs);
   // allocate and copy shape
   size_t* shape = NM_ALLOC_N(size_t, rhs->dim);
   memcpy(shape, rhs->shape, rhs->dim * sizeof(size_t));
@@ -114,6 +114,7 @@ DENSE_STORAGE* create_from_list_storage(const LIST_STORAGE* rhs, dtype_t l_dtype
     nm_list_storage_delete(tmp);
 
   }
+  nm_list_storage_unregister(rhs);
 
   return lhs;
 }
@@ -127,6 +128,7 @@ DENSE_STORAGE* create_from_list_storage(const LIST_STORAGE* rhs, dtype_t l_dtype
 template <typename LDType, typename RDType>
 DENSE_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype) {
 
+  nm_yale_storage_register(rhs);
   // Position in rhs->elements.
   IType*  rhs_ija = reinterpret_cast<YALE_STORAGE*>(rhs->src)->ija;
   RDType* rhs_a   = reinterpret_cast<RDType*>(reinterpret_cast<YALE_STORAGE*>(rhs->src)->a);
@@ -195,6 +197,7 @@ DENSE_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype
       }
     }
   }
+  nm_yale_storage_unregister(rhs);
 
   return lhs;
 }
@@ -209,7 +212,9 @@ static void cast_copy_list_contents(LDType* lhs, const LIST* rhs, RDType* defaul
   NODE *curr = rhs->first;
   int last_key = -1;
 
-	for (size_t i = 0; i < shape[dim - 1 - recursions]; ++i, ++pos) {
+  nm_list_storage_register_list(rhs, recursions);
+
+  for (size_t i = 0; i < shape[dim - 1 - recursions]; ++i, ++pos) {
 
     if (!curr || (curr->key > (size_t)(last_key+1))) {
 
@@ -228,6 +233,8 @@ static void cast_copy_list_contents(LDType* lhs, const LIST* rhs, RDType* defaul
       curr     = curr->next;
     }
   }
+
+  nm_list_storage_unregister_list(rhs, recursions);
 
   --pos;
 }
@@ -261,6 +268,7 @@ static bool cast_copy_contents_dense(LIST* lhs, const RDType* rhs, RDType* zero,
  */
 template <typename LDType, typename RDType>
 LIST_STORAGE* create_from_dense_storage(const DENSE_STORAGE* rhs, dtype_t l_dtype, void* init) {
+  nm_dense_storage_register(rhs);
 
   LDType* l_default_val = NM_ALLOC_N(LDType, 1);
   RDType* r_default_val = NM_ALLOCA_N(RDType, 1); // clean up when finished with this function
@@ -286,6 +294,8 @@ LIST_STORAGE* create_from_dense_storage(const DENSE_STORAGE* rhs, dtype_t l_dtyp
 
   LIST_STORAGE* lhs = nm_list_storage_create(l_dtype, shape, rhs->dim, l_default_val);
 
+  nm_list_storage_register(lhs);
+
   size_t pos = 0;
 
   if (rhs->src == rhs)
@@ -303,6 +313,9 @@ LIST_STORAGE* create_from_dense_storage(const DENSE_STORAGE* rhs, dtype_t l_dtyp
     nm_dense_storage_delete(tmp);
   }
 
+  nm_list_storage_unregister(lhs);
+  nm_dense_storage_unregister(rhs);
+
   return lhs;
 }
 
@@ -314,6 +327,8 @@ LIST_STORAGE* create_from_dense_storage(const DENSE_STORAGE* rhs, dtype_t l_dtyp
 template <typename LDType, typename RDType>
 LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype) {
   // allocate and copy shape
+  nm_yale_storage_register(rhs);
+
   size_t *shape = NM_ALLOC_N(size_t, rhs->dim);
   shape[0] = rhs->shape[0]; shape[1] = rhs->shape[1];
 
@@ -405,6 +420,8 @@ LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype)
 		// end of walk through rows
   }
 
+  nm_yale_storage_unregister(rhs);
+
   return lhs;
 }
 
@@ -415,6 +432,9 @@ LIST_STORAGE* create_from_yale_storage(const YALE_STORAGE* rhs, dtype_t l_dtype)
  */
 template <typename LDType, typename RDType>
 static bool cast_copy_contents_dense(LIST* lhs, const RDType* rhs, RDType* zero, size_t& pos, size_t* coords, const size_t* shape, size_t dim, size_t recursions) {
+
+  nm_list_storage_register_list(lhs, recursions);
+
   NODE *prev = NULL;
   LIST *sub_list;
   bool added = false, added_list = false;
@@ -453,6 +473,8 @@ static bool cast_copy_contents_dense(LIST* lhs, const RDType* rhs, RDType* zero,
     }
   }
 
+  nm_list_storage_unregister_list(lhs, recursions);
+
   coords[dim-1-recursions] = 0;
   --pos;
 
@@ -470,6 +492,8 @@ namespace yale_storage { // FIXME: Move to yale.cpp
   YALE_STORAGE* create_from_dense_storage(const DENSE_STORAGE* rhs, dtype_t l_dtype, void* init) {
 
     if (rhs->dim != 2) rb_raise(nm_eStorageTypeError, "can only convert matrices of dim 2 to yale");
+
+    nm_dense_storage_register(rhs);
 
     IType pos = 0;
     IType ndnz = 0;
@@ -539,6 +563,8 @@ namespace yale_storage { // FIXME: Move to yale.cpp
     lhs_ija[shape[0]] = ija; // indicate the end of the last row
     lhs->ndnz = ndnz;
 
+    nm_dense_storage_unregister(rhs);
+
     return lhs;
   }
 
@@ -556,6 +582,7 @@ namespace yale_storage { // FIXME: Move to yale.cpp
     } else if (strncmp(reinterpret_cast<const char*>(rhs->default_val), "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", DTYPE_SIZES[rhs->dtype]))
       rb_raise(nm_eStorageTypeError, "list matrix of non-Ruby objects must have default value of 0 to convert to yale");
 
+    nm_list_storage_register(rhs);
 
     size_t ndnz = nm_list_storage_count_nd_elements(rhs);
     // Copy shape for yale construction
@@ -611,6 +638,8 @@ namespace yale_storage { // FIXME: Move to yale.cpp
     
     lhs_ija[rhs->shape[0]] = ija; // indicate the end of the last row
     lhs->ndnz = ndnz;
+
+    nm_list_storage_unregister(rhs);
 
     return lhs;
   }
