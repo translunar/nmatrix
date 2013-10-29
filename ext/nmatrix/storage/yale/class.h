@@ -51,14 +51,22 @@ public:
      slice(storage != storage->src),
      slice_shape(storage->shape),
      slice_offset(storage->offset)
-  { }
+  {
+    nm_yale_storage_register(storage->src);
+  }
 
   YaleStorage(const STORAGE* storage)
    : s(reinterpret_cast<YALE_STORAGE*>(storage->src)),
      slice(storage != storage->src),
      slice_shape(storage->shape),
      slice_offset(storage->offset)
-  { }
+  {
+    nm_yale_storage_register(reinterpret_cast<STORAGE*>(storage->src));
+  }
+
+  ~YaleStorage() {
+    nm_yale_storage_unregister(s);
+  }
 
   /* Allows us to do YaleStorage<uint8>::dtype() to get an nm::dtype_t */
   static nm::dtype_t dtype() {
@@ -835,11 +843,12 @@ public:
    */
   template <typename E>
   VALUE map_merged_stored(VALUE klass, nm::YaleStorage<E>& t, VALUE r_init) const {
+    nm_register_value(r_init);
     VALUE s_init    = const_default_value(),
           t_init    = t.const_default_value();
-    nm_register_value(r_init);
     nm_register_value(s_init);
     nm_register_value(t_init);
+    
     // Make a reasonable approximation of the resulting capacity
     size_t s_ndnz   = count_copy_ndnz(),
            t_ndnz   = t.count_copy_ndnz();
@@ -862,21 +871,19 @@ public:
     // Prepare the matrix structure
     YaleStorage<nm::RubyObject>::init(*rs, &r_init_obj);
     NMATRIX* m     = nm_create(nm::YALE_STORE, reinterpret_cast<STORAGE*>(rs));
+    nm_register_nmatrix(m);
     VALUE result   = Data_Wrap_Struct(klass, nm_mark, nm_delete, m);
-
-    // No obvious, efficient way to pass a length function as the fourth argument here:
+    nm_unregister_nmatrix(m);
+    nm_register_value(result);
     nm_unregister_value(r_init);
-    nm_unregister_value(s_init);
-    nm_unregister_value(t_init);
 
+    RETURN_SIZED_ENUMERATOR_PRE
+    nm_unregister_value(result);
+    nm_unregister_value(t_init);
+    nm_unregister_value(s_init);
+    // No obvious, efficient way to pass a length function as the fourth argument here:
     RETURN_SIZED_ENUMERATOR(result, 0, 0, 0);
 
-    nm_register_value(s_init); //FIXME: these are unregistered and reregistered in order to avoid leaking in the case where an enumerator is returned.  Surely there is a better way.
-    nm_register_value(t_init);
-
-
-
-    nm_register_value(result);
     // Create an object for us to iterate over.
     YaleStorage<nm::RubyObject> r(rs);
 
@@ -1079,11 +1086,18 @@ protected:
       new_a[m+n]        = a(m);
     }
 
+    if (s->dtype == nm::RUBYOBJ) {
+      nm_yale_storage_register_a(new_a, new_cap);
+    }
 
     s->capacity = new_cap;
 
     NM_FREE(s->ija);
     NM_FREE(s->a);
+
+    if (s->dtype == nm::RUBYOBJ) {
+      nm_yale_storage_register_a(new_a, new_cap);
+    }
 
     s->ija      = new_ija;
     s->a        = reinterpret_cast<void*>(new_a);

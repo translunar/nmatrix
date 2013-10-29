@@ -115,21 +115,27 @@
    *      return enumerator_init(enumerator_allocate(rb_cEnumerator), obj, meth, argc, argv);
    *    }
    */
+
+//opening portion -- this allows unregistering any objects in use before returning
+ #define RETURN_SIZED_ENUMERATOR_PRE do { \
+   if (!rb_block_given_p()) {
+
+//remaining portion
  #ifdef RUBY_2
   #ifndef RETURN_SIZED_ENUMERATOR
    #undef RETURN_SIZED_ENUMERATOR
    // Ruby 2.0 and higher has rb_enumeratorize_with_size instead of rb_enumeratorize.
    // We want to support both in the simplest way possible.
-   #define RETURN_SIZED_ENUMERATOR(obj, argc, argv, size_fn) do {   \
-    if (!rb_block_given_p())                                        \
-      return rb_enumeratorize_with_size((obj), ID2SYM(rb_frame_this_func()), (argc), (argv), (size_fn));  \
+   #define RETURN_SIZED_ENUMERATOR(obj, argc, argv, size_fn) \
+        return rb_enumeratorize_with_size((obj), ID2SYM(rb_frame_this_func()), (argc), (argv), (size_fn));  \
+      } \
     } while (0)
   #endif
  #else
    #undef RETURN_SIZED_ENUMERATOR
-   #define RETURN_SIZED_ENUMERATOR(obj, argc, argv, size_fn) do {				            \
-    if (!rb_block_given_p())					                                              \
-      return rb_enumeratorize((obj), ID2SYM(rb_frame_this_func()), (argc), (argv));	\
+   #define RETURN_SIZED_ENUMERATOR(obj, argc, argv, size_fn) \
+        return rb_enumeratorize((obj), ID2SYM(rb_frame_this_func()), (argc), (argv));	\
+      } \
     } while (0)
  #endif
 

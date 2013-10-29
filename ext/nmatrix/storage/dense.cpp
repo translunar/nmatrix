@@ -364,10 +364,13 @@ void nm_dense_storage_unregister(const STORAGE* s) {
  */
 VALUE nm_dense_map_pair(VALUE self, VALUE right) {
 
-  RETURN_SIZED_ENUMERATOR(self, 0, 0, nm_enumerator_length);
-
   nm_register_value(self);
   nm_register_value(right);
+
+  RETURN_SIZED_ENUMERATOR_PRE
+  nm_unregister_value(right);
+  nm_unregister_value(self);
+  RETURN_SIZED_ENUMERATOR(self, 0, 0, nm_enumerator_length);
 
   DENSE_STORAGE *s = NM_STORAGE_DENSE(self),
                 *t = NM_STORAGE_DENSE(right);
@@ -397,12 +400,17 @@ VALUE nm_dense_map_pair(VALUE self, VALUE right) {
     nm_unregister_value(sval);
   }
 
+  VALUE klass = CLASS_OF(self);
   NMATRIX* m = nm_create(nm::DENSE_STORE, reinterpret_cast<STORAGE*>(result));
+  nm_register_nmatrix(m);
+  VALUE to_return = Data_Wrap_Struct(klass, nm_mark, nm_delete, m);
+
+  nm_unregister_nmatrix(m);
   nm_dense_storage_unregister(result);
   nm_unregister_value(self);
   nm_unregister_value(right);
 
-  return Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, m);
+  return to_return;
 
 }
 
@@ -411,9 +419,11 @@ VALUE nm_dense_map_pair(VALUE self, VALUE right) {
  */
 VALUE nm_dense_map(VALUE self) {
 
-  RETURN_SIZED_ENUMERATOR(self, 0, 0, nm_enumerator_length);
-
   nm_register_value(self);
+
+  RETURN_SIZED_ENUMERATOR_PRE
+  nm_unregister_value(self);
+  RETURN_SIZED_ENUMERATOR(self, 0, 0, nm_enumerator_length);
 
   DENSE_STORAGE *s = NM_STORAGE_DENSE(self);
 
@@ -438,13 +448,18 @@ VALUE nm_dense_map(VALUE self) {
     result_elem[k] = rb_yield(NM_DTYPE(self) == nm::RUBYOBJ ? reinterpret_cast<VALUE*>(s->elements)[s_index] : rubyobj_from_cval((char*)(s->elements) + s_index*DTYPE_SIZES[NM_DTYPE(self)], NM_DTYPE(self)).rval);
   }
 
-  NMATRIX* m = nm_create(nm::DENSE_STORE, reinterpret_cast<STORAGE*>(result));
+  VALUE klass = CLASS_OF(self);
 
+  NMATRIX* m = nm_create(nm::DENSE_STORE, reinterpret_cast<STORAGE*>(result));
+  nm_register_nmatrix(m);
+
+  VALUE to_return = Data_Wrap_Struct(klass, nm_mark, nm_delete, m);
+
+  nm_unregister_nmatrix(m);
   nm_dense_storage_unregister(result);
   nm_unregister_value(self);
 
-  return Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, m);
-
+  return to_return;
 }
 
 
@@ -453,10 +468,11 @@ VALUE nm_dense_map(VALUE self) {
  */
 VALUE nm_dense_each_with_indices(VALUE nmatrix) {
 
-  RETURN_SIZED_ENUMERATOR(nmatrix, 0, 0, nm_enumerator_length); // fourth argument only used by Ruby2+
-
   nm_register_value(nmatrix);
-
+  
+  RETURN_SIZED_ENUMERATOR_PRE
+  nm_unregister_value(nmatrix);
+  RETURN_SIZED_ENUMERATOR(nmatrix, 0, 0, nm_enumerator_length); // fourth argument only used by Ruby2+
   DENSE_STORAGE* s = NM_STORAGE_DENSE(nmatrix);
 
   // Create indices and initialize them to zero
@@ -503,9 +519,13 @@ VALUE nm_dense_each_with_indices(VALUE nmatrix) {
  * containing other types of data.
  */
 VALUE nm_dense_each(VALUE nmatrix) {
-  RETURN_SIZED_ENUMERATOR(nmatrix, 0, 0, nm_enumerator_length);
 
   nm_register_value(nmatrix);
+
+  RETURN_SIZED_ENUMERATOR_PRE
+  nm_unregister_value(nmatrix);
+  RETURN_SIZED_ENUMERATOR(nmatrix, 0, 0, nm_enumerator_length);
+
   DENSE_STORAGE* s = NM_STORAGE_DENSE(nmatrix);
 
   size_t* temp_coords = NM_ALLOCA_N(size_t, s->dim);
@@ -647,7 +667,7 @@ void nm_dense_storage_set(VALUE left, SLICE* slice, VALUE right) {
  *				have the same dtype.
  */
 bool nm_dense_storage_eqeq(const STORAGE* left, const STORAGE* right) {
-	LR_DTYPE_TEMPLATE_TABLE(nm::dense_storage::eqeq, bool, const DENSE_STORAGE*, const DENSE_STORAGE*)
+  LR_DTYPE_TEMPLATE_TABLE(nm::dense_storage::eqeq, bool, const DENSE_STORAGE*, const DENSE_STORAGE*)
 
   if (!ttable[left->dtype][right->dtype]) {
     rb_raise(nm_eDataTypeError, "comparison between these dtypes is undefined");

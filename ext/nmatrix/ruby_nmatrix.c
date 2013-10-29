@@ -1121,6 +1121,7 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
     SLICE* slice = get_slice(dim, dim, slice_argv, shape);
     // Create a temporary dense matrix and use it to do a slice assignment on self.
     NMATRIX* tmp = nm_create(nm::DENSE_STORE, (STORAGE*)nm_dense_storage_create(dtype, tmp_shape, dim, v, v_size));
+    nm_register_nmatrix(tmp);
     VALUE rb_tmp = Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, tmp);
     nm_register_value(rb_tmp);
     if (stype == nm::YALE_STORE)  nm_yale_storage_set(self, slice, rb_tmp);
@@ -1360,10 +1361,16 @@ VALUE nm_cast(VALUE self, VALUE new_stype_symbol, VALUE new_dtype_symbol, VALUE 
   void* init_ptr = NM_ALLOCA_N(char, DTYPE_SIZES[new_dtype]);
   rubyval_to_cval(init, new_dtype, init_ptr);
 
+  NMATRIX* m = nm_cast_with_ctype_args(rhs, new_stype, new_dtype, init_ptr);
+  nm_register_nmatrix(m);
+
+  VALUE to_return = Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, m);
+  
+  nm_unregister_nmatrix(m);
   nm_unregister_value(self);
   nm_unregister_value(init);
+  return to_return;
 
-  return Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, nm_cast_with_ctype_args(rhs, new_stype, new_dtype, init_ptr));
 }
 
 /*
@@ -1381,9 +1388,12 @@ static VALUE nm_init_transposed(VALUE self) {
   NMATRIX* lhs = nm_create( NM_STYPE(self),
                             storage_copy_transposed[NM_STYPE(self)]( NM_STORAGE(self) )
                           );
+  nm_register_nmatrix(lhs);
+  VALUE to_return = Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, lhs);
 
+  nm_unregister_nmatrix(lhs);
   nm_unregister_value(self);
-  return Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, lhs);
+  return to_return;
 }
 
 /*
@@ -1744,7 +1754,10 @@ static VALUE nm_read(int argc, VALUE* argv, VALUE self) {
   // Return the appropriate matrix object (Ruby VALUE)
   // FIXME: This should probably return CLASS_OF(self) instead of cNMatrix, but I don't know how that works for
   // FIXME: class methods.
+  nm_register_nmatrix(nm);
+  VALUE to_return = Data_Wrap_Struct(cNMatrix, nm_mark, nm_delete, nm);
 
+  nm_unregister_nmatrix(nm);
   nm_unregister_values(argv, argc);
   nm_unregister_value(self);
   nm_unregister_storage(stype, s);
@@ -1752,7 +1765,7 @@ static VALUE nm_read(int argc, VALUE* argv, VALUE self) {
   switch(stype) {
   case nm::DENSE_STORE:
   case nm::YALE_STORE:
-    return Data_Wrap_Struct(cNMatrix, nm_mark, nm_delete, nm);
+    return to_return;
   default: // this case never occurs (due to earlier rb_raise)
     return Qnil;
   }
@@ -2116,8 +2129,9 @@ static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(const STORAGE*
       NMATRIX* mat  = NM_ALLOC(NMATRIX);
       mat->stype    = NM_STYPE(self);
       mat->storage  = (STORAGE*)((*slice_func)( s, slice ));
-
+      nm_register_nmatrix(mat);
       result        = Data_Wrap_Struct(CLASS_OF(self), nm_mark, delete_func, mat);
+      nm_unregister_nmatrix(mat);
     }
 
     free_slice(slice);
@@ -2786,12 +2800,13 @@ static VALUE matrix_multiply(NMATRIX* left, NMATRIX* right) {
   nm_unregister_storage(right->stype, casted.right);
   if (right->storage != casted.right) free_storage[result->stype](casted.right);
 
+  VALUE to_return = result ? Data_Wrap_Struct(cNMatrix, nm_mark, nm_delete, result) : Qnil; // Only if we try to multiply list matrices should we return Qnil.
+
   nm_unregister_nmatrix(left);
   nm_unregister_nmatrix(right);
   nm_unregister_nmatrix(result);
 
-  if (result) return Data_Wrap_Struct(cNMatrix, nm_mark, nm_delete, result);
-  return Qnil; // Only if we try to multiply list matrices should we return Qnil.
+  return to_return;
 }
 
 /*
@@ -2875,12 +2890,17 @@ VALUE rb_nmatrix_dense_create(nm::dtype_t dtype, size_t* shape, size_t dim, void
   // allocate and create the matrix and its storage
   nm = nm_create(nm::DENSE_STORE, nm_dense_storage_create(dtype, shape_copy, dim, elements_copy, length));
 
+  nm_register_nmatrix(nm);
+
+  VALUE to_return = Data_Wrap_Struct(cNMatrix, nm_mark, nm_delete, nm);
+
+  nm_unregister_nmatrix(nm);
   if (dtype == nm::RUBYOBJ) {
     nm_unregister_values(reinterpret_cast<VALUE*>(elements), length);
   }
 
   // tell Ruby about the matrix and its storage, particularly how to garbage collect it.
-  return Data_Wrap_Struct(cNMatrix, nm_mark, nm_delete, nm);
+  return to_return;
 }
 
 /*

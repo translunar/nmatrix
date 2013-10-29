@@ -78,11 +78,18 @@ public:
         offsets[i] += actual->offset[i];
       actual = reinterpret_cast<LIST_STORAGE*>(actual->src);
     }
+    nm_list_storage_register(actual);
     actual_shape_ = actual->shape;
 
     if (init_obj_ == Qnil) {
       init_obj_ = s->dtype == nm::RUBYOBJ ? *reinterpret_cast<VALUE*>(s->default_val) : rubyobj_from_cval(s->default_val, s->dtype).rval;
     }
+    nm_register_value(init_obj_);
+  }
+
+  ~RecurseData() {
+    nm_list_storage_unregister(actual);
+    nm_unregister_value(init_obj_);
   }
 
   dtype_t dtype() const { return ref->dtype; }
@@ -889,9 +896,12 @@ static void each_stored_with_indices_r(nm::list_storage::RecurseData& s, const L
  */
 VALUE nm_list_each_with_indices(VALUE nmatrix, bool stored) {
 
-  // If we don't have a block, return an enumerator.
-  RETURN_SIZED_ENUMERATOR(nmatrix, 0, 0, 0);
   nm_register_value(nmatrix);
+
+  // If we don't have a block, return an enumerator.
+  RETURN_SIZED_ENUMERATOR_PRE
+  nm_unregister_value(nmatrix);
+  RETURN_SIZED_ENUMERATOR(nmatrix, 0, 0, 0);
 
   nm::list_storage::RecurseData sdata(NM_STORAGE_LIST(nmatrix));
 
@@ -925,7 +935,10 @@ VALUE nm_list_map_stored(VALUE left, VALUE init) {
   //  rb_raise(rb_eNotImpError, "RETURN_SIZED_ENUMERATOR probably won't work for a map_merged since no merged object is created");
   //}
   // If we don't have a block, return an enumerator.
-  RETURN_SIZED_ENUMERATOR(left, 0, 0, 0); // FIXME: Test this. Probably won't work. Enable above code instead.  FIXME: leak left, init here
+  RETURN_SIZED_ENUMERATOR_PRE
+  nm_unregister_value(left);
+  nm_unregister_value(init);
+  RETURN_SIZED_ENUMERATOR(left, 0, 0, 0); // FIXME: Test this. Probably won't work. Enable above code instead.
 
   // Figure out default value if none provided by the user
   if (init == Qnil) {
@@ -943,11 +956,15 @@ VALUE nm_list_map_stored(VALUE left, VALUE init) {
   nm::list_storage::RecurseData rdata(r, init);
   nm_register_nmatrix(result);
   map_stored_r(rdata, sdata, rdata.top_level_list(), sdata.top_level_list(), sdata.dim() - 1);
+
+  VALUE to_return = Data_Wrap_Struct(CLASS_OF(left), nm_mark, nm_delete, result);
+
   nm_unregister_nmatrix(result);
   nm_unregister_value(*reinterpret_cast<VALUE*>(init_val));
   nm_unregister_value(init);
   nm_unregister_value(left);
-  return Data_Wrap_Struct(CLASS_OF(left), nm_mark, nm_delete, result);
+
+  return to_return;
 }
 
 
@@ -984,6 +1001,10 @@ VALUE nm_list_map_merged_stored(VALUE left, VALUE right, VALUE init) {
   //  rb_raise(rb_eNotImpError, "RETURN_SIZED_ENUMERATOR probably won't work for a map_merged since no merged object is created");
   //}
   // If we don't have a block, return an enumerator.
+  RETURN_SIZED_ENUMERATOR_PRE
+  nm_unregister_value(left);
+  nm_unregister_value(right);
+  nm_unregister_value(init);
   RETURN_SIZED_ENUMERATOR(left, 0, 0, 0); // FIXME: Test this. Probably won't work. Enable above code instead.  FIXME: leaks left, right, init
 
   // Figure out default value if none provided by the user
@@ -1008,12 +1029,14 @@ VALUE nm_list_map_merged_stored(VALUE left, VALUE right, VALUE init) {
   // If we are working with a scalar operation
   if (scalar) nm_list_storage_delete(t);
 
+  VALUE to_return = Data_Wrap_Struct(CLASS_OF(left), nm_mark, nm_delete, result);
+
   nm_unregister_nmatrix(result);
   nm_unregister_value(init);
   nm_unregister_value(right);
   nm_unregister_value(left);
 
-  return Data_Wrap_Struct(CLASS_OF(left), nm_mark, nm_delete, result);
+  return to_return;
 }
 
 
@@ -1199,8 +1222,13 @@ static void slice_set_single(LIST_STORAGE* dest, LIST* l, void* val, size_t* coo
  * Set a value or values in a list matrix.
  */
 void nm_list_storage_set(VALUE left, SLICE* slice, VALUE right) {
+  nm_register_value(left);
+  nm_register_value(right);
+  nm::dtype_t dtype = NM_DTYPE(left);
+  nm_unregister_value(right);
+  nm_unregister_value(left);
   NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::list_storage::set, void, VALUE, SLICE*, VALUE)
-  ttable[NM_DTYPE(left)](left, slice, right);
+  ttable[dtype](left, slice, right);
 }
 
 
@@ -1549,7 +1577,10 @@ extern "C" {
    * This is an internal C function which handles list stype only.
    */
   VALUE nm_to_hash(VALUE self) {
-    return nm_list_storage_to_hash(NM_STORAGE_LIST(self), NM_DTYPE(self));
+    nm_register_value(self);
+    VALUE to_return = nm_list_storage_to_hash(NM_STORAGE_LIST(self), NM_DTYPE(self));
+    nm_unregister_value(self);
+    return to_return;
   }
 
     /*
@@ -1559,6 +1590,9 @@ extern "C" {
      * Get the default_value property from a list matrix.
      */
     VALUE nm_list_default_value(VALUE self) {
-      return (NM_DTYPE(self) == nm::RUBYOBJ) ? *reinterpret_cast<VALUE*>(NM_DEFAULT_VAL(self)) : rubyobj_from_cval(NM_DEFAULT_VAL(self), NM_DTYPE(self)).rval;
+      nm_register_value(self);
+      VALUE to_return = (NM_DTYPE(self) == nm::RUBYOBJ) ? *reinterpret_cast<VALUE*>(NM_DEFAULT_VAL(self)) : rubyobj_from_cval(NM_DEFAULT_VAL(self), NM_DTYPE(self)).rval;
+      nm_unregister_value(self);
+      return to_return;
     }
 } // end of extern "C" block
