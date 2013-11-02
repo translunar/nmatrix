@@ -475,7 +475,7 @@ static nm_gc_holder* allocated_pool = NULL; // an object pool for linked list no
 /**
  * GC Marking function for the values that have been registered.
  */
-void __nm_mark_value_container(nm_gc_holder* gc_value_holder_struct) {
+static void __nm_mark_value_container(nm_gc_holder* gc_value_holder_struct) {
   if (gc_value_holder_struct && gc_value_holder_struct->start) {
     nm_gc_ll_node* curr = gc_value_holder_struct->start;
     while (curr) {
@@ -489,7 +489,7 @@ void __nm_mark_value_container(nm_gc_holder* gc_value_holder_struct) {
  * Initilalizes the linked list of in-use VALUEs if it hasn't been done
  * already.
  */
-void __nm_initialize_value_container() {
+static void __nm_initialize_value_container() {
   if (gc_value_holder == NULL) {
     gc_value_holder_struct = NM_ALLOC_NONRUBY(nm_gc_holder);
     allocated_pool = NM_ALLOC_NONRUBY(nm_gc_holder);

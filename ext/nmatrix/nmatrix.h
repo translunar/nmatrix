@@ -389,8 +389,6 @@ extern "C" {
   void     nm_unregister_storage(nm::stype_t stype, const STORAGE* storage);
   void     nm_register_nmatrix(NMATRIX* nmatrix);
   void     nm_unregister_nmatrix(NMATRIX* nmatrix);
-  void     __nm_initialize_value_container();
-  void     __nm_mark_value_container(nm_gc_holder* holder);
 
 #ifdef __cplusplus
 }
