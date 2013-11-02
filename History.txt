@@ -432,12 +432,18 @@
 
 * 1 major enhancements:
 
-* 2 minor enhancements:
+* 3 minor enhancements:
 
   * User-friendly #gesvd and #gesdd updates (by @ryanmt)
 
   * Added experimental #yale_row_key_intersection function for expert
     recommendation problems
+
+  * Added additional *indgen shortcuts and changed behavior for some;
+    now, #cindgen for :complex64, #zindgen for :complex128, #findgen
+    for :float32, #dindgen for :float64, #rindgen for :rational128,
+    and #rbindgen for Ruby objects (which contain integers); also,
+    removed code repetition
 
 * 7 bug fixes:
 

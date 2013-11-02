@@ -295,6 +295,14 @@ class NMatrix
     # call-seq:
     #     seq(shape) -> NMatrix
     #     seq(shape, options) -> NMatrix
+    #     bindgen(shape) -> NMatrix of :byte
+    #     indgen(shape) -> NMatrix of :int64
+    #     findgen(shape) -> NMatrix of :float32
+    #     dindgen(shape) -> NMatrix of :float64
+    #     cindgen(shape) -> NMatrix of :complex64
+    #     zindgen(shape) -> NMatrix of :complex128
+    #     rindgen(shape) -> NMatrix of :rational128
+    #     rbindgen(shape) -> NMatrix of :object
     #
     # Creates a matrix filled with a sequence of integers starting at zero.
     #
@@ -322,66 +330,11 @@ class NMatrix
       NMatrix.new(shape, values, {:stype => :dense}.merge(options))
     end
 
-    #
-    # call-seq:
-    #     indgen(size) -> NMatrix
-    #
-    # Returns an integer NMatrix. Equivalent to <tt>seq(n, dtype: :int32)</tt>.
-    #
-    # * *Arguments* :
-    #   - +shape+ -> Shape of the sequence.
-    # * *Returns* :
-    #   - NMatrix with dtype +:int32+.
-    #
-    def indgen(shape)
-      NMatrix.seq(shape, dtype: :int32)
+    {:bindgen => :byte, :indgen => :int64, :findgen => :float32, :dindgen => :float64,
+     :cindgen => :complex64, :zindgen => :complex128,
+     :rindgen => :rational128, :rbindgen => :object}.each_pair do |meth, dtype|
+      define_method(meth) { |shape| NMatrix.seq(shape, :dtype => dtype) }
     end
-
-    #
-    # call-seq:
-    #     findgen(shape) -> NMatrix
-    #
-    # Returns a float NMatrix. Equivalent to <tt>seq(n, dtype: :float32)</tt>.
-    #
-    # * *Arguments* :
-    #   - +shape+ -> Shape of the sequence.
-    # * *Returns* :
-    #   - NMatrix with dtype +:float32+.
-    #
-    def findgen(shape)
-      NMatrix.seq(shape, dtype: :float32)
-    end
-
-    #
-    # call-seq:
-    #     bindgen(size) -> NMatrix
-    #
-    # Returns a byte NMatrix. Equivalent to <tt>seq(n, dtype: :byte)</tt>.
-    #
-    # * *Arguments* :
-    #   - +size+ -> Shape of the sequence.
-    # * *Returns* :
-    #   - NMatrix with dtype +:byte+.
-    #
-    def bindgen(shape)
-      NMatrix.seq(shape, dtype: :byte)
-    end
-
-    #
-    # call-seq:
-    #     cindgen(shape) -> NMatrix
-    #
-    # Returns a complex NMatrix. Equivalent to <tt>seq(n, dtype: :complex64)</tt>.
-    #
-    # * *Arguments* :
-    #   - +shape+ -> Shape of the sequence.
-    # * *Returns* :
-    #   - NMatrix with dtype +:complex64+.
-    #
-    def cindgen(shape)
-      NMatrix.seq(shape, dtype: :complex64)
-    end
-
   end
 end
 
