@@ -432,7 +432,12 @@
 
 * 1 major enhancements:
 
-* 3 minor enhancements:
+  * Improved garbage collection strategy for partial object creation
+    (i.e., when VALUEs are allocated but not registered right away),
+    which in addition to fixing numerous bugs should prevent some new
+    bugs from arising in the future (by @cjfuller)
+
+* 4 minor enhancements:
 
   * User-friendly #gesvd and #gesdd updates (by @ryanmt)
 
@@ -445,7 +450,10 @@
     and #rbindgen for Ruby objects (which contain integers); also,
     removed code repetition
 
-* 7 bug fixes:
+  * Changed #stddev to use elementwise #sqrt instead of a manual map
+    block (by @cjfuller)
+
+* 12 bug fixes:
 
   * Spec revisions for lapack_gesdd and lapack_gesvd (by @ryanmt)
 
@@ -469,3 +477,12 @@
     range of argument to prevent segfault
 
   * Fixed :* shortcut for a full list dimension (by @cjfuller)
+
+  * Fixed list construction problem which occurred when an initial
+    value array was provided (by @cjfuller)
+
+  * Fixed #inject issue with list and yale matrices of two dimensions
+    (by @cjfuller)
+
+  * Fixed several garbage collection problems (also listed under
+    enhancements)
