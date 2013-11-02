@@ -58,7 +58,7 @@ namespace nm { namespace list {
  * Creates an empty linked list.
  */
 LIST* create(void) {
-  LIST* list = ALLOC( LIST );
+  LIST* list = NM_ALLOC( LIST );
   list->first = NULL;
   return list;
 }
@@ -77,18 +77,18 @@ void del(LIST* list, size_t recursions) {
 
     if (recursions == 0) {
       //fprintf(stderr, "    free_val: %p\n", curr->val);
-      xfree(curr->val);
+      NM_FREE(curr->val);
       
     } else {
       //fprintf(stderr, "    free_list: %p\n", list);
       del((LIST*)curr->val, recursions - 1);
     }
 
-    xfree(curr);
+    NM_FREE(curr);
     curr = next;
   }
   //fprintf(stderr, "    free_list: %p\n", list);
-  xfree(list);
+  NM_FREE(list);
 }
 
 /*
@@ -122,10 +122,10 @@ void mark(LIST* list, size_t recursions) {
  * checks, just inserts.
  */
 NODE* insert_first_node(LIST* list, size_t key, void* val, size_t val_size) {
-  NODE* ins   = ALLOC(NODE);
+  NODE* ins   = NM_ALLOC(NODE);
   ins->next   = list->first;
 
-  void* val_copy = ALLOC_N(char, val_size);
+  void* val_copy = NM_ALLOC_N(char, val_size);
   memcpy(val_copy, val, val_size);
 
   ins->val    = reinterpret_cast<void*>(val_copy);
@@ -136,7 +136,7 @@ NODE* insert_first_node(LIST* list, size_t key, void* val, size_t val_size) {
 }
 
 NODE* insert_first_list(LIST* list, size_t key, LIST* l) {
-  NODE* ins   = ALLOC(NODE);
+  NODE* ins   = NM_ALLOC(NODE);
   ins->next   = list->first;
 
   ins->val    = reinterpret_cast<void*>(l);
@@ -160,7 +160,7 @@ NODE* insert(LIST* list, bool replace, size_t key, void* val) {
   	// List is empty
   	
     //if (!(ins = malloc(sizeof(NODE)))) return NULL;
-    ins = ALLOC(NODE);
+    ins = NM_ALLOC(NODE);
     ins->next             = NULL;
     ins->val              = val;
     ins->key              = key;
@@ -172,7 +172,7 @@ NODE* insert(LIST* list, bool replace, size_t key, void* val) {
   	// Goes at the beginning of the list
   	
     //if (!(ins = malloc(sizeof(NODE)))) return NULL;
-    ins = ALLOC(NODE);
+    ins = NM_ALLOC(NODE);
     ins->next             = list->first;
     ins->val              = val;
     ins->key              = key;
@@ -187,11 +187,11 @@ NODE* insert(LIST* list, bool replace, size_t key, void* val) {
   if (ins->key == key) {
     // key already exists
     if (replace) {
-      xfree(ins->val);
+      NM_FREE(ins->val);
       ins->val = val;
       
     } else {
-    	xfree(val);
+    	NM_FREE(val);
     }
     
     return ins;
@@ -208,7 +208,7 @@ NODE* insert(LIST* list, bool replace, size_t key, void* val) {
  */
 NODE* insert_after(NODE* node, size_t key, void* val) {
   //if (!(ins = malloc(sizeof(NODE)))) return NULL;
-  NODE* ins = ALLOC(NODE);
+  NODE* ins = NM_ALLOC(NODE);
 
   // insert 'ins' between 'node' and 'node->next'
   ins->next  = node->next;
@@ -231,7 +231,7 @@ NODE* replace_insert_after(NODE* node, size_t key, void* val, bool copy, size_t 
     // Should we copy into the current one or free and insert?
     if (copy) memcpy(node->next->val, val, copy_size);
     else {
-      xfree(node->next->val);
+      NM_FREE(node->next->val);
       node->next->val = val;
     }
 
@@ -240,7 +240,7 @@ NODE* replace_insert_after(NODE* node, size_t key, void* val, bool copy, size_t 
   } else { // no next node, or if there is one, it's greater than the current key
 
     if (copy) {
-      void* val_copy = ALLOC_N(char, copy_size);
+      void* val_copy = NM_ALLOC_N(char, copy_size);
       memcpy(val_copy, val, copy_size);
       return insert_after(node, key, val_copy);
     } else {
@@ -256,7 +256,7 @@ NODE* replace_insert_after(NODE* node, size_t key, void* val, bool copy, size_t 
  * Functions analogously to list::insert but this inserts a copy of the value instead of the original.
  */
 NODE* insert_copy(LIST *list, bool replace, size_t key, void *val, size_t size) {
-  void *copy_val = ALLOC_N(char, size);
+  void *copy_val = NM_ALLOC_N(char, size);
   memcpy(copy_val, val, size);
 
   return insert(list, replace, key, copy_val);
@@ -272,7 +272,7 @@ void* remove_by_node(LIST* list, NODE* prev, NODE* rm) {
   else        prev->next  = rm->next;
 
   void* val   = rm->val;
-  xfree(rm);
+  NM_FREE(rm);
 
   return val;
 }
@@ -296,7 +296,7 @@ void* remove_by_key(LIST* list, size_t key) {
     rm  = list->first;
     
     list->first = rm->next;
-    xfree(rm);
+    NM_FREE(rm);
     
     return val;
   }
@@ -313,7 +313,7 @@ void* remove_by_key(LIST* list, size_t key) {
 
     // get the value and free the memory for the node
     val = rm->val;
-    xfree(rm);
+    NM_FREE(rm);
 
     return val;
   }
@@ -348,7 +348,7 @@ bool remove_recursive(LIST* list, const size_t* coords, const size_t* offsets, c
 
       if (remove_parent) { // now empty -- so remove the sub-list
 //        std::cerr << r << ": removing parent list at " << n->key << std::endl;
-        xfree(remove_by_node(list, prev, n));
+        NM_FREE(remove_by_node(list, prev, n));
 
         if (prev) n  = prev->next && node_is_within_slice(prev->next, coords[r] + offsets[r], lengths[r]) ? prev->next : NULL;
         else      n  = node_is_within_slice(list->first, coords[r] + offsets[r], lengths[r]) ? list->first : NULL;
@@ -367,7 +367,7 @@ bool remove_recursive(LIST* list, const size_t* coords, const size_t* offsets, c
 
     while (n) {
 //      std::cerr << r << ": removing node at " << n->key << std::endl;
-      xfree(remove_by_node(list, prev, n));
+      NM_FREE(remove_by_node(list, prev, n));
 
       if (prev) n  = prev->next && node_is_within_slice(prev->next, coords[r] + offsets[r], lengths[r]) ? prev->next : NULL;
       else      n  = node_is_within_slice(list->first, coords[r] + offsets[r], lengths[r]) ? list->first : NULL;
@@ -505,7 +505,7 @@ void cast_copy_contents(LIST* lhs, const LIST* rhs, size_t recursions) {
   if (rhs->first) {
     // copy head node
     rcurr = rhs->first;
-    lcurr = lhs->first = ALLOC( NODE );
+    lcurr = lhs->first = NM_ALLOC( NODE );
 
     while (rcurr) {
       lcurr->key = rcurr->key;
@@ -513,14 +513,14 @@ void cast_copy_contents(LIST* lhs, const LIST* rhs, size_t recursions) {
       if (recursions == 0) {
       	// contents is some kind of value
 
-        lcurr->val = ALLOC( LDType );
+        lcurr->val = NM_ALLOC( LDType );
 
         *reinterpret_cast<LDType*>(lcurr->val) = *reinterpret_cast<RDType*>( rcurr->val );
 
       } else {
       	// contents is a list
 
-        lcurr->val = ALLOC( LIST );
+        lcurr->val = NM_ALLOC( LIST );
 
         cast_copy_contents<LDType, RDType>(
           reinterpret_cast<LIST*>(lcurr->val),
@@ -530,7 +530,7 @@ void cast_copy_contents(LIST* lhs, const LIST* rhs, size_t recursions) {
       }
 
       if (rcurr->next) {
-      	lcurr->next = ALLOC( NODE );
+      	lcurr->next = NM_ALLOC( NODE );
 
       } else {
       	lcurr->next = NULL;

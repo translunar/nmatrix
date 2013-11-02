@@ -304,8 +304,8 @@ class NMatrix
       reduce_dtype = :float64
     end
     inject_rank(dimen, 0.0, reduce_dtype) do |mean, sub_mat|
-      mean + sub_mat/shape[dimen]
-    end
+      mean + sub_mat
+    end / shape[dimen]
   end
 
   ##
@@ -397,7 +397,7 @@ class NMatrix
   # @see #inject_rank
   #
   def std(dimen=0)
-    variance(dimen).map! { |e| Math.sqrt(e) }
+    variance(dimen).sqrt
   end
 
 

@@ -53,6 +53,8 @@
 	#endif
 #endif
 
+#include "nm_memory.h"
+
 /*
  * Macros
  */
@@ -113,21 +115,27 @@
    *      return enumerator_init(enumerator_allocate(rb_cEnumerator), obj, meth, argc, argv);
    *    }
    */
+
+//opening portion -- this allows unregistering any objects in use before returning
+ #define RETURN_SIZED_ENUMERATOR_PRE do { \
+   if (!rb_block_given_p()) {
+
+//remaining portion
  #ifdef RUBY_2
   #ifndef RETURN_SIZED_ENUMERATOR
    #undef RETURN_SIZED_ENUMERATOR
    // Ruby 2.0 and higher has rb_enumeratorize_with_size instead of rb_enumeratorize.
    // We want to support both in the simplest way possible.
-   #define RETURN_SIZED_ENUMERATOR(obj, argc, argv, size_fn) do {   \
-    if (!rb_block_given_p())                                        \
-      return rb_enumeratorize_with_size((obj), ID2SYM(rb_frame_this_func()), (argc), (argv), (size_fn));  \
+   #define RETURN_SIZED_ENUMERATOR(obj, argc, argv, size_fn) \
+        return rb_enumeratorize_with_size((obj), ID2SYM(rb_frame_this_func()), (argc), (argv), (size_fn));  \
+      } \
     } while (0)
   #endif
  #else
    #undef RETURN_SIZED_ENUMERATOR
-   #define RETURN_SIZED_ENUMERATOR(obj, argc, argv, size_fn) do {				            \
-    if (!rb_block_given_p())					                                              \
-      return rb_enumeratorize((obj), ID2SYM(rb_frame_this_func()), (argc), (argv));	\
+   #define RETURN_SIZED_ENUMERATOR(obj, argc, argv, size_fn) \
+        return rb_enumeratorize((obj), ID2SYM(rb_frame_this_func()), (argc), (argv));	\
+      } \
     } while (0)
  #endif
 
@@ -278,6 +286,18 @@ NM_DEF_STRUCT_PRE(NMATRIX);   // struct NMATRIX {
   NM_DECL_STRUCT(STORAGE*, storage);  // STORAGE* storage;  // Pointer to storage struct.
 NM_DEF_STRUCT_POST(NMATRIX);  // };
 
+/* Structs for dealing with VALUEs in use so that they don't get GC'd */
+
+typedef struct __NM_GC_LL_NODE {
+  VALUE* val;
+  size_t n;
+  __NM_GC_LL_NODE* next;
+} nm_gc_ll_node;
+
+typedef struct __NM_GC_HOLDER {
+  __NM_GC_LL_NODE* start;
+} nm_gc_holder;
+
 #define NM_MAX_RANK 15
 
 #define UnwrapNMatrix(obj,var)  Data_Get_Struct(obj, NMATRIX, var)
@@ -361,9 +381,14 @@ extern "C" {
 	void     nm_mark(NMATRIX* mat);
 	void     nm_delete(NMATRIX* mat);
 	void     nm_delete_ref(NMATRIX* mat);
-  void     nm_mark(NMATRIX* mat);
   void     nm_register_values(VALUE* vals, size_t n);
   void     nm_unregister_values(VALUE* vals, size_t n);
+  void     nm_register_value(VALUE& val);
+  void     nm_unregister_value(VALUE& val);
+  void     nm_register_storage(nm::stype_t stype, const STORAGE* storage);
+  void     nm_unregister_storage(nm::stype_t stype, const STORAGE* storage);
+  void     nm_register_nmatrix(NMATRIX* nmatrix);
+  void     nm_unregister_nmatrix(NMATRIX* nmatrix);
 
 #ifdef __cplusplus
 }

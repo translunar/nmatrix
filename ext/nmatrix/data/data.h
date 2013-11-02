@@ -122,6 +122,20 @@ namespace nm {
     nm_yale_storage_mark												\
   };
 
+#define STYPE_REGISTER_TABLE(name)              \
+  static void (*(name)[nm::NUM_STYPES])(const STORAGE*) = { \
+    nm_dense_storage_register,                  \
+    nm_list_storage_register,                   \
+    nm_yale_storage_register                    \
+  };
+
+#define STYPE_UNREGISTER_TABLE(name)              \
+  static void (*(name)[nm::NUM_STYPES])(const STORAGE*) = { \
+    nm_dense_storage_unregister,                \
+    nm_list_storage_unregister,                 \
+    nm_yale_storage_unregister                  \
+  };
+
 #define CAST_TABLE(name)                                                   \
   static STORAGE* (*(name)[nm::NUM_STYPES][nm::NUM_STYPES])(const STORAGE*, nm::dtype_t, void*) = {      \
     { nm_dense_storage_cast_copy,  nm_dense_storage_from_list,  nm_dense_storage_from_yale },  \
