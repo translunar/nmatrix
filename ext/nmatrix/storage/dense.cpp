@@ -124,10 +124,13 @@ namespace nm { namespace dense_storage {
    */
   template <typename D>
   void set(VALUE left, SLICE* slice, VALUE right) {
+    nm_register_value(left);
+    nm_register_value(right);
+
     DENSE_STORAGE* s = NM_STORAGE_DENSE(left);
 
     std::pair<NMATRIX*,bool> nm_and_free =
-      interpret_arg_as_dense_nmatrix(right, NM_DTYPE(left));
+      interpret_arg_as_dense_nmatrix(right, s->dtype);
 
     // Map the data onto D* v.
     D*     v;
@@ -139,13 +142,20 @@ namespace nm { namespace dense_storage {
       v_size           = nm_storage_count_max_elements(t);
 
     } else if (TYPE(right) == T_ARRAY) {
+      
       v_size = RARRAY_LEN(right);
-      v      = ALLOC_N(D, v_size);
+      v      = NM_ALLOC_N(D, v_size);
+      if (s->dtype == nm::RUBYOBJ)
+        nm_register_values(reinterpret_cast<VALUE*>(v), v_size);
+
       for (size_t m = 0; m < v_size; ++m) {
         rubyval_to_cval(rb_ary_entry(right, m), s->dtype, &(v[m]));
       }
+
     } else {
       v = reinterpret_cast<D*>(rubyobj_to_cval(right, NM_DTYPE(left)));
+      if (s->dtype == nm::RUBYOBJ)
+        nm_register_values(reinterpret_cast<VALUE*>(v), v_size);
     }
 
     if (slice->single) {
@@ -160,7 +170,15 @@ namespace nm { namespace dense_storage {
       if (nm_and_free.second) {
         nm_delete(nm_and_free.first);
       }
-    } else xfree(v);
+    } else {
+      if (s->dtype == nm::RUBYOBJ)
+	nm_unregister_values(reinterpret_cast<VALUE*>(v), v_size);
+
+      NM_FREE(v);
+    }
+    nm_unregister_value(left);
+    nm_unregister_value(right);
+
   }
 
 }} // end of namespace nm::dense_storage
@@ -187,13 +205,13 @@ static void slice_copy(DENSE_STORAGE *dest, const DENSE_STORAGE *src, size_t* le
  * check for that NULL pointer before freeing elements.
  */
 static DENSE_STORAGE* nm_dense_storage_create_dummy(nm::dtype_t dtype, size_t* shape, size_t dim) {
-  DENSE_STORAGE* s = ALLOC( DENSE_STORAGE );
+  DENSE_STORAGE* s = NM_ALLOC( DENSE_STORAGE );
 
   s->dim        = dim;
   s->shape      = shape;
   s->dtype      = dtype;
 
-  s->offset     = ALLOC_N(size_t, dim);
+  s->offset     = NM_ALLOC_N(size_t, dim);
   memset(s->offset, 0, sizeof(size_t)*dim);
 
   s->stride     = stride(shape, dim);
@@ -214,14 +232,24 @@ static DENSE_STORAGE* nm_dense_storage_create_dummy(nm::dtype_t dtype, size_t* s
  */
 DENSE_STORAGE* nm_dense_storage_create(nm::dtype_t dtype, size_t* shape, size_t dim, void* elements, size_t elements_length) {
 
+  if (dtype == nm::RUBYOBJ)
+    nm_register_values(reinterpret_cast<VALUE*>(elements), elements_length);
+
   DENSE_STORAGE* s = nm_dense_storage_create_dummy(dtype, shape, dim);
   size_t count  = nm_storage_count_max_elements(s);
 
   if (elements_length == count) {
-  	s->elements = elements;
+    s->elements = elements;
+    
+    if (dtype == nm::RUBYOBJ)
+      nm_unregister_values(reinterpret_cast<VALUE*>(elements), elements_length);
 
   } else {
-    s->elements = ALLOC_N(char, DTYPE_SIZES[dtype]*count);
+
+    s->elements = NM_ALLOC_N(char, DTYPE_SIZES[dtype]*count);
+
+    if (dtype == nm::RUBYOBJ)
+      nm_unregister_values(reinterpret_cast<VALUE*>(elements), elements_length);
 
     size_t copy_length = elements_length;
 
@@ -237,7 +265,7 @@ DENSE_STORAGE* nm_dense_storage_create(nm::dtype_t dtype, size_t* shape, size_t 
       }
 
       // Get rid of the init_val.
-      xfree(elements);
+      NM_FREE(elements);
     }
   }
 
@@ -253,13 +281,13 @@ void nm_dense_storage_delete(STORAGE* s) {
   if (s) {
     DENSE_STORAGE* storage = (DENSE_STORAGE*)s;
     if(storage->count-- == 1) {
-      xfree(storage->shape);
-      xfree(storage->offset);
-      xfree(storage->stride);
+      NM_FREE(storage->shape);
+      NM_FREE(storage->offset);
+      NM_FREE(storage->stride);
       if (storage->elements != NULL) {// happens with dummy objects
-        xfree(storage->elements);
+        NM_FREE(storage->elements);
       }
-      xfree(storage);
+      NM_FREE(storage);
     }
   }
 }
@@ -272,9 +300,9 @@ void nm_dense_storage_delete_ref(STORAGE* s) {
   if (s) {
     DENSE_STORAGE* storage = (DENSE_STORAGE*)s;
     nm_dense_storage_delete( reinterpret_cast<STORAGE*>(storage->src) );
-    xfree(storage->shape);
-    xfree(storage->offset);
-    xfree(storage);
+    NM_FREE(storage->shape);
+    NM_FREE(storage->offset);
+    NM_FREE(storage);
   }
 }
 
@@ -297,6 +325,34 @@ void nm_dense_storage_mark(STORAGE* storage_base) {
   }
 }
 
+/**
+ * Register a dense storage struct as in-use to avoid garbage collection of the
+ * elements stored.
+ *
+ * This function will check dtype and ignore non-object dtype, so its safe to pass any dense storage in.
+ *
+ */
+void nm_dense_storage_register(const STORAGE* s) {
+  const DENSE_STORAGE* storage = reinterpret_cast<const DENSE_STORAGE*>(s);
+  if (storage->dtype == nm::RUBYOBJ && storage->elements) {
+    nm_register_values(reinterpret_cast<VALUE*>(storage->elements), nm_storage_count_max_elements(storage));
+  }
+}
+
+/**
+ * Unregister a dense storage struct to allow normal garbage collection of the
+ * elements stored.
+ *
+ * This function will check dtype and ignore non-object dtype, so its safe to pass any dense storage in.
+ *
+ */
+void nm_dense_storage_unregister(const STORAGE* s) {
+  const DENSE_STORAGE* storage = reinterpret_cast<const DENSE_STORAGE*>(s);
+  if (storage->dtype == nm::RUBYOBJ && storage->elements) {
+    nm_unregister_values(reinterpret_cast<VALUE*>(storage->elements), nm_storage_count_max_elements(storage));
+  }
+}
+
 ///////////////
 // Accessors //
 ///////////////
@@ -307,26 +363,30 @@ void nm_dense_storage_mark(STORAGE* storage_base) {
  * map_pair iterator for dense matrices (for element-wise operations)
  */
 VALUE nm_dense_map_pair(VALUE self, VALUE right) {
+
+  nm_register_value(self);
+  nm_register_value(right);
+
+  RETURN_SIZED_ENUMERATOR_PRE
+  nm_unregister_value(right);
+  nm_unregister_value(self);
+  RETURN_SIZED_ENUMERATOR(self, 0, 0, nm_enumerator_length);
+
   DENSE_STORAGE *s = NM_STORAGE_DENSE(self),
                 *t = NM_STORAGE_DENSE(right);
 
-  RETURN_SIZED_ENUMERATOR(self, 0, 0, nm_enumerator_length);
-
-  size_t* coords = ALLOCA_N(size_t, s->dim);
+  size_t* coords = NM_ALLOCA_N(size_t, s->dim);
   memset(coords, 0, sizeof(size_t) * s->dim);
 
-  size_t *shape_copy = ALLOC_N(size_t, s->dim);
+  size_t *shape_copy = NM_ALLOC_N(size_t, s->dim);
   memcpy(shape_copy, s->shape, sizeof(size_t) * s->dim);
 
   size_t count = nm_storage_count_max_elements(s);
 
   DENSE_STORAGE* result = nm_dense_storage_create(nm::RUBYOBJ, shape_copy, s->dim, NULL, 0);
-  
-  /* Using volatile here ensures that the pointer remains on the stack no matter what
-   * so that the ruby GC can find out that the elements array is in use if GC runs 
-   * during the yield statement below.
-   */
-  volatile VALUE* result_elem = reinterpret_cast<VALUE*>(result->elements);
+
+  VALUE* result_elem = reinterpret_cast<VALUE*>(result->elements);
+  nm_dense_storage_register(result);
 
   for (size_t k = 0; k < count; ++k) {
     nm_dense_storage_coords(result, k, coords);
@@ -334,13 +394,23 @@ VALUE nm_dense_map_pair(VALUE self, VALUE right) {
            t_index = nm_dense_storage_pos(t, coords);
 
     VALUE sval = NM_DTYPE(self) == nm::RUBYOBJ ? reinterpret_cast<VALUE*>(s->elements)[s_index] : rubyobj_from_cval((char*)(s->elements) + s_index*DTYPE_SIZES[NM_DTYPE(self)], NM_DTYPE(self)).rval;
+    nm_register_value(sval);
     VALUE tval = NM_DTYPE(right) == nm::RUBYOBJ ? reinterpret_cast<VALUE*>(t->elements)[t_index] : rubyobj_from_cval((char*)(t->elements) + t_index*DTYPE_SIZES[NM_DTYPE(right)], NM_DTYPE(right)).rval;
-
     result_elem[k] = rb_yield_values(2, sval, tval);
+    nm_unregister_value(sval);
   }
 
+  VALUE klass = CLASS_OF(self);
   NMATRIX* m = nm_create(nm::DENSE_STORE, reinterpret_cast<STORAGE*>(result));
-  return Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, m);
+  nm_register_nmatrix(m);
+  VALUE to_return = Data_Wrap_Struct(klass, nm_mark, nm_delete, m);
+
+  nm_unregister_nmatrix(m);
+  nm_dense_storage_unregister(result);
+  nm_unregister_value(self);
+  nm_unregister_value(right);
+
+  return to_return;
 
 }
 
@@ -348,37 +418,48 @@ VALUE nm_dense_map_pair(VALUE self, VALUE right) {
  * map enumerator for dense matrices.
  */
 VALUE nm_dense_map(VALUE self) {
-  volatile VALUE vself = self;
-  DENSE_STORAGE *s = NM_STORAGE_DENSE(vself);
 
-  RETURN_SIZED_ENUMERATOR(vself, 0, 0, nm_enumerator_length);
+  nm_register_value(self);
 
-  size_t* coords = ALLOCA_N(size_t, s->dim);
+  RETURN_SIZED_ENUMERATOR_PRE
+  nm_unregister_value(self);
+  RETURN_SIZED_ENUMERATOR(self, 0, 0, nm_enumerator_length);
+
+  DENSE_STORAGE *s = NM_STORAGE_DENSE(self);
+
+  size_t* coords = NM_ALLOCA_N(size_t, s->dim);
   memset(coords, 0, sizeof(size_t) * s->dim);
 
-  size_t *shape_copy = ALLOC_N(size_t, s->dim);
+  size_t *shape_copy = NM_ALLOC_N(size_t, s->dim);
   memcpy(shape_copy, s->shape, sizeof(size_t) * s->dim);
 
   size_t count = nm_storage_count_max_elements(s);
 
   DENSE_STORAGE* result = nm_dense_storage_create(nm::RUBYOBJ, shape_copy, s->dim, NULL, 0);
 
-  /* Using volatile here ensures that the pointer remains on the stack no matter what
-   * so that the ruby GC can find out that the elements array is in use if GC runs 
-   * during the yield statement below.
-   */
-  volatile VALUE* result_elem = reinterpret_cast<VALUE*>(result->elements);
+  VALUE* result_elem = reinterpret_cast<VALUE*>(result->elements);
+
+  nm_dense_storage_register(result);
 
   for (size_t k = 0; k < count; ++k) {
     nm_dense_storage_coords(result, k, coords);
     size_t s_index = nm_dense_storage_pos(s, coords);
 
-    result_elem[k] = rb_yield(NM_DTYPE(vself) == nm::RUBYOBJ ? reinterpret_cast<VALUE*>(s->elements)[s_index] : rubyobj_from_cval((char*)(s->elements) + s_index*DTYPE_SIZES[NM_DTYPE(self)], NM_DTYPE(self)).rval);
+    result_elem[k] = rb_yield(NM_DTYPE(self) == nm::RUBYOBJ ? reinterpret_cast<VALUE*>(s->elements)[s_index] : rubyobj_from_cval((char*)(s->elements) + s_index*DTYPE_SIZES[NM_DTYPE(self)], NM_DTYPE(self)).rval);
   }
 
-  NMATRIX* m = nm_create(nm::DENSE_STORE, reinterpret_cast<STORAGE*>(result));
-  return Data_Wrap_Struct(CLASS_OF(vself), nm_mark, nm_delete, m);
+  VALUE klass = CLASS_OF(self);
 
+  NMATRIX* m = nm_create(nm::DENSE_STORE, reinterpret_cast<STORAGE*>(result));
+  nm_register_nmatrix(m);
+
+  VALUE to_return = Data_Wrap_Struct(klass, nm_mark, nm_delete, m);
+
+  nm_unregister_nmatrix(m);
+  nm_dense_storage_unregister(result);
+  nm_unregister_value(self);
+
+  return to_return;
 }
 
 
@@ -386,18 +467,20 @@ VALUE nm_dense_map(VALUE self) {
  * each_with_indices iterator for dense matrices.
  */
 VALUE nm_dense_each_with_indices(VALUE nmatrix) {
-  volatile VALUE nm = nmatrix;
 
-  DENSE_STORAGE* s = NM_STORAGE_DENSE(nm);
-
-  RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_enumerator_length); // fourth argument only used by Ruby2+
+  nm_register_value(nmatrix);
+  
+  RETURN_SIZED_ENUMERATOR_PRE
+  nm_unregister_value(nmatrix);
+  RETURN_SIZED_ENUMERATOR(nmatrix, 0, 0, nm_enumerator_length); // fourth argument only used by Ruby2+
+  DENSE_STORAGE* s = NM_STORAGE_DENSE(nmatrix);
 
   // Create indices and initialize them to zero
-  size_t* coords = ALLOCA_N(size_t, s->dim);
+  size_t* coords = NM_ALLOCA_N(size_t, s->dim);
   memset(coords, 0, sizeof(size_t) * s->dim);
 
   size_t slice_index;
-  size_t* shape_copy = ALLOC_N(size_t, s->dim);
+  size_t* shape_copy = NM_ALLOC_N(size_t, s->dim);
   memcpy(shape_copy, s->shape, sizeof(size_t) * s->dim);
 
   DENSE_STORAGE* sliced_dummy = nm_dense_storage_create_dummy(s->dtype, shape_copy, s->dim);
@@ -406,8 +489,9 @@ VALUE nm_dense_each_with_indices(VALUE nmatrix) {
     nm_dense_storage_coords(sliced_dummy, k, coords);
     slice_index = nm_dense_storage_pos(s, coords);
     VALUE ary = rb_ary_new();
-    if (NM_DTYPE(nm) == nm::RUBYOBJ) rb_ary_push(ary, reinterpret_cast<VALUE*>(s->elements)[slice_index]);
-    else rb_ary_push(ary, rubyobj_from_cval((char*)(s->elements) + slice_index*DTYPE_SIZES[NM_DTYPE(nm)], NM_DTYPE(nm)).rval);
+    nm_register_value(ary);
+    if (NM_DTYPE(nmatrix) == nm::RUBYOBJ) rb_ary_push(ary, reinterpret_cast<VALUE*>(s->elements)[slice_index]);
+    else rb_ary_push(ary, rubyobj_from_cval((char*)(s->elements) + slice_index*DTYPE_SIZES[NM_DTYPE(nmatrix)], NM_DTYPE(nmatrix)).rval);
 
     for (size_t p = 0; p < s->dim; ++p) {
       rb_ary_push(ary, INT2FIX(coords[p]));
@@ -415,10 +499,12 @@ VALUE nm_dense_each_with_indices(VALUE nmatrix) {
 
     // yield the array which now consists of the value and the indices
     rb_yield(ary);
-
+    nm_unregister_value(ary);
   }
 
   nm_dense_storage_delete(sliced_dummy);
+
+  nm_unregister_value(nmatrix);
 
   return nmatrix;
 
@@ -433,18 +519,22 @@ VALUE nm_dense_each_with_indices(VALUE nmatrix) {
  * containing other types of data.
  */
 VALUE nm_dense_each(VALUE nmatrix) {
-  volatile VALUE nm = nmatrix; // Not sure this actually does anything.
-  DENSE_STORAGE* s = NM_STORAGE_DENSE(nm);
 
-  RETURN_SIZED_ENUMERATOR(nm, 0, 0, nm_enumerator_length);
+  nm_register_value(nmatrix);
 
-  size_t* temp_coords = ALLOCA_N(size_t, s->dim);
+  RETURN_SIZED_ENUMERATOR_PRE
+  nm_unregister_value(nmatrix);
+  RETURN_SIZED_ENUMERATOR(nmatrix, 0, 0, nm_enumerator_length);
+
+  DENSE_STORAGE* s = NM_STORAGE_DENSE(nmatrix);
+
+  size_t* temp_coords = NM_ALLOCA_N(size_t, s->dim);
   size_t sliced_index;
-  size_t* shape_copy = ALLOC_N(size_t, s->dim);
+  size_t* shape_copy = NM_ALLOC_N(size_t, s->dim);
   memcpy(shape_copy, s->shape, sizeof(size_t) * s->dim);
   DENSE_STORAGE* sliced_dummy = nm_dense_storage_create_dummy(s->dtype, shape_copy, s->dim);
 
-  if (NM_DTYPE(nm) == nm::RUBYOBJ) {
+  if (NM_DTYPE(nmatrix) == nm::RUBYOBJ) {
 
     // matrix of Ruby objects -- yield those objects directly
     for (size_t i = 0; i < nm_storage_count_max_elements(s); ++i) {
@@ -460,12 +550,13 @@ VALUE nm_dense_each(VALUE nmatrix) {
     for (size_t i = 0; i < nm_storage_count_max_elements(s); ++i) {
       nm_dense_storage_coords(sliced_dummy, i, temp_coords);
       sliced_index = nm_dense_storage_pos(s, temp_coords);
-      VALUE v = rubyobj_from_cval((char*)(s->elements) + sliced_index*DTYPE_SIZES[NM_DTYPE(nm)], NM_DTYPE(nm)).rval;
+      VALUE v = rubyobj_from_cval((char*)(s->elements) + sliced_index*DTYPE_SIZES[NM_DTYPE(nmatrix)], NM_DTYPE(nmatrix)).rval;
       rb_yield( v ); // yield to the copy we made
     }
   }
 
   nm_dense_storage_delete(sliced_dummy);
+  nm_unregister_value(nmatrix);
 
   return nmatrix;
 
@@ -489,11 +580,11 @@ static void slice_copy(DENSE_STORAGE *dest, const DENSE_STORAGE *src, size_t* le
  */
 void* nm_dense_storage_get(const STORAGE* storage, SLICE* slice) {
   DENSE_STORAGE* s = (DENSE_STORAGE*)storage;
-
   if (slice->single)
     return (char*)(s->elements) + nm_dense_storage_pos(s, slice->coords) * DTYPE_SIZES[s->dtype];
   else {
-    size_t *shape      = ALLOC_N(size_t, s->dim);
+    nm_dense_storage_register(s);
+    size_t *shape      = NM_ALLOC_N(size_t, s->dim);
     for (size_t i = 0; i < s->dim; ++i) {
       shape[i]  = slice->lengths[i];
     }
@@ -507,6 +598,7 @@ void* nm_dense_storage_get(const STORAGE* storage, SLICE* slice) {
         nm_dense_storage_pos(s, slice->coords),
         0);
 
+    nm_dense_storage_unregister(s);
     return ns;
   }
 }
@@ -523,11 +615,12 @@ void* nm_dense_storage_ref(const STORAGE* storage, SLICE* slice) {
     return (char*)(s->elements) + nm_dense_storage_pos(s, slice->coords) * DTYPE_SIZES[s->dtype];
 
   else {
-    DENSE_STORAGE* ns = ALLOC( DENSE_STORAGE );
+    nm_dense_storage_register(s);
+    DENSE_STORAGE* ns = NM_ALLOC( DENSE_STORAGE );
     ns->dim        = s->dim;
     ns->dtype      = s->dtype;
-    ns->offset     = ALLOC_N(size_t, ns->dim);
-    ns->shape      = ALLOC_N(size_t, ns->dim);
+    ns->offset     = NM_ALLOC_N(size_t, ns->dim);
+    ns->shape      = NM_ALLOC_N(size_t, ns->dim);
 
     for (size_t i = 0; i < ns->dim; ++i) {
       ns->offset[i] = slice->coords[i] + s->offset[i];
@@ -540,6 +633,7 @@ void* nm_dense_storage_ref(const STORAGE* storage, SLICE* slice) {
     s->src->count++;
     ns->src = s->src;
 
+    nm_dense_storage_unregister(s);
     return ns;
   }
 }
@@ -552,8 +646,12 @@ void* nm_dense_storage_ref(const STORAGE* storage, SLICE* slice) {
  */
 void nm_dense_storage_set(VALUE left, SLICE* slice, VALUE right) {
   NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::dense_storage::set, void, VALUE, SLICE*, VALUE)
-
-  ttable[NM_DTYPE(left)](left, slice, right);
+  nm_register_value(left);
+  nm_register_value(right);
+  nm::dtype_t dtype = NM_DTYPE(left);
+  nm_unregister_value(right);
+  nm_unregister_value(left);
+  ttable[dtype](left, slice, right);
 }
 
 
@@ -569,7 +667,7 @@ void nm_dense_storage_set(VALUE left, SLICE* slice, VALUE right) {
  *				have the same dtype.
  */
 bool nm_dense_storage_eqeq(const STORAGE* left, const STORAGE* right) {
-	LR_DTYPE_TEMPLATE_TABLE(nm::dense_storage::eqeq, bool, const DENSE_STORAGE*, const DENSE_STORAGE*)
+  LR_DTYPE_TEMPLATE_TABLE(nm::dense_storage::eqeq, bool, const DENSE_STORAGE*, const DENSE_STORAGE*)
 
   if (!ttable[left->dtype][right->dtype]) {
     rb_raise(nm_eDataTypeError, "comparison between these dtypes is undefined");
@@ -659,7 +757,7 @@ void nm_dense_storage_coords(const DENSE_STORAGE* s, const size_t slice_pos, siz
  */
 static size_t* stride(size_t* shape, size_t dim) {
   size_t i, j;
-  size_t* stride = ALLOC_N(size_t, dim);
+  size_t* stride = NM_ALLOC_N(size_t, dim);
 
   for (i = 0; i < dim; ++i) {
     stride[i] = 1;
@@ -680,22 +778,24 @@ static size_t* stride(size_t* shape, size_t dim) {
  * Copy dense storage, changing dtype if necessary.
  */
 STORAGE* nm_dense_storage_cast_copy(const STORAGE* rhs, nm::dtype_t new_dtype, void* dummy) {
-	NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::dense_storage::cast_copy, DENSE_STORAGE*, const DENSE_STORAGE* rhs, nm::dtype_t new_dtype);
+  NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::dense_storage::cast_copy, DENSE_STORAGE*, const DENSE_STORAGE* rhs, nm::dtype_t new_dtype);
 
   if (!ttable[new_dtype][rhs->dtype]) {
     rb_raise(nm_eDataTypeError, "cast between these dtypes is undefined");
     return NULL;
   }
 
-	return (STORAGE*)ttable[new_dtype][rhs->dtype]((DENSE_STORAGE*)rhs, new_dtype);
+  return (STORAGE*)ttable[new_dtype][rhs->dtype]((DENSE_STORAGE*)rhs, new_dtype);
 }
 
 /*
  * Copy dense storage without a change in dtype.
  */
 DENSE_STORAGE* nm_dense_storage_copy(const DENSE_STORAGE* rhs) {
+  nm_dense_storage_register(rhs);
+
   size_t  count = 0;
-  size_t *shape  = ALLOC_N(size_t, rhs->dim);
+  size_t *shape  = NM_ALLOC_N(size_t, rhs->dim);
 
   // copy shape and offset
   for (size_t i = 0; i < rhs->dim; ++i) {
@@ -711,7 +811,8 @@ DENSE_STORAGE* nm_dense_storage_copy(const DENSE_STORAGE* rhs) {
     if (rhs == rhs->src) // not a reference
       memcpy(lhs->elements, rhs->elements, DTYPE_SIZES[rhs->dtype] * count);
     else { // slice whole matrix
-      size_t *offset = ALLOC_N(size_t, rhs->dim);
+      nm_dense_storage_register(lhs);
+      size_t *offset = NM_ALLOC_N(size_t, rhs->dim);
       memset(offset, 0, sizeof(size_t) * rhs->dim);
 
       slice_copy(lhs,
@@ -720,8 +821,12 @@ DENSE_STORAGE* nm_dense_storage_copy(const DENSE_STORAGE* rhs) {
            0,
            nm_dense_storage_pos(rhs, offset),
            0);
+
+      nm_dense_storage_unregister(lhs);
     }
   }
+
+  nm_dense_storage_unregister(rhs);
 
   return lhs;
 }
@@ -735,7 +840,9 @@ DENSE_STORAGE* nm_dense_storage_copy(const DENSE_STORAGE* rhs) {
 STORAGE* nm_dense_storage_copy_transposed(const STORAGE* rhs_base) {
   DENSE_STORAGE* rhs = (DENSE_STORAGE*)rhs_base;
 
-  size_t *shape = ALLOC_N(size_t, rhs->dim);
+  nm_dense_storage_register(rhs);
+
+  size_t *shape = NM_ALLOC_N(size_t, rhs->dim);
 
   // swap shape and offset
   shape[0] = rhs->shape[1];
@@ -745,16 +852,24 @@ STORAGE* nm_dense_storage_copy_transposed(const STORAGE* rhs_base) {
   lhs->offset[0] = rhs->offset[1];
   lhs->offset[1] = rhs->offset[0];
 
+  nm_dense_storage_register(lhs);
+
   if (rhs_base->src == rhs_base) {
     nm_math_transpose_generic(rhs->shape[0], rhs->shape[1], rhs->elements, rhs->shape[1], lhs->elements, lhs->shape[1], DTYPE_SIZES[rhs->dtype]);
   } else {
     NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::dense_storage::ref_slice_copy_transposed, void, const DENSE_STORAGE* rhs, DENSE_STORAGE* lhs);
 
-    if (!ttable[lhs->dtype][rhs->dtype])
+    if (!ttable[lhs->dtype][rhs->dtype]) {
+      nm_dense_storage_unregister(rhs);
+      nm_dense_storage_unregister(lhs);      
       rb_raise(nm_eDataTypeError, "transposition between these dtypes is undefined");
+    }
 
     ttable[lhs->dtype][rhs->dtype](rhs, lhs);
   }
+
+  nm_dense_storage_unregister(rhs);
+  nm_dense_storage_unregister(lhs);
 
   return (STORAGE*)lhs;
 }
@@ -770,21 +885,26 @@ namespace nm {
  * Otherwise, the NMATRIX* still belongs to Ruby and Ruby will free it.
  */
 std::pair<NMATRIX*,bool> interpret_arg_as_dense_nmatrix(VALUE right, nm::dtype_t dtype) {
+  nm_register_value(right);
   if (TYPE(right) == T_DATA && (RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete || RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete_ref)) {
     NMATRIX *r;
     if (NM_STYPE(right) != DENSE_STORE || NM_DTYPE(right) != dtype || NM_SRC(right) != NM_STORAGE(right)) {
       UnwrapNMatrix( right, r );
       NMATRIX* ldtype_r = nm_cast_with_ctype_args(r, nm::DENSE_STORE, dtype, NULL);
+      nm_unregister_value(right);
       return std::make_pair(ldtype_r,true);
     } else {  // simple case -- right-hand matrix is dense and is not a reference and has same dtype
       UnwrapNMatrix( right, r );
+      nm_unregister_value(right);
       return std::make_pair(r, false);
     }
     // Do not set v_alloc = true for either of these. It is the responsibility of r/ldtype_r
   } else if (TYPE(right) == T_DATA) {
+    nm_unregister_value(right);
     rb_raise(rb_eTypeError, "unrecognized type for slice assignment");
   }
 
+  nm_unregister_value(right);
   return std::make_pair<NMATRIX*,bool>(NULL, false);
 }
 
@@ -798,11 +918,14 @@ namespace dense_storage {
 template<typename LDType, typename RDType>
 void ref_slice_copy_transposed(const DENSE_STORAGE* rhs, DENSE_STORAGE* lhs) {
 
+  nm_dense_storage_register(rhs);
+  nm_dense_storage_register(lhs);
+
   LDType* lhs_els = reinterpret_cast<LDType*>(lhs->elements);
   RDType* rhs_els = reinterpret_cast<RDType*>(rhs->elements);
 
   size_t count = nm_storage_count_max_elements(lhs);
-  size_t* temp_coords = ALLOCA_N(size_t, lhs->dim);
+  size_t* temp_coords = NM_ALLOCA_N(size_t, lhs->dim);
   size_t coord_swap_temp;
 
   while (count-- > 0) {
@@ -812,21 +935,28 @@ void ref_slice_copy_transposed(const DENSE_STORAGE* rhs, DENSE_STORAGE* lhs) {
     lhs_els[count] = rhs_els[r_coord];
   }
 
+  nm_dense_storage_unregister(rhs);
+  nm_dense_storage_unregister(lhs);
+
 }
 
 template <typename LDType, typename RDType>
 DENSE_STORAGE* cast_copy(const DENSE_STORAGE* rhs, dtype_t new_dtype) {
+  nm_dense_storage_register(rhs);
+
   size_t  count = nm_storage_count_max_elements(rhs);
 
-  size_t *shape = ALLOC_N(size_t, rhs->dim);
+  size_t *shape = NM_ALLOC_N(size_t, rhs->dim);
   memcpy(shape, rhs->shape, sizeof(size_t) * rhs->dim);
 
-  DENSE_STORAGE* lhs			= nm_dense_storage_create(new_dtype, shape, rhs->dim, NULL, 0);
+  DENSE_STORAGE* lhs = nm_dense_storage_create(new_dtype, shape, rhs->dim, NULL, 0);
+
+  nm_dense_storage_register(lhs);
 
 	// Ensure that allocation worked before copying.
   if (lhs && count) {
     if (rhs->src != rhs) { // Make a copy of a ref to a matrix.
-      size_t* offset      = ALLOCA_N(size_t, rhs->dim);
+      size_t* offset      = NM_ALLOCA_N(size_t, rhs->dim);
       memset(offset, 0, sizeof(size_t) * rhs->dim);
 
       slice_copy(lhs, reinterpret_cast<const DENSE_STORAGE*>(rhs->src),
@@ -842,47 +972,64 @@ DENSE_STORAGE* cast_copy(const DENSE_STORAGE* rhs, dtype_t new_dtype) {
     }
   }
 
+  nm_dense_storage_unregister(rhs);
+  nm_dense_storage_unregister(lhs);
+
   return lhs;
 }
 
 template <typename LDType, typename RDType>
 bool eqeq(const DENSE_STORAGE* left, const DENSE_STORAGE* right) {
+  nm_dense_storage_register(left);
+  nm_dense_storage_register(right);
+
   size_t index;
   DENSE_STORAGE *tmp1, *tmp2;
   tmp1 = NULL; tmp2 = NULL;
   bool result = true;
   /* FIXME: Very strange behavior! The GC calls the method directly with non-initialized data. */
-  if (left->dim != right->dim) return false;
+  if (left->dim != right->dim) {
+    nm_dense_storage_unregister(right);
+    nm_dense_storage_unregister(left);
+    return false;
+  }
 
-
-	LDType* left_elements	  = (LDType*)left->elements;
-  RDType* right_elements	= (RDType*)right->elements;
+  LDType* left_elements	  = (LDType*)left->elements;
+  RDType* right_elements  = (RDType*)right->elements;
 
   // Copy elements in temp matrix if you have reference to the right.
   if (left->src != left) {
     tmp1 = nm_dense_storage_copy(left);
+    nm_dense_storage_register(tmp1);
     left_elements = (LDType*)tmp1->elements;
   }
   if (right->src != right) {
     tmp2 = nm_dense_storage_copy(right);
+    nm_dense_storage_register(tmp2);
     right_elements = (RDType*)tmp2->elements;
   }
 
 
 
-	for (index = nm_storage_count_max_elements(left); index-- > 0;) {
-		if (left_elements[index] != right_elements[index]) {
+  for (index = nm_storage_count_max_elements(left); index-- > 0;) {
+    if (left_elements[index] != right_elements[index]) {
       result = false;
       break;
     }
-	}
+  }
 
-  if (tmp1)
-    free(tmp1);
-  if (tmp2)
-    free(tmp2);
+  if (tmp1) {
+    nm_dense_storage_unregister(tmp1);
+    NM_FREE(tmp1);
+  }
+  if (tmp2) {
+    nm_dense_storage_unregister(tmp2);
+    NM_FREE(tmp2);
+  }
 
-	return result;
+  nm_dense_storage_unregister(left);
+  nm_dense_storage_unregister(right);
+  return result;
 }
 
 template <typename DType>
@@ -932,11 +1079,16 @@ static DENSE_STORAGE* matrix_multiply(const STORAGE_PAIR& casted_storage, size_t
   DENSE_STORAGE *left  = (DENSE_STORAGE*)(casted_storage.left),
                 *right = (DENSE_STORAGE*)(casted_storage.right);
 
+  nm_dense_storage_register(left);
+  nm_dense_storage_register(right);
+
   // Create result storage.
   DENSE_STORAGE* result = nm_dense_storage_create(left->dtype, resulting_shape, 2, NULL, 0);
 
-  DType *pAlpha = ALLOCA_N(DType, 1),
-        *pBeta  = ALLOCA_N(DType, 1);
+  nm_dense_storage_register(result);
+
+  DType *pAlpha = NM_ALLOCA_N(DType, 1),
+        *pBeta  = NM_ALLOCA_N(DType, 1);
 
   *pAlpha = 1;
   *pBeta = 0;
@@ -949,6 +1101,11 @@ static DENSE_STORAGE* matrix_multiply(const STORAGE_PAIR& casted_storage, size_t
                                     pAlpha, reinterpret_cast<DType*>(left->elements), left->shape[1],
                                     reinterpret_cast<DType*>(right->elements), right->shape[1], pBeta,
                                     reinterpret_cast<DType*>(result->elements), result->shape[1]);
+
+
+  nm_dense_storage_unregister(left);
+  nm_dense_storage_unregister(right);
+  nm_dense_storage_unregister(result);
 
   return result;
 }

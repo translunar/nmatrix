@@ -90,7 +90,7 @@ bool node_is_within_slice(NODE* n, size_t coord, size_t len);
 
 template <typename Type>
 inline NODE* insert_helper(LIST* list, NODE* node, size_t key, Type val) {
-	Type* val_mem = ALLOC(Type);
+	Type* val_mem = NM_ALLOC(Type);
 	*val_mem = val;
 	
 	if (node == NULL) {

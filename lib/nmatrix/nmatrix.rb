@@ -76,7 +76,7 @@ class NMatrix
 
   # TODO: Make this actually pretty.
   def pretty_print(q) #:nodoc:
-    if self.shape[1] > 100
+    if self.shape.size > 1 and self.shape[1] > 100
       self.inspect.pretty_print(q)
     elsif self.dim > 3 || self.dim == 1
       self.to_a.pretty_print(q)
@@ -116,6 +116,24 @@ class NMatrix
   end
   #alias :pp :pretty_print
 
+  #
+  # See the note in #cast about why this is necessary.
+  # If this is a non-dense matrix with a complex dtype and to_dtype is
+  # non-complex, then this will convert the default value to noncomplex.
+  # Returns 0 if dense.  Returns existing default_value if there isn't a
+  # mismatch.
+  #
+  def maybe_get_noncomplex_default_value(to_dtype)
+    default_value = 0
+    unless self.stype == :dense then
+      if self.dtype.to_s.start_with?('complex') and not to_dtype.to_s.start_with?('complex') then
+        default_value = self.default_value.real
+      else
+        default_value = self.default_value
+      end
+    end
+    default_value
+  end
 
 
   #
@@ -152,8 +170,11 @@ class NMatrix
     else
       params << self.stype if params.size == 0
       params << self.dtype if params.size == 1
-      params << (self.stype == :dense ? 0 : self.default_value) if params.size == 2
-
+      #HACK: the default value can cause an exception if dtype is not complex
+      #and default_value is. (The ruby C code apparently won't convert these.)
+      #Perhaps this should be fixed in the C code (in rubyval_to_cval).
+      default_value = maybe_get_noncomplex_default_value(params[1])
+      params << (self.stype == :dense ? 0 : default_value) if params.size == 2
       self.cast_full(*params)
     end
 

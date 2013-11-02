@@ -86,10 +86,18 @@ class NMatrix
   #
   def map!
     return enum_for(:map!) unless block_given?
+    iterated = false
     self.each_stored_with_indices do |e, *i|
+      iterated = true
       self[*i] = (yield e)
     end
-    self
+    #HACK: if there's a single element in a non-dense matrix, it won't iterate and
+    #won't change the default value; this ensures that it does get changed.
+    unless iterated then
+      self.each_with_indices do |e, *i|
+        self[*i] = (yield e)
+      end
+    end
   end
 
 
@@ -218,7 +226,7 @@ class NMatrix
     first_as_acc = false
 
     if initial then
-      acc = NMatrix.new(new_shape, initial, :dtype => dtype || self.dtype)
+      acc = NMatrix.new(new_shape, initial, :dtype => dtype || self.dtype, stype: self.stype)
     else
       each_rank(dimen) do |sub_mat|
         acc = (sub_mat.is_a?(NMatrix) and !dtype.nil? and dtype != self.dtype) ? sub_mat.cast(self.stype, dtype) : sub_mat

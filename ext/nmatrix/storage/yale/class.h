@@ -31,6 +31,7 @@
 
 #include "../dense.h"
 #include "math/transpose.h"
+#include "yale.h"
 
 namespace nm {
 
@@ -50,14 +51,22 @@ public:
      slice(storage != storage->src),
      slice_shape(storage->shape),
      slice_offset(storage->offset)
-  { }
+  {
+    nm_yale_storage_register(storage->src);
+  }
 
   YaleStorage(const STORAGE* storage)
    : s(reinterpret_cast<YALE_STORAGE*>(storage->src)),
      slice(storage != storage->src),
      slice_shape(storage->shape),
      slice_offset(storage->offset)
-  { }
+  {
+    nm_yale_storage_register(reinterpret_cast<STORAGE*>(storage->src));
+  }
+
+  ~YaleStorage() {
+    nm_yale_storage_unregister(s);
+  }
 
   /* Allows us to do YaleStorage<uint8>::dtype() to get an nm::dtype_t */
   static nm::dtype_t dtype() {
@@ -353,6 +362,8 @@ public:
    */
   void insert(SLICE* slice, VALUE right) {
 
+    nm_register_value(right);
+
     std::pair<NMATRIX*,bool> nm_and_free =
       interpret_arg_as_dense_nmatrix(right, dtype());
     // Map the data onto D* v
@@ -367,10 +378,17 @@ public:
 
     } else if (TYPE(right) == T_ARRAY) {
       v_size = RARRAY_LEN(right);
-      v      = ALLOC_N(D, v_size);
+      v      = NM_ALLOC_N(D, v_size);
+      if (dtype() == nm::RUBYOBJ) {
+	nm_register_values(reinterpret_cast<VALUE*>(v), v_size);
+      }
       for (size_t m = 0; m < v_size; ++m) {
         rubyval_to_cval(rb_ary_entry(right, m), s->dtype, &(v[m]));
       }
+      if (dtype() == nm::RUBYOBJ) {
+	nm_unregister_values(reinterpret_cast<VALUE*>(v), v_size);
+      }
+
     } else {
       v = reinterpret_cast<D*>(rubyobj_to_cval(right, dtype()));
     }
@@ -390,7 +408,9 @@ public:
       if (nm_and_free.second) {
         nm_delete(nm_and_free.first);
       }
-    } else xfree(v);
+    } else NM_FREE(v);
+
+    nm_unregister_value(right);
   }
 
 
@@ -498,15 +518,15 @@ public:
    * Allocate a reference pointing to s. Note that even if +this+ is a reference,
    * we can create a reference within it.
    *
-   * Note: Make sure you xfree() the result of this call. You can't just cast it
+   * Note: Make sure you NM_FREE() the result of this call. You can't just cast it
    * directly into a YaleStorage<D> class.
    */
   YALE_STORAGE* alloc_ref(SLICE* slice) {
-    YALE_STORAGE* ns  = ALLOC( YALE_STORAGE );
+    YALE_STORAGE* ns  = NM_ALLOC( YALE_STORAGE );
 
     ns->dim           = s->dim;
-    ns->offset        = ALLOC_N(size_t, ns->dim);
-    ns->shape         = ALLOC_N(size_t, ns->dim);
+    ns->offset        = NM_ALLOC_N(size_t, ns->dim);
+    ns->shape         = NM_ALLOC_N(size_t, ns->dim);
 
     for (size_t d = 0; d < ns->dim; ++d) {
       ns->offset[d]   = slice->coords[d]  + offset(d);
@@ -531,12 +551,12 @@ public:
    * Allocates and initializes the basic struct (but not IJA or A vectors).
    */
   static YALE_STORAGE* alloc(size_t* shape, size_t dim = 2) {
-    YALE_STORAGE* s = ALLOC( YALE_STORAGE );
+    YALE_STORAGE* s = NM_ALLOC( YALE_STORAGE );
 
     s->ndnz         = 0;
     s->dtype        = dtype();
     s->shape        = shape;
-    s->offset       = ALLOC_N(size_t, dim);
+    s->offset       = NM_ALLOC_N(size_t, dim);
     for (size_t d = 0; d < dim; ++d)
       s->offset[d]  = 0;
     s->dim          = dim;
@@ -565,8 +585,8 @@ public:
       s->capacity = reserve;
     }
 
-    s->ija = ALLOC_N( size_t, s->capacity );
-    s->a   = ALLOC_N( D,      s->capacity );
+    s->ija = NM_ALLOC_N( size_t, s->capacity );
+    s->a   = NM_ALLOC_N( D,      s->capacity );
 
     return s;
   }
@@ -617,14 +637,14 @@ public:
    template <typename E>
    YALE_STORAGE* alloc_basic_copy(size_t new_capacity, size_t new_ndnz) const {
      nm::dtype_t new_dtype = nm::ctype_to_dtype_enum<E>::value_type;
-     YALE_STORAGE* lhs     = ALLOC( YALE_STORAGE );
+     YALE_STORAGE* lhs     = NM_ALLOC( YALE_STORAGE );
      lhs->dim              = s->dim;
-     lhs->shape            = ALLOC_N( size_t, lhs->dim );
+     lhs->shape            = NM_ALLOC_N( size_t, lhs->dim );
 
      lhs->shape[0]         = shape(0);
      lhs->shape[1]         = shape(1);
 
-     lhs->offset           = ALLOC_N( size_t, lhs->dim );
+     lhs->offset           = NM_ALLOC_N( size_t, lhs->dim );
 
      lhs->offset[0]        = 0;
      lhs->offset[1]        = 0;
@@ -632,8 +652,8 @@ public:
      lhs->capacity         = new_capacity;
      lhs->dtype            = new_dtype;
      lhs->ndnz             = new_ndnz;
-     lhs->ija              = ALLOC_N( size_t, new_capacity );
-     lhs->a                = ALLOC_N( E,      new_capacity );
+     lhs->ija              = NM_ALLOC_N( size_t, new_capacity );
+     lhs->a                = NM_ALLOC_N( E,      new_capacity );
      lhs->src              = lhs;
      lhs->count            = 1;
 
@@ -642,7 +662,7 @@ public:
 
 
   /*
-   * Make a full matrix structure copy (entries remain uninitialized). Remember to xfree()!
+   * Make a full matrix structure copy (entries remain uninitialized). Remember to NM_FREE()!
    */
   template <typename E>
   YALE_STORAGE* alloc_struct_copy(size_t new_capacity) const {
@@ -674,6 +694,7 @@ public:
 
     E* ns_a    = reinterpret_cast<E*>(ns.a);
     size_t sz  = shape(0) + 1; // current used size of ns
+    nm_yale_storage_register(&ns);
 
     // FIXME: If diagonals line up, it's probably faster to do this with stored diagonal and stored non-diagonal iterators
     for (const_row_iterator it = cribegin(); it != criend(); ++it) {
@@ -690,6 +711,7 @@ public:
       }
       ns.ija[it.i()+1]  = sz;
     }
+    nm_yale_storage_unregister(&ns);
 
     //ns.ija[shape(0)] = sz;                // indicate end of last row
     ns.ndnz          = sz - shape(0) - 1; // update ndnz count
@@ -697,7 +719,7 @@ public:
 
 
   /*
-   * Allocate a casted copy of this matrix/reference. Remember to xfree() the result!
+   * Allocate a casted copy of this matrix/reference. Remember to NM_FREE() the result!
    *
    * If Yield is true, E must be nm::RubyObject, and it will call an rb_yield upon the stored value.
    */
@@ -707,7 +729,7 @@ public:
 
     YALE_STORAGE* lhs;
     if (slice) {
-      size_t* xshape    = ALLOC_N(size_t, 2);
+      size_t* xshape    = NM_ALLOC_N(size_t, 2);
       xshape[0]         = shape(0);
       xshape[1]         = shape(1);
       size_t ndnz       = count_copy_ndnz();
@@ -728,10 +750,15 @@ public:
       lhs               = alloc_struct_copy<E>(s->capacity);
 
       E* la = reinterpret_cast<E*>(lhs->a);
+
+      nm_yale_storage_register(lhs);
       for (size_t m = 0; m < size(); ++m) {
-        if (Yield) la[m] = rb_yield(nm::yale_storage::nm_rb_dereference(a(m)));
+        if (Yield) {
+	  la[m] = rb_yield(nm::yale_storage::nm_rb_dereference(a(m)));
+	}
         else       la[m] = static_cast<E>(a(m));
       }
+      nm_yale_storage_unregister(lhs);
 
     }
 
@@ -742,7 +769,7 @@ public:
    * Allocate a transposed copy of the matrix
    */
   /*
-   * Allocate a casted copy of this matrix/reference. Remember to xfree() the result!
+   * Allocate a casted copy of this matrix/reference. Remember to NM_FREE() the result!
    *
    * If Yield is true, E must be nm::RubyObject, and it will call an rb_yield upon the stored value.
    */
@@ -753,7 +780,7 @@ public:
       rb_raise(rb_eNotImpError, "please make a copy before transposing");
     } else {
       // Copy the structure and setup the IJA structure.
-      size_t* xshape    = ALLOC_N(size_t, 2);
+      size_t* xshape    = NM_ALLOC_N(size_t, 2);
       xshape[0]         = shape(1);
       xshape[1]         = shape(0);
 
@@ -816,30 +843,44 @@ public:
    */
   template <typename E>
   VALUE map_merged_stored(VALUE klass, nm::YaleStorage<E>& t, VALUE r_init) const {
+    nm_register_value(r_init);
     VALUE s_init    = const_default_value(),
           t_init    = t.const_default_value();
-
+    nm_register_value(s_init);
+    nm_register_value(t_init);
+    
     // Make a reasonable approximation of the resulting capacity
     size_t s_ndnz   = count_copy_ndnz(),
            t_ndnz   = t.count_copy_ndnz();
     size_t reserve  = shape(0) + std::max(s_ndnz, t_ndnz) + 1;
 
-    size_t* xshape  = ALLOC_N(size_t, 2);
+    size_t* xshape  = NM_ALLOC_N(size_t, 2);
     xshape[0]       = shape(0);
     xshape[1]       = shape(1);
 
     YALE_STORAGE* rs= YaleStorage<nm::RubyObject>::create(xshape, reserve);
 
-    if (r_init == Qnil)
+    if (r_init == Qnil) {
+      nm_unregister_value(r_init);
       r_init       = rb_yield_values(2, s_init, t_init);
+      nm_register_value(r_init);
+    }
 
     nm::RubyObject r_init_obj(r_init);
 
     // Prepare the matrix structure
     YaleStorage<nm::RubyObject>::init(*rs, &r_init_obj);
     NMATRIX* m     = nm_create(nm::YALE_STORE, reinterpret_cast<STORAGE*>(rs));
+    nm_register_nmatrix(m);
     VALUE result   = Data_Wrap_Struct(klass, nm_mark, nm_delete, m);
+    nm_unregister_nmatrix(m);
+    nm_register_value(result);
+    nm_unregister_value(r_init);
 
+    RETURN_SIZED_ENUMERATOR_PRE
+    nm_unregister_value(result);
+    nm_unregister_value(t_init);
+    nm_unregister_value(s_init);
     // No obvious, efficient way to pass a length function as the fourth argument here:
     RETURN_SIZED_ENUMERATOR(result, 0, 0, 0);
 
@@ -883,6 +924,9 @@ public:
         //RB_P(rb_funcall(result, rb_intern("yale_ija"), 0));
       }
     }
+    nm_unregister_value(result);
+    nm_unregister_value(t_init);
+    nm_unregister_value(s_init);
 
     return result;
   }
@@ -910,12 +954,16 @@ protected:
     size_t new_cap = sz + p.total_change;
 
     if (new_cap > real_max_size()) {
-      xfree(v);
+      NM_FREE(v);
       rb_raise(rb_eStandardError, "resize caused by insertion of size %d (on top of current size %lu) would have caused yale matrix size to exceed its maximum (%lu)", p.total_change, sz, real_max_size());
     }
 
-    size_t* new_ija     = ALLOC_N( size_t,new_cap );
-    D* new_a            = ALLOC_N( D,     new_cap );
+    if (s->dtype == nm::RUBYOBJ) {
+      nm_register_values(reinterpret_cast<VALUE*>(v), v_size);
+    }
+
+    size_t* new_ija     = NM_ALLOC_N( size_t,new_cap );
+    D* new_a            = NM_ALLOC_N( D,     new_cap );
 
     // Copy unchanged row pointers first.
     size_t m = 0;
@@ -977,8 +1025,12 @@ protected:
 
     s->capacity = new_cap;
 
-    xfree(s->ija);
-    xfree(s->a);
+    NM_FREE(s->ija);
+    NM_FREE(s->a);
+
+    if (s->dtype == nm::RUBYOBJ) {
+      nm_unregister_values(reinterpret_cast<VALUE*>(v), v_size);
+    }   
 
     s->ija      = new_ija;
     s->a        = reinterpret_cast<void*>(new_a);
@@ -1004,8 +1056,8 @@ protected:
 
     if (new_cap < sz + n) new_cap = sz + n;
 
-    size_t* new_ija     = ALLOC_N( size_t,new_cap );
-    D* new_a            = ALLOC_N( D,     new_cap );
+    size_t* new_ija     = NM_ALLOC_N( size_t,new_cap );
+    D* new_a            = NM_ALLOC_N( D,     new_cap );
 
     // Copy unchanged row pointers first.
     for (size_t m = 0; m <= real_i; ++m) {
@@ -1034,11 +1086,18 @@ protected:
       new_a[m+n]        = a(m);
     }
 
+    if (s->dtype == nm::RUBYOBJ) {
+      nm_yale_storage_register_a(new_a, new_cap);
+    }
 
     s->capacity = new_cap;
 
-    xfree(s->ija);
-    xfree(s->a);
+    NM_FREE(s->ija);
+    NM_FREE(s->a);
+
+    if (s->dtype == nm::RUBYOBJ) {
+      nm_yale_storage_register_a(new_a, new_cap);
+    }
 
     s->ija      = new_ija;
     s->a        = reinterpret_cast<void*>(new_a);
