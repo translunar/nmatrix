@@ -140,7 +140,7 @@
 #include "math/rot.h"
 #include "math/rotg.h"
 #include "math/math.h"
-#include "storage/dense.h"
+#include "storage/dense/dense.h"
 
 #include "nmatrix.h"
 #include "ruby_constants.h"

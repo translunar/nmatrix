@@ -39,16 +39,16 @@
  * Project Includes
  */
 
-#include "types.h"
+#include "../../types.h"
 
-#include "data/data.h"
+#include "../../data/data.h"
 
-#include "dense.h"
-#include "common.h"
+#include "../dense/dense.h"
+#include "../common.h"
 #include "list.h"
 
-#include "math/math.h"
-#include "util/sl_list.h"
+#include "../../math/math.h"
+#include "../../util/sl_list.h"
 
 /*
  * Macros

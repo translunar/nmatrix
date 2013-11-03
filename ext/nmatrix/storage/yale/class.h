@@ -29,7 +29,7 @@
 #ifndef YALE_CLASS_H
 # define YALE_CLASS_H
 
-#include "../dense.h"
+#include "../dense/dense.h"
 #include "math/transpose.h"
 #include "yale.h"
 

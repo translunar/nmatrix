@@ -437,7 +437,7 @@
     which in addition to fixing numerous bugs should prevent some new
     bugs from arising in the future (by @cjfuller)
 
-* 4 minor enhancements:
+* 5 minor enhancements:
 
   * User-friendly #gesvd and #gesdd updates (by @ryanmt)
 
@@ -452,6 +452,12 @@
 
   * Changed #stddev to use elementwise #sqrt instead of a manual map
     block (by @cjfuller)
+
+  * Added alias from MATLAB `load_mat` method to `load` for
+    consistency with the MatrixMarket loader
+
+  * Improved organization by moving list and yale code into storage/
+    subdirectories
 
 * 12 bug fixes:
 
@@ -485,4 +491,6 @@
     (by @cjfuller)
 
   * Fixed several garbage collection problems (also listed under
-    enhancements)
+    enhancements) (by @cjfuller)
+
+  * Updated object cleaning target in extconf.rb

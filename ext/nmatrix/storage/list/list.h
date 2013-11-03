@@ -41,7 +41,7 @@
 
 #include "types.h"
 #include "data/data.h"
-#include "common.h"
+#include "../common.h"
 #include "util/sl_list.h"
 #include "nmatrix.h"
 

@@ -43,7 +43,7 @@
 
 #include "data/data.h"
 
-#include "common.h"
+#include "../common.h"
 
 #include "nmatrix.h"
 

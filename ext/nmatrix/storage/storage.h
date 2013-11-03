@@ -45,8 +45,8 @@
 #include "data/data.h"
 
 #include "common.h"
-#include "dense.h"
-#include "list.h"
+#include "dense/dense.h"
+#include "list/list.h"
 #include "yale/yale.h"
 
 /*

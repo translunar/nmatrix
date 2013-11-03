@@ -41,6 +41,7 @@ class NMatrix
         def load_mat file_path
           NMatrix::IO::Matlab::Mat5Reader.new(File.open(file_path, "rb+")).to_ruby
         end
+        alias :load :load_mat
       end
 
       # FIXME: Remove autoloads

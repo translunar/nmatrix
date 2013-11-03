@@ -8,8 +8,8 @@
 #
 # == Copyright Information
 #
-# SciRuby is Copyright (c) 2010 - 2012, Ruby Science Foundation
-# NMatrix is Copyright (c) 2012, Ruby Science Foundation
+# SciRuby is Copyright (c) 2010 - 2013, Ruby Science Foundation
+# NMatrix is Copyright (c) 2011 - 2013, Ruby Science Foundation
 #
 # Please see LICENSE.txt for additional copyright notices.
 #
@@ -95,6 +95,7 @@ describe "Statistical functions" do
         end
 
         it "should map a block to all elements" do
+          #binding.pry if stype == :list
           @nm_1d.map { |e| e ** 2 }.should eq NMatrix[25.0,0.0,1.0,4.0,9.0, stype: stype] unless stype == :yale
           @nm_2d.map { |e| e ** 2 }.should eq NMatrix[[0.0,1.0],[4.0,9.0], stype: stype]
         end
