@@ -554,7 +554,9 @@ void set(VALUE left, SLICE* slice, VALUE right) {
   }
 
   if (v_size == 1 && *v == *reinterpret_cast<D*>(s->default_val)) {
-    nm::list::remove_recursive(s->rows, slice->coords, s->offset, slice->lengths, 0, s->dim);
+    if (*reinterpret_cast<D*>(nm_list_storage_get(s, slice)) != *reinterpret_cast<D*>(s->default_val)) {
+      nm::list::remove_recursive(s->rows, slice->coords, s->offset, slice->lengths, 0, s->dim);
+    }
   } else if (slice->single) {
     slice_set_single(s, s->rows, reinterpret_cast<void*>(v), slice->coords, slice->lengths, 0);
   } else {
@@ -1010,17 +1012,17 @@ VALUE nm_list_map_merged_stored(VALUE left, VALUE right, VALUE init) {
   nm_unregister_value(left);
   nm_unregister_value(right);
   nm_unregister_value(init);
-  RETURN_SIZED_ENUMERATOR(left, 0, 0, 0); // FIXME: Test this. Probably won't work. Enable above code instead.  FIXME: leaks left, right, init
+  RETURN_SIZED_ENUMERATOR(left, 0, 0, 0); // FIXME: Test this. Probably won't work. Enable above code instead.
 
   // Figure out default value if none provided by the user
-  nm::list_storage::RecurseData tdata(t);
+  nm::list_storage::RecurseData& tdata = *(new nm::list_storage::RecurseData(t)); //FIXME: this is a hack to make sure that we can run the destructor before nm_list_storage_delete(t) below.
   if (init == Qnil) {
     nm_unregister_value(init);
     init = rb_yield_values(2, sdata.init_obj(), tdata.init_obj());
     nm_register_value(init);
   }
 
-	// Allocate a new shape array for the resulting matrix.
+  // Allocate a new shape array for the resulting matrix.
   void* init_val = NM_ALLOC(VALUE);
   memcpy(init_val, &init, sizeof(VALUE));
   nm_register_value(*reinterpret_cast<VALUE*>(init_val));
@@ -1031,6 +1033,7 @@ VALUE nm_list_map_merged_stored(VALUE left, VALUE right, VALUE init) {
   nm_register_nmatrix(result);
   map_merged_stored_r(rdata, sdata, tdata, rdata.top_level_list(), sdata.top_level_list(), tdata.top_level_list(), sdata.dim() - 1);
 
+  delete &tdata;
   // If we are working with a scalar operation
   if (scalar) nm_list_storage_delete(t);
 
