@@ -81,7 +81,7 @@ extern "C" {
   void          nm_list_storage_unregister_list(const LIST* l, size_t recursions);
   void          nm_list_storage_register_node(const NODE* n);
   void          nm_list_storage_unregister_node(const NODE* n);
-
+  void		nm_list_storage_completely_unregister_node(const NODE* curr);
   ///////////////
   // Accessors //
   ///////////////

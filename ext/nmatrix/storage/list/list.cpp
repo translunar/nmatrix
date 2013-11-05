@@ -79,6 +79,7 @@ public:
       actual = reinterpret_cast<LIST_STORAGE*>(actual->src);
     }
     nm_list_storage_register(actual);
+    nm_list_storage_register(ref);
     actual_shape_ = actual->shape;
 
     if (init_obj_ == Qnil) {
@@ -88,8 +89,9 @@ public:
   }
 
   ~RecurseData() {
-    nm_list_storage_unregister(actual);
     nm_unregister_value(init_obj_);
+    nm_list_storage_unregister(ref);
+    nm_list_storage_unregister(actual);
   }
 
   dtype_t dtype() const { return ref->dtype; }
@@ -695,6 +697,17 @@ void nm_list_storage_unregister_node(const NODE* curr) {
   nm_unregister_value(*reinterpret_cast<VALUE*>(curr->val));      
 }
 
+/**
+ * Gets rid of all instances of a given node in the registration list.
+ * Sometimes a node will get deleted and replaced deep in a recursion, but
+ * further up it will still get registered.  This leads to a potential read
+ * after free during the GC marking.  This function completely clears out a
+ * node so that this won't happen.
+ */
+void nm_list_storage_completely_unregister_node(const NODE* curr) {
+  nm_completely_unregister_value(*reinterpret_cast<VALUE*>(curr->val));
+}
+
 void nm_list_storage_register_list(const LIST* list, size_t recursions) {
   NODE* next;
   if (!list) return;
@@ -1077,14 +1090,14 @@ static LIST* slice_copy(const LIST_STORAGE* src, LIST* src_rows, size_t* coords,
 	  }
 	  nm::list::insert_copy(dst_rows, false, key, val, sizeof(LIST));
 	}
+      } else { // matches src->dim - n > 1
+	if (src->dtype == nm::RUBYOBJ) {
+	  nm_register_value(*reinterpret_cast<VALUE*>(src_node->val));
+	  temp_vals.push_front(*reinterpret_cast<VALUE*>(src_node->val));
+	}
+	nm::list::insert_copy(dst_rows, false, key, src_node->val, DTYPE_SIZES[src->dtype]);
       }
-      if (src->dtype == nm::RUBYOBJ) {
-	nm_register_value(*reinterpret_cast<VALUE*>(val));
-	temp_vals.push_front(*reinterpret_cast<VALUE*>(val));
-      }
-      else nm::list::insert_copy(dst_rows, false, key, src_node->val, DTYPE_SIZES[src->dtype]);
     }
-
     src_node = src_node->next;
   }
   if (src->dtype == nm::RUBYOBJ) {

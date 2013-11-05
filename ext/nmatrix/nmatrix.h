@@ -389,7 +389,7 @@ extern "C" {
   void     nm_unregister_storage(nm::stype_t stype, const STORAGE* storage);
   void     nm_register_nmatrix(NMATRIX* nmatrix);
   void     nm_unregister_nmatrix(NMATRIX* nmatrix);
-
+  void	   nm_completely_unregister_value(VALUE& val);
 #ifdef __cplusplus
 }
 #endif
