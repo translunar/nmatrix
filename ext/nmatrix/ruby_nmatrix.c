@@ -567,6 +567,39 @@ void nm_unregister_value(VALUE& val) {
 }
 
 /**
+ * Removes all instances of a single VALUE in the gc list.  This can be
+ * dangerous.  Primarily used when something is about to be
+ * freed and replaced so that and residual registrations won't access after
+ * free.
+ **/
+void nm_completely_unregister_value(VALUE& val) {
+  if (gc_value_holder_struct) {
+    nm_gc_ll_node* curr = gc_value_holder_struct->start;
+    nm_gc_ll_node* last = NULL;
+    while (curr) {
+      if (curr->val == &val) {
+	if (last) {
+	  last->next = curr->next;
+	} else {
+	  gc_value_holder_struct->start = curr->next;
+	}
+	nm_gc_ll_node* temp_next = curr->next;
+	curr->next = allocated_pool->start;
+	curr->val = NULL;
+	curr->n = 0;
+	allocated_pool->start = curr;
+	curr = temp_next;
+      } else {
+	last = curr;
+	curr = curr->next;
+      }
+    }
+  }
+}
+
+
+
+/**
  * Register a STORAGE struct of the supplied stype to avoid garbage collection
  * of its internals.
  *
