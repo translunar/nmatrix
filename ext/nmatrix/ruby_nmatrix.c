@@ -1156,6 +1156,7 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
     NMATRIX* tmp = nm_create(nm::DENSE_STORE, (STORAGE*)nm_dense_storage_create(dtype, tmp_shape, dim, v, v_size));
     nm_register_nmatrix(tmp);
     VALUE rb_tmp = Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, tmp);
+    nm_unregister_nmatrix(tmp);
     nm_register_value(rb_tmp);
     if (stype == nm::YALE_STORE)  nm_yale_storage_set(self, slice, rb_tmp);
     else                          nm_list_storage_set(self, slice, rb_tmp);
