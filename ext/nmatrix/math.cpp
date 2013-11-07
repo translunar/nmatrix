@@ -1285,7 +1285,7 @@ static VALUE nm_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a
  */
 static VALUE nm_clapack_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
 #ifndef HAVE_CLAPACK_H
-  rb_raise(rb_eNotImpError, "potrf currently requires LAPACK");
+  rb_raise(rb_eNotImpError, "potrf currently requires CLAPACK");
 #endif
 
   static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const enum CBLAS_UPLO, const int n, void* a, const int lda) = {
@@ -1414,7 +1414,7 @@ static VALUE nm_clapack_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALU
  */
 static VALUE nm_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE lda, VALUE ipiv) {
 #ifndef HAVE_CLAPACK_H
-  rb_raise(rb_eNotImpError, "getri currently requires LAPACK");
+  rb_raise(rb_eNotImpError, "getri currently requires CLAPACK");
 #endif
 
   static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const int n, void* a, const int lda, const int* ipiv) = {
@@ -1471,7 +1471,7 @@ static VALUE nm_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE l
  */
 static VALUE nm_clapack_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
 #ifndef HAVE_CLAPACK_H
-  rb_raise(rb_eNotImpError, "getri currently requires LAPACK");
+  rb_raise(rb_eNotImpError, "getri currently requires CLAPACK");
 #endif
 
   static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const enum CBLAS_UPLO, const int n, void* a, const int lda) = {

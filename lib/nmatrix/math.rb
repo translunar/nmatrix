@@ -82,9 +82,49 @@ class NMatrix
   #   - +StorageTypeError+ -> ATLAS functions only work on dense matrices.
   #
   def getrf!
-    raise(StorageTypeError, "ATLAS functions only work on dense matrices") unless self.stype == :dense
+    raise(StorageTypeError, "ATLAS functions only work on dense matrices") unless self.dense?
     NMatrix::LAPACK::clapack_getrf(:row, self.shape[0], self.shape[1], self, self.shape[1])
   end
+
+
+  #
+  # call-seq:
+  #     getrf -> NMatrix
+  #
+  # In-place version of #getrf!. Returns the new matrix, which contains L and U matrices.
+  #
+  # * *Raises* :
+  #   - +StorageTypeError+ -> ATLAS functions only work on dense matrices.
+  #
+  def getrf
+    a = self.clone
+    a.getrf!
+    return a
+  end
+
+
+  #
+  # call-seq:
+  #     potrf -> NMatrix
+  #
+  # Cholesky factorization of a symmetric positive-definite matrix -- or, if complex,
+  # a Hermitian positive-definite matrix +A+.
+  #
+  # * *Returns* :
+  #   [upper, lower]
+  # * *Raises* :
+  #   - +StorageTypeError+ -> ATLAS functions only work on dense matrices.
+  #
+  def potrf
+    raise(StorageTypeError, "ATLAS functions only work on dense matrices") unless self.dense?
+    upper = self.clone
+    lower = self.clone
+    # FIXME: Surely there's an easy way to calculate one of these from the other. Do we really need to run twice?
+    NMatrix::LAPACK::clapack_potrf(:row, :upper, self.shape[0], upper, self.shape[1])
+    NMatrix::LAPACK::clapack_potrf(:row, :lower, self.shape[0], lower, self.shape[1])
+    [upper, lower]
+  end
+
 
   #
   # call-seq:

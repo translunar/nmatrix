@@ -437,7 +437,7 @@
     which in addition to fixing numerous bugs should prevent some new
     bugs from arising in the future (by @cjfuller)
 
-* 5 minor enhancements:
+* 7 minor enhancements:
 
   * User-friendly #gesvd and #gesdd updates (by @ryanmt)
 
@@ -458,6 +458,9 @@
 
   * Improved organization by moving list and yale code into storage/
     subdirectories
+
+  * Added NMatrix#potrf and NMatrix#getrf, which are instance methods
+    for calling CLAPACK functions (NMatrix#getrf! already existed)
 
 * 12 bug fixes:
 
