@@ -1086,10 +1086,10 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
       init = RARRAY_LEN(initial_ary) == 1 ? rubyobj_to_cval(rb_ary_entry(initial_ary, 0), dtype) : NULL;
     else
       init = rubyobj_to_cval(initial_ary, dtype);
-  }
-
-  if (dtype == nm::RUBYOBJ) {
-    nm_register_values(reinterpret_cast<VALUE*>(init), 1);
+    
+    if (dtype == nm::RUBYOBJ) {
+      nm_register_values(reinterpret_cast<VALUE*>(init), 1);
+    }
   }
 
   // capacity = h[:capacity] || 0
@@ -1098,10 +1098,11 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
   }
 
   if (!NIL_P(initial_ary)) {
-    v = interpret_initial_value(initial_ary, dtype);
-
+    
     if (TYPE(initial_ary) == T_ARRAY) 	v_size = RARRAY_LEN(initial_ary);
     else                                v_size = 1;
+
+    v = interpret_initial_value(initial_ary, dtype);
 
     if (dtype == nm::RUBYOBJ) {
       nm_register_values(reinterpret_cast<VALUE*>(v), v_size);
@@ -1156,6 +1157,7 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
     NMATRIX* tmp = nm_create(nm::DENSE_STORE, (STORAGE*)nm_dense_storage_create(dtype, tmp_shape, dim, v, v_size));
     nm_register_nmatrix(tmp);
     VALUE rb_tmp = Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, tmp);
+    nm_unregister_nmatrix(tmp);
     nm_register_value(rb_tmp);
     if (stype == nm::YALE_STORE)  nm_yale_storage_set(self, slice, rb_tmp);
     else                          nm_list_storage_set(self, slice, rb_tmp);
@@ -1176,7 +1178,7 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
     nm_unregister_values(reinterpret_cast<VALUE*>(v), v_size);
   }
 
-  if (dtype == nm::RUBYOBJ) {
+  if (stype != nm::DENSE_STORE && dtype == nm::RUBYOBJ) {
     nm_unregister_values(reinterpret_cast<VALUE*>(init), 1);
   }
 
