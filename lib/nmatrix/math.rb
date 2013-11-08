@@ -105,26 +105,42 @@ class NMatrix
 
   #
   # call-seq:
-  #     potrf -> NMatrix
+  #     potrf!(upper_or_lower) -> NMatrix
   #
   # Cholesky factorization of a symmetric positive-definite matrix -- or, if complex,
-  # a Hermitian positive-definite matrix +A+.
+  # a Hermitian positive-definite matrix +A+. This uses the ATLAS function clapack_potrf,
+  # so the result will be written in either the upper or lower triangular portion of the
+  # matrix upon which it is called.
   #
   # * *Returns* :
-  #   [upper, lower]
+  #   the triangular portion specified by the parameter
   # * *Raises* :
   #   - +StorageTypeError+ -> ATLAS functions only work on dense matrices.
   #
-  def potrf
+  def potrf!(which)
     raise(StorageTypeError, "ATLAS functions only work on dense matrices") unless self.dense?
-    upper = self.clone
-    lower = self.clone
     # FIXME: Surely there's an easy way to calculate one of these from the other. Do we really need to run twice?
-    NMatrix::LAPACK::clapack_potrf(:row, :upper, self.shape[0], upper, self.shape[1])
-    NMatrix::LAPACK::clapack_potrf(:row, :lower, self.shape[0], lower, self.shape[1])
-    [upper, lower]
+    NMatrix::LAPACK::clapack_potrf(:row, which, self.shape[0], self, self.shape[1])
   end
 
+  def potrf_upper!
+    potrf! :upper
+  end
+
+  def potrf_lower!
+    potrf! :lower
+  end
+
+
+  #
+  # call-seq:
+  #     factorize_cholesky -> ...
+  #
+  # Cholesky factorization of a matrix.
+  def factorize_cholesky
+    [self.clone.potrf_upper!.triu!,
+    self.clone.potrf_lower!.tril!]
+  end
 
   #
   # call-seq:

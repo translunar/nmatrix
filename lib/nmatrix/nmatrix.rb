@@ -181,6 +181,7 @@ class NMatrix
 
   end
 
+
   #
   # call-seq:
   #     rows -> Integer
@@ -402,11 +403,122 @@ class NMatrix
   #   - +row_number+ -> Integer.
   #   - +get_by+ -> Type of slicing to use, +:copy+ or +:reference+.
   # * *Returns* :
-  #   - A NMatrix representing the requested row as a row vector.
+  #   - An NMatrix representing the requested row as a row vector.
   #
   def row(row_number, get_by = :copy)
     rank(0, row_number, get_by)
   end
+
+
+  #
+  # call-seq:
+  #     upper_triangle -> NMatrix
+  #     upper_triangle(k) -> NMatrix
+  #     triu -> NMatrix
+  #     triu(k) -> NMatrix
+  #
+  # Returns the upper triangular portion of a matrix. This is analogous to the +triu+ method
+  # in MATLAB.
+  #
+  # * *Arguments* :
+  #   - +k+ -> Positive integer. How many extra diagonals to include in the upper triangular portion.
+  #
+  def upper_triangle(k = 0)
+    raise(NotImplementedError, "only implemented for 2D matrices") if self.shape.size > 2
+
+    t = self.clone_structure
+    (0...self.shape[0]).each do |i|
+      if i - k < 0
+        t[i, :*] = self[i, :*]
+      else
+        t[i, 0...(i-k)]             = 0
+        t[i, (i-k)...self.shape[1]] = self[i, (i-k)...self.shape[1]]
+      end
+    end
+    t
+  end
+  alias :triu :upper_triangle
+
+
+  #
+  # call-seq:
+  #     upper_triangle! -> NMatrix
+  #     upper_triangle!(k) -> NMatrix
+  #     triu! -> NMatrix
+  #     triu!(k) -> NMatrix
+  #
+  # Deletes the lower triangular portion of the matrix (in-place) so only the upper portion remains.
+  #
+  # * *Arguments* :
+  #   - +k+ -> Integer. How many extra diagonals to include in the deletion.
+  #
+  def upper_triangle!(k = 0)
+    raise(NotImplementedError, "only implemented for 2D matrices") if self.shape.size > 2
+
+    (0...self.shape[0]).each do |i|
+      if i - k >= 0
+        self[i, 0...(i-k)] = 0
+      end
+    end
+    self
+  end
+  alias :triu! :upper_triangle!
+
+
+  #
+  # call-seq:
+  #     lower_triangle -> NMatrix
+  #     lower_triangle(k) -> NMatrix
+  #     tril -> NMatrix
+  #     tril(k) -> NMatrix
+  #
+  # Returns the lower triangular portion of a matrix. This is analogous to the +tril+ method
+  # in MATLAB.
+  #
+  # * *Arguments* :
+  #   - +k+ -> Integer. How many extra diagonals to include in the lower triangular portion.
+  #
+  def lower_triangle(k = 0)
+    raise(NotImplementedError, "only implemented for 2D matrices") if self.shape.size > 2
+
+    t = self.clone_structure
+    (0...self.shape[0]).each do |i|
+      if i + k >= shape[0]
+        t[i, :*] = self[i, :*]
+      else
+        t[i, (i+k+1)...self.shape[1]] = 0
+        t[i, 0..(i+k)] = self[i, 0..(i+k)]
+      end
+    end
+    t
+  end
+  alias :tril :lower_triangle
+
+
+  #
+  # call-seq:
+  #     lower_triangle! -> NMatrix
+  #     lower_triangle!(k) -> NMatrix
+  #     tril! -> NMatrix
+  #     tril!(k) -> NMatrix
+  #
+  # Deletes the upper triangular portion of the matrix (in-place) so only the lower portion remains.
+  #
+  # * *Arguments* :
+  #   - +k+ -> Integer. How many extra diagonals to include in the deletion.
+  #
+  def lower_triangle!(k = 0)
+    raise(NotImplementedError, "only implemented for 2D matrices") if self.shape.size > 2
+
+    (0...self.shape[0]).each do |i|
+      if i + k < shape[0]
+        self[i, (i+k+1)...self.shape[1]] = 0
+      end
+    end
+    self
+  end
+  alias :tril! :lower_triangle!
+
 
   #
   # call-seq:
@@ -541,6 +653,22 @@ protected
     end
 
     ary
+  end
+
+
+  #
+  # call-seq:
+  #     clone_structure -> NMatrix
+  #
+  # This function is like clone, but it only copies the structure and the default value.
+  # None of the other values are copied. It takes an optional capacity argument. This is
+  # mostly only useful for dense, where you may not want to initialize; for other types,
+  # you should probably use +zeros_like+.
+  #
+  def clone_structure(capacity = nil)
+    opts = {stype: self.stype, default: self.default_value, dtype: self.dtype}
+    opts = {capacity: capacity}.merge(opts) if self.yale?
+    NMatrix.new(self.shape, opts)
   end
 
 

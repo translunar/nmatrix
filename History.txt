@@ -459,7 +459,7 @@
   * Improved organization by moving list and yale code into storage/
     subdirectories
 
-  * Added NMatrix#potrf and NMatrix#getrf, which are instance methods
+  * Added NMatrix#potrf! and NMatrix#getrf, which are instance methods
     for calling CLAPACK functions (NMatrix#getrf! already existed)
 
 * 12 bug fixes:
