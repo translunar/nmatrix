@@ -412,6 +412,27 @@ class NMatrix
 
   #
   # call-seq:
+  #     reshape(new_shape) -> NMatrix
+  #
+  # Clone a matrix, changing the shape in the process. Note that this function does not do a resize; the product of
+  # the new and old shapes' components must be equal.
+  #
+  # * *Arguments* :
+  #   - +new_shape+ -> Array of positive Fixnums.
+  # * *Returns* :
+  #   - A copy with a different shape.
+  #
+  def reshape new_shape
+    t = reshape_clone_structure(new_shape)
+    left_params  = [:*]*new_shape.size
+    right_params = [:*]*self.shape.size
+    t[*left_params] = self[*right_params]
+    t
+  end
+
+
+  #
+  # call-seq:
   #     upper_triangle -> NMatrix
   #     upper_triangle(k) -> NMatrix
   #     triu -> NMatrix
@@ -669,6 +690,18 @@ protected
     opts = {stype: self.stype, default: self.default_value, dtype: self.dtype}
     opts = {capacity: capacity}.merge(opts) if self.yale?
     NMatrix.new(self.shape, opts)
+  end
+
+
+  def reshape_clone_structure(new_shape)
+    raise(ArgumentError, "reshape cannot resize; size of new and old matrices must match") unless self.size == new_shape.inject(1) { |p,i| p *= i }
+
+    opts = {stype: self.stype, default: self.default_value, dtype: self.dtype}
+    if self.yale?
+      # We can generally predict the change in capacity for Yale.
+      opts = {capacity: self.capacity - self.shape[0] + new_shape[0]}.merge(opts)
+    end
+    NMatrix.new(new_shape, opts)
   end
 
 

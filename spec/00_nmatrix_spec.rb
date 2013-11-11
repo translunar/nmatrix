@@ -404,3 +404,20 @@ describe "NMatrix#lower_triangle!" do
     n.lower_triangle!(2).should == NMatrix.new(4, [1,2,3,0,5,6,7,8,9,10,11,12,13,14,15,16])
   end
 end
+
+describe "NMatrix#reshape" do
+  it "should change the shape of a matrix without the contents changing" do
+    n = NMatrix.seq(4)+1
+    n.reshape([8,2]).to_flat_array.should == n.to_flat_array
+  end
+
+  it "should permit a change of dimensionality" do
+    n = NMatrix.seq(4)+1
+    n.reshape([8,1,2]).to_flat_array.should == n.to_flat_array
+  end
+
+  it "should prevent a resize" do
+    n = NMatrix.seq(4)+1
+    expect { n.reshape([5,2]) }.to raise_error(ArgumentError)
+  end
+end
