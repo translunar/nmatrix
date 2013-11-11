@@ -194,9 +194,14 @@ def find_newer_gplusplus #:nodoc:
 end
 
 def gplusplus_version #:nodoc:
-  version_match = `LANG="en_US" #{CONFIG['CXX']} -v 2>&1`.lines.to_a.find { |l| l.match(/version\s/) }.match(/version\s(\d\.\d(\.\d)?)/)
-  raise("unable to determine g++ version (match to get version was nil)") if version_match.nil?
-  version_match.captures.first
+  cxxvar = proc { |n| `#{CONFIG['CXX']} -E -dM - </dev/null | grep #{n}`.chomp.split(' ')[2] }
+  major = cxxvar.call('__GNUC__')
+  minor = cxxvar.call('__GNUC_MINOR__')
+  patch = cxxvar.call('__GNUC_PATCHLEVEL__')
+
+  raise("unable to determine g++ version (match to get version was nil)") if major.nil? || minor.nil? || patch.nil?
+
+  "#{major}.#{minor}.#{patch}"
 end
 
 
