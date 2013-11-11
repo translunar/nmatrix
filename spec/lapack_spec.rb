@@ -61,10 +61,17 @@ describe NMatrix::LAPACK do
     context dtype do
 
       it "exposes clapack_gesv" do
-        pending("needs rational implementation") if dtype.to_s =~ /rational/
-        a = NMatrix[[1.0, 2, 3], [0,0.5,4],[3,3,9]]
-        b = NMatrix[[1.0],[2],[3]]
-        NMatrix::LAPACK::clapack_gesv(:row,a.shape[0],b.shape[1],a,a.shape[0],b,b.shape[0]).should be_within(1E-15).of(NMatrix[[-0.5], [0.0], [0.5]])
+        a = NMatrix[[1.quo(1), 2, 3], [0,1.quo(2),4],[3,3,9]].cast(dtype: dtype)
+        b = NMatrix[[1.quo(1)],[2],[3]].cast(dtype: dtype)
+        err = case dtype
+                when :float32, :complex64
+                  1e-6
+                when :float64, :complex128
+                  1e-8
+                else
+                  1e-64
+              end
+        NMatrix::LAPACK::clapack_gesv(:row,a.shape[0],b.shape[1],a,a.shape[0],b,b.shape[0]).should be_within(err).of(NMatrix[[-1.quo(2)], [0], [1.quo(2)]].cast(dtype: dtype))
       end
 
 
