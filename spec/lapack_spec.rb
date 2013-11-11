@@ -59,6 +59,15 @@ describe NMatrix::LAPACK do
   # where integer math is not allowed
   [:rational32, :rational64, :rational128, :float32, :float64, :complex64, :complex128].each do |dtype|
     context dtype do
+
+      it "exposes clapack_gesv" do
+        pending("needs rational implementation") if dtype.to_s =~ /rational/
+        a = NMatrix[[1.0, 2, 3], [0,0.5,4],[3,3,9]]
+        b = NMatrix[[1.0],[2],[3]]
+        NMatrix::LAPACK::clapack_gesv(:row,a.shape[0],b.shape[1],a,a.shape[0],b,b.shape[0]).should be_within(1E-15).of(NMatrix[[-0.5], [0.0], [0.5]])
+      end
+
+
       it "exposes clapack_getrf" do
         a = NMatrix.new(3, [4,9,2,3,5,7,8,1,6], dtype: dtype)
         NMatrix::LAPACK::clapack_getrf(:row, 3, 3, a, 3)
