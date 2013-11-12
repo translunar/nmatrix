@@ -74,14 +74,14 @@ extern "C" {
   void					nm_list_storage_delete_ref(STORAGE* s);
   void					nm_list_storage_mark(STORAGE*);
   void          __nm_list_storage_unregister_temp_value_list(std::list<VALUE>& temp_vals);
-  void		__nm_list_storage_unregister_temp_list_list(std::list<LIST*>& temp_vals, size_t recursions);
+  void		      __nm_list_storage_unregister_temp_list_list(std::list<LIST*>& temp_vals, size_t recursions);
   void          nm_list_storage_register(const STORAGE* s);
   void          nm_list_storage_unregister(const STORAGE* s);
   void          nm_list_storage_register_list(const LIST* l, size_t recursions);
   void          nm_list_storage_unregister_list(const LIST* l, size_t recursions);
   void          nm_list_storage_register_node(const NODE* n);
   void          nm_list_storage_unregister_node(const NODE* n);
-  void		nm_list_storage_completely_unregister_node(const NODE* curr);
+  void		      nm_list_storage_completely_unregister_node(const NODE* curr);
   ///////////////
   // Accessors //
   ///////////////
@@ -90,7 +90,7 @@ extern "C" {
   void* nm_list_storage_ref(const STORAGE* s, SLICE* slice);
   void* nm_list_storage_get(const STORAGE* s, SLICE* slice);
   NODE* nm_list_storage_insert(STORAGE* s, SLICE* slice, void* val);
-  void nm_list_storage_set(VALUE left, SLICE* slice, VALUE right);
+  void  nm_list_storage_set(VALUE left, SLICE* slice, VALUE right);
   void  nm_list_storage_remove(STORAGE* s, SLICE* slice);
 
   ///////////
