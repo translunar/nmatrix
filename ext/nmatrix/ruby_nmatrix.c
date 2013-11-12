@@ -221,7 +221,7 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "write", (METHOD)nm_write, -1);
 
 	// Technically, the following function is a copy constructor.
-	rb_define_method(cNMatrix, "transpose", (METHOD)nm_init_transposed, 0);
+	rb_define_protected_method(cNMatrix, "clone_transpose", (METHOD)nm_init_transposed, 0);
 
 	rb_define_method(cNMatrix, "dtype", (METHOD)nm_dtype, 0);
 	rb_define_method(cNMatrix, "stype", (METHOD)nm_stype, 0);

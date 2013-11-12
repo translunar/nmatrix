@@ -635,7 +635,7 @@ LIST_STORAGE* nm_list_storage_create(nm::dtype_t dtype, size_t* shape, size_t di
 }
 
 /*
- * Documentation goes here.
+ * Destructor for list storage.
  */
 void nm_list_storage_delete(STORAGE* s) {
   if (s) {
@@ -652,7 +652,7 @@ void nm_list_storage_delete(STORAGE* s) {
 }
 
 /*
- * Documentation goes here.
+ * Destructor for a list storage reference slice.
  */
 void nm_list_storage_delete_ref(STORAGE* s) {
   if (s) {
@@ -666,7 +666,7 @@ void nm_list_storage_delete_ref(STORAGE* s) {
 }
 
 /*
- * Documentation goes here.
+ * GC mark function for list storage.
  */
 void nm_list_storage_mark(STORAGE* storage_base) {
   LIST_STORAGE* storage = (LIST_STORAGE*)storage_base;

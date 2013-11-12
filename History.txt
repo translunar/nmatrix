@@ -430,12 +430,16 @@
 
 === 0.1.0.rc1
 
-* 1 major enhancements:
+* 3 major enhancements:
 
   * Improved garbage collection strategy for partial object creation
     (i.e., when VALUEs are allocated but not registered right away),
     which in addition to fixing numerous bugs should prevent some new
     bugs from arising in the future (by @cjfuller)
+
+  * Implemented list storage transpose
+
+  * Implemented generic n-dimensional transpose
 
 * 7 minor enhancements:
 

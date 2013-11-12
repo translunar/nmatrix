@@ -421,3 +421,26 @@ describe "NMatrix#reshape" do
     expect { n.reshape([5,2]) }.to raise_error(ArgumentError)
   end
 end
+
+describe "NMatrix#transpose" do
+  [:dense, :list, :yale].each do |stype|
+    context(stype) do
+      it "should transpose a #{stype} matrix (2-dimensional)" do
+        n = NMatrix.seq(4, stype: stype)
+        n.transpose.to_a.flatten.should == [0,4,8,12,1,5,9,13,2,6,10,14,3,7,11,15]
+      end
+    end
+  end
+
+  [:dense, :list].each do |stype|
+    context(stype) do
+      it "should transpose a #{stype} matrix (3-dimensional)" do
+        n = NMatrix.new([4,4,1], [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], stype: stype)
+        n.transpose([2,1,0]).to_flat_array.should == [0,4,8,12,1,5,9,13,2,6,10,14,3,7,11,15]
+        n.transpose([1,0,2]).to_flat_array.should == [0,4,8,12,1,5,9,13,2,6,10,14,3,7,11,15]
+        n.transpose([0,2,1]).to_flat_array.should == n.to_flat_array # for dense, make this reshape!
+      end
+    end
+  end
+
+end

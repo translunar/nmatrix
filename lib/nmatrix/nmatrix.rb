@@ -433,6 +433,57 @@ class NMatrix
 
   #
   # call-seq:
+  #     transpose -> NMatrix
+  #     transpose(permutation) -> NMatrix
+  #
+  # Clone a matrix, transposing it in the process. If the matrix is two-dimensional, the permutation is taken to be [1,0]
+  # automatically (switch dimension 0 with dimension 1). If the matrix is n-dimensional, you must provide a permutation
+  # of +0...n+.
+  #
+  # * *Arguments* :
+  #   - +permutation+ -> Optional Array giving a permutation.
+  # * *Returns* :
+  #   - A copy of the matrix, but transposed.
+  #
+  def transpose(permute = nil)
+    if self.dim <= 2 # This will give an error if dim is 1.
+      new_shape = [self.shape[1], self.shape[0]]
+    elsif permute.nil?
+      raise(ArgumentError, "need permutation array of size #{self.dim}")
+    elsif permute.sort.uniq != (0...self.dim).to_a
+      raise(ArgumentError, "invalid permutation array")
+    else
+      # Figure out the new shape based on the permutation given as an argument.
+      new_shape = permute.map { |p| self.shape[p] }
+    end
+
+    if self.dim > 2 # FIXME: For dense, several of these are basically equivalent to reshape.
+
+      # Make the new data structure.
+      t = self.reshape_clone_structure(new_shape)
+
+      self.each_stored_with_indices do |v,*indices|
+        p_indices = permute.map { |p| indices[p] }
+        t[*p_indices] = v
+      end
+      t
+    elsif self.list? # TODO: Need a C list transposition algorithm.
+      # Make the new data structure.
+      t = self.reshape_clone_structure(new_shape)
+
+      self.each_column.with_index do |col,j|
+        t[j,:*] = col.to_flat_array
+      end
+      t
+    else
+      # Call C versions of Yale and List transpose, which do their own copies
+      self.clone_transpose
+    end
+  end
+
+
+  #
+  # call-seq:
   #     upper_triangle -> NMatrix
   #     upper_triangle(k) -> NMatrix
   #     triu -> NMatrix
@@ -722,6 +773,7 @@ protected
   def __sparse_initial_set__(ary) #:nodoc:
     self[0...self.shape[0],0...self.shape[1]] = ary
   end
+
 end
 
 require_relative './shortcuts.rb'
