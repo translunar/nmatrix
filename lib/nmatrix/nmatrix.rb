@@ -484,6 +484,76 @@ class NMatrix
 
   #
   # call-seq:
+  #     matrix1.concat(*m) -> NMatrix
+  #     matrix1.concat(*m, rank) -> NMatrix
+  #
+  # Joins two matrices together into a new larger matrix. Attempts to determine which direction to concatenate
+  # on by looking for the first common element of the matrix +shape+ in reverse. In other words, concatenating two
+  # columns together without supplying +rank+ will glue them into an n x 2 matrix.
+  #
+  # The two matrices must have the same +dim+.
+  #
+  # * *Arguments* :
+  #   - +matrices+ -> one or more matrices
+  #   - +rank+ -> Fixnum (for rank); alternatively, may use :row, :column, or :layer for 0, 1, 2, respectively
+  #
+  def concat *matrices
+    rank = nil
+    rank = matrices.pop unless matrices.last.is_a?(NMatrix)
+
+    # Find the first matching dimension and concatenate along that (unless rank is specified)
+    if rank.nil?
+      rank = self.dim-1
+      self.shape.reverse_each.with_index do |s,i|
+        matrices.each do |m|
+          if m.shape[i] != s
+            rank -= 1
+            break
+          end
+        end
+      end
+    elsif rank.is_a?(Symbol) # Convert to numeric
+      rank = {:row => 0, :column => 1, :col => 1, :lay => 2, :layer => 3}[rank]
+    end
+
+    # Need to figure out the new shape.
+    new_shape = self.shape.dup
+    new_shape[rank] = matrices.inject(self.shape[rank]) { |total,m| total + m.shape[rank] }
+
+    # Now figure out the options for constructing the concatenated matrix.
+    opts = {stype: self.stype, default: self.default_value, dtype: self.dtype}
+    if self.yale?
+      # We can generally predict the new capacity for Yale. Subtract out the number of rows
+      # for each matrix being concatenated, and then add in the number of rows for the new
+      # shape. That takes care of the diagonal. The rest of the capacity is represented by
+      # the non-diagonal non-default values.
+      new_cap = matrices.inject(self.capacity - self.shape[0]) do |total,m|
+        total + m.capacity - m.shape[0]
+      end - self.shape[0] + new_shape[0]
+      opts = {capacity: self.new_cap}.merge(opts)
+    end
+
+    # Do the actual construction.
+    n = NMatrix.new(new_shape, opts)
+
+    # Figure out where to start and stop the concatenation. We'll use NMatrices instead of
+    # Arrays because then we can do elementwise addition.
+    ranges = self.shape.map.with_index { |s,i| 0...self.shape[i] }
+
+    matrices.unshift(self)
+    matrices.each do |m|
+      n[*ranges] = m
+
+      # move over by the requisite amount
+      ranges[rank]  = (ranges[rank].first + m.shape[rank])...(ranges[rank].last + m.shape[rank])
+    end
+
+    n
+  end
+
+
+  #
+  # call-seq:
   #     upper_triangle -> NMatrix
   #     upper_triangle(k) -> NMatrix
   #     triu -> NMatrix
@@ -744,7 +814,8 @@ protected
   end
 
 
-  def reshape_clone_structure(new_shape)
+  # Clone the structure as needed for a reshape
+  def reshape_clone_structure(new_shape) #:nodoc:
     raise(ArgumentError, "reshape cannot resize; size of new and old matrices must match") unless self.size == new_shape.inject(1) { |p,i| p *= i }
 
     opts = {stype: self.stype, default: self.default_value, dtype: self.dtype}
