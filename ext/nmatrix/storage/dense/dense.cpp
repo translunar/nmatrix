@@ -229,7 +229,6 @@ static DENSE_STORAGE* nm_dense_storage_create_dummy(nm::dtype_t dtype, size_t* s
  * elements is NULL, the new elements array will not be initialized.
  */
 DENSE_STORAGE* nm_dense_storage_create(nm::dtype_t dtype, size_t* shape, size_t dim, void* elements, size_t elements_length) {
-
   if (dtype == nm::RUBYOBJ)
     nm_register_values(reinterpret_cast<VALUE*>(elements), elements_length);
 

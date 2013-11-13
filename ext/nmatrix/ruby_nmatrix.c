@@ -822,8 +822,8 @@ static VALUE nm_each_ordered_stored_with_indices(VALUE nmatrix) {
  * This method will raise an exception if dimensions do not match.
  */
 static VALUE nm_eqeq(VALUE left, VALUE right) {
-  nm_register_value(left);
-  nm_register_value(right);
+  NM_CONSERVATIVE(nm_register_value(left));
+  NM_CONSERVATIVE(nm_register_value(right));
 
   NMATRIX *l, *r;
 
@@ -834,8 +834,8 @@ static VALUE nm_eqeq(VALUE left, VALUE right) {
   UnwrapNMatrix(right, r);
 
   if (l->stype != r->stype) {
-    nm_unregister_value(left);
-    nm_unregister_value(right);
+    NM_CONSERVATIVE(nm_unregister_value(left));
+    NM_CONSERVATIVE(nm_unregister_value(right));
     rb_raise(rb_eNotImpError, "comparison between different matrix stypes not yet implemented");
   }
 
@@ -853,8 +853,8 @@ static VALUE nm_eqeq(VALUE left, VALUE right) {
     break;
   }
 
-  nm_unregister_value(left);
-  nm_unregister_value(right);
+  NM_CONSERVATIVE(nm_unregister_value(left));
+  NM_CONSERVATIVE(nm_unregister_value(right));
 
   return result ? Qtrue : Qfalse;
 }
@@ -1034,9 +1034,9 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
     }
   }
 #endif
-  nm_register_value(shape_ary);
-  nm_register_value(initial_ary);
-  nm_register_value(hash);
+  NM_CONSERVATIVE(nm_register_value(shape_ary));
+  NM_CONSERVATIVE(nm_register_value(initial_ary));
+  NM_CONSERVATIVE(nm_register_value(hash));
   // Get the shape.
   size_t  dim;
   size_t* shape = interpret_shape(shape_ary, &dim);
@@ -1052,9 +1052,9 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
     dtype_sym       = rb_hash_aref(hash, ID2SYM(nm_rb_dtype));
     stype_sym       = rb_hash_aref(hash, ID2SYM(nm_rb_stype));
     capacity_num    = rb_hash_aref(hash, ID2SYM(nm_rb_capacity));
-    nm_register_value(capacity_num);
+    NM_CONSERVATIVE(nm_register_value(capacity_num));
     default_val_num = rb_hash_aref(hash, ID2SYM(nm_rb_default));
-    nm_register_value(default_val_num);
+    NM_CONSERVATIVE(nm_register_value(default_val_num));
   }
 
   //     stype ||= :dense
@@ -1183,13 +1183,13 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
   }
 
   if (!NIL_P(hash)) {
-    nm_unregister_value(capacity_num);
-    nm_unregister_value(default_val_num);
+    NM_CONSERVATIVE(nm_unregister_value(capacity_num));
+    NM_CONSERVATIVE(nm_unregister_value(default_val_num));
   }
 
-  nm_unregister_value(shape_ary);
-  nm_unregister_value(initial_ary);
-  nm_unregister_value(hash);
+  NM_CONSERVATIVE(nm_unregister_value(shape_ary));
+  NM_CONSERVATIVE(nm_unregister_value(initial_ary));
+  NM_CONSERVATIVE(nm_unregister_value(hash));
 
   NM_CONSERVATIVE(nm_unregister_value(self));
   NM_CONSERVATIVE(nm_unregister_values(argv, argc));
@@ -1435,7 +1435,7 @@ static VALUE nm_init_transposed(VALUE self) {
  * Copy constructor for no change of dtype or stype (used for #initialize_copy hook).
  */
 static VALUE nm_init_copy(VALUE copy, VALUE original) {
-  nm_register_value(copy);
+  NM_CONSERVATIVE(nm_register_value(copy));
   NM_CONSERVATIVE(nm_register_value(original));
 
   NMATRIX *lhs, *rhs;
@@ -1443,8 +1443,8 @@ static VALUE nm_init_copy(VALUE copy, VALUE original) {
   CheckNMatrixType(original);
 
   if (copy == original) {
-    nm_unregister_value(copy);
-    nm_unregister_value(original);
+    NM_CONSERVATIVE(nm_unregister_value(copy));
+    NM_CONSERVATIVE(nm_unregister_value(original));
     return copy;
   }
 
@@ -1457,7 +1457,7 @@ static VALUE nm_init_copy(VALUE copy, VALUE original) {
   CAST_TABLE(ttable);
   lhs->storage = ttable[lhs->stype][rhs->stype](rhs->storage, rhs->storage->dtype, NULL);
 
-  nm_unregister_value(copy);
+  NM_CONSERVATIVE(nm_unregister_value(copy));
   NM_CONSERVATIVE(nm_unregister_value(original));
 
   return copy;
@@ -1837,11 +1837,8 @@ static VALUE nm_init_yale_from_old_yale(VALUE shape, VALUE dtype, VALUE ia, VALU
  * Check to determine whether matrix is a reference to another matrix.
  */
 static VALUE nm_is_ref(VALUE self) {
-  NM_CONSERVATIVE(nm_register_value(self));
-  VALUE retval = Qtrue;
-  if (NM_SRC(self) == NM_STORAGE(self)) retval = Qfalse;
-  NM_CONSERVATIVE(nm_unregister_value(self));
-  return retval;
+  if (NM_SRC(self) == NM_STORAGE(self)) return Qfalse;
+  return Qtrue;
 }
 
 /*
@@ -1860,11 +1857,7 @@ static VALUE nm_mget(int argc, VALUE* argv, VALUE self) {
     nm_list_storage_get,
     nm_yale_storage_get
   };
-  NM_CONSERVATIVE(nm_register_value(self));
-  NM_CONSERVATIVE(nm_register_values(argv, argc));
   nm::stype_t stype = NM_STYPE(self);
-  NM_CONSERVATIVE(nm_unregister_value(self));
-  NM_CONSERVATIVE(nm_unregister_values(argv, argc));
   return nm_xslice(argc, argv, ttable[stype], nm_delete, self);
 }
 
@@ -1884,11 +1877,7 @@ static VALUE nm_mref(int argc, VALUE* argv, VALUE self) {
     nm_list_storage_ref,
     nm_yale_storage_ref
   };
-  NM_CONSERVATIVE(nm_register_value(self));
-  NM_CONSERVATIVE(nm_register_values(argv, argc));
   nm::stype_t stype = NM_STYPE(self);
-  NM_CONSERVATIVE(nm_unregister_value(self));
-  NM_CONSERVATIVE(nm_unregister_values(argv, argc));
   return nm_xslice(argc, argv, ttable[stype], nm_delete_ref, self);
 }
 
@@ -1902,18 +1891,17 @@ static VALUE nm_mref(int argc, VALUE* argv, VALUE self) {
  *     n[3,3] = n[2,3] = 5.0
  */
 static VALUE nm_mset(int argc, VALUE* argv, VALUE self) {
-  NM_CONSERVATIVE(nm_register_value(self));
-  NM_CONSERVATIVE(nm_register_values(argv, argc));
-
+  
   size_t dim = NM_DIM(self); // last arg is the value
 
   VALUE to_return = Qnil;
 
   if ((size_t)(argc) > NM_DIM(self)+1) {
-    NM_CONSERVATIVE(nm_unregister_value(self));
-    NM_CONSERVATIVE(nm_unregister_values(argv, argc));
     rb_raise(rb_eArgError, "wrong number of arguments (%d for %lu)", argc, effective_dim(NM_STORAGE(self))+1);
   } else {
+    NM_CONSERVATIVE(nm_register_value(self));
+    NM_CONSERVATIVE(nm_register_values(argv, argc));
+
     SLICE* slice = get_slice(dim, argc-1, argv, NM_STORAGE(self)->shape);
 
     static void (*ttable[nm::NUM_STYPES])(VALUE, SLICE*, VALUE) = {
@@ -1927,10 +1915,10 @@ static VALUE nm_mset(int argc, VALUE* argv, VALUE self) {
     free_slice(slice);
 
     to_return = argv[argc-1];
-  }
 
-  NM_CONSERVATIVE(nm_unregister_value(self));
-  NM_CONSERVATIVE(nm_unregister_values(argv, argc));
+    NM_CONSERVATIVE(nm_unregister_value(self));
+    NM_CONSERVATIVE(nm_unregister_values(argv, argc));
+  }
 
   return to_return;
 }
@@ -2003,10 +1991,7 @@ static VALUE nm_multiply(VALUE left_v, VALUE right_v) {
  * Use #effective_dim to get the dimension of an NMatrix which acts as a vector (e.g., a column or row).
  */
 static VALUE nm_dim(VALUE self) {
-  NM_CONSERVATIVE(nm_register_value(self));
-  VALUE to_return = INT2FIX(NM_STORAGE(self)->dim);
-  NM_CONSERVATIVE(nm_unregister_value(self)); 
-  return to_return;
+  return INT2FIX(NM_STORAGE(self)->dim);
 }
 
 /*
@@ -2060,14 +2045,14 @@ static VALUE nm_offset(VALUE self) {
  * Get the shape of a slice's parent.
  */
 static VALUE nm_supershape(VALUE self) {
-  NM_CONSERVATIVE(nm_register_value(self));
 
   STORAGE* s   = NM_STORAGE(self);
   if (s->src == s) {
-    NM_CONSERVATIVE(nm_unregister_value(self));
     return nm_shape(self); // easy case (not a slice)
   } 
   else s = s->src;
+
+  NM_CONSERVATIVE(nm_register_value(self));
   
   VALUE* shape = NM_ALLOCA_N(VALUE, s->dim);
   nm_register_values(shape, s->dim);
@@ -2122,10 +2107,7 @@ static size_t effective_dim(STORAGE* s) {
  * Returns the number of dimensions that don't have length 1. Guaranteed to be less than or equal to #dim.
  */
 static VALUE nm_effective_dim(VALUE self) {
-  NM_CONSERVATIVE(nm_register_value(self));
-  VALUE to_return = INT2FIX(effective_dim(NM_STORAGE(self)));
-  NM_CONSERVATIVE(nm_unregister_value(self));
-  return to_return;
+  return INT2FIX(effective_dim(NM_STORAGE(self)));
 }
 
 
@@ -2135,16 +2117,15 @@ static VALUE nm_effective_dim(VALUE self) {
 static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(const STORAGE*, SLICE*), void (*delete_func)(NMATRIX*), VALUE self) {
   VALUE result = Qnil;
 
-  NM_CONSERVATIVE(nm_register_values(argv, argc));
-  NM_CONSERVATIVE(nm_register_value(self));
-
   STORAGE* s = NM_STORAGE(self);
 
   if (NM_DIM(self) < (size_t)(argc)) {
-    NM_CONSERVATIVE(nm_unregister_values(argv, argc));
-    NM_CONSERVATIVE(nm_unregister_value(self));
     rb_raise(rb_eArgError, "wrong number of arguments (%d for %lu)", argc, effective_dim(s));
   } else {
+
+    NM_CONSERVATIVE(nm_register_values(argv, argc));
+    NM_CONSERVATIVE(nm_register_value(self));
+
     nm_register_value(result);
 
     SLICE* slice = get_slice(NM_DIM(self), argc, argv, s->shape);
@@ -2852,16 +2833,15 @@ static VALUE matrix_multiply(NMATRIX* left, NMATRIX* right) {
  * Note: Currently only implemented for 2x2 and 3x3 matrices.
  */
 static VALUE nm_det_exact(VALUE self) {
-  NM_CONSERVATIVE(nm_register_value(self));
 
   if (NM_STYPE(self) != nm::DENSE_STORE) {
-    NM_CONSERVATIVE(nm_unregister_value(self));
     rb_raise(nm_eStorageTypeError, "can only calculate exact determinant for dense matrices");
   }
   if (NM_DIM(self) != 2 || NM_SHAPE0(self) != NM_SHAPE1(self)) {
-    NM_CONSERVATIVE(nm_unregister_value(self));
     return Qnil;
   }
+
+  NM_CONSERVATIVE(nm_register_value(self));
 
   // Calculate the determinant and then assign it to the return value
   void* result = NM_ALLOCA_N(char, DTYPE_SIZES[NM_DTYPE(self)]);

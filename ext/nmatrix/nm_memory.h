@@ -49,12 +49,12 @@
 
 //Defines whether to do conservative gc registrations, i.e. those
 //registrations that we're not that sure are necessary.
-#define NM_GC_CONSERVATIVE
+//#define NM_GC_CONSERVATIVE
 
 #ifdef NM_GC_CONSERVATIVE
 #define NM_CONSERVATIVE(statement) (statement)
 #else
-#define NM_CONSERVATIVE
+#define NM_CONSERVATIVE(statement)
 #endif //NM_GC_CONSERVATIVE
 
 #endif
