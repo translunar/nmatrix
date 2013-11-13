@@ -1249,13 +1249,8 @@ static void slice_set_single(LIST_STORAGE* dest, LIST* l, void* val, size_t* coo
  * Set a value or values in a list matrix.
  */
 void nm_list_storage_set(VALUE left, SLICE* slice, VALUE right) {
-  nm_register_value(left);
-  nm_register_value(right);
-  nm::dtype_t dtype = NM_DTYPE(left);
-  nm_unregister_value(right);
-  nm_unregister_value(left);
   NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::list_storage::set, void, VALUE, SLICE*, VALUE)
-  ttable[dtype](left, slice, right);
+  ttable[NM_DTYPE(left)](left, slice, right);
 }
 
 
