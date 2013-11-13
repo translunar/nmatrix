@@ -1557,7 +1557,7 @@ static bool is_pos_default_value(YALE_STORAGE* s, size_t apos) {
 
 /*
  * call-seq:
- *     yale_nd_row_keys_intersection(i, m2, i2) -> Array
+ *     yale_row_keys_intersection(i, m2, i2) -> Array
  *
  * This function is experimental.
  *

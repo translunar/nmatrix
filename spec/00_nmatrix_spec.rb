@@ -369,3 +369,78 @@ describe NMatrix do
   end
 
 end
+
+
+describe "NMatrix#upper_triangle" do
+  it "should create a copy with the lower corner set to zero" do
+    n = NMatrix.seq(4)+1
+    n.upper_triangle.should == NMatrix.new(4, [1,2,3,4,0,6,7,8,0,0,11,12,0,0,0,16])
+    n.upper_triangle(2).should == NMatrix.new(4, [1,2,3,4,5,6,7,8,9,10,11,12,0,14,15,16])
+  end
+end
+
+describe "NMatrix#lower_triangle" do
+  it "should create a copy with the lower corner set to zero" do
+    n = NMatrix.seq(4)+1
+    n.lower_triangle.should == NMatrix.new(4, [1,0,0,0,5,6,0,0,9,10,11,0,13,14,15,16])
+    n.lower_triangle(2).should == NMatrix.new(4, [1,2,3,0,5,6,7,8,9,10,11,12,13,14,15,16])
+  end
+end
+
+describe "NMatrix#upper_triangle!" do
+  it "should create a copy with the lower corner set to zero" do
+    n = NMatrix.seq(4)+1
+    n.upper_triangle!.should == NMatrix.new(4, [1,2,3,4,0,6,7,8,0,0,11,12,0,0,0,16])
+    n = NMatrix.seq(4)+1
+    n.upper_triangle!(2).should == NMatrix.new(4, [1,2,3,4,5,6,7,8,9,10,11,12,0,14,15,16])
+  end
+end
+
+describe "NMatrix#lower_triangle!" do
+  it "should create a copy with the lower corner set to zero" do
+    n = NMatrix.seq(4)+1
+    n.lower_triangle!.should == NMatrix.new(4, [1,0,0,0,5,6,0,0,9,10,11,0,13,14,15,16])
+    n = NMatrix.seq(4)+1
+    n.lower_triangle!(2).should == NMatrix.new(4, [1,2,3,0,5,6,7,8,9,10,11,12,13,14,15,16])
+  end
+end
+
+describe "NMatrix#reshape" do
+  it "should change the shape of a matrix without the contents changing" do
+    n = NMatrix.seq(4)+1
+    n.reshape([8,2]).to_flat_array.should == n.to_flat_array
+  end
+
+  it "should permit a change of dimensionality" do
+    n = NMatrix.seq(4)+1
+    n.reshape([8,1,2]).to_flat_array.should == n.to_flat_array
+  end
+
+  it "should prevent a resize" do
+    n = NMatrix.seq(4)+1
+    expect { n.reshape([5,2]) }.to raise_error(ArgumentError)
+  end
+end
+
+describe "NMatrix#transpose" do
+  [:dense, :list, :yale].each do |stype|
+    context(stype) do
+      it "should transpose a #{stype} matrix (2-dimensional)" do
+        n = NMatrix.seq(4, stype: stype)
+        n.transpose.to_a.flatten.should == [0,4,8,12,1,5,9,13,2,6,10,14,3,7,11,15]
+      end
+    end
+  end
+
+  [:dense, :list].each do |stype|
+    context(stype) do
+      it "should transpose a #{stype} matrix (3-dimensional)" do
+        n = NMatrix.new([4,4,1], [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], stype: stype)
+        n.transpose([2,1,0]).to_flat_array.should == [0,4,8,12,1,5,9,13,2,6,10,14,3,7,11,15]
+        n.transpose([1,0,2]).to_flat_array.should == [0,4,8,12,1,5,9,13,2,6,10,14,3,7,11,15]
+        n.transpose([0,2,1]).to_flat_array.should == n.to_flat_array # for dense, make this reshape!
+      end
+    end
+  end
+
+end

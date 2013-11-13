@@ -271,30 +271,6 @@ describe NMatrix do
       mn[0,0].should == 541
     end
 
-    it "transposes" do
-      a = NMatrix.new(4, 0.0, stype: :yale)
-      a[0,0] = 1.0
-      a[0,1] = 4.0
-      a[1,2] = 2.0
-      a[1,3] = -4.0
-      a[3,1] = 5.0
-      a[3,3] = 6.0
-      b = a.transpose
-
-      b[0,0].should == 1.0
-      b[1,0].should == 4.0
-      b[2,0].should == 0.0
-      b[3,0].should == 0.0
-      b[0,1].should == 0.0
-      b[1,1].should == 0.0
-      b[2,1].should == 2.0
-      b[3,1].should == -4.0
-      b[0,3].should == 0.0
-      b[1,3].should == 5.0
-      b[2,3].should == 0.0
-      b[3,3].should == 6.0
-    end
-
     it "calculates the row key intersections of two matrices" do
       a = NMatrix.new([3,9], [0,1], stype: :yale, dtype: :byte, default: 0)
       b = NMatrix.new([3,9], [0,0,1,0,1], stype: :yale, dtype: :byte, default: 0)

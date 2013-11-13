@@ -64,16 +64,16 @@ class NMatrix
       #   - +nrhs+ ->
       #   - +a+ ->
       #   - +lda+ ->
-      #   - +ipiv+ ->
       #   - +b+ ->
       #   - +ldb+ ->
+      #   - +ipiv+ -> A pivot array (if nil, one will be generated with +clapack_getrf+)
       # * *Returns* :
       #   -
       # * *Raises* :
       #   - ++ ->
       #
-      def clapack_gesv(order, n, nrhs, a, lda, ipiv, b, ldb)
-        clapack_getrf(order, n, n, a, lda, ipiv)
+      def clapack_gesv(order, n, nrhs, a, lda, b, ldb, ipiv=nil)
+        ipiv ||= clapack_getrf(order, n, n, a, lda)
         clapack_getrs(order, :no_transpose, n, nrhs, a, lda, ipiv, b, ldb)
       end
 

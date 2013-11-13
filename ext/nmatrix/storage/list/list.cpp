@@ -39,16 +39,16 @@
  * Project Includes
  */
 
-#include "types.h"
+#include "../../types.h"
 
-#include "data/data.h"
+#include "../../data/data.h"
 
-#include "dense.h"
-#include "common.h"
+#include "../dense/dense.h"
+#include "../common.h"
 #include "list.h"
 
-#include "math/math.h"
-#include "util/sl_list.h"
+#include "../../math/math.h"
+#include "../../util/sl_list.h"
 
 /*
  * Macros
@@ -79,6 +79,7 @@ public:
       actual = reinterpret_cast<LIST_STORAGE*>(actual->src);
     }
     nm_list_storage_register(actual);
+    nm_list_storage_register(ref);
     actual_shape_ = actual->shape;
 
     if (init_obj_ == Qnil) {
@@ -88,8 +89,9 @@ public:
   }
 
   ~RecurseData() {
-    nm_list_storage_unregister(actual);
     nm_unregister_value(init_obj_);
+    nm_list_storage_unregister(ref);
+    nm_list_storage_unregister(actual);
   }
 
   dtype_t dtype() const { return ref->dtype; }
@@ -176,9 +178,9 @@ static void map_empty_stored_r(RecurseData& result, RecurseData& s, LIST* x, con
 
       if (!val->first) nm::list::del(val, 0);
       else {
-        nm::list::insert_helper(x, xcurr, curr->key - offset, val);
         nm_list_storage_register_list(val, rec-1);
 	temp_vals.push_front(val);
+        nm::list::insert_helper(x, xcurr, curr->key - offset, val);
       } 
       curr = curr->next;
       if (curr && curr->key - offset >= x_shape) curr = NULL;
@@ -327,12 +329,13 @@ static void map_merged_stored_r(RecurseData& result, RecurseData& left, RecurseD
         rcurr = rcurr->next;
       }
 
-      nm_list_storage_register_list(val, rec-1);
-      temp_vals.push_front(val);
 
       if (!val->first) nm::list::del(val, 0); // empty list -- don't insert
-      else xcurr = nm::list::insert_helper(x, xcurr, key, val);
-
+      else {
+        nm_list_storage_register_list(val, rec-1);
+        temp_vals.push_front(val);
+        xcurr = nm::list::insert_helper(x, xcurr, key, val);
+      }
       if (rcurr && rcurr->key - right.offset(rec) >= result.ref_shape(rec)) rcurr = NULL;
       if (lcurr && lcurr->key - left.offset(rec) >= result.ref_shape(rec)) lcurr = NULL;
     }
@@ -348,7 +351,7 @@ static void map_merged_stored_r(RecurseData& result, RecurseData& left, RecurseD
         key   = lcurr->key - left.offset(rec);
         lcurr = lcurr->next;
       } else if (!lcurr || (rcurr && (rcurr->key - right.offset(rec) < lcurr->key - left.offset(rec)))) {
-	val   = rb_yield_values(2, left.init_obj(), rubyobj_from_cval(rcurr->val, right.dtype()).rval);
+	      val   = rb_yield_values(2, left.init_obj(), rubyobj_from_cval(rcurr->val, right.dtype()).rval);
         key   = rcurr->key - right.offset(rec);
         rcurr = rcurr->next;
       } else { // == and both present
@@ -396,9 +399,9 @@ static bool slice_set(LIST_STORAGE* dest, LIST* l, size_t* coords, size_t* lengt
   size_t* offsets = dest->offset;
 
   nm_list_storage_register(dest);
-  nm_list_storage_register_list(l, dest->dim - n - 1);
   if (dest->dtype == nm::RUBYOBJ) {
     nm_register_values(reinterpret_cast<VALUE*>(v), v_size);
+    nm_list_storage_register_list(l, dest->dim - n - 1);
   }
 
   // drill down into the structure
@@ -426,8 +429,8 @@ static bool slice_set(LIST_STORAGE* dest, LIST* l, size_t* coords, size_t* lengt
       // Recurse down into the list. If it returns true, it's empty, so we need to delete it.
       bool remove_parent = slice_set(dest, reinterpret_cast<LIST*>(node->val), coords, lengths, n+1, v, v_size, v_offset);
       if (dest->dtype == nm::RUBYOBJ) {
-	temp_lists.push_front(reinterpret_cast<LIST*>(node->val));
-	nm_list_storage_register_list(reinterpret_cast<LIST*>(node->val), dest->dim - n - 2);
+        temp_lists.push_front(reinterpret_cast<LIST*>(node->val));
+        nm_list_storage_register_list(reinterpret_cast<LIST*>(node->val), dest->dim - n - 2);
       }
       if (remove_parent) {
         NM_FREE(remove_by_node(l, prev, node));
@@ -478,10 +481,10 @@ static bool slice_set(LIST_STORAGE* dest, LIST* l, size_t* coords, size_t* lengt
           }
         } else if (node->key > key) {
           D* nv = NM_ALLOC(D); *nv = v[v_offset++];
-	  if (dest->dtype == nm::RUBYOBJ) {
-	    nm_register_value(*reinterpret_cast<VALUE*>(nv));
-	    temp_vals.push_front(*reinterpret_cast<VALUE*>(nv));
-	  }
+          if (dest->dtype == nm::RUBYOBJ) {
+            nm_register_value(*reinterpret_cast<VALUE*>(nv));
+            temp_vals.push_front(*reinterpret_cast<VALUE*>(nv));
+          }
           if (prev) node = insert_after(prev, key, nv);
           else      node = insert_first_node(l, key, nv, sizeof(D));
 
@@ -490,10 +493,10 @@ static bool slice_set(LIST_STORAGE* dest, LIST* l, size_t* coords, size_t* lengt
         }
       } else { // no node -- insert a new one
         D* nv = NM_ALLOC(D); *nv = v[v_offset++];
-	if (dest->dtype == nm::RUBYOBJ) {
-	  nm_register_value(*reinterpret_cast<VALUE*>(nv));
-	  temp_vals.push_front(*reinterpret_cast<VALUE*>(nv));
-	}
+        if (dest->dtype == nm::RUBYOBJ) {
+          nm_register_value(*reinterpret_cast<VALUE*>(nv));
+          temp_vals.push_front(*reinterpret_cast<VALUE*>(nv));
+        }
         if (prev) node = insert_after(prev, key, nv);
         else      node = insert_first_node(l, key, nv, sizeof(D));
 
@@ -508,8 +511,8 @@ static bool slice_set(LIST_STORAGE* dest, LIST* l, size_t* coords, size_t* lengt
 
   if (dest->dtype == nm::RUBYOBJ) {
     nm_unregister_values(reinterpret_cast<VALUE*>(v), v_size);
+    nm_list_storage_unregister_list(l, dest->dim - n - 1);
   }
-  nm_list_storage_unregister_list(l, dest->dim - n - 1);
   nm_list_storage_unregister(dest);
 
   return (l->first) ? false : true;
@@ -553,7 +556,9 @@ void set(VALUE left, SLICE* slice, VALUE right) {
   }
 
   if (v_size == 1 && *v == *reinterpret_cast<D*>(s->default_val)) {
-    nm::list::remove_recursive(s->rows, slice->coords, s->offset, slice->lengths, 0, s->dim);
+    if (*reinterpret_cast<D*>(nm_list_storage_get(s, slice)) != *reinterpret_cast<D*>(s->default_val)) {
+      nm::list::remove_recursive(s->rows, slice->coords, s->offset, slice->lengths, 0, s->dim);
+    }
   } else if (slice->single) {
     slice_set_single(s, s->rows, reinterpret_cast<void*>(v), slice->coords, slice->lengths, 0);
   } else {
@@ -630,7 +635,7 @@ LIST_STORAGE* nm_list_storage_create(nm::dtype_t dtype, size_t* shape, size_t di
 }
 
 /*
- * Documentation goes here.
+ * Destructor for list storage.
  */
 void nm_list_storage_delete(STORAGE* s) {
   if (s) {
@@ -647,7 +652,7 @@ void nm_list_storage_delete(STORAGE* s) {
 }
 
 /*
- * Documentation goes here.
+ * Destructor for a list storage reference slice.
  */
 void nm_list_storage_delete_ref(STORAGE* s) {
   if (s) {
@@ -661,7 +666,7 @@ void nm_list_storage_delete_ref(STORAGE* s) {
 }
 
 /*
- * Documentation goes here.
+ * GC mark function for list storage.
  */
 void nm_list_storage_mark(STORAGE* storage_base) {
   LIST_STORAGE* storage = (LIST_STORAGE*)storage_base;
@@ -690,6 +695,17 @@ void nm_list_storage_register_node(const NODE* curr) {
 
 void nm_list_storage_unregister_node(const NODE* curr) {
   nm_unregister_value(*reinterpret_cast<VALUE*>(curr->val));      
+}
+
+/**
+ * Gets rid of all instances of a given node in the registration list.
+ * Sometimes a node will get deleted and replaced deep in a recursion, but
+ * further up it will still get registered.  This leads to a potential read
+ * after free during the GC marking.  This function completely clears out a
+ * node so that this won't happen.
+ */
+void nm_list_storage_completely_unregister_node(const NODE* curr) {
+  nm_completely_unregister_value(*reinterpret_cast<VALUE*>(curr->val));
 }
 
 void nm_list_storage_register_list(const LIST* list, size_t recursions) {
@@ -795,7 +811,8 @@ static void each_empty_with_indices_r(nm::list_storage::RecurseData& s, size_t r
  * Recursive helper function for each_with_indices, based on nm_list_storage_count_elements_r.
  */
 static void each_with_indices_r(nm::list_storage::RecurseData& s, const LIST* l, size_t rec, VALUE& stack) {
-  nm_list_storage_register_list(l, rec);
+  if (s.dtype() == nm::RUBYOBJ)
+    nm_list_storage_register_list(l, rec);
   nm_register_value(stack);
   NODE*  curr  = l->first;
 
@@ -837,7 +854,8 @@ static void each_with_indices_r(nm::list_storage::RecurseData& s, const LIST* l,
     }
   }
   nm_unregister_value(stack);
-  nm_list_storage_unregister_list(l, rec);
+  if (s.dtype() == nm::RUBYOBJ)
+    nm_list_storage_unregister_list(l, rec);
 }
 
 
@@ -845,7 +863,8 @@ static void each_with_indices_r(nm::list_storage::RecurseData& s, const LIST* l,
  * Recursive helper function for each_stored_with_indices, based on nm_list_storage_count_elements_r.
  */
 static void each_stored_with_indices_r(nm::list_storage::RecurseData& s, const LIST* l, size_t rec, VALUE& stack) {
-  nm_list_storage_register_list(l, rec);
+  if (s.dtype() == nm::RUBYOBJ)
+    nm_list_storage_register_list(l, rec);
   nm_register_value(stack);
   
   NODE* curr = l->first;
@@ -886,7 +905,8 @@ static void each_stored_with_indices_r(nm::list_storage::RecurseData& s, const L
     }
   }
   nm_unregister_value(stack);
-  nm_list_storage_unregister_list(l, rec);
+  if (s.dtype() == nm::RUBYOBJ)
+    nm_list_storage_unregister_list(l, rec);
 }
 
 
@@ -1005,17 +1025,17 @@ VALUE nm_list_map_merged_stored(VALUE left, VALUE right, VALUE init) {
   nm_unregister_value(left);
   nm_unregister_value(right);
   nm_unregister_value(init);
-  RETURN_SIZED_ENUMERATOR(left, 0, 0, 0); // FIXME: Test this. Probably won't work. Enable above code instead.  FIXME: leaks left, right, init
+  RETURN_SIZED_ENUMERATOR(left, 0, 0, 0); // FIXME: Test this. Probably won't work. Enable above code instead.
 
   // Figure out default value if none provided by the user
-  nm::list_storage::RecurseData tdata(t);
+  nm::list_storage::RecurseData& tdata = *(new nm::list_storage::RecurseData(t)); //FIXME: this is a hack to make sure that we can run the destructor before nm_list_storage_delete(t) below.
   if (init == Qnil) {
     nm_unregister_value(init);
     init = rb_yield_values(2, sdata.init_obj(), tdata.init_obj());
     nm_register_value(init);
   }
 
-	// Allocate a new shape array for the resulting matrix.
+  // Allocate a new shape array for the resulting matrix.
   void* init_val = NM_ALLOC(VALUE);
   memcpy(init_val, &init, sizeof(VALUE));
   nm_register_value(*reinterpret_cast<VALUE*>(init_val));
@@ -1026,6 +1046,7 @@ VALUE nm_list_map_merged_stored(VALUE left, VALUE right, VALUE init) {
   nm_register_nmatrix(result);
   map_merged_stored_r(rdata, sdata, tdata, rdata.top_level_list(), sdata.top_level_list(), tdata.top_level_list(), sdata.dim() - 1);
 
+  delete &tdata;
   // If we are working with a scalar operation
   if (scalar) nm_list_storage_delete(t);
 
@@ -1062,21 +1083,21 @@ static LIST* slice_copy(const LIST_STORAGE* src, LIST* src_rows, size_t* coords,
                           coords,
                           lengths,
                           n + 1    );
-	if (val) {
-	  if (src->dtype == nm::RUBYOBJ) {
-	    nm_list_storage_register_list(reinterpret_cast<LIST*>(val), src->dim - n - 2);
-	    temp_lists.push_front(reinterpret_cast<LIST*>(val));
-	  }
-	  nm::list::insert_copy(dst_rows, false, key, val, sizeof(LIST));
-	}
+        if (val) {
+          if (src->dtype == nm::RUBYOBJ) {
+            nm_list_storage_register_list(reinterpret_cast<LIST*>(val), src->dim - n - 2);
+            temp_lists.push_front(reinterpret_cast<LIST*>(val));
+          }
+          nm::list::insert_copy(dst_rows, false, key, val, sizeof(LIST));
+        }
+      } else { // matches src->dim - n > 1
+        if (src->dtype == nm::RUBYOBJ) {
+          nm_register_value(*reinterpret_cast<VALUE*>(src_node->val));
+          temp_vals.push_front(*reinterpret_cast<VALUE*>(src_node->val));
+        }
+        nm::list::insert_copy(dst_rows, false, key, src_node->val, DTYPE_SIZES[src->dtype]);
       }
-      if (src->dtype == nm::RUBYOBJ) {
-	nm_register_value(*reinterpret_cast<VALUE*>(val));
-	temp_vals.push_front(*reinterpret_cast<VALUE*>(val));
-      }
-      else nm::list::insert_copy(dst_rows, false, key, src_node->val, DTYPE_SIZES[src->dtype]);
     }
-
     src_node = src_node->next;
   }
   if (src->dtype == nm::RUBYOBJ) {
@@ -1093,11 +1114,14 @@ static LIST* slice_copy(const LIST_STORAGE* src, LIST* src_rows, size_t* coords,
 void* nm_list_storage_get(const STORAGE* storage, SLICE* slice) {
   LIST_STORAGE* s = (LIST_STORAGE*)storage;
   LIST_STORAGE* ns = NULL;
+
   nm_list_storage_register(s);
+
   if (slice->single) {
     NODE* n = list_storage_get_single_node(s, slice);
     nm_list_storage_unregister(s);
     return (n ? n->val : s->default_val);
+
   } else {
     void *init_val = NM_ALLOC_N(char, DTYPE_SIZES[s->dtype]);
     memcpy(init_val, s->default_val, DTYPE_SIZES[s->dtype]);
@@ -1110,9 +1134,11 @@ void* nm_list_storage_get(const STORAGE* storage, SLICE* slice) {
     ns = nm_list_storage_create(s->dtype, shape, s->dim, init_val);
   
     ns->rows = slice_copy(s, s->rows, slice->coords, slice->lengths, 0);
+
     if (s->dtype == nm::RUBYOBJ)
       nm_unregister_value(*reinterpret_cast<VALUE*>(init_val));
-    nm_list_storage_unregister(s);  
+    nm_list_storage_unregister(s);
+
     return ns;
   }
 }
@@ -1181,9 +1207,10 @@ static void slice_set_single(LIST_STORAGE* dest, LIST* l, void* val, size_t* coo
       } else {
         node = node->next; // correct rank already exists.
       }
+
       if (dest->dtype == nm::RUBYOBJ) {
-	temp_nodes.push_front(reinterpret_cast<LIST*>(node->val));
-	nm_list_storage_register_list(reinterpret_cast<LIST*>(node->val), dest->dim - n - 2);
+        temp_nodes.push_front(reinterpret_cast<LIST*>(node->val));
+        nm_list_storage_register_list(reinterpret_cast<LIST*>(node->val), dest->dim - n - 2);
       }
 
       // cast it to a list and recurse
@@ -1202,8 +1229,8 @@ static void slice_set_single(LIST_STORAGE* dest, LIST* l, void* val, size_t* coo
         node = nm::list::replace_insert_after(node, key, val, true, DTYPE_SIZES[dest->dtype]);
       }
       if (dest->dtype == nm::RUBYOBJ) {
-	temp_vals.push_front(*reinterpret_cast<VALUE*>(node->val));
-	nm_register_value(*reinterpret_cast<VALUE*>(node->val));
+        temp_vals.push_front(*reinterpret_cast<VALUE*>(node->val));
+        nm_register_value(*reinterpret_cast<VALUE*>(node->val));
       }
     }
     __nm_list_storage_unregister_temp_value_list(temp_vals);
@@ -1222,13 +1249,8 @@ static void slice_set_single(LIST_STORAGE* dest, LIST* l, void* val, size_t* coo
  * Set a value or values in a list matrix.
  */
 void nm_list_storage_set(VALUE left, SLICE* slice, VALUE right) {
-  nm_register_value(left);
-  nm_register_value(right);
-  nm::dtype_t dtype = NM_DTYPE(left);
-  nm_unregister_value(right);
-  nm_unregister_value(left);
   NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::list_storage::set, void, VALUE, SLICE*, VALUE)
-  ttable[dtype](left, slice, right);
+  ttable[NM_DTYPE(left)](left, slice, right);
 }
 
 
@@ -1252,9 +1274,7 @@ NODE* nm_list_storage_insert(STORAGE* storage, SLICE* slice, void* val) {
   LIST*  l = s->rows;
 
   // drill down into the structure
-//for (r = s->dim; r > 1; --r) {
   for (r = 0; r < s->dim -1; ++r) {
-    //n = nm::list::insert(l, false, s->offset[s->dim - r] + slice->coords[s->dim - r], nm::list::create());
     n = nm::list::insert(l, false, s->offset[r] + slice->coords[s->dim - r], nm::list::create());
     l = reinterpret_cast<LIST*>(n->val);
   }
@@ -1262,6 +1282,7 @@ NODE* nm_list_storage_insert(STORAGE* storage, SLICE* slice, void* val) {
   nm_list_storage_unregister(s);
   if (s->dtype == nm::RUBYOBJ)
     nm_unregister_value(*reinterpret_cast<VALUE*>(val));
+
   return nm::list::insert(l, true, s->offset[r] + slice->coords[r], val);
 }
 
@@ -1394,8 +1415,10 @@ LIST_STORAGE* nm_list_storage_copy(const LIST_STORAGE* rhs) {
   memcpy(init_val, rhs->default_val, DTYPE_SIZES[rhs->dtype]);
 
   LIST_STORAGE* lhs = nm_list_storage_create(rhs->dtype, shape, rhs->dim, init_val);
-  nm_list_storage_register(lhs); 
+  nm_list_storage_register(lhs);
+
   lhs->rows = slice_copy(rhs, rhs->rows, lhs->offset, lhs->shape, 0);
+
   nm_list_storage_unregister(rhs);
   nm_list_storage_unregister(lhs);
   return lhs;
@@ -1583,16 +1606,16 @@ extern "C" {
     return to_return;
   }
 
-    /*
-     * call-seq:
-     *     __list_default_value__ -> ...
-     *
-     * Get the default_value property from a list matrix.
-     */
-    VALUE nm_list_default_value(VALUE self) {
-      nm_register_value(self);
-      VALUE to_return = (NM_DTYPE(self) == nm::RUBYOBJ) ? *reinterpret_cast<VALUE*>(NM_DEFAULT_VAL(self)) : rubyobj_from_cval(NM_DEFAULT_VAL(self), NM_DTYPE(self)).rval;
-      nm_unregister_value(self);
-      return to_return;
-    }
+  /*
+   * call-seq:
+   *     __list_default_value__ -> ...
+   *
+   * Get the default_value property from a list matrix.
+   */
+  VALUE nm_list_default_value(VALUE self) {
+    nm_register_value(self);
+    VALUE to_return = (NM_DTYPE(self) == nm::RUBYOBJ) ? *reinterpret_cast<VALUE*>(NM_DEFAULT_VAL(self)) : rubyobj_from_cval(NM_DEFAULT_VAL(self), NM_DTYPE(self)).rval;
+    nm_unregister_value(self);
+    return to_return;
+  }
 } // end of extern "C" block

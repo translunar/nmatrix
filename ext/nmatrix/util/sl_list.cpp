@@ -31,6 +31,8 @@
 
 #include "sl_list.h"
 
+#include "storage/list/list.h"
+
 namespace nm { namespace list {
 
 /*
@@ -77,6 +79,7 @@ void del(LIST* list, size_t recursions) {
 
     if (recursions == 0) {
       //fprintf(stderr, "    free_val: %p\n", curr->val);
+      nm_list_storage_completely_unregister_node(curr);
       NM_FREE(curr->val);
       
     } else {
@@ -187,11 +190,12 @@ NODE* insert(LIST* list, bool replace, size_t key, void* val) {
   if (ins->key == key) {
     // key already exists
     if (replace) {
+      nm_list_storage_completely_unregister_node(ins);
       NM_FREE(ins->val);
       ins->val = val;
-      
+      nm_list_storage_register_node(ins);
     } else {
-    	NM_FREE(val);
+      NM_FREE(val);
     }
     
     return ins;

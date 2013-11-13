@@ -221,7 +221,7 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "write", (METHOD)nm_write, -1);
 
 	// Technically, the following function is a copy constructor.
-	rb_define_method(cNMatrix, "transpose", (METHOD)nm_init_transposed, 0);
+	rb_define_protected_method(cNMatrix, "clone_transpose", (METHOD)nm_init_transposed, 0);
 
 	rb_define_method(cNMatrix, "dtype", (METHOD)nm_dtype, 0);
 	rb_define_method(cNMatrix, "stype", (METHOD)nm_stype, 0);
@@ -565,6 +565,39 @@ void nm_register_value(VALUE& val) {
 void nm_unregister_value(VALUE& val) {
   nm_unregister_values(&val, 1);
 }
+
+/**
+ * Removes all instances of a single VALUE in the gc list.  This can be
+ * dangerous.  Primarily used when something is about to be
+ * freed and replaced so that and residual registrations won't access after
+ * free.
+ **/
+void nm_completely_unregister_value(VALUE& val) {
+  if (gc_value_holder_struct) {
+    nm_gc_ll_node* curr = gc_value_holder_struct->start;
+    nm_gc_ll_node* last = NULL;
+    while (curr) {
+      if (curr->val == &val) {
+	if (last) {
+	  last->next = curr->next;
+	} else {
+	  gc_value_holder_struct->start = curr->next;
+	}
+	nm_gc_ll_node* temp_next = curr->next;
+	curr->next = allocated_pool->start;
+	curr->val = NULL;
+	curr->n = 0;
+	allocated_pool->start = curr;
+	curr = temp_next;
+      } else {
+	last = curr;
+	curr = curr->next;
+      }
+    }
+  }
+}
+
+
 
 /**
  * Register a STORAGE struct of the supplied stype to avoid garbage collection
@@ -1053,10 +1086,10 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
       init = RARRAY_LEN(initial_ary) == 1 ? rubyobj_to_cval(rb_ary_entry(initial_ary, 0), dtype) : NULL;
     else
       init = rubyobj_to_cval(initial_ary, dtype);
-  }
-
-  if (dtype == nm::RUBYOBJ) {
-    nm_register_values(reinterpret_cast<VALUE*>(init), 1);
+    
+    if (dtype == nm::RUBYOBJ) {
+      nm_register_values(reinterpret_cast<VALUE*>(init), 1);
+    }
   }
 
   // capacity = h[:capacity] || 0
@@ -1065,10 +1098,11 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
   }
 
   if (!NIL_P(initial_ary)) {
-    v = interpret_initial_value(initial_ary, dtype);
-
+    
     if (TYPE(initial_ary) == T_ARRAY) 	v_size = RARRAY_LEN(initial_ary);
     else                                v_size = 1;
+
+    v = interpret_initial_value(initial_ary, dtype);
 
     if (dtype == nm::RUBYOBJ) {
       nm_register_values(reinterpret_cast<VALUE*>(v), v_size);
@@ -1123,6 +1157,7 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
     NMATRIX* tmp = nm_create(nm::DENSE_STORE, (STORAGE*)nm_dense_storage_create(dtype, tmp_shape, dim, v, v_size));
     nm_register_nmatrix(tmp);
     VALUE rb_tmp = Data_Wrap_Struct(CLASS_OF(self), nm_mark, nm_delete, tmp);
+    nm_unregister_nmatrix(tmp);
     nm_register_value(rb_tmp);
     if (stype == nm::YALE_STORE)  nm_yale_storage_set(self, slice, rb_tmp);
     else                          nm_list_storage_set(self, slice, rb_tmp);
@@ -1143,7 +1178,7 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
     nm_unregister_values(reinterpret_cast<VALUE*>(v), v_size);
   }
 
-  if (dtype == nm::RUBYOBJ) {
+  if (stype != nm::DENSE_STORE && dtype == nm::RUBYOBJ) {
     nm_unregister_values(reinterpret_cast<VALUE*>(init), 1);
   }
 

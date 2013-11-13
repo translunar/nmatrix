@@ -534,7 +534,7 @@ inline int potrf(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const
 #ifdef HAVE_CLAPACK_H
   rb_raise(rb_eNotImpError, "not yet implemented for non-BLAS dtypes");
 #else
-  rb_raise(rb_eNotImpError, "only LAPACK version implemented thus far");
+  rb_raise(rb_eNotImpError, "only CLAPACK version implemented thus far");
 #endif
   return 0;
 }

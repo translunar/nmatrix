@@ -41,6 +41,7 @@ class NMatrix
         def load_mat file_path
           NMatrix::IO::Matlab::Mat5Reader.new(File.open(file_path, "rb+")).to_ruby
         end
+        alias :load :load_mat
       end
 
       # FIXME: Remove autoloads
@@ -179,6 +180,7 @@ class NMatrix
     end
 
   end
+
 
   #
   # call-seq:
@@ -401,11 +403,264 @@ class NMatrix
   #   - +row_number+ -> Integer.
   #   - +get_by+ -> Type of slicing to use, +:copy+ or +:reference+.
   # * *Returns* :
-  #   - A NMatrix representing the requested row as a row vector.
+  #   - An NMatrix representing the requested row as a row vector.
   #
   def row(row_number, get_by = :copy)
     rank(0, row_number, get_by)
   end
+
+
+  #
+  # call-seq:
+  #     reshape(new_shape) -> NMatrix
+  #
+  # Clone a matrix, changing the shape in the process. Note that this function does not do a resize; the product of
+  # the new and old shapes' components must be equal.
+  #
+  # * *Arguments* :
+  #   - +new_shape+ -> Array of positive Fixnums.
+  # * *Returns* :
+  #   - A copy with a different shape.
+  #
+  def reshape new_shape
+    t = reshape_clone_structure(new_shape)
+    left_params  = [:*]*new_shape.size
+    right_params = [:*]*self.shape.size
+    t[*left_params] = self[*right_params]
+    t
+  end
+
+
+  #
+  # call-seq:
+  #     transpose -> NMatrix
+  #     transpose(permutation) -> NMatrix
+  #
+  # Clone a matrix, transposing it in the process. If the matrix is two-dimensional, the permutation is taken to be [1,0]
+  # automatically (switch dimension 0 with dimension 1). If the matrix is n-dimensional, you must provide a permutation
+  # of +0...n+.
+  #
+  # * *Arguments* :
+  #   - +permutation+ -> Optional Array giving a permutation.
+  # * *Returns* :
+  #   - A copy of the matrix, but transposed.
+  #
+  def transpose(permute = nil)
+    if self.dim <= 2 # This will give an error if dim is 1.
+      new_shape = [self.shape[1], self.shape[0]]
+    elsif permute.nil?
+      raise(ArgumentError, "need permutation array of size #{self.dim}")
+    elsif permute.sort.uniq != (0...self.dim).to_a
+      raise(ArgumentError, "invalid permutation array")
+    else
+      # Figure out the new shape based on the permutation given as an argument.
+      new_shape = permute.map { |p| self.shape[p] }
+    end
+
+    if self.dim > 2 # FIXME: For dense, several of these are basically equivalent to reshape.
+
+      # Make the new data structure.
+      t = self.reshape_clone_structure(new_shape)
+
+      self.each_stored_with_indices do |v,*indices|
+        p_indices = permute.map { |p| indices[p] }
+        t[*p_indices] = v
+      end
+      t
+    elsif self.list? # TODO: Need a C list transposition algorithm.
+      # Make the new data structure.
+      t = self.reshape_clone_structure(new_shape)
+
+      self.each_column.with_index do |col,j|
+        t[j,:*] = col.to_flat_array
+      end
+      t
+    else
+      # Call C versions of Yale and List transpose, which do their own copies
+      self.clone_transpose
+    end
+  end
+
+
+  #
+  # call-seq:
+  #     matrix1.concat(*m) -> NMatrix
+  #     matrix1.concat(*m, rank) -> NMatrix
+  #
+  # Joins two matrices together into a new larger matrix. Attempts to determine which direction to concatenate
+  # on by looking for the first common element of the matrix +shape+ in reverse. In other words, concatenating two
+  # columns together without supplying +rank+ will glue them into an n x 2 matrix.
+  #
+  # The two matrices must have the same +dim+.
+  #
+  # * *Arguments* :
+  #   - +matrices+ -> one or more matrices
+  #   - +rank+ -> Fixnum (for rank); alternatively, may use :row, :column, or :layer for 0, 1, 2, respectively
+  #
+  def concat *matrices
+    rank = nil
+    rank = matrices.pop unless matrices.last.is_a?(NMatrix)
+
+    # Find the first matching dimension and concatenate along that (unless rank is specified)
+    if rank.nil?
+      rank = self.dim-1
+      self.shape.reverse_each.with_index do |s,i|
+        matrices.each do |m|
+          if m.shape[i] != s
+            rank -= 1
+            break
+          end
+        end
+      end
+    elsif rank.is_a?(Symbol) # Convert to numeric
+      rank = {:row => 0, :column => 1, :col => 1, :lay => 2, :layer => 3}[rank]
+    end
+
+    # Need to figure out the new shape.
+    new_shape = self.shape.dup
+    new_shape[rank] = matrices.inject(self.shape[rank]) { |total,m| total + m.shape[rank] }
+
+    # Now figure out the options for constructing the concatenated matrix.
+    opts = {stype: self.stype, default: self.default_value, dtype: self.dtype}
+    if self.yale?
+      # We can generally predict the new capacity for Yale. Subtract out the number of rows
+      # for each matrix being concatenated, and then add in the number of rows for the new
+      # shape. That takes care of the diagonal. The rest of the capacity is represented by
+      # the non-diagonal non-default values.
+      new_cap = matrices.inject(self.capacity - self.shape[0]) do |total,m|
+        total + m.capacity - m.shape[0]
+      end - self.shape[0] + new_shape[0]
+      opts = {capacity: self.new_cap}.merge(opts)
+    end
+
+    # Do the actual construction.
+    n = NMatrix.new(new_shape, opts)
+
+    # Figure out where to start and stop the concatenation. We'll use NMatrices instead of
+    # Arrays because then we can do elementwise addition.
+    ranges = self.shape.map.with_index { |s,i| 0...self.shape[i] }
+
+    matrices.unshift(self)
+    matrices.each do |m|
+      n[*ranges] = m
+
+      # move over by the requisite amount
+      ranges[rank]  = (ranges[rank].first + m.shape[rank])...(ranges[rank].last + m.shape[rank])
+    end
+
+    n
+  end
+
+
+  #
+  # call-seq:
+  #     upper_triangle -> NMatrix
+  #     upper_triangle(k) -> NMatrix
+  #     triu -> NMatrix
+  #     triu(k) -> NMatrix
+  #
+  # Returns the upper triangular portion of a matrix. This is analogous to the +triu+ method
+  # in MATLAB.
+  #
+  # * *Arguments* :
+  #   - +k+ -> Positive integer. How many extra diagonals to include in the upper triangular portion.
+  #
+  def upper_triangle(k = 0)
+    raise(NotImplementedError, "only implemented for 2D matrices") if self.shape.size > 2
+
+    t = self.clone_structure
+    (0...self.shape[0]).each do |i|
+      if i - k < 0
+        t[i, :*] = self[i, :*]
+      else
+        t[i, 0...(i-k)]             = 0
+        t[i, (i-k)...self.shape[1]] = self[i, (i-k)...self.shape[1]]
+      end
+    end
+    t
+  end
+  alias :triu :upper_triangle
+
+
+  #
+  # call-seq:
+  #     upper_triangle! -> NMatrix
+  #     upper_triangle!(k) -> NMatrix
+  #     triu! -> NMatrix
+  #     triu!(k) -> NMatrix
+  #
+  # Deletes the lower triangular portion of the matrix (in-place) so only the upper portion remains.
+  #
+  # * *Arguments* :
+  #   - +k+ -> Integer. How many extra diagonals to include in the deletion.
+  #
+  def upper_triangle!(k = 0)
+    raise(NotImplementedError, "only implemented for 2D matrices") if self.shape.size > 2
+
+    (0...self.shape[0]).each do |i|
+      if i - k >= 0
+        self[i, 0...(i-k)] = 0
+      end
+    end
+    self
+  end
+  alias :triu! :upper_triangle!
+
+
+  #
+  # call-seq:
+  #     lower_triangle -> NMatrix
+  #     lower_triangle(k) -> NMatrix
+  #     tril -> NMatrix
+  #     tril(k) -> NMatrix
+  #
+  # Returns the lower triangular portion of a matrix. This is analogous to the +tril+ method
+  # in MATLAB.
+  #
+  # * *Arguments* :
+  #   - +k+ -> Integer. How many extra diagonals to include in the lower triangular portion.
+  #
+  def lower_triangle(k = 0)
+    raise(NotImplementedError, "only implemented for 2D matrices") if self.shape.size > 2
+
+    t = self.clone_structure
+    (0...self.shape[0]).each do |i|
+      if i + k >= shape[0]
+        t[i, :*] = self[i, :*]
+      else
+        t[i, (i+k+1)...self.shape[1]] = 0
+        t[i, 0..(i+k)] = self[i, 0..(i+k)]
+      end
+    end
+    t
+  end
+  alias :tril :lower_triangle
+
+
+  #
+  # call-seq:
+  #     lower_triangle! -> NMatrix
+  #     lower_triangle!(k) -> NMatrix
+  #     tril! -> NMatrix
+  #     tril!(k) -> NMatrix
+  #
+  # Deletes the upper triangular portion of the matrix (in-place) so only the lower portion remains.
+  #
+  # * *Arguments* :
+  #   - +k+ -> Integer. How many extra diagonals to include in the deletion.
+  #
+  def lower_triangle!(k = 0)
+    raise(NotImplementedError, "only implemented for 2D matrices") if self.shape.size > 2
+
+    (0...self.shape[0]).each do |i|
+      if i + k < shape[0]
+        self[i, (i+k+1)...self.shape[1]] = 0
+      end
+    end
+    self
+  end
+  alias :tril! :lower_triangle!
+
 
   #
   # call-seq:
@@ -543,6 +798,35 @@ protected
   end
 
 
+  #
+  # call-seq:
+  #     clone_structure -> NMatrix
+  #
+  # This function is like clone, but it only copies the structure and the default value.
+  # None of the other values are copied. It takes an optional capacity argument. This is
+  # mostly only useful for dense, where you may not want to initialize; for other types,
+  # you should probably use +zeros_like+.
+  #
+  def clone_structure(capacity = nil)
+    opts = {stype: self.stype, default: self.default_value, dtype: self.dtype}
+    opts = {capacity: capacity}.merge(opts) if self.yale?
+    NMatrix.new(self.shape, opts)
+  end
+
+
+  # Clone the structure as needed for a reshape
+  def reshape_clone_structure(new_shape) #:nodoc:
+    raise(ArgumentError, "reshape cannot resize; size of new and old matrices must match") unless self.size == new_shape.inject(1) { |p,i| p *= i }
+
+    opts = {stype: self.stype, default: self.default_value, dtype: self.dtype}
+    if self.yale?
+      # We can generally predict the change in capacity for Yale.
+      opts = {capacity: self.capacity - self.shape[0] + new_shape[0]}.merge(opts)
+    end
+    NMatrix.new(new_shape, opts)
+  end
+
+
   # Helper for converting a matrix into an array of arrays recursively
   def to_a_rec(dimen = 0) #:nodoc:
     return self.flat_map { |v| v } if dimen == self.dim-1
@@ -560,6 +844,7 @@ protected
   def __sparse_initial_set__(ary) #:nodoc:
     self[0...self.shape[0],0...self.shape[1]] = ary
   end
+
 end
 
 require_relative './shortcuts.rb'

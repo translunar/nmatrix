@@ -52,7 +52,7 @@ extern "C" {
 #include "math/math.h"
 #include "util/io.h"
 #include "storage/storage.h"
-#include "storage/list.h"
+#include "storage/list/list.h"
 #include "storage/yale/yale.h"
 
 #include "nmatrix.h"

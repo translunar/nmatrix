@@ -106,20 +106,11 @@ $CFLAGS = ["-Wall -Werror=return-type",$CFLAGS].join(" ")
 $CXXFLAGS = ["-Wall -Werror=return-type",$CXXFLAGS].join(" ")
 $CPPFLAGS = ["-Wall -Werror=return-type",$CPPFLAGS].join(" ")
 
-$srcs = [
-         'nmatrix.cpp',
-         'ruby_constants.cpp',
+# When adding objects here, make sure their directories are included in CLEANOBJS down at the bottom of extconf.rb.
+basenames = %w{nmatrix ruby_constants data/data util/io math util/sl_list storage/common storage/storage storage/dense/dense storage/yale/yale storage/list/list}
+$objs = basenames.map { |b| "#{b}.o"   }
+$srcs = basenames.map { |b| "#{b}.cpp" }
 
-         'data/data.cpp',
-         'math.cpp',
-         'util/sl_list.cpp',
-         'util/io.cpp',
-         'storage/common.cpp',
-         'storage/storage.cpp',
-         'storage/dense.cpp',
-         'storage/yale/yale.cpp',
-         'storage/list.cpp'
-        ]
 # add smmp in to get generic transp; remove smmp2 to eliminate funcptr transp
 
 # The next line allows the user to supply --with-atlas-dir=/usr/local/atlas,
@@ -185,8 +176,6 @@ have_func("cblas_dgemm", "cblas.h")
 $libs += " -llapack -lcblas -latlas "
 #$libs += " -lprofiler "
 
-$objs = %w{nmatrix ruby_constants data/data util/io math util/sl_list storage/common storage/storage storage/dense storage/yale/yale storage/list}.map { |i| i + ".o" }
-
 #CONFIG['CXX'] = 'clang++'
 CONFIG['CXX'] = 'g++'
 
@@ -205,9 +194,14 @@ def find_newer_gplusplus #:nodoc:
 end
 
 def gplusplus_version #:nodoc:
-  version_match = `LANG="en_US" #{CONFIG['CXX']} -v 2>&1`.lines.to_a.last.match(/gcc\sversion\s(\d\.\d.\d)/)
-  raise("unable to determine g++ version (match to get version was nil)") if version_match.nil?
-  version_match.captures.first
+  cxxvar = proc { |n| `#{CONFIG['CXX']} -E -dM - </dev/null | grep #{n}`.chomp.split(' ')[2] }
+  major = cxxvar.call('__GNUC__')
+  minor = cxxvar.call('__GNUC_MINOR__')
+  patch = cxxvar.call('__GNUC_PATCHLEVEL__')
+
+  raise("unable to determine g++ version (match to get version was nil)") if major.nil? || minor.nil? || patch.nil?
+
+  "#{major}.#{minor}.#{patch}"
 end
 
 
@@ -249,15 +243,13 @@ Dir.mkdir("data") unless Dir.exists?("data")
 Dir.mkdir("util") unless Dir.exists?("util")
 Dir.mkdir("storage") unless Dir.exists?("storage")
 Dir.chdir("storage") do
-  Dir.mkdir("yale") unless Dir.exists?("yale")
-  Dir.chdir("yale") do
-    Dir.mkdir("iterators") unless Dir.exists?("iterators")
-  end
+  Dir.mkdir("yale")  unless Dir.exists?("yale")
+  Dir.mkdir("list")  unless Dir.exists?("list")
+  Dir.mkdir("dense") unless Dir.exists?("dense")
 end
 
 # to clean up object files in subdirectories:
 open('Makefile', 'a') do |f|
-  f.write <<EOS
-CLEANOBJS := $(CLEANOBJS) data/*.#{CONFIG["OBJEXT"]} storage/*.#{CONFIG["OBJEXT"]} util/*.#{CONFIG["OBJEXT"]}
-EOS
+  clean_objs_paths = %w{data storage storage/dense storage/yale storage/list util}.map { |d| "#{d}/*.#{CONFIG["OBJEXT"]}" }
+  f.write("CLEANOBJS := $(CLEANOBJS) #{clean_objs_paths.join(' ')}")
 end
