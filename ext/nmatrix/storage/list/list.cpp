@@ -61,6 +61,8 @@
 
 extern "C" {
 static void slice_set_single(LIST_STORAGE* dest, LIST* l, void* val, size_t* coords, size_t* lengths, size_t n);
+static void __nm_list_storage_unregister_temp_value_list(std::list<VALUE*>& temp_vals);
+static void __nm_list_storage_unregister_temp_list_list(std::list<LIST*>& temp_vals, size_t recursions);
 }
 
 namespace nm { namespace list_storage {
@@ -686,13 +688,13 @@ void nm_list_storage_mark(STORAGE* storage_base) {
   }
 }
 
-void __nm_list_storage_unregister_temp_value_list(std::list<VALUE*>& temp_vals) {
+static void __nm_list_storage_unregister_temp_value_list(std::list<VALUE*>& temp_vals) {
   for (std::list<VALUE*>::iterator it = temp_vals.begin(); it != temp_vals.end(); ++it) {
     nm_unregister_value(**it);
   }
 }
 
-void __nm_list_storage_unregister_temp_list_list(std::list<LIST*>& temp_vals, size_t recursions) {
+static void __nm_list_storage_unregister_temp_list_list(std::list<LIST*>& temp_vals, size_t recursions) {
   for (std::list<LIST*>::iterator it = temp_vals.begin(); it != temp_vals.end(); ++it) {
     nm_list_storage_unregister_list(*it, recursions);
   }
