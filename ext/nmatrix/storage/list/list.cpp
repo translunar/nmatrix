@@ -187,18 +187,20 @@ static void map_empty_stored_r(RecurseData& result, RecurseData& s, LIST* x, con
     }
     __nm_list_storage_unregister_temp_list_list(temp_vals, rec-1);
   } else {
-    std::list<VALUE> temp_vals;
+    std::list<VALUE*> temp_vals;
     while (curr) {
       VALUE val, s_val = rubyobj_from_cval(curr->val, s.dtype()).rval;
       if (rev) val = rb_yield_values(2, t_init, s_val);
       else     val = rb_yield_values(2, s_val, t_init);
 
       nm_register_value(val);
-      temp_vals.push_front(val);
 
       if (rb_funcall(val, rb_intern("!="), 1, result.init_obj()) == Qtrue) {
         xcurr = nm::list::insert_helper(x, xcurr, curr->key - offset, val);
+        temp_vals.push_front(reinterpret_cast<VALUE*>(xcurr->val));
+        nm_register_value(*reinterpret_cast<VALUE*>(xcurr->val));
       }
+      nm_unregister_value(val);
 
       curr = curr->next;
       if (curr && curr->key - offset >= x_shape) curr = NULL;
@@ -253,7 +255,7 @@ static void map_stored_r(RecurseData& result, RecurseData& left, LIST* x, const 
     }
     __nm_list_storage_unregister_temp_list_list(temp_vals, rec-1);
   } else {
-    std::list<VALUE> temp_vals;
+    std::list<VALUE*> temp_vals;
     while (lcurr) {
       size_t key;
       VALUE  val;
@@ -261,11 +263,12 @@ static void map_stored_r(RecurseData& result, RecurseData& left, LIST* x, const 
       val   = rb_yield_values(1, rubyobj_from_cval(lcurr->val, left.dtype()).rval);
       key   = lcurr->key - left.offset(rec);
       lcurr = lcurr->next;
-      nm_register_value(val);
-      temp_vals.push_front(val);
 
-      if (!rb_equal(val, result.init_obj()))
+      if (!rb_equal(val, result.init_obj())) {
         xcurr = nm::list::insert_helper(x, xcurr, key, val);
+        temp_vals.push_front(reinterpret_cast<VALUE*>(xcurr->val));
+        nm_register_value(*reinterpret_cast<VALUE*>(xcurr->val));
+      }
 
       if (lcurr && lcurr->key - left.offset(rec) >= result.ref_shape(rec)) lcurr = NULL;
     }
@@ -341,7 +344,7 @@ static void map_merged_stored_r(RecurseData& result, RecurseData& left, RecurseD
     }
     __nm_list_storage_unregister_temp_list_list(temp_vals, rec-1);
   } else {
-    std::list<VALUE> temp_vals;
+    std::list<VALUE*> temp_vals;
     while (lcurr || rcurr) {
       size_t key;
       VALUE  val;
@@ -360,11 +363,16 @@ static void map_merged_stored_r(RecurseData& result, RecurseData& left, RecurseD
         lcurr = lcurr->next;
         rcurr = rcurr->next;
       }
-      temp_vals.push_front(val);
+
       nm_register_value(val);
 
-      if (rb_funcall(val, rb_intern("!="), 1, result.init_obj()) == Qtrue)
+      if (rb_funcall(val, rb_intern("!="), 1, result.init_obj()) == Qtrue) {
         xcurr = nm::list::insert_helper(x, xcurr, key, val);
+        temp_vals.push_front(reinterpret_cast<VALUE*>(xcurr->val));
+        nm_register_value(*reinterpret_cast<VALUE*>(xcurr->val));
+      }
+
+      nm_unregister_value(val);
 
       if (rcurr && rcurr->key - right.offset(rec) >= result.ref_shape(rec)) rcurr = NULL;
       if (lcurr && lcurr->key - left.offset(rec) >= result.ref_shape(rec)) lcurr = NULL;
@@ -460,7 +468,7 @@ static bool slice_set(LIST_STORAGE* dest, LIST* l, size_t* coords, size_t* lengt
 
     size_t i    = 0;
     size_t key  = i + offsets[n] + coords[n];
-    std::list<VALUE> temp_vals;
+    std::list<VALUE*> temp_vals;
     while (i < lengths[n]) {
       // Make sure we have an element to work with
       if (v_offset >= v_size) v_offset %= v_size;
@@ -483,8 +491,9 @@ static bool slice_set(LIST_STORAGE* dest, LIST* l, size_t* coords, size_t* lengt
           D* nv = NM_ALLOC(D); *nv = v[v_offset++];
           if (dest->dtype == nm::RUBYOBJ) {
             nm_register_value(*reinterpret_cast<VALUE*>(nv));
-            temp_vals.push_front(*reinterpret_cast<VALUE*>(nv));
+            temp_vals.push_front(reinterpret_cast<VALUE*>(nv));
           }
+
           if (prev) node = insert_after(prev, key, nv);
           else      node = insert_first_node(l, key, nv, sizeof(D));
 
@@ -495,7 +504,7 @@ static bool slice_set(LIST_STORAGE* dest, LIST* l, size_t* coords, size_t* lengt
         D* nv = NM_ALLOC(D); *nv = v[v_offset++];
         if (dest->dtype == nm::RUBYOBJ) {
           nm_register_value(*reinterpret_cast<VALUE*>(nv));
-          temp_vals.push_front(*reinterpret_cast<VALUE*>(nv));
+          temp_vals.push_front(reinterpret_cast<VALUE*>(nv));
         }
         if (prev) node = insert_after(prev, key, nv);
         else      node = insert_first_node(l, key, nv, sizeof(D));
@@ -677,9 +686,9 @@ void nm_list_storage_mark(STORAGE* storage_base) {
   }
 }
 
-void __nm_list_storage_unregister_temp_value_list(std::list<VALUE>& temp_vals) {
-  for (std::list<VALUE>::iterator it = temp_vals.begin(); it != temp_vals.end(); ++it) {
-    nm_unregister_value(*it);
+void __nm_list_storage_unregister_temp_value_list(std::list<VALUE*>& temp_vals) {
+  for (std::list<VALUE*>::iterator it = temp_vals.begin(); it != temp_vals.end(); ++it) {
+    nm_unregister_value(**it);
   }
 }
 
@@ -1043,7 +1052,6 @@ VALUE nm_list_map_merged_stored(VALUE left, VALUE right, VALUE init) {
   NMATRIX* result = nm_create(nm::LIST_STORE, nm_list_storage_create(nm::RUBYOBJ, sdata.copy_alloc_shape(), s->dim, init_val));
   LIST_STORAGE* r = reinterpret_cast<LIST_STORAGE*>(result->storage);
   nm::list_storage::RecurseData rdata(r, init);
-  nm_register_nmatrix(result);
   map_merged_stored_r(rdata, sdata, tdata, rdata.top_level_list(), sdata.top_level_list(), tdata.top_level_list(), sdata.dim() - 1);
 
   delete &tdata;
@@ -1052,7 +1060,8 @@ VALUE nm_list_map_merged_stored(VALUE left, VALUE right, VALUE init) {
 
   VALUE to_return = Data_Wrap_Struct(CLASS_OF(left), nm_mark, nm_delete, result);
 
-  nm_unregister_nmatrix(result);
+  nm_unregister_value(*reinterpret_cast<VALUE*>(init_val));
+
   nm_unregister_value(init);
   nm_unregister_value(right);
   nm_unregister_value(left);
@@ -1071,7 +1080,7 @@ static LIST* slice_copy(const LIST_STORAGE* src, LIST* src_rows, size_t* coords,
   
   LIST* dst_rows = nm::list::create();
   NODE* src_node = src_rows->first;
-  std::list<VALUE> temp_vals;
+  std::list<VALUE*> temp_vals;
   std::list<LIST*> temp_lists;
   while (src_node) {
     key = src_node->key - (src->offset[n] + coords[n]);
@@ -1093,13 +1102,13 @@ static LIST* slice_copy(const LIST_STORAGE* src, LIST* src_rows, size_t* coords,
       } else { // matches src->dim - n > 1
         if (src->dtype == nm::RUBYOBJ) {
           nm_register_value(*reinterpret_cast<VALUE*>(src_node->val));
-          temp_vals.push_front(*reinterpret_cast<VALUE*>(src_node->val));
+          temp_vals.push_front(reinterpret_cast<VALUE*>(src_node->val));
         }
         nm::list::insert_copy(dst_rows, false, key, src_node->val, DTYPE_SIZES[src->dtype]);
       }
     }
     src_node = src_node->next;
-  }
+ }
   if (src->dtype == nm::RUBYOBJ) {
     __nm_list_storage_unregister_temp_list_list(temp_lists, src->dim - n - 2);
     __nm_list_storage_unregister_temp_value_list(temp_vals);
@@ -1218,7 +1227,7 @@ static void slice_set_single(LIST_STORAGE* dest, LIST* l, void* val, size_t* coo
     }
     __nm_list_storage_unregister_temp_list_list(temp_nodes, dest->dim - n - 2);
   } else {
-    std::list<VALUE> temp_vals;
+    std::list<VALUE*> temp_vals;
     for (size_t i = 0; i < lengths[n]; ++i) {
 
       size_t key = i + dest->offset[n] + coords[n];
@@ -1229,7 +1238,7 @@ static void slice_set_single(LIST_STORAGE* dest, LIST* l, void* val, size_t* coo
         node = nm::list::replace_insert_after(node, key, val, true, DTYPE_SIZES[dest->dtype]);
       }
       if (dest->dtype == nm::RUBYOBJ) {
-        temp_vals.push_front(*reinterpret_cast<VALUE*>(node->val));
+        temp_vals.push_front(reinterpret_cast<VALUE*>(node->val));
         nm_register_value(*reinterpret_cast<VALUE*>(node->val));
       }
     }
