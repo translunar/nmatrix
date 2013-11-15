@@ -441,7 +441,7 @@
 
   * Implemented generic n-dimensional transpose
 
-* 7 minor enhancements:
+* 8 minor enhancements:
 
   * User-friendly #gesvd and #gesdd updates (by @ryanmt)
 
@@ -465,6 +465,10 @@
 
   * Added NMatrix#potrf! and NMatrix#getrf, which are instance methods
     for calling CLAPACK functions (NMatrix#getrf! already existed)
+
+  * Updated GCC instructions for Mac OS X to include the procedure
+    for installing version 4.8.2 instead of 4.7.2, which should be
+    easier
 
 * 12 bug fixes:
 
@@ -501,3 +505,5 @@
     enhancements) (by @cjfuller)
 
   * Updated object cleaning target in extconf.rb
+
+  * Fixed possible compilation problem on Mavericks with Xcode 5.02
