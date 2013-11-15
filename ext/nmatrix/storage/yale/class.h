@@ -362,7 +362,7 @@ public:
    */
   void insert(SLICE* slice, VALUE right) {
 
-    nm_register_value(right);
+    NM_CONSERVATIVE(nm_register_value(right));
 
     std::pair<NMATRIX*,bool> nm_and_free =
       interpret_arg_as_dense_nmatrix(right, dtype());
@@ -380,13 +380,13 @@ public:
       v_size = RARRAY_LEN(right);
       v      = NM_ALLOC_N(D, v_size);
       if (dtype() == nm::RUBYOBJ) {
-	nm_register_values(reinterpret_cast<VALUE*>(v), v_size);
+       nm_register_values(reinterpret_cast<VALUE*>(v), v_size);
       }
       for (size_t m = 0; m < v_size; ++m) {
         rubyval_to_cval(rb_ary_entry(right, m), s->dtype, &(v[m]));
       }
       if (dtype() == nm::RUBYOBJ) {
-	nm_unregister_values(reinterpret_cast<VALUE*>(v), v_size);
+       nm_unregister_values(reinterpret_cast<VALUE*>(v), v_size);
       }
 
     } else {
@@ -410,7 +410,7 @@ public:
       }
     } else NM_FREE(v);
 
-    nm_unregister_value(right);
+    NM_CONSERVATIVE(nm_unregister_value(right));
   }
 
 
@@ -1096,7 +1096,7 @@ protected:
     NM_FREE(s->a);
 
     if (s->dtype == nm::RUBYOBJ) {
-      nm_yale_storage_register_a(new_a, new_cap);
+      nm_yale_storage_unregister_a(new_a, new_cap);
     }
 
     s->ija      = new_ija;
