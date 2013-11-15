@@ -193,7 +193,6 @@ NODE* insert(LIST* list, bool replace, size_t key, void* val) {
       nm_list_storage_completely_unregister_node(ins);
       NM_FREE(ins->val);
       ins->val = val;
-      nm_list_storage_register_node(ins);
     } else {
       NM_FREE(val);
     }

@@ -503,8 +503,8 @@ static VALUE nm_cblas_rotg(VALUE self, VALUE ab) {
     return Qnil;
 
   } else {
-    nm_register_value(self);
-    nm_register_value(ab);
+    NM_CONSERVATIVE(nm_register_value(self));
+    NM_CONSERVATIVE(nm_register_value(ab));
     void *pC = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]),
          *pS = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
 
@@ -524,8 +524,8 @@ static VALUE nm_cblas_rotg(VALUE self, VALUE ab) {
       rb_ary_store(result, 0, rubyobj_from_cval(pC, dtype).rval);
       rb_ary_store(result, 1, rubyobj_from_cval(pS, dtype).rval);
     }
-    nm_unregister_value(ab);
-    nm_unregister_value(self);
+    NM_CONSERVATIVE(nm_unregister_value(ab));
+    NM_CONSERVATIVE(nm_unregister_value(self));
     return result;
   }
 }
