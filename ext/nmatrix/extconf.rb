@@ -188,6 +188,10 @@ ldefaults = {lapack: ["/usr/local/lib", "/usr/local/atlas/lib", "/usr/lib64/atla
              cblas: ["/usr/local/lib", "/usr/local/atlas/lib", "/usr/lib64/atlas"].delete_if { |d| !Dir.exists?(d) },
              atlas: ["/usr/local/lib", "/usr/local/atlas/lib", "/usr/lib", "/usr/lib64/atlas"].delete_if { |d| !Dir.exists?(d) }}
 
+if have_library("clapack") # Usually only applies for Mac OS X
+  $libs += " -lclapack "
+end
+
 unless have_library("lapack")
   dir_config("lapack", idefaults[:lapack], ldefaults[:lapack])
 end
@@ -226,7 +230,7 @@ have_func("cblas_dgemm", "cblas.h")
 #find_library("atlas", "ATL_dgemmNN")
 
 # Order matters here: ATLAS has to go after LAPACK: http://mail.scipy.org/pipermail/scipy-user/2007-January/010717.html
-$libs += " -llapack -lclapack -lcblas -latlas "
+$libs += " -llapack -lcblas -latlas "
 #$libs += " -lprofiler "
 
 
