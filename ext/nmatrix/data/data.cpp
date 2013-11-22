@@ -89,50 +89,8 @@ namespace nm {
     "erfc", "cbrt", "gamma"
   };
 
-
-  template <typename Type>
-  Complex<Type>::Complex(const RubyObject& other) {
-    switch(TYPE(other.rval)) {
-    case T_COMPLEX:
-      r = NUM2DBL(rb_funcall(other.rval, rb_intern("real"), 0));
-      i = NUM2DBL(rb_funcall(other.rval, rb_intern("imag"), 0));
-      break;
-    case T_FLOAT:
-    case T_RATIONAL:
-    case T_FIXNUM:
-    case T_BIGNUM:
-      r = NUM2DBL(other.rval);
-      i = 0.0;
-      break;
-    default:
-      rb_raise(rb_eTypeError, "not sure how to convert this type of VALUE to a complex");
-    }
-  }
-
-
-  template <typename Type>
-  Rational<Type>::Rational(const RubyObject& other) {
-    switch (TYPE(other.rval)) {
-    case T_RATIONAL:
-      n = NUM2LONG(rb_funcall(other.rval, rb_intern("numerator"), 0));
-      d = NUM2LONG(rb_funcall(other.rval, rb_intern("denominator"), 0));
-      break;
-    case T_FIXNUM:
-    case T_BIGNUM:
-      n = NUM2LONG(other.rval);
-      d = 1;
-      break;
-    case T_COMPLEX:
-    case T_FLOAT:
-      rb_raise(rb_eTypeError, "cannot convert float to a rational");
-      break;
-    default:
-      rb_raise(rb_eTypeError, "not sure how to convert this type of VALUE to a rational");
-    }
-  }
-
-
 } // end of namespace nm
+
 extern "C" {
 
 const char* const DTYPE_NAMES[nm::NUM_DTYPES] = {
@@ -327,12 +285,13 @@ void* rubyobj_to_cval(VALUE val, nm::dtype_t dtype) {
 
 
 void nm_init_data() {
-    nm::RubyObject obj(INT2FIX(1));
-    nm::Rational32 x(obj);
-    nm::Rational64 y(obj);
-    nm::Rational128 z(obj);
-    volatile nm::Complex64 a(obj);
-    volatile nm::Complex128 b(obj);
+  volatile VALUE t = INT2FIX(1);
+  volatile nm::RubyObject obj(t);
+  volatile nm::Rational32 x(const_cast<nm::RubyObject&>(obj));
+  volatile nm::Rational64 y(const_cast<nm::RubyObject&>(obj));
+  volatile nm::Rational128 z(const_cast<nm::RubyObject&>(obj));
+  volatile nm::Complex64 a(const_cast<nm::RubyObject&>(obj));
+  volatile nm::Complex128 b(const_cast<nm::RubyObject&>(obj));
 }
 
 

@@ -109,6 +109,48 @@ namespace nm {
   extern const std::string  NONCOM_EWOP_NAMES[nm::NUM_NONCOM_EWOPS];
 
 
+  template <typename Type>
+  Complex<Type>::Complex(const RubyObject& other) {
+    switch(TYPE(other.rval)) {
+    case T_COMPLEX:
+      r = NUM2DBL(rb_funcall(other.rval, rb_intern("real"), 0));
+      i = NUM2DBL(rb_funcall(other.rval, rb_intern("imag"), 0));
+      break;
+    case T_FLOAT:
+    case T_RATIONAL:
+    case T_FIXNUM:
+    case T_BIGNUM:
+      r = NUM2DBL(other.rval);
+      i = 0.0;
+      break;
+    default:
+      rb_raise(rb_eTypeError, "not sure how to convert this type of VALUE to a complex");
+    }
+  }
+
+
+  template <typename Type>
+  Rational<Type>::Rational(const RubyObject& other) {
+    switch (TYPE(other.rval)) {
+    case T_RATIONAL:
+      n = NUM2LONG(rb_funcall(other.rval, rb_intern("numerator"), 0));
+      d = NUM2LONG(rb_funcall(other.rval, rb_intern("denominator"), 0));
+      break;
+    case T_FIXNUM:
+    case T_BIGNUM:
+      n = NUM2LONG(other.rval);
+      d = 1;
+      break;
+    case T_COMPLEX:
+    case T_FLOAT:
+      rb_raise(rb_eTypeError, "cannot convert float to a rational");
+      break;
+    default:
+      rb_raise(rb_eTypeError, "not sure how to convert this type of VALUE to a rational");
+    }
+  }
+
+
 } // end of namespace nm
 
 /*
