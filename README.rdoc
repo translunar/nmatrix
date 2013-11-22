@@ -39,6 +39,8 @@ If you want to obtain the latest (development) code, you should generally do:
     gem install pkg/nmatrix-0.1.0-rc1.gem
 
 Detailed instructions are available for {Mac}[https://github.com/SciRuby/nmatrix/wiki/Installation#mac-os-x] and {Linux}[https://github.com/SciRuby/nmatrix/wiki/Installation#linux].
+We are currently working on Mavericks (Mac OS X) installation instructions, but in general, you'll need Homebrew and should
+probably use +brew install gcc48+ instead of using the install script.
 
 == Documentation
 
@@ -51,21 +53,27 @@ You can find the complete API documentation {on our website}[http://sciruby.com/
 
 == Examples
 
-Create a new NMatrix from a ruby array: 
+Create a new NMatrix from a ruby Array: 
 
     >> require 'nmatrix'
-    >> NMatrix.new([2, 3], [0, 1, 2, 3, 4, 5], dtype: :int64).pp
-      [0, 1, 2]
-      [3, 4, 5]
-    => nil
+    >> NMatrix.new([2, 3], [0, 1, 2, 3, 4, 5], dtype: :int64)
+    => [
+        [0, 1, 2],
+        [3, 4, 5]
+       ]
 
 Create a new NMatrix using the +N+ shortcut:
 
     >> m = N[ [2, 3, 4], [7, 8, 9] ]
+    => [
+        [2, 3, 4],
+        [7, 8, 9]
+       ]
+    >> m.inspect
     => #<NMatrix:0x007f8e121b6cf8shape:[2,3] dtype:int32 stype:dense>
-    >> m.pp
-       [2, 3, 4]
-       [7, 8, 9]
+
+The above output requires that you have a pretty-print-enabled console such as Pry; otherwise, you'll
+see the output given by +inspect+.
 
 If you want to learn more about how to create a
 matrix, {read the guide in our wiki}[https://github.com/SciRuby/nmatrix/wiki/How-to-create-a-NMatrix].
