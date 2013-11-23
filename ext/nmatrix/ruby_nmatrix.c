@@ -820,6 +820,8 @@ static VALUE nm_each_ordered_stored_with_indices(VALUE nmatrix) {
  * For elementwise, use =~ instead.
  *
  * This method will raise an exception if dimensions do not match.
+ *
+ * When stypes differ, this function calls a protected Ruby method.
  */
 static VALUE nm_eqeq(VALUE left, VALUE right) {
   NM_CONSERVATIVE(nm_register_value(left));
@@ -833,24 +835,30 @@ static VALUE nm_eqeq(VALUE left, VALUE right) {
   UnwrapNMatrix(left, l);
   UnwrapNMatrix(right, r);
 
-  if (l->stype != r->stype) {
-    NM_CONSERVATIVE(nm_unregister_value(left));
-    NM_CONSERVATIVE(nm_unregister_value(right));
-    rb_raise(rb_eNotImpError, "comparison between different matrix stypes not yet implemented");
-  }
-
   bool result = false;
 
-  switch(l->stype) {
-  case nm::DENSE_STORE:
-    result = nm_dense_storage_eqeq(l->storage, r->storage);
-    break;
-  case nm::LIST_STORE:
-    result = nm_list_storage_eqeq(l->storage, r->storage);
-    break;
-  case nm::YALE_STORE:
-    result = nm_yale_storage_eqeq(l->storage, r->storage);
-    break;
+  if (l->stype != r->stype) { // DIFFERENT STYPES
+
+    if (l->stype == nm::DENSE_STORE)
+      result = rb_funcall(left, rb_intern("dense_eql_sparse?"), 1, right);
+    else if (r->stype == nm::DENSE_STORE)
+      result = rb_funcall(right, rb_intern("dense_eql_sparse?"), 1, left);
+    else
+      result = rb_funcall(left, rb_intern("sparse_eql_sparse?"), 1, right);
+
+  } else {
+
+    switch(l->stype) {       // SAME STYPES
+    case nm::DENSE_STORE:
+      result = nm_dense_storage_eqeq(l->storage, r->storage);
+      break;
+    case nm::LIST_STORE:
+      result = nm_list_storage_eqeq(l->storage, r->storage);
+      break;
+    case nm::YALE_STORE:
+      result = nm_yale_storage_eqeq(l->storage, r->storage);
+      break;
+    }
   }
 
   NM_CONSERVATIVE(nm_unregister_value(left));

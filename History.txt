@@ -430,7 +430,7 @@
 
 === 0.1.0.rc1
 
-* 3 major enhancements:
+* 4 major enhancements:
 
   * Improved garbage collection strategy for partial object creation
     (i.e., when VALUEs are allocated but not registered right away),
@@ -440,6 +440,8 @@
   * Implemented list storage transpose
 
   * Implemented generic n-dimensional transpose
+
+  * Implemented == comparison between differing matrix stypes
 
 * 8 minor enhancements:
 

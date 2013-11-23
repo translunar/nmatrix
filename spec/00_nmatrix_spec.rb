@@ -444,3 +444,18 @@ describe "NMatrix#transpose" do
   end
 
 end
+
+describe "NMatrix#==" do
+  [:dense, :list, :yale].each do |left|
+    [:dense, :list, :yale].each do |right|
+      next if left == right
+      context ("#{left}?#{right}") do
+        it "should compare two matrices of differing stypes" do
+          n = NMatrix.new([3,4], [0,0,1,2,0,0,3,4,0,0,0,0,5,6,7,0], stype: left)
+          m = NMatrix.new([3,4], [0,0,1,2,0,0,3,4,0,0,0,0,5,6,7,0], stype: right)
+          n.should == m
+        end
+      end
+    end
+  end
+end

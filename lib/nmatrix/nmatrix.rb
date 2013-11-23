@@ -117,25 +117,6 @@ class NMatrix
   end
   #alias :pp :pretty_print
 
-  #
-  # See the note in #cast about why this is necessary.
-  # If this is a non-dense matrix with a complex dtype and to_dtype is
-  # non-complex, then this will convert the default value to noncomplex.
-  # Returns 0 if dense.  Returns existing default_value if there isn't a
-  # mismatch.
-  #
-  def maybe_get_noncomplex_default_value(to_dtype)
-    default_value = 0
-    unless self.stype == :dense then
-      if self.dtype.to_s.start_with?('complex') and not to_dtype.to_s.start_with?('complex') then
-        default_value = self.default_value.real
-      else
-        default_value = self.default_value
-      end
-    end
-    default_value
-  end
-
 
   #
   # call-seq:
@@ -843,6 +824,47 @@ protected
   # with a given array of initial values.
   def __sparse_initial_set__(ary) #:nodoc:
     self[0...self.shape[0],0...self.shape[1]] = ary
+  end
+
+
+  # Function assumes the dimensions and such have already been tested.
+  #
+  # Called from inside NMatrix: nm_eqeq
+  #
+  # There are probably more efficient ways to do this, but currently it's unclear how.
+  # We could use +each_row+, but for list matrices, it's still going to need to make a
+  # reference to each of those rows, and that is going to require a seek.
+  #
+  # It might be more efficient to convert one sparse matrix type to the other with a
+  # cast and then run the comparison. For now, let's assume that people aren't going
+  # to be doing this very often, and we can optimize as needed.
+  def dense_eql_sparse? m #:nodoc:
+    m.each_with_indices do |v,*indices|
+      return false if self[*indices] != v
+    end
+
+    return true
+  end
+  alias :sparse_eql_sparse? :dense_eql_sparse?
+
+
+  #
+  # See the note in #cast about why this is necessary.
+  # If this is a non-dense matrix with a complex dtype and to_dtype is
+  # non-complex, then this will convert the default value to noncomplex.
+  # Returns 0 if dense.  Returns existing default_value if there isn't a
+  # mismatch.
+  #
+  def maybe_get_noncomplex_default_value(to_dtype) #:nodoc:
+    default_value = 0
+    unless self.stype == :dense then
+      if self.dtype.to_s.start_with?('complex') and not to_dtype.to_s.start_with?('complex') then
+        default_value = self.default_value.real
+      else
+        default_value = self.default_value
+      end
+    end
+    default_value
   end
 
 end
