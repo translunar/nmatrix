@@ -468,9 +468,9 @@
   * Added NMatrix#potrf! and NMatrix#getrf, which are instance methods
     for calling CLAPACK functions (NMatrix#getrf! already existed)
 
-  * Updated GCC instructions for Mac OS X to include the procedure
-    for installing version 4.8.2 instead of 4.7.2, which should be
-    easier
+  * Added GCC installation instructions for Mac OS X Mavericks, and
+    updated the old installation instructions for Mac OS X (both
+    found in scripts/)
 
 * 15 bug fixes:
 
