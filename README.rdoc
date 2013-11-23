@@ -7,6 +7,8 @@ Fast Numerical Linear Algebra Library for Ruby
 * {NMatrix Installation wiki}[https://github.com/SciRuby/nmatrix/wiki/Installation]
 * {SciRuby Installation guide}[http://sciruby.com/docs#installation]
 
+{<img src="https://travis-ci.org/sciruby/nmatrix.png" />}[https://travis-ci.org/sciruby/nmatrix]
+
 == Description
 
 NMatrix is a fast numerical linear algebra library for Ruby, with dense and sparse matrices, written mostly in C and
