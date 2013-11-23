@@ -7,7 +7,7 @@ Fast Numerical Linear Algebra Library for Ruby
 * {NMatrix Installation wiki}[https://github.com/SciRuby/nmatrix/wiki/Installation]
 * {SciRuby Installation guide}[http://sciruby.com/docs#installation]
 
-{<img src="https://travis-ci.org/sciruby/nmatrix.png" />}[https://travis-ci.org/sciruby/nmatrix]
+{<img src=https://travis-ci.org/sciruby/nmatrix.png>}[https://travis-ci.org/sciruby/nmatrix]
 
 == Description
 
