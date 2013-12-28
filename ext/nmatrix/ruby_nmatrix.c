@@ -1472,21 +1472,17 @@ static VALUE nm_init_copy(VALUE copy, VALUE original) {
 }
 
 /*
- * Get major, minor, and release components of NMatrix::VERSION. Store in function parameters.
+ * Get major, minor, and release components of NMatrix::VERSION. Store in function parameters. Doesn't get
+ * the "pre" field currently (beta1/rc1/etc).
  */
 static void get_version_info(uint16_t& major, uint16_t& minor, uint16_t& release) {
   // Get VERSION and split it on periods. Result is an Array.
-  VALUE version = rb_funcall(rb_const_get(cNMatrix, rb_intern("VERSION")), rb_intern("split"), 1, rb_str_new_cstr("."));
-  VALUE* ary    = RARRAY_PTR(version); // major, minor, and release
+  VALUE cVersion = rb_const_get(cNMatrix, rb_intern("VERSION"));
 
   // Convert each to an integer
-  VALUE  maj    = rb_funcall(ary[0], rb_intern("to_i"), 0);
-  VALUE  min    = rb_funcall(ary[1], rb_intern("to_i"), 0);
-  VALUE  rel    = rb_funcall(ary[2], rb_intern("to_i"), 0);
-
-  major   = FIX2INT(maj);
-  minor   = FIX2INT(min);
-  release = FIX2INT(rel);
+  major   = FIX2INT(rb_const_get(cVersion, rb_intern("MAJOR")));
+  minor   = FIX2INT(rb_const_get(cVersion, rb_intern("MINOR")));
+  release = FIX2INT(rb_const_get(cVersion, rb_intern("TINY")));
 }
 
 

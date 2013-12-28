@@ -472,6 +472,9 @@
     updated the old installation instructions for Mac OS X (both
     found in scripts/)
 
+  * Switched NMatrix::VERSION to work more like Rails::VERSION, with
+    support for MAJOR, MINOR, TINY, and PRE
+
 * 15 bug fixes:
 
   * Spec revisions for lapack_gesdd and lapack_gesvd (by @ryanmt)
