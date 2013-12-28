@@ -16,12 +16,6 @@ Gem::Specification.new do |gem|
 ***********************************************************
 Welcome to SciRuby: Tools for Scientific Computing in Ruby!
 
-                     *** WARNING ***
-Please be aware that NMatrix is in ALPHA status. If you're
-thinking of using NMatrix to write mission critical code,
-such as for driving a car or flying a space shuttle, you
-may wish to choose other software (for now).
-
 NMatrix requires a C compiler, and has been tested only
 with GCC 4.6+. We are happy to accept contributions
 which improve the portability of this project.

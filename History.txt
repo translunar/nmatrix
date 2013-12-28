@@ -428,7 +428,7 @@
   * Casting from dense to Yale now properly accepts the default
     value option
 
-=== 0.1.0.rc1
+=== 0.1.0.rc1 / 2014-12-28
 
 * 4 major enhancements:
 
