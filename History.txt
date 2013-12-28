@@ -443,7 +443,7 @@
 
   * Implemented == comparison between differing matrix stypes
 
-* 8 minor enhancements:
+* 9 minor enhancements:
 
   * User-friendly #gesvd and #gesdd updates (by @ryanmt)
 
@@ -475,7 +475,7 @@
   * Switched NMatrix::VERSION to work more like Rails::VERSION, with
     support for MAJOR, MINOR, TINY, and PRE
 
-* 15 bug fixes:
+* 16 bug fixes:
 
   * Spec revisions for lapack_gesdd and lapack_gesvd (by @ryanmt)
 
@@ -515,3 +515,6 @@
 
   * Fixed errors involving undefined symbols, unresolved symbols, and
     lazy symbol binding
+
+  * Improved LAPACK and BLAS header selection for Ubuntu/Debian
+    systems with ATLAS (by @mvz)
