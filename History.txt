@@ -475,6 +475,9 @@
   * Switched NMatrix::VERSION to work more like Rails::VERSION, with
     support for MAJOR, MINOR, TINY, and PRE
 
+  * Added #concat, #hconcat, #vconcat, and #dconcat for joining
+    matrices together
+
 * 16 bug fixes:
 
   * Spec revisions for lapack_gesdd and lapack_gesvd (by @ryanmt)

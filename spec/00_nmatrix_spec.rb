@@ -459,3 +459,20 @@ describe "NMatrix#==" do
     end
   end
 end
+
+describe "NMatrix#concat" do
+  it "should default to horizontal concatenation" do
+    n = NMatrix.new([1,3], [1,2,3])
+    n.concat(n).should == NMatrix.new([1,6], [1,2,3,1,2,3])
+  end
+
+  it "should permit vertical concatenation" do
+    n = NMatrix.new([1,3], [1,2,3])
+    n.vconcat(n).should == NMatrix.new([2,3], [1,2,3])
+  end
+
+  it "should permit depth concatenation on tensors" do
+    n = NMatrix.new([1,3,1], [1,2,3])
+    n.dconcat(n).should == NMatrix.new([1,3,2], [1,1,2,2,3,3])
+  end
+end

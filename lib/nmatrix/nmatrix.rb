@@ -465,12 +465,18 @@ class NMatrix
 
   #
   # call-seq:
-  #     matrix1.concat(*m) -> NMatrix
-  #     matrix1.concat(*m, rank) -> NMatrix
+  #     matrix1.concat(*m2) -> NMatrix
+  #     matrix1.concat(*m2, rank) -> NMatrix
+  #     matrix1.hconcat(*m2) -> NMatrix
+  #     matrix1.vconcat(*m2) -> NMatrix
+  #     matrix1.dconcat(*m3) -> NMatrix
   #
   # Joins two matrices together into a new larger matrix. Attempts to determine which direction to concatenate
   # on by looking for the first common element of the matrix +shape+ in reverse. In other words, concatenating two
   # columns together without supplying +rank+ will glue them into an n x 2 matrix.
+  #
+  # You can also use hconcat, vconcat, and dconcat for the first three ranks. concat performs an hconcat when no
+  # rank argument is provided.
   #
   # The two matrices must have the same +dim+.
   #
@@ -494,7 +500,7 @@ class NMatrix
         end
       end
     elsif rank.is_a?(Symbol) # Convert to numeric
-      rank = {:row => 0, :column => 1, :col => 1, :lay => 2, :layer => 3}[rank]
+      rank = {:row => 0, :column => 1, :col => 1, :lay => 2, :layer => 2}[rank]
     end
 
     # Need to figure out the new shape.
@@ -530,6 +536,18 @@ class NMatrix
     end
 
     n
+  end
+
+  def hconcat *matrices
+    concat(*matrices, :column)
+  end
+
+  def vconcat *matrices
+    concat(*matrices, :row)
+  end
+
+  def dconcat *matrices
+    concat(*matrices, :layer)
   end
 
 
