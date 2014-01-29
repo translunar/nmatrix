@@ -49,6 +49,10 @@ namespace nm { namespace list {
  * Macros
  */
 
+#ifndef RHASH_SET_IFNONE
+#define RHASH_SET_IFNONE(h, v) (RHASH(h)->ifnone = (v))
+#endif
+
 /*
  * Global Variables
  */
@@ -580,9 +584,9 @@ extern "C" {
   static VALUE empty_list_to_hash(const nm::dtype_t dtype, size_t recursions, VALUE default_value) {
     VALUE h = rb_hash_new();
     if (recursions) {
-      RHASH_IFNONE(h) = empty_list_to_hash(dtype, recursions-1, default_value);
+      RHASH_SET_IFNONE(h, empty_list_to_hash(dtype, recursions-1, default_value));
     } else {
-      RHASH_IFNONE(h) = default_value;
+      RHASH_SET_IFNONE(h, default_value);
     }
     return h;
   }
