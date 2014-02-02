@@ -2569,8 +2569,10 @@ static SLICE* get_slice(size_t dim, int argc, VALUE* arg, size_t* shape) {
       slice->lengths[r] = 1;
 
     } else if (FIXNUM_P(v)) { // this used CLASS_OF before, which is inefficient for fixnum
-
-      slice->coords[r]  = FIX2UINT(v);
+      if(FIX2INT(v)<0)
+        slice->coords[r]  = shape[r]+FIX2INT(v);
+      else
+        slice->coords[r]  = FIX2INT(v);
       slice->lengths[r] = 1;
       t++;
 
@@ -2584,21 +2586,31 @@ static SLICE* get_slice(size_t dim, int argc, VALUE* arg, size_t* shape) {
     } else if (TYPE(arg[t]) == T_HASH) { // 3:5 notation (inclusive)
       VALUE begin_end   = rb_funcall(v, rb_intern("shift"), 0); // rb_hash_shift
       nm_register_value(begin_end);
-      slice->coords[r]  = FIX2UINT(rb_ary_entry(begin_end, 0));
-      slice->lengths[r] = FIX2UINT(rb_ary_entry(begin_end, 1)) - slice->coords[r];
-
+      if (rb_ary_entry(begin_end, 0) >= 0)
+        slice->coords[r]  = FIX2UINT(rb_ary_entry(begin_end, 0));
+      else 
+        slice->coords[r]  = shape[r] + FIX2UINT(rb_ary_entry(begin_end, 0));
+      if (rb_ary_entry(begin_end, 1) >= 0)
+        slice->lengths[r] = FIX2UINT(rb_ary_entry(begin_end, 1)) - slice->coords[r];
+      else 
+        slice->lengths[r] = shape[r] + FIX2UINT(rb_ary_entry(begin_end, 1)) - slice->coords[r];
+      
       if (RHASH_EMPTY_P(v)) t++; // go on to the next
       slice->single = false;
       nm_unregister_value(begin_end);
 
     } else if (CLASS_OF(v) == rb_cRange) {
       rb_range_values(arg[t], &beg, &end, &excl);
-      slice->coords[r]  = FIX2UINT(beg);
+      if (FIX2INT(beg) >= 0) 
+      	slice->coords[r]  = FIX2INT(beg);
+      else 
+      	slice->coords[r]  = shape[r] + FIX2INT(beg);
       // Exclude last element for a...b range
-      slice->lengths[r] = FIX2UINT(end) - slice->coords[r] + (excl ? 0 : 1);
-
+      if (FIX2INT(end) >= 0)
+        slice->lengths[r] = FIX2INT(end) - slice->coords[r] + (excl ? 0 : 1);
+      else 
+      	slice->lengths[r] = shape[r] + FIX2INT(end) - slice->coords[r] + (excl ? 0 : 1);
       slice->single     = false;
-
       t++;
 
     } else {
