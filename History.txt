@@ -528,10 +528,10 @@
 
   * Implemented negative slicing indices (by @rajatkapoor)
 
-* 0 minor enhancements:
+* 1 minor enhancements:
 
-  *
+  * Added Travis CI testing for Ruby 2.1
 
-* 0 bug fixes:
+* 1 bug fixes:
 
-  *
+  * Fixed compile error with Ruby 2.1 (by @diminish7)
