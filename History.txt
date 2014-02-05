@@ -428,7 +428,7 @@
   * Casting from dense to Yale now properly accepts the default
     value option
 
-=== 0.1.0.rc1 / 2014-12-28
+=== 0.1.0.rc1 / 2013-12-28
 
 * 4 major enhancements:
 
@@ -521,3 +521,17 @@
 
   * Improved LAPACK and BLAS header selection for Ubuntu/Debian
     systems with ATLAS (by @mvz)
+
+=== 0.1.0.rc2 / 2014-02-05
+
+* 1 major enhancements:
+
+  * Implemented negative slicing indices (by @rajatkapoor)
+
+* 0 minor enhancements:
+
+  *
+
+* 0 bug fixes:
+
+  *
