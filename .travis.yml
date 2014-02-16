@@ -1,4 +1,5 @@
 language: ruby
+cache: bundler
 env:
   - CPLUS_INCLUDE_PATH=/usr/include/atlas C_INCLUDE_PATH=/usr/include/atlas
 rvm:
