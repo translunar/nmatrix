@@ -96,7 +96,9 @@ extern VALUE	cNMatrix,
 			
 							nm_eDataTypeError,
               nm_eConvergenceError,
-							nm_eStorageTypeError;
+							nm_eStorageTypeError,
+							nm_eShapeError,
+							nm_eNotInvertibleError;
 
 /*
  * Functions

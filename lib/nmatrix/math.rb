@@ -43,7 +43,8 @@ class NMatrix
   # Use LAPACK to calculate the inverse of the matrix (in-place). Only works on
   # dense matrices.
   #
-  # Note: If you don't have LAPACK, e.g., on a Mac, this may not work yet.
+  # Note: If you don't have LAPACK, e.g., on a Mac, this may not work yet. Use
+  # invert instead (which still probably won't work if your matrix is larger than 3x3).
   #
   def invert!
     # Get the pivot array; factor the matrix
@@ -59,13 +60,29 @@ class NMatrix
   # call-seq:
   #     invert -> NMatrix
   #
-  # Make a copy of the matrix, then invert it (requires LAPACK).
+  # Make a copy of the matrix, then invert it (requires LAPACK for matrices larger than 3x3).
+  #
+  #
   #
   # * *Returns* :
   #   - A dense NMatrix.
   #
   def invert
-    self.cast(:dense, self.dtype).invert!
+    if NMatrix.has_clapack?
+      begin
+        self.cast(:dense, self.dtype).invert! # call CLAPACK version
+      rescue NotImplementedError # probably a rational matrix
+        inverse = self.clone_structure
+        __inverse_exact__(inverse)
+      end
+    elsif self.integer_dtype? # FIXME: This check is probably too slow.
+      rational_self = self.cast(dtype: :rational128)
+      inverse       = rational_self.clone_structure
+      rational_self.__inverse_exact__(inverse)
+    else
+      inverse       = self.clone_structure
+      __inverse_exact__(inverse)
+    end
   end
   alias :inverse :invert
 

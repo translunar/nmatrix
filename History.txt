@@ -528,9 +528,15 @@
 
   * Implemented negative slicing indices (by @rajatkapoor)
 
-* 1 minor enhancements:
+* 3 minor enhancements:
 
   * Added Travis CI testing for Ruby 2.1
+
+  * Implemented LAPACK-independent exact inverse calculation for
+    dense matrices of size 2x2 and 3x3, as well as
+
+  * Added NMatrix::has_clapack? method to determine whether CLAPACK
+    support has been compiled in
 
 * 1 bug fixes:
 

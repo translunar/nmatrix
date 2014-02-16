@@ -174,6 +174,7 @@ extern "C" {
   static VALUE nm_cblas_syrk(VALUE self, VALUE order, VALUE uplo, VALUE trans, VALUE n, VALUE k, VALUE alpha, VALUE a,
                              VALUE lda, VALUE beta, VALUE c, VALUE ldc);
 
+  static VALUE nm_has_clapack(VALUE self);
   static VALUE nm_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda);
   static VALUE nm_clapack_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
   static VALUE nm_clapack_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE ipiv, VALUE b, VALUE ldb);
@@ -219,6 +220,46 @@ void det_exact(const int M, const void* A_elements, const int lda, void* result_
     rb_raise(rb_eArgError, "can only calculate exact determinant of a square matrix of size 2 or larger");
   } else {
     rb_raise(rb_eNotImpError, "exact determinant calculation needed for matrices larger than 3x3");
+  }
+}
+
+
+/*
+ * Calculate the inverse for a dense matrix (A [elements]) of size 2 or 3. Places the result in B_elements.
+ */
+template <typename DType>
+void inverse_exact(const int M, const void* A_elements, const int lda, void* B_elements, const int ldb) {
+  const DType* A = reinterpret_cast<const DType*>(A_elements);
+  DType* B       = reinterpret_cast<DType*>(B_elements);
+
+  if (M == 2) {
+    DType det = A[0] * A[lda+1] - A[1] * A[lda];
+    B[0] = A[lda+1] / det;
+    B[1] = -A[1] / det;
+    B[ldb] = -A[lda] / det;
+    B[ldb+1] = -A[0] / det;
+
+  } else if (M == 3) {
+    // Calculate the exact determinant.
+    DType det;
+    det_exact<DType>(M, A_elements, lda, reinterpret_cast<void*>(&det));
+    if (det == 0) {
+      rb_raise(nm_eNotInvertibleError, "matrix must have non-zero determinant to be invertible (not getting this error does not mean matrix is invertible if you're dealing with floating points)");
+    }
+
+    B[0]      = (  A[lda+1] * A[2*lda+2] - A[lda+2] * A[2*lda+1]) / det; // A = ei - fh
+    B[1]      = (- A[1]     * A[2*lda+2] + A[2]     * A[2*lda+1]) / det; // D = -bi + ch
+    B[2]      = (  A[1]     * A[lda+2]   - A[2]     * A[lda+1])   / det; // G = bf - ce
+    B[ldb]    = (- A[lda]   * A[2*lda+2] + A[lda+2] * A[2*lda])   / det; // B = -di + fg
+    B[ldb+1]  = (  A[0]     * A[2*lda+2] - A[2]     * A[2*lda])   / det; // E = ai - cg
+    B[ldb+2]  = (- A[0]     * A[lda+2]   + A[2]     * A[lda])     / det; // H = -af + cd
+    B[2*ldb]  = (  A[lda]   * A[2*lda+1] - A[lda+1] * A[2*lda])   / det; // C = dh - eg
+    B[2*ldb+1]= ( -A[0]     * A[2*lda+1] + A[1]     * A[2*lda])   / det; // F = -ah + bg
+    B[2*ldb+2]= (  A[0]     * A[lda+1]   - A[1]     * A[lda])     / det; // I = ae - bd
+  } else if (M == 1) {
+    B[0] = 1 / A[0];
+  } else {
+    rb_raise(rb_eNotImpError, "exact inverse calculation needed for matrices larger than 3x3");
   }
 }
 
@@ -342,6 +383,8 @@ extern "C" {
 
 void nm_math_init_blas() {
 	cNMatrix_LAPACK = rb_define_module_under(cNMatrix, "LAPACK");
+
+  rb_define_singleton_method(cNMatrix, "has_clapack?", (METHOD)nm_has_clapack, 0);
 
   /* ATLAS-CLAPACK Functions */
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getrf", (METHOD)nm_clapack_getrf, 5);
@@ -1404,6 +1447,19 @@ static VALUE nm_clapack_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALU
 }
 
 
+/*
+ * Simple way to check from within Ruby code if clapack functions are available, without
+ * having to wait around for an exception to be thrown.
+ */
+static VALUE nm_has_clapack(VALUE self) {
+#ifndef HAVE_CLAPACK_H
+  return Qfalse;
+#else
+  return Qtrue;
+#endif
+}
+
+
 /* Call any of the clapack_xgetri functions as directly as possible.
  *
  * You probably don't want to call this function. Instead, why don't you try clapack_getri, which is more flexible
@@ -1560,6 +1616,15 @@ void nm_math_det_exact(const int M, const void* elements, const int lda, nm::dty
   NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::det_exact, void, const int M, const void* A_elements, const int lda, void* result_arg);
 
   ttable[dtype](M, elements, lda, result);
+}
+
+/*
+ * C accessor for calculating an exact inverse.
+ */
+void nm_math_inverse_exact(const int M, const void* A_elements, const int lda, void* B_elements, const int ldb, nm::dtype_t dtype) {
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::inverse_exact, void, const int, const void*, const int, void*, const int);
+
+  ttable[dtype](M, A_elements, lda, B_elements, ldb);
 }
 
 

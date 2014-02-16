@@ -149,6 +149,7 @@ static VALUE matrix_multiply_scalar(NMATRIX* left, VALUE scalar);
 static VALUE matrix_multiply(NMATRIX* left, NMATRIX* right);
 static VALUE nm_multiply(VALUE left_v, VALUE right_v);
 static VALUE nm_det_exact(VALUE self);
+static VALUE nm_inverse_exact(VALUE self, VALUE inverse);
 static VALUE nm_complex_conjugate_bang(VALUE self);
 
 static nm::dtype_t	interpret_dtype(int argc, VALUE* argv, nm::stype_t stype);
@@ -189,6 +190,16 @@ void Init_nmatrix() {
 	 * Exception raised when something goes wrong with the storage of a matrix.
 	 */
 	nm_eStorageTypeError = rb_define_class("StorageTypeError", rb_eStandardError);
+
+	/*
+	 * Exception raise when the matrix shape is not appropriate for a given operation.
+	 */
+	nm_eShapeError = rb_define_class("ShapeError", nm_eShapeError);
+
+  /*
+   * Exception raise when an inverse is requested but the matrix is not invertible.
+   */
+  nm_eNotInvertibleError = rb_define_class("NotInvertibleError", nm_eNotInvertibleError);
 
   /*
    * Class that holds values in use by the C code.
@@ -243,6 +254,7 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "supershape", (METHOD)nm_supershape, 0);
 	rb_define_method(cNMatrix, "offset", (METHOD)nm_offset, 0);
 	rb_define_method(cNMatrix, "det_exact", (METHOD)nm_det_exact, 0);
+	rb_define_protected_method(cNMatrix, "__inverse_exact__", (METHOD)nm_inverse_exact, 1);
 	rb_define_method(cNMatrix, "complex_conjugate!", (METHOD)nm_complex_conjugate_bang, 0);
 
 	rb_define_protected_method(cNMatrix, "__dense_each__", (METHOD)nm_dense_each, 0);
@@ -2846,6 +2858,30 @@ static VALUE matrix_multiply(NMATRIX* left, NMATRIX* right) {
   return to_return;
 }
 
+
+/*
+ * Calculate the exact inverse of a 2x2 or 3x3 matrix.
+ *
+ * Does not test for invertibility!
+ */
+static VALUE nm_inverse_exact(VALUE self, VALUE inverse) {
+
+  if (NM_STYPE(self) != nm::DENSE_STORE) {
+    rb_raise(rb_eNotImpError, "needs exact determinant implementation for this matrix stype");
+    return Qnil;
+  }
+
+  if (NM_DIM(self) != 2 || NM_SHAPE0(self) != NM_SHAPE1(self)) {
+    rb_raise(nm_eShapeError, "matrices must be square to have an inverse defined");
+    return Qnil;
+  }
+
+  // Calculate the exact inverse.
+  nm_math_inverse_exact(NM_SHAPE0(self), NM_STORAGE_DENSE(self)->elements, NM_SHAPE0(self), NM_STORAGE_DENSE(inverse)->elements, NM_SHAPE0(inverse), NM_DTYPE(self));
+
+  return inverse;
+}
+
 /*
  * Calculate the exact determinant of a dense matrix.
  *
@@ -2856,9 +2892,11 @@ static VALUE matrix_multiply(NMATRIX* left, NMATRIX* right) {
 static VALUE nm_det_exact(VALUE self) {
 
   if (NM_STYPE(self) != nm::DENSE_STORE) {
-    rb_raise(nm_eStorageTypeError, "can only calculate exact determinant for dense matrices");
+    rb_raise(rb_eNotImpError, "can only calculate exact determinant for dense matrices");
+    return Qnil;
   }
   if (NM_DIM(self) != 2 || NM_SHAPE0(self) != NM_SHAPE1(self)) {
+    rb_raise(nm_eShapeError, "matrices must be square to have a determinant defined");
     return Qnil;
   }
 
