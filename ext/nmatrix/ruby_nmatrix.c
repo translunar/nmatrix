@@ -194,12 +194,12 @@ void Init_nmatrix() {
 	/*
 	 * Exception raise when the matrix shape is not appropriate for a given operation.
 	 */
-	nm_eShapeError = rb_define_class("ShapeError", nm_eShapeError);
+	nm_eShapeError = rb_define_class("ShapeError", rb_eStandardError);
 
   /*
    * Exception raise when an inverse is requested but the matrix is not invertible.
    */
-  nm_eNotInvertibleError = rb_define_class("NotInvertibleError", nm_eNotInvertibleError);
+  nm_eNotInvertibleError = rb_define_class("NotInvertibleError", rb_eStandardError);
 
   /*
    * Class that holds values in use by the C code.
