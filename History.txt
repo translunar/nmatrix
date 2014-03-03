@@ -538,6 +538,9 @@
   * Added NMatrix::has_clapack? method to determine whether CLAPACK
     support has been compiled in
 
-* 1 bug fixes:
+* 2 bug fixes:
 
+  * Fixed dot product operation on 1-dimensional matrices (by @rve
+    and @cjfuller)
+  
   * Fixed compile error with Ruby 2.1 (by @diminish7)
