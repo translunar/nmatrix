@@ -438,6 +438,12 @@ describe 'NMatrix' do
           expect(n.transpose([0,2,1]).to_flat_array).to eq(n.to_flat_array) # for dense, make this reshape!
         end
       end
+
+      it "should just copy a 1-dimensional #{stype} matrix" do
+        n = NMatrix.new([3], [1,2,3], stype: stype)
+        expect(n.transpose).to eq n
+        expect(n.transpose).not_to be n
+      end
     end
   end
 
