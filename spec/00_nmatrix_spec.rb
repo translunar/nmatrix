@@ -439,6 +439,12 @@ describe "NMatrix#transpose" do
         n.transpose([1,0,2]).to_flat_array.should == [0,4,8,12,1,5,9,13,2,6,10,14,3,7,11,15]
         n.transpose([0,2,1]).to_flat_array.should == n.to_flat_array # for dense, make this reshape!
       end
+
+      it "should just copy a 1-dimensional #{stype} matrix" do
+        n = NMatrix.new([3], [1,2,3], stype: stype)
+        expect(n.transpose).to eq n
+        expect(n.transpose).not_to be n
+      end
     end
   end
 
