@@ -444,6 +444,17 @@ describe "NMatrix#transpose" do
 
 end
 
+describe "NMatrix#dot_product" do
+  [:dense].each do |stype| # list storage transpose not yet implemented
+    context(stype) do # yale support only 2-dim matrix
+      it "should work like vector product on a #{stype} (1-dimensional)" do
+        m = NMatrix.new([3], [1,2,3], stype: stype)
+        expect(m.dot(m)).to eq (NMatrix.new([1],[14]))
+      end
+    end
+  end
+end
+
 describe "NMatrix#==" do
   [:dense, :list, :yale].each do |left|
     [:dense, :list, :yale].each do |right|

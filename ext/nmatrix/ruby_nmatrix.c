@@ -1970,6 +1970,21 @@ static VALUE nm_multiply(VALUE left_v, VALUE right_v) {
     CheckNMatrixType(right_v);
     UnwrapNMatrix( right_v, right );
 
+    // work like vector dot product for 1dim
+    if (left->storage->dim == 1 && right->storage->dim == 1) {
+      if (left->storage->shape[0] != right->storage->shape[0]) {
+        NM_CONSERVATIVE(nm_unregister_value(left_v));
+        NM_CONSERVATIVE(nm_unregister_value(right_v));
+        rb_raise(rb_eArgError, "The left- and right-hand sides of the operation must have the same dimensionality.");
+      } else {
+        VALUE result = elementwise_op(nm::EW_MUL, left_v, right_v);
+        VALUE to_return = rb_funcall(result, rb_intern("sum"),0);
+        NM_CONSERVATIVE(nm_unregister_value(left_v));
+        NM_CONSERVATIVE(nm_unregister_value(right_v));
+        return to_return;
+      }
+    }
+
     if (left->storage->shape[1] != right->storage->shape[0]) {
       NM_CONSERVATIVE(nm_unregister_value(left_v));
       NM_CONSERVATIVE(nm_unregister_value(right_v));
