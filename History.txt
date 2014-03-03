@@ -538,9 +538,17 @@
   * Added NMatrix::has_clapack? method to determine whether CLAPACK
     support has been compiled in
 
-* 2 bug fixes:
+  * Improved conformance of specs to RSpec best practices (by 
+    @duggiefresh)
+
+  * Travis CI now updates the IRC channel when a check passes (by
+    @agarie)
+
+* 3 bug fixes:
 
   * Fixed dot product operation on 1-dimensional matrices (by @rve
     and @cjfuller)
-  
+
+  * Fixed segfault on 1-dimensional matrix transpose (by @cjfuller)
+
   * Fixed compile error with Ruby 2.1 (by @diminish7)
