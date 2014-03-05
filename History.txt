@@ -548,7 +548,7 @@
     the stored elements in a matrix (generally for use with FFI and
     other libraries that need pointers)
 
-* 4 bug fixes:
+* 5 bug fixes:
 
   * Fixed dot product operation on 1-dimensional matrices (by @rve
     and @cjfuller)
@@ -559,3 +559,6 @@
 
   * Fixed regression which wasn't causing any problems but was
     counter to design: stride was prior to data storage for NMatrix
+
+  * Fixed Rakefile problem which was causing specs to run twice in a
+    row with each call to rake spec

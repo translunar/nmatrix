@@ -66,8 +66,6 @@ VALGRIND_MEMORYFILL_OPTIONS = [
 GDB_OPTIONS = []
 
 
-RSpec::Core::RakeTask.new(:spec)
-
 task :console do |task|
   cmd = [ 'irb', "-r './lib/nmatrix.rb'" ]
   run *cmd
