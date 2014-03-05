@@ -528,7 +528,7 @@
 
   * Implemented negative slicing indices (by @rajatkapoor)
 
-* 3 minor enhancements:
+* 6 minor enhancements:
 
   * Added Travis CI testing for Ruby 2.1
 
@@ -544,7 +544,11 @@
   * Travis CI now updates the IRC channel when a check passes (by
     @agarie)
 
-* 3 bug fixes:
+  * Added NMatrix#data_pointer, which returns the memory address of
+    the stored elements in a matrix (generally for use with FFI and
+    other libraries that need pointers)
+
+* 4 bug fixes:
 
   * Fixed dot product operation on 1-dimensional matrices (by @rve
     and @cjfuller)
@@ -552,3 +556,6 @@
   * Fixed segfault on 1-dimensional matrix transpose (by @cjfuller)
 
   * Fixed compile error with Ruby 2.1 (by @diminish7)
+
+  * Fixed regression which wasn't causing any problems but was
+    counter to design: stride was prior to data storage for NMatrix

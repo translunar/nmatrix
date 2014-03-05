@@ -248,8 +248,8 @@ NM_DEF_STORAGE_STRUCT;
 
 /* Dense Storage */
 NM_DEF_STORAGE_CHILD_STRUCT_PRE(DENSE_STORAGE); // struct DENSE_STORAGE : STORAGE {
-	size_t*	stride;
-	void*		elements;
+	void*		elements; // should go first to align with void* a in yale and NODE* first in list.
+  size_t*	stride;
 NM_DEF_STORAGE_STRUCT_POST(DENSE_STORAGE);     // };
 
 /* Yale Storage */

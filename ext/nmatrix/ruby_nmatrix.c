@@ -65,6 +65,8 @@ static VALUE is_symmetric(VALUE self, bool hermitian);
 static VALUE nm_guess_dtype(VALUE self, VALUE v);
 static VALUE nm_min_dtype(VALUE self, VALUE v);
 
+static VALUE nm_data_pointer(VALUE self);
+
 /*
  * Macro defines an element-wise accessor function for some operation.
  *
@@ -327,6 +329,11 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "hermitian?", (METHOD)nm_hermitian, 0);
 
 	rb_define_method(cNMatrix, "capacity", (METHOD)nm_capacity, 0);
+
+	/////////////////
+	// FFI Methods //
+	/////////////////
+	rb_define_method(cNMatrix, "data_pointer", (METHOD)nm_data_pointer, 0);
 
 	/////////////
 	// Aliases //
@@ -2933,6 +2940,24 @@ static VALUE nm_det_exact(VALUE self) {
 
   return to_return;
 }
+
+
+
+/*
+ * Returns the pointer to the matrix storage's data. This is useful primarily when you are using FFI with NMatrix --
+ * say, for example, you want to pass a float* to some function, and your NMatrix is a :float32 :dense matrix. Then you
+ * can call this function and get that pointer directly instead of copying the data.
+ */
+static VALUE nm_data_pointer(VALUE self) {
+  //if (NM_DTYPE(self) == nm::LIST_STORE)
+  //  rb_warn("pointer requested for list storage, which may be meaningless");
+
+  // This is actually pretty easy, since all of the storage types have their elements positioned in the same place
+  // relative to one another. So yes, believe it or not, this should work just as well for Yale or list storage as for
+  // dense.
+  return INT2FIX(NM_STORAGE_DENSE(self)->elements);
+}
+
 
 /////////////////
 // Exposed API //
