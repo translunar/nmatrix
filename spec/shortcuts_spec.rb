@@ -70,21 +70,39 @@ describe NMatrix do
     expect(m[3,3]).to eq(arr[3])
   end
 
-  it "random() creates a matrix of random numbers" do
-    m = NMatrix.random(2)
+  context "::random" do
+    it "creates a matrix of random numbers" do
+      m = NMatrix.random(2)
 
-    expect(m.stype).to eq(:dense)
-    expect(m.dtype).to eq(:float64)
-  end
+      expect(m.stype).to eq(:dense)
+      expect(m.dtype).to eq(:float64)
+    end
 
-  it "random() only accepts an integer or an array as dimension" do
-    m = NMatrix.random([2, 2])
+    it "creates a complex matrix of random numbers" do
+      m = NMatrix.random(2, :dtype => :complex128)
+    end
 
-    expect(m.stype).to eq(:dense)
-    expect(m.dtype).to eq(:float64)
+    it "forbids generation of a rational matrix" do
+      expect { m = NMatrix.random(2, dtype: :rational128) }.to raise_error
+    end
 
-    expect { NMatrix.random(2.0) }.to raise_error
-    expect { NMatrix.random("not an array or integer") }.to raise_error
+    it "correctly accepts :scale parameter" do
+      m = NMatrix.random([2,2], dtype: :byte, scale: 255)
+      m.each do |v|
+        expect(v).to be > 0
+        expect(v).to be < 255
+      end
+    end
+
+    it "only accepts an integer or an array as dimension" do
+      m = NMatrix.random([2, 2])
+
+      expect(m.stype).to eq(:dense)
+      expect(m.dtype).to eq(:float64)
+
+      expect { NMatrix.random(2.0) }.to raise_error
+      expect { NMatrix.random("not an array or integer") }.to raise_error
+    end
   end
 
   it "seq() creates a matrix of integers, sequentially" do

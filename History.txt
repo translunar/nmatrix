@@ -526,9 +526,9 @@
 
 * 1 major enhancements:
 
-  * Implemented negative slicing indices (by @rajatkapoor)
+  * Implemented negative-index slicing (by @rajatkapoor)
 
-* 6 minor enhancements:
+* 10 minor enhancements:
 
   * Added Travis CI testing for Ruby 2.1
 
@@ -550,7 +550,14 @@
 
   * Made NMatrix#clone_structure a public method (was protected)
 
-* 5 bug fixes:
+  * Added :scale option for NMatrix::random to handle non-floating
+    point forms
+
+  * Added complex support to NMatrix::random
+
+  * Aliased NMatrix::random to NMatrix::rand
+
+* 6 bug fixes:
 
   * Fixed dot product operation on 1-dimensional matrices (by @rve
     and @cjfuller)
@@ -564,3 +571,7 @@
 
   * Fixed Rakefile problem which was causing specs to run twice in a
     row with each call to rake spec
+
+  * NMatrix::random now raises an exception when rational matrices
+    are requested
+
