@@ -773,6 +773,21 @@ class NMatrix
   end
 
 
+  #
+  # call-seq:
+  #     clone_structure -> NMatrix
+  #
+  # This function is like clone, but it only copies the structure and the default value.
+  # None of the other values are copied. It takes an optional capacity argument. This is
+  # mostly only useful for dense, where you may not want to initialize; for other types,
+  # you should probably use +zeros_like+.
+  #
+  def clone_structure(capacity = nil)
+    opts = {stype: self.stype, default: self.default_value, dtype: self.dtype}
+    opts = {capacity: capacity}.merge(opts) if self.yale?
+    NMatrix.new(self.shape, opts)
+  end
+
   # This is how you write an individual element-wise operation function:
   #def __list_elementwise_add__ rhs
   #  self.__list_map_merged_stored__(rhs){ |l,r| l+r }.cast(self.stype, NMatrix.upcast(self.dtype, rhs.dtype))
@@ -796,22 +811,6 @@ protected
     end
 
     ary
-  end
-
-
-  #
-  # call-seq:
-  #     clone_structure -> NMatrix
-  #
-  # This function is like clone, but it only copies the structure and the default value.
-  # None of the other values are copied. It takes an optional capacity argument. This is
-  # mostly only useful for dense, where you may not want to initialize; for other types,
-  # you should probably use +zeros_like+.
-  #
-  def clone_structure(capacity = nil)
-    opts = {stype: self.stype, default: self.default_value, dtype: self.dtype}
-    opts = {capacity: capacity}.merge(opts) if self.yale?
-    NMatrix.new(self.shape, opts)
   end
 
 

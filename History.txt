@@ -548,6 +548,8 @@
     the stored elements in a matrix (generally for use with FFI and
     other libraries that need pointers)
 
+  * Made NMatrix#clone_structure a public method (was protected)
+
 * 5 bug fixes:
 
   * Fixed dot product operation on 1-dimensional matrices (by @rve
