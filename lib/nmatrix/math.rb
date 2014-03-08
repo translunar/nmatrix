@@ -515,30 +515,63 @@ class NMatrix
   #  Calculates the selected norm (defaults to Frobenius norm) of a 2D matrix.
   #  
   #  This should be used for small or medium sized matrices. 
-  #  For greater mtrices, there should be a separate implementation where
+  #  For greater matrices, there should be a separate implementation where
   #  the norm is estimated, not computed.
+  #  
+  #  The norm calculation code is added to lambdas and then the corresponding one runs, depending on the input argument.
+  #
+  #  Currently implemented norms: p-norm, Frobenius, Infinity
   #  
   # * *Returns* :
   # - The selected norm of the matrix.
   # * *Raises* :
   # - +NotImplementedError+ -> Must be used in 2D matrices.
+  # - +ArgumentError+ -> Argument must be positive integer or one of the valid strings.
   #
   def norm type = 2
     raise(NotImplementedError, "norm can be calculated only for 2D matrices") unless self.dim == 2
     
+    str_args = [:fro, :frobenius, :inf, :infinity]
     r = self.rows
     c = self.cols
+    
+    pnorm_lambda = lambda{  |p|       
+	  sum = 0
+
+      c.times do |i|
+        sum += self.column(i).inject(0) {|vsum, n| vsum + (n**p)}
+      end 
+       
+      return sum**(1/p.to_f)
+    }
+    
+    inorm_lambda = lambda{       
+	  row_sums = []
+
+      r.times do |i|
+        row_sums << self.row(i).inject(0) {|vsum, n| vsum + n}
+        puts "sum added @ #{i}= #{row_sums}"
+      end 
+       
+      return row_sums.sort!.last
+    }
 
     if type.class == Fixnum
-       raise ArgumentError.new("no available norm for number #{type}") unless type > 0
-       sum = 0
+      raise ArgumentError.new("no available norm for #{type}") unless type > 0
+      raise ArgumentError.new("given number has to be a positive integer, found #{type.class}") unless type.integer?
+      
+      return pnorm_lambda.call(type)
+    
+    else
+      raise ArgumentError.new("no available norm for type #{type.class}") unless type.class == String || type.class == Symbol
 
-       c.times do |i|
-         sum += self.column(i).inject(0) {|vsum, n| vsum + (n**type)}
-         puts "sum @ #{i}= #{sum}"
-       end 
-       
-       sum**(1/type.to_f)
+      type_str = type.to_s unless type.class == String
+
+      raise ArgumentError.new("no available norm for #{type}") unless str_args.include? type.downcase
+      
+      return pnorm_lambda.call(2) if type_str.start_with? 'fro'
+      return inorm_lambda.call() if type_str.start_with? 'inf'
+      
     end
 
   end
