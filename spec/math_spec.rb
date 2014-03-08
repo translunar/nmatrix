@@ -162,6 +162,40 @@ describe "math" do
       end
     end
   end
+  
+  #TODO: add precise, valid values for expected norms
+  context "#norm" do
+    it "should default to frobenius" do
+      n = NMatrix.new([2, 3], [1, 2, 3, 5, 6, 7])
+      expect(n.norm).to eq(11.135528725660043)
+    end
+
+    it "should reject invalid arguments" do
+      n = NMatrix.new([2, 3], [1, 2, 3, 5, 6, 7])
+      
+      nums = [0.5, -1, 0]
+      
+      nums.each do |num|        
+        expect{n.norm(num)}.to raise_error(ArgumentError)
+      end
+      
+      expect{n.norm([])}.to raise_error(ArgumentError)        
+      expect{n.norm('fr0')}.to raise_error(ArgumentError)
+      expect{n.norm(:infiniti)}.to raise_error(ArgumentError)
+    end
+    
+    it "should calculate p norms correctly" do
+      n = NMatrix.new([2, 3], [1, 2, 3, 5, 6, 7])
+      expect(n.norm(2)).to eq(11.135528725660043)
+      expect(n.norm(3)).to eq(8.962809493114328)
+      expect(n.norm(4)).to eq(8.15371575138468)
+    end
+    
+    it "should calculate infinity norms correctly" do
+      n = NMatrix.new([2, 3], [1, 2, 3, 5, 6, 7])
+      expect(n.norm(:inf)).to eq(18)
+    end
+  end
 
   # TODO: Get it working with ROBJ too
   [:byte,:int8,:int16,:int32,:int64,:float32,:float64,:rational64,:rational128].each do |left_dtype|

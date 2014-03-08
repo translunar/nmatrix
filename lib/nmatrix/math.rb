@@ -520,7 +520,8 @@ class NMatrix
   #  
   #  The norm calculation code is added to lambdas and then the corresponding one runs, depending on the input argument.
   #
-  #  Currently implemented norms: p-norm, Frobenius, Infinity
+  #  Currently implemented norms are p-norm, Frobenius, Infinity.
+  #  Based on this reference: https://en.wikipedia.org/wiki/Matrix_norm#.22Entrywise.22_norms
   #  
   # * *Returns* :
   # - The selected norm of the matrix.
@@ -538,8 +539,8 @@ class NMatrix
     pnorm_lambda = lambda{  |p|       
 	  sum = 0
 
-      c.times do |i|
-        sum += self.column(i).inject(0) {|vsum, n| vsum + (n**p)}
+      r.times do |i|
+        sum += self.row(i).inject(0) {|vsum, n| vsum + (n**p)}
       end 
        
       return sum**(1/p.to_f)
@@ -550,24 +551,22 @@ class NMatrix
 
       r.times do |i|
         row_sums << self.row(i).inject(0) {|vsum, n| vsum + n}
-        puts "sum added @ #{i}= #{row_sums}"
       end 
        
       return row_sums.sort!.last
     }
 
     if type.class == Fixnum
-      raise ArgumentError.new("no available norm for #{type}") unless type > 0
-      raise ArgumentError.new("given number has to be a positive integer, found #{type.class}") unless type.integer?
+      raise ArgumentError.new("given number has to be a positive integer") unless type.integer? && type > 0
       
       return pnorm_lambda.call(type)
     
     else
-      raise ArgumentError.new("no available norm for type #{type.class}") unless type.class == String || type.class == Symbol
+      raise ArgumentError.new("argument must be positive integer, string or symbol, found: #{type.class}") unless type.class == String || type.class == Symbol
 
       type_str = type.to_s unless type.class == String
 
-      raise ArgumentError.new("no available norm for #{type}") unless str_args.include? type.downcase
+      raise ArgumentError.new("no available norm for #{type_str}") unless str_args.include? type.downcase
       
       return pnorm_lambda.call(2) if type_str.start_with? 'fro'
       return inorm_lambda.call() if type_str.start_with? 'inf'
