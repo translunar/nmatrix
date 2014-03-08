@@ -506,6 +506,43 @@ class NMatrix
       self.__yale_map_stored__ { |v| v.abs }
     end.cast(self.stype, abs_dtype)
   end
+  
+
+  #
+  # call-seq:
+  #   norm -> Numeric
+  #
+  #  Calculates the selected norm (defaults to Frobenius norm) of a 2D matrix.
+  #  
+  #  This should be used for small or medium sized matrices. 
+  #  For greater mtrices, there should be a separate implementation where
+  #  the norm is estimated, not computed.
+  #  
+  # * *Returns* :
+  # - The selected norm of the matrix.
+  # * *Raises* :
+  # - +NotImplementedError+ -> Must be used in 2D matrices.
+  #
+  def norm type = 2
+    raise(NotImplementedError, "norm can be calculated only for 2D matrices") unless self.dim == 2
+    
+    r = self.rows
+    c = self.cols
+
+    if type.class == Fixnum
+       raise ArgumentError.new("no available norm for number #{type}") unless type > 0
+       sum = 0
+
+       c.times do |i|
+         sum += self.column(i).inject(0) {|vsum, n| vsum + (n**type)}
+         puts "sum @ #{i}= #{sum}"
+       end 
+       
+       sum**(1/type.to_f)
+    end
+
+  end
+
 
 
   #
