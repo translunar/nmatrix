@@ -153,6 +153,7 @@ static VALUE nm_multiply(VALUE left_v, VALUE right_v);
 static VALUE nm_det_exact(VALUE self);
 static VALUE nm_inverse_exact(VALUE self, VALUE inverse);
 static VALUE nm_complex_conjugate_bang(VALUE self);
+static VALUE nm_reshape_bang(VALUE self, VALUE arg);
 
 static nm::dtype_t	interpret_dtype(int argc, VALUE* argv, nm::stype_t stype);
 static void*		interpret_initial_value(VALUE arg, nm::dtype_t dtype);
@@ -258,6 +259,7 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "det_exact", (METHOD)nm_det_exact, 0);
 	rb_define_protected_method(cNMatrix, "__inverse_exact__", (METHOD)nm_inverse_exact, 1);
 	rb_define_method(cNMatrix, "complex_conjugate!", (METHOD)nm_complex_conjugate_bang, 0);
+	rb_define_method(cNMatrix, "reshape!", (METHOD)nm_reshape_bang, 1);
 
 	rb_define_protected_method(cNMatrix, "__dense_each__", (METHOD)nm_dense_each, 0);
 	rb_define_protected_method(cNMatrix, "__dense_map__", (METHOD)nm_dense_map, 0);
@@ -1017,6 +1019,51 @@ static VALUE nm_complex_conjugate_bang(VALUE self) {
   }
 
   return self;
+}
+
+
+/*
+ * call-seq:
+ *     reshape! -> NMatrix
+ *
+ * Reshapes the matrix (in-place) to the desired shape. Note that this function does not do a resize; the product of
+ * the new and old shapes' components must be equal.
+ *
+ */
+static VALUE nm_reshape_bang(VALUE self, VALUE arg){
+  NMATRIX* m;
+  UnwrapNMatrix(self, m); 
+  if(m->stype == nm::DENSE_STORE){
+    DENSE_STORAGE* s   = NM_STORAGE_DENSE(self);
+    VALUE shape_ary = arg;
+    size_t dim;
+    size_t size = nm_storage_count_max_elements(s);
+    size_t new_size = 1;
+    size_t* shape = interpret_shape(shape_ary, &dim);
+    void* elem = s->elements;
+    for (size_t index = 0; index < dim; ++index){
+      new_size *= shape[index];}
+ 
+    if (size == new_size){
+      s->shape = shape; 
+      s->dim = dim;
+      size_t i, j;
+      size_t* stride = NM_ALLOC_N(size_t, dim);
+      for (i = 0; i < dim; ++i) {
+        stride[i] = 1;
+        for (j = i+1; j < dim; ++j) {
+          stride[i] *= shape[j];
+        }
+        s->stride = stride;
+      }
+      return self;
+     }
+     else
+       rb_raise(rb_eArgError, "reshape cannot resize; size of new and old matrices must match");  
+  }
+  else {
+    rb_raise(rb_eNotImpError, "reshape in place only for dense stype");
+  }
 }
 
 /*
