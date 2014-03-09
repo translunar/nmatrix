@@ -540,9 +540,8 @@ class NMatrix
 	  sum = 0
 
       r.times do |i|
-        sum += self.row(i).inject(0) {|vsum, n| vsum + (n**2)}       
-      end 
-      
+        sum += self.row(i).inject(0) {|vsum, n| vsum + (n**2)}                      
+      end       
        
       return sum**(1.quo(2))
     }
@@ -550,8 +549,7 @@ class NMatrix
     two_norm_lambda = lambda{  
       self.dtype == :int32 ? self_cast = self.cast(:dtype => :float32) : self_cast = self.cast(:dtype => :float64)
    
-	  svd = self_cast.gesd
-	  puts svd
+	  svd = self_cast.gesvd
 	  return s = svd[1][0, 0]
 	  
 	  sum = 0
@@ -583,7 +581,7 @@ class NMatrix
       return row_sums.sort!.last.abs
     }
 
-    if type.class == Fixnum
+    if type.is_a?(Fixnum)
       raise ArgumentError.new("given number has to be 1 or 2") unless type.integer? && type > 0 && type < 3
       
       return one_norm_lambda.call() unless type == 2
@@ -591,9 +589,9 @@ class NMatrix
     elsif type == ""
       return two_norm_lambda.call()
     else    
-      raise ArgumentError.new("argument must be integer, string or symbol, found: #{type.class}") unless type.class == String || type.class == Symbol
+      raise ArgumentError.new("argument must be integer, string or symbol, found: #{type.class}") unless type.is_a?(String) || type.is_a?(Symbol)
 
-      type.class == Symbol ? type_sym = type : type_sym = str_args[type]
+      type.is_a?(Symbol) ? type_sym = type : type_sym = str_args[type]
 
       raise ArgumentError.new("no available norm for #{type_sym}") unless str_args.values.include? type_sym
       
