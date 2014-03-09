@@ -520,8 +520,7 @@ class NMatrix
   #  
   #  The norm calculation code is added to lambdas and then the corresponding one runs, depending on the input argument.
   #
-  #  Currently implemented norms are p-norm, Frobenius, Infinity.
-  #  Based on this reference: https://en.wikipedia.org/wiki/Matrix_norm#.22Entrywise.22_norms
+  #  Currently implemented norms are 1-norm, 2-norm, Frobenius, Infinity.
   #  
   # * *Returns* :
   # - The selected norm of the matrix.
@@ -532,18 +531,46 @@ class NMatrix
   def norm type = 2
     raise(NotImplementedError, "norm can be calculated only for 2D matrices") unless self.dim == 2
     
-    str_args = [:fro, :frobenius, :inf, :infinity]
+    str_args = {'fro' => :fro,  'frobenius' => :fro, 'inf' => :inf, 'infinity' => :inf}
     r = self.rows
     c = self.cols
     
-    pnorm_lambda = lambda{  |p|       
+    fro_norm_lambda = lambda{     
+	  
 	  sum = 0
 
       r.times do |i|
-        sum += self.row(i).inject(0) {|vsum, n| vsum + (n**p)}
+        sum += self.row(i).inject(0) {|vsum, n| vsum + (n**2)}       
+      end 
+      
+       
+      return sum**(1.quo(2))
+    }
+    
+    two_norm_lambda = lambda{  
+      self.dtype == :int32 ? self_cast = self.cast(:dtype => :float32) : self_cast = self.cast(:dtype => :float64)
+   
+	  svd = self_cast.gesd
+	  puts svd
+	  return s = svd[1][0, 0]
+	  
+	  sum = 0
+	  sr = s.rows
+	  sr.times do |i|
+        sum += s.row(i).inject(0) {|vsum, n| vsum + (n**2)}      
+      end 
+	         
+      return sum**(1.quo(2))
+    }
+    
+    one_norm_lambda = lambda{       
+	  col_sums = []
+
+      c.times do |i|
+        col_sums << self.col(i).inject(0) {|vsum, n| vsum + n}
       end 
        
-      return sum**(1/p.to_f)
+      return col_sums.sort!.last.abs
     }
     
     inorm_lambda = lambda{       
@@ -553,23 +580,25 @@ class NMatrix
         row_sums << self.row(i).inject(0) {|vsum, n| vsum + n}
       end 
        
-      return row_sums.sort!.last
+      return row_sums.sort!.last.abs
     }
 
     if type.class == Fixnum
-      raise ArgumentError.new("given number has to be a positive integer") unless type.integer? && type > 0
+      raise ArgumentError.new("given number has to be 1 or 2") unless type.integer? && type > 0 && type < 3
       
-      return pnorm_lambda.call(type)
-    
-    else
-      raise ArgumentError.new("argument must be positive integer, string or symbol, found: #{type.class}") unless type.class == String || type.class == Symbol
+      return one_norm_lambda.call() unless type == 2
+      return two_norm_lambda.call()
+    elsif type == ""
+      return two_norm_lambda.call()
+    else    
+      raise ArgumentError.new("argument must be integer, string or symbol, found: #{type.class}") unless type.class == String || type.class == Symbol
 
-      type_str = type.to_s unless type.class == String
+      type.class == Symbol ? type_sym = type : type_sym = str_args[type]
 
-      raise ArgumentError.new("no available norm for #{type_str}") unless str_args.include? type.downcase
+      raise ArgumentError.new("no available norm for #{type_sym}") unless str_args.values.include? type_sym
       
-      return pnorm_lambda.call(2) if type_str.start_with? 'fro'
-      return inorm_lambda.call() if type_str.start_with? 'inf'
+      return fro_norm_lambda.call() if type_sym == :fro
+      return inorm_lambda.call() if type_sym == :inf
       
     end
 

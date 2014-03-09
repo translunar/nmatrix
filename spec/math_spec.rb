@@ -167,7 +167,7 @@ describe "math" do
   context "#norm" do
     it "should default to frobenius" do
       n = NMatrix.new([2, 3], [1, 2, 3, 5, 6, 7])
-      expect(n.norm).to eq(11.135528725660043)
+      expect(n.norm).to eq(11.096439361572266)
     end
 
     it "should reject invalid arguments" do
@@ -184,16 +184,20 @@ describe "math" do
       expect{n.norm(:infiniti)}.to raise_error(ArgumentError)
     end
     
-    it "should calculate p norms correctly" do
+    it "should calculate 1 and 2 norms correctly" do
       n = NMatrix.new([2, 3], [1, 2, 3, 5, 6, 7])
-      expect(n.norm(2)).to eq(11.135528725660043)
-      expect(n.norm(3)).to eq(8.962809493114328)
-      expect(n.norm(4)).to eq(8.15371575138468)
+      expect(n.norm(2)).to eq(11.096439361572266)
+      expect(n.norm(1)).to eq(10)
     end
     
     it "should calculate infinity norms correctly" do
       n = NMatrix.new([2, 3], [1, 2, 3, 5, 6, 7])
       expect(n.norm(:inf)).to eq(18)
+    end
+    
+    it "should calculate frobenius norms correctly" do
+      n = NMatrix.new([2, 3], [1, 2, 3, 5, 6, 7])
+      expect(n.norm(:fro)).to eq(11.135528725660043)
     end
   end
 
