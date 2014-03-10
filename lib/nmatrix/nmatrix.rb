@@ -430,14 +430,17 @@ class NMatrix
   #   - +new_shape+ -> Array of positive Fixnums.
   #
   def reshape! new_shape,*shapes
-    if new_shape.is_a?Fixnum
-      shape =  [new_shape]+shapes
-    else  # new_shape is an Array
-      shape = new_shape
+    if self.is_ref?
+      raise(ArgumentError, "This operation cannot be performed on reference slices")
+    else
+      if new_shape.is_a?Fixnum
+        shape =  [new_shape]+shapes
+      else  # new_shape is an Array
+        shape = new_shape
+      end
+      self.reshape_bang(shape)
     end
-    self.reshape_bang(shape)
   end
-
 
   #
   # call-seq:
