@@ -403,15 +403,32 @@ class NMatrix
   # * *Returns* :
   #   - A copy with a different shape.
   #
-  def reshape new_shape
-    t = reshape_clone_structure(new_shape)
-    left_params  = [:*]*new_shape.size
+  def reshape new_shape,*shapes
+    if new_shape.is_a?Fixnum
+      newer_shape =  [new_shape]+shapes
+    else  # new_shape is an Array
+      newer_shape = new_shape
+    end
+    t = reshape_clone_structure(newer_shape)
+    left_params  = [:*]*newer_shape.size
     puts(left_params)
     right_params = [:*]*self.shape.size
     t[*left_params] = self[*right_params]
     t
   end
 
+
+  #
+  # call-seq:
+  #     reshape!(new_shape) -> NMatrix
+  #     reshape! new_shape  -> NMatrix
+  #
+  # Reshapes the matrix (in-place) to the desired shape. Note that this function does not do a resize; the product of
+  # the new and old shapes' components must be equal.
+  #
+  # * *Arguments* :
+  #   - +new_shape+ -> Array of positive Fixnums.
+  #
   def reshape! new_shape,*shapes
     if new_shape.is_a?Fixnum
       shape =  [new_shape]+shapes
