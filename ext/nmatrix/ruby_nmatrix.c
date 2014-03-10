@@ -259,7 +259,7 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "det_exact", (METHOD)nm_det_exact, 0);
 	rb_define_protected_method(cNMatrix, "__inverse_exact__", (METHOD)nm_inverse_exact, 1);
 	rb_define_method(cNMatrix, "complex_conjugate!", (METHOD)nm_complex_conjugate_bang, 0);
-	rb_define_method(cNMatrix, "reshape!", (METHOD)nm_reshape_bang, 1);
+	rb_define_protected_method(cNMatrix, "reshape_bang", (METHOD)nm_reshape_bang, 1);
 
 	rb_define_protected_method(cNMatrix, "__dense_each__", (METHOD)nm_dense_each, 0);
 	rb_define_protected_method(cNMatrix, "__dense_map__", (METHOD)nm_dense_map, 0);
@@ -1024,7 +1024,7 @@ static VALUE nm_complex_conjugate_bang(VALUE self) {
 
 /*
  * call-seq:
- *     reshape! -> NMatrix
+ *     __reshape!__ -> NMatrix
  *
  * Reshapes the matrix (in-place) to the desired shape. Note that this function does not do a resize; the product of
  * the new and old shapes' components must be equal.

@@ -406,9 +406,19 @@ class NMatrix
   def reshape new_shape
     t = reshape_clone_structure(new_shape)
     left_params  = [:*]*new_shape.size
+    puts(left_params)
     right_params = [:*]*self.shape.size
     t[*left_params] = self[*right_params]
     t
+  end
+
+  def reshape! new_shape,*shapes
+    if new_shape.is_a?Fixnum
+      shape =  [new_shape]+shapes
+    else  # new_shape is an Array
+      shape = new_shape
+    end
+    self.reshape_bang(shape)
   end
 
 
