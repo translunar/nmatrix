@@ -85,6 +85,13 @@ describe NMatrix::IO do
     expect(`wc -l spec/utm5940.mtx`.split[0]).to eq(`wc -l spec/utm5940.saved.mtx`.split[0])
   end
 
+  it "loads a Point Cloud Library PCD file" do
+    n = NMatrix::IO::PointCloud.load("spec/test.pcd")
+    expect(n.column(0).sort.uniq.size).to eq(1)
+    expect(n.column(0).sort.uniq.first).to eq(207.008)
+    expect(n[0,3]).to eq(0)
+  end
+
   it "raises an error when reading a non-existent file" do
     fn = rand(10000000).to_i.to_s
     while File.exist?(fn)

@@ -45,26 +45,39 @@ class NMatrix
       end
 
       # FIXME: Remove autoloads
-      autoload :MatReader, 'nmatrix/io/mat_reader'
-      autoload :Mat5Reader, 'nmatrix/io/mat5_reader'
+      require_relative './io/mat_reader.rb'
+      require_relative './io/mat5_reader.rb'
     end
 
-    # FIXME: Remove autoloads
-    autoload :Market, 'nmatrix/io/market'
+    require_relative './io/market.rb'
+    require_relative './io/point_cloud.rb'
   end
 
   class << self
     #
     # call-seq:
-    #     load_file(path) -> Mat5Reader
+    #     load_matlab_file(path) -> Mat5Reader
     #
     # * *Arguments* :
-    #   - +path+ -> The path to a version 5 .mat file.
+    #   - +file_path+ -> The path to a version 5 .mat file.
     # * *Returns* :
     #   - A Mat5Reader object.
     #
-    def load_file(file_path)
+    def load_matlab_file(file_path)
       NMatrix::IO::Mat5Reader.new(File.open(file_path, 'rb')).to_ruby
+    end
+
+    #
+    # call-seq:
+    #     load_pcd_file(path) -> PointCloudReader::MetaReader
+    #
+    # * *Arguments* :
+    #   - +file_path+ -> The path to a PCL PCD file.
+    # * *Returns* :
+    #   - A PointCloudReader::MetaReader object with the matrix stored in its +matrix+ property
+    #
+    def load_pcd_file(file_path)
+      NMatrix::IO::PointCloudReader::MetaReader.new(file_path)
     end
 
     #

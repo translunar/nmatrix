@@ -13,6 +13,7 @@ lib/nmatrix/rspec.rb
 lib/nmatrix/io/market.rb
 lib/nmatrix/io/mat5_reader.rb
 lib/nmatrix/io/mat_reader.rb
+lib/nmatrix/io/point_cloud_reader.rb
 lib/nmatrix/blas.rb
 lib/nmatrix/enumerate.rb
 lib/nmatrix/lapack.rb
