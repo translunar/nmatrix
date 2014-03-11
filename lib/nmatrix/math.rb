@@ -516,9 +516,9 @@ class NMatrix
   #  
   #  This should be used for small or medium sized matrices. 
   #  For greater matrices, there should be a separate implementation where
-  #  the norm is estimated, not computed.
+  #  the norm is estimated, not computed for the sake of computation speed.
   #  
-  #  The norm calculation code is added to lambdas and then the corresponding one runs, depending on the input argument.
+  #  The norm calculation code is written in protected functions.
   #
   #  Currently implemented norms are 1-norm, 2-norm, Frobenius, Infinity.
   #  
@@ -531,7 +531,7 @@ class NMatrix
   def norm type = 2
     raise(NotImplementedError, "norm can be calculated only for 2D matrices") unless self.dim == 2
     
-    str_args = {'fro' => :fro,  'frobenius' => :fro, 'inf' => :inf, 'infinity' => :inf}
+    str_args = {'fro' => :frobenius,  'frobenius' => :frobenius, 'inf' => :infinity, 'infinity' => :infinity}
 
     if type.is_a?(Fixnum)
       raise ArgumentError.new("given number has to be 1 or 2") unless type.integer? && type > 0 && type < 3
@@ -751,6 +751,7 @@ protected
 
     c.times do |i|
       col_sums << self.col(i).inject(0) {|vsum, n| vsum + n}
+      
     end 
        
     return col_sums.sort!.last.abs

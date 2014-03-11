@@ -163,9 +163,9 @@ describe "math" do
     end
   end
   
-  #TODO: add precise, valid values for expected norms
+  #TODO: check validity of SVD values in 2-norm
   context "#norm" do
-    it "should default to frobenius" do
+    it "should default to 2-norm" do
       n = NMatrix.new([2, 3], [1, 2, 3, 5, 6, 7])
       expect(n.norm).to eq(11.096439361572266)
     end
