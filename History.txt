@@ -177,9 +177,6 @@
 
   * Added #each_row, #each_column to NMatrix
 
-  * Added NMatrix#reshape! for in-place reshape of dense matrices (by
-    @rajatkapoor)
-
 * 5 bug fixes:
 
   * Dense iterators now return self (an NMatrix) in order to be
@@ -561,6 +558,9 @@
   * Added complex support to NMatrix::random
 
   * Aliased NMatrix::random to NMatrix::rand
+
+  * Added NMatrix#reshape! for in-place reshape of dense matrices (by
+    @rajatkapoor)
 
 * 6 bug fixes:
 
