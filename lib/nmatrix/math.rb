@@ -535,6 +535,7 @@ class NMatrix
     raise(NotImplementedError, "norm can be calculated only for 2D matrices") unless self.dim == 2
     
     str_args = {'fro' => :frobenius,  'frobenius' => :frobenius, 'inf' => :infinity, 'infinity' => :infinity}
+    sym_args = {:fro => :frobenius, :inf => :infinity}
 
     if type.is_a?(Fixnum)
       raise ArgumentError.new("given number has to be 1 or 2") unless type.integer? && type > 0 && type < 3
@@ -546,12 +547,12 @@ class NMatrix
     else    
       raise ArgumentError.new("argument must be integer, string or symbol, found: #{type.class}") unless type.is_a?(String) || type.is_a?(Symbol)
 
-      type.is_a?(Symbol) ? type_sym = type : type_sym = str_args[type]
+      type.is_a?(Symbol) ? type_sym = sym_args[type] : type_sym = str_args[type]
 
       raise ArgumentError.new("no available norm for #{type_sym}") unless str_args.values.include? type_sym
       
-      return self.fro_norm if type_sym == :fro
-      return self.inorm if type_sym == :inf
+      return self.fro_norm if type_sym == :frobenius
+      return self.inorm if type_sym == :infinity
       
     end
 
