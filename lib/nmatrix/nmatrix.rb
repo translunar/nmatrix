@@ -45,12 +45,12 @@ class NMatrix
       end
 
       # FIXME: Remove autoloads
-      require_relative './io/mat_reader.rb'
-      require_relative './io/mat5_reader.rb'
+      autoload :MatReader, 'nmatrix/io/mat_reader'
+      autoload :Mat5Reader, 'nmatrix/io/mat5_reader'
     end
 
-    require_relative './io/market.rb'
-    require_relative './io/point_cloud.rb'
+    autoload :Market, 'nmatrix/io/market.rb'
+    autoload :PointCloud, 'nmatrix/io/point_cloud.rb'
   end
 
   class << self
