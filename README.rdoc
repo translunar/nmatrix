@@ -102,6 +102,8 @@ The following features exist in the current version of NMatrix (0.1.0.rc1):
 * Native reading and writing of dense and yale matrices
   * Optional compression for dense matrices with symmetry or triangularity: symmetric, skew, hermitian, upper, lower
 * Matlab .MAT v5 file input
+* MatrixMarket file input/output
+* Point Cloud Library PCD file reader
 * C and C++ API
 * BLAS internal implementations (no library) and ATLAS (with library) access:
   * Level 1: xROT, xROTG (BLAS dtypes only), xASUM, xNRM2

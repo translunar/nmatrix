@@ -524,9 +524,11 @@
 
 === 0.1.0.rc2 / 2014-02-05
 
-* 1 major enhancements:
+* 2 major enhancements:
 
   * Implemented negative-index slicing (by @rajatkapoor)
+
+  * Added reader for Point Cloud Library's PCD format
 
 * 10 minor enhancements:
 
