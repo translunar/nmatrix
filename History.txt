@@ -177,6 +177,9 @@
 
   * Added #each_row, #each_column to NMatrix
 
+  * Added NMatrix#reshape! for in-place reshape of dense matrices (by
+    @rajatkapoor)
+
 * 5 bug fixes:
 
   * Dense iterators now return self (an NMatrix) in order to be
