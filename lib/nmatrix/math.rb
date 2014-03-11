@@ -532,62 +532,14 @@ class NMatrix
     raise(NotImplementedError, "norm can be calculated only for 2D matrices") unless self.dim == 2
     
     str_args = {'fro' => :fro,  'frobenius' => :fro, 'inf' => :inf, 'infinity' => :inf}
-    r = self.rows
-    c = self.cols
-    
-    fro_norm_lambda = lambda{     
-	  
-	  sum = 0
-
-      r.times do |i|
-        sum += self.row(i).inject(0) {|vsum, n| vsum + (n**2)}                      
-      end       
-       
-      return sum**(1.quo(2))
-    }
-    
-    two_norm_lambda = lambda{  
-      self.dtype == :int32 ? self_cast = self.cast(:dtype => :float32) : self_cast = self.cast(:dtype => :float64)
-   
-	  svd = self_cast.gesvd
-	  return s = svd[1][0, 0]
-	  
-	  sum = 0
-	  sr = s.rows
-	  sr.times do |i|
-        sum += s.row(i).inject(0) {|vsum, n| vsum + (n**2)}      
-      end 
-	         
-      return sum**(1.quo(2))
-    }
-    
-    one_norm_lambda = lambda{       
-	  col_sums = []
-
-      c.times do |i|
-        col_sums << self.col(i).inject(0) {|vsum, n| vsum + n}
-      end 
-       
-      return col_sums.sort!.last.abs
-    }
-    
-    inorm_lambda = lambda{       
-	  row_sums = []
-
-      r.times do |i|
-        row_sums << self.row(i).inject(0) {|vsum, n| vsum + n}
-      end 
-       
-      return row_sums.sort!.last.abs
-    }
 
     if type.is_a?(Fixnum)
       raise ArgumentError.new("given number has to be 1 or 2") unless type.integer? && type > 0 && type < 3
       
-      return one_norm_lambda.call() unless type == 2
-      return two_norm_lambda.call()
-    elsif type == ""
-      return two_norm_lambda.call()
+      return self.one_norm unless type == 2
+      return self.two_norm
+    elsif type.nil?
+      return self.two_norm
     else    
       raise ArgumentError.new("argument must be integer, string or symbol, found: #{type.class}") unless type.is_a?(String) || type.is_a?(Symbol)
 
@@ -595,8 +547,8 @@ class NMatrix
 
       raise ArgumentError.new("no available norm for #{type_sym}") unless str_args.values.include? type_sym
       
-      return fro_norm_lambda.call() if type_sym == :fro
-      return inorm_lambda.call() if type_sym == :inf
+      return self.fro_norm if type_sym == :fro
+      return self.inorm if type_sym == :inf
       
     end
 
@@ -764,5 +716,54 @@ protected
     define_method("__dense_scalar_#{ewop}__") do |rhs|
       self.__dense_map__ { |l| l.send(op,rhs) }
     end
+  end
+  
+  # Norm calculation methods
+  def fro_norm     
+	  sum = 0
+	  r = self.rows
+
+      r.times do |i|
+        sum += self.row(i).inject(0) {|vsum, n| vsum + (n**2)}                      
+      end       
+       
+      return sum**(1.quo(2))
+  end
+    
+  def two_norm  
+    self.dtype == :int32 ? self_cast = self.cast(:dtype => :float32) : self_cast = self.cast(:dtype => :float64)
+   
+	svd = self_cast.gesvd
+	return s = svd[1][0, 0]
+	
+	sum = 0
+	sr = s.rows
+	sr.times do |i|
+      sum += s.row(i).inject(0) {|vsum, n| vsum + (n**2)}      
+    end 
+	       
+    return sum**(1.quo(2))
+  end
+    
+  def one_norm
+    c = self.cols      
+	col_sums = []
+
+    c.times do |i|
+      col_sums << self.col(i).inject(0) {|vsum, n| vsum + n}
+    end 
+       
+    return col_sums.sort!.last.abs
+  end
+    
+  def inorm  
+    r = self.rows   
+	row_sums = []
+
+    r.times do |i|
+      row_sums << self.row(i).inject(0) {|vsum, n| vsum + n}
+    end 
+       
+    return row_sums.sort!.last.abs
   end
 end
