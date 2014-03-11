@@ -162,6 +162,44 @@ describe "math" do
       end
     end
   end
+  
+  #TODO: check validity of SVD values in 2-norm
+  context "#norm" do
+    it "should default to 2-norm" do
+      n = NMatrix.new([2, 3], [1, 2, 3, 5, 6, 7])
+      expect(n.norm).to eq(11.096439361572266)
+    end
+
+    it "should reject invalid arguments" do
+      n = NMatrix.new([2, 3], [1, 2, 3, 5, 6, 7])
+      
+      nums = [0.5, -1, 0]
+      
+      nums.each do |num|        
+        expect{n.norm(num)}.to raise_error(ArgumentError)
+      end
+      
+      expect{n.norm([])}.to raise_error(ArgumentError)        
+      expect{n.norm('fr0')}.to raise_error(ArgumentError)
+      expect{n.norm(:infiniti)}.to raise_error(ArgumentError)
+    end
+    
+    it "should calculate 1 and 2 norms correctly" do
+      n = NMatrix.new([2, 3], [1, 2, 3, 5, 6, 7])
+      expect(n.norm(2)).to eq(11.096439361572266)
+      expect(n.norm(1)).to eq(10)
+    end
+    
+    it "should calculate infinity norms correctly" do
+      n = NMatrix.new([2, 3], [1, 2, 3, 5, 6, 7])
+      expect(n.norm(:inf)).to eq(18)
+    end
+    
+    it "should calculate frobenius norms correctly" do
+      n = NMatrix.new([2, 3], [1, 2, 3, 5, 6, 7])
+      expect(n.norm(:fro)).to eq(11.135528725660043)
+    end
+  end
 
   # TODO: Get it working with ROBJ too
   [:byte,:int8,:int16,:int32,:int64,:float32,:float64,:rational64,:rational128].each do |left_dtype|

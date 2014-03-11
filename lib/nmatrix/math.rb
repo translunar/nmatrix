@@ -506,6 +506,58 @@ class NMatrix
       self.__yale_map_stored__ { |v| v.abs }
     end.cast(self.stype, abs_dtype)
   end
+  
+
+  #
+  # call-seq:
+  #   norm -> Numeric
+  #
+  #  Calculates the selected norm (defaults to 2-norm) of a 2D matrix.
+  #  
+  #  This should be used for small or medium sized matrices. 
+  #  For greater matrices, there should be a separate implementation where
+  #  the norm is estimated rather than computed, for the sake of computation speed.
+  #  
+  #  The norm calculation code is written in protected functions.
+  #
+  #  Currently implemented norms are 1-norm, 2-norm, Frobenius, Infinity.
+  #
+  #  Tested mainly with dense matrices. Further checks and modifications might
+  #  be necessary for sparse matrices.
+  #  
+  # * *Returns* :
+  # - The selected norm of the matrix.
+  # * *Raises* :
+  # - +NotImplementedError+ -> Must be used in 2D matrices.
+  # - +ArgumentError+ -> Argument must be positive integer or one of the valid strings.
+  #
+  def norm type = 2
+    raise(NotImplementedError, "norm can be calculated only for 2D matrices") unless self.dim == 2
+    
+    str_args = {'fro' => :frobenius,  'frobenius' => :frobenius, 'inf' => :infinity, 'infinity' => :infinity}
+    sym_args = {:fro => :frobenius, :inf => :infinity}
+
+    if type.is_a?(Fixnum)
+      raise ArgumentError.new("given number has to be 1 or 2") unless type.integer? && type > 0 && type < 3
+      
+      return self.one_norm unless type == 2
+      return self.two_norm
+    elsif type.nil?
+      return self.two_norm
+    else    
+      raise ArgumentError.new("argument must be integer, string or symbol, found: #{type.class}") unless type.is_a?(String) || type.is_a?(Symbol)
+
+      type.is_a?(Symbol) ? type_sym = sym_args[type] : type_sym = str_args[type]
+
+      raise ArgumentError.new("no available norm for #{type_sym}") unless str_args.values.include? type_sym
+      
+      return self.fro_norm if type_sym == :frobenius
+      return self.inorm if type_sym == :infinity
+      
+    end
+
+  end
+
 
 
   #
@@ -668,5 +720,61 @@ protected
     define_method("__dense_scalar_#{ewop}__") do |rhs|
       self.__dense_map__ { |l| l.send(op,rhs) }
     end
+  end
+  
+  # Norm calculation methods
+  # Frobenius norm: the Euclidean norm of the matrix, treated as if it were a vector
+  def fro_norm     
+	  sum = 0
+	  r = self.rows
+
+      r.times do |i|
+        sum += self.row(i).inject(0) {|vsum, n| vsum + (n**2)}                      
+      end       
+       
+      return sum**(1.quo(2))
+  end
+  
+  # 2-norm: the largest singular value of the matrix  
+  def two_norm  
+    self.dtype == :int32 ? self_cast = self.cast(:dtype => :float32) : self_cast = self.cast(:dtype => :float64)
+   
+    #TODO: confirm if this is the desired svd calculation
+	svd = self_cast.gesvd
+	return s = svd[1][0, 0]
+	
+	sum = 0
+	sr = s.rows
+	sr.times do |i|
+      sum += s.row(i).inject(0) {|vsum, n| vsum + (n**2)}      
+    end 
+	       
+    return sum**(1.quo(2))
+  end
+  
+  # 1-norm: the absolute column sum of the matrix   
+  def one_norm
+    #TODO: change traversing method for sparse matrices
+    c = self.cols      
+	col_sums = []
+
+    c.times do |i|
+      col_sums << self.col(i).inject(0) {|vsum, n| vsum + n}
+      
+    end 
+       
+    return col_sums.sort!.last.abs
+  end
+  
+  # Infinity norm: the absolute row sum of the matrix  
+  def inorm  
+    r = self.rows   
+	row_sums = []
+
+    r.times do |i|
+      row_sums << self.row(i).inject(0) {|vsum, n| vsum + n}
+    end 
+       
+    return row_sums.sort!.last.abs
   end
 end
