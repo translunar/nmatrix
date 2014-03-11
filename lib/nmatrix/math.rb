@@ -512,15 +512,18 @@ class NMatrix
   # call-seq:
   #   norm -> Numeric
   #
-  #  Calculates the selected norm (defaults to Frobenius norm) of a 2D matrix.
+  #  Calculates the selected norm (defaults to 2-norm) of a 2D matrix.
   #  
   #  This should be used for small or medium sized matrices. 
   #  For greater matrices, there should be a separate implementation where
-  #  the norm is estimated, not computed for the sake of computation speed.
+  #  the norm is estimated rather than computed, for the sake of computation speed.
   #  
   #  The norm calculation code is written in protected functions.
   #
   #  Currently implemented norms are 1-norm, 2-norm, Frobenius, Infinity.
+  #
+  #  Tested mainly with dense matrices. Further checks and modifications might
+  #  be necessary for sparse matrices.
   #  
   # * *Returns* :
   # - The selected norm of the matrix.
@@ -719,6 +722,7 @@ protected
   end
   
   # Norm calculation methods
+  # Frobenius norm: the Euclidean norm of the matrix, treated as if it were a vector
   def fro_norm     
 	  sum = 0
 	  r = self.rows
@@ -729,10 +733,12 @@ protected
        
       return sum**(1.quo(2))
   end
-    
+  
+  # 2-norm: the largest singular value of the matrix  
   def two_norm  
     self.dtype == :int32 ? self_cast = self.cast(:dtype => :float32) : self_cast = self.cast(:dtype => :float64)
    
+    #TODO: confirm if this is the desired svd calculation
 	svd = self_cast.gesvd
 	return s = svd[1][0, 0]
 	
@@ -744,8 +750,10 @@ protected
 	       
     return sum**(1.quo(2))
   end
-    
+  
+  # 1-norm: the absolute column sum of the matrix   
   def one_norm
+    #TODO: change traversing method for sparse matrices
     c = self.cols      
 	col_sums = []
 
@@ -756,7 +764,8 @@ protected
        
     return col_sums.sort!.last.abs
   end
-    
+  
+  # Infinity norm: the absolute row sum of the matrix  
   def inorm  
     r = self.rows   
 	row_sums = []
