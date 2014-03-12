@@ -596,15 +596,15 @@ protected
 
   # These are for negating matrix contents using -@
   def __list_unary_negate__
-    self.__list_map_stored__(nil) { |l| -l }
+    self.__list_map_stored__(nil) { |l| -l }.cast(stype, dtype)
   end
 
   def __yale_unary_negate__
-    self.__yale_map_stored__ { |l| -l }
+    self.__yale_map_stored__ { |l| -l }.cast(stype, dtype)
   end
 
   def __dense_unary_negate__
-    self.__dense_map__ { |l| -l }
+    self.__dense_map__ { |l| -l }.cast(stype, dtype)
   end
 
   # These take two arguments. One might be a matrix, and one might be a scalar.
