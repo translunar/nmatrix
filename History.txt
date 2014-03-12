@@ -522,19 +522,17 @@
   * Improved LAPACK and BLAS header selection for Ubuntu/Debian
     systems with ATLAS (by @mvz)
 
-=== 0.1.0.rc2 / 2014-02-05
+=== 0.1.0.rc2 / 2014-03-12
 
-* 3 major enhancements:
+* No major enhancements.
+
+* 14 minor enhancements:
 
   * Implemented negative-index slicing (by @rajatkapoor)
 
   * Added reader for Point Cloud Library's PCD format
 
-  * Added unary negation of matrices
-
-* 11 minor enhancements:
-
-  * Added Travis CI testing for Ruby 2.1
+  * Added Ruby 2.1 support (including Travis CI testing)
 
   * Implemented LAPACK-independent exact inverse calculation for
     dense matrices of size 2x2 and 3x3, as well as
@@ -564,6 +562,8 @@
   * Added NMatrix#reshape! for in-place reshape of dense matrices (by
     @rajatkapoor)
 
+  * Implemented unary negation of matrices
+
 * 6 bug fixes:
 
   * Fixed dot product operation on 1-dimensional matrices (by @rve
@@ -574,7 +574,8 @@
   * Fixed compile error with Ruby 2.1 (by @diminish7)
 
   * Fixed regression which wasn't causing any problems but was
-    counter to design: stride was prior to data storage for NMatrix
+    counter to design: stride was declared prior to data storage for
+    dense matrix storage
 
   * Fixed Rakefile problem which was causing specs to run twice in a
     row with each call to rake spec

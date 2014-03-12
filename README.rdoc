@@ -20,7 +20,7 @@ NMatrix was inspired by {NArray}[http://narray.rubyforge.org], by Masahiro Tanak
 
 To install the latest stable version:
 
-    gem install nmatrix
+    gem install nmatrix --pre
 
 However, you will need to install {ATLAS}[http://math-atlas.sourceforge.net/] with CBLAS (C interface to
 {BLAS}[http://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms]) first. Detailed directions can be found
@@ -28,7 +28,7 @@ However, you will need to install {ATLAS}[http://math-atlas.sourceforge.net/] wi
 
 * ATLAS, preferably with CLAPACK ({see here for details}[https://github.com/SciRuby/nmatrix/wiki/Installation])
 * a version of GCC or clang which supports C++0x or C++11
-* Ruby 1.9.3+
+* Ruby 1.9.2+
 * {packable}[http://github.com/marcandre/packable] 1.3.5 (used for I/O)
 
 If you want to obtain the latest (development) code, you should generally do:
@@ -38,7 +38,7 @@ If you want to obtain the latest (development) code, you should generally do:
     bundle install
     bundle exec rake compile
     bundle exec rake repackage
-    gem install pkg/nmatrix-0.1.0.rc1.gem
+    gem install pkg/nmatrix-0.1.0.rc2.gem
 
 Detailed instructions are available for {Mac}[https://github.com/SciRuby/nmatrix/wiki/Installation#mac-os-x] and {Linux}[https://github.com/SciRuby/nmatrix/wiki/Installation#linux].
 We are currently working on Mavericks (Mac OS X) installation instructions, but in general, you'll need Homebrew and should
@@ -101,9 +101,10 @@ The following features exist in the current version of NMatrix (0.1.0.rc1):
 * Matrix slicing by copy and reference (for dense, yale, and list)
 * Native reading and writing of dense and yale matrices
   * Optional compression for dense matrices with symmetry or triangularity: symmetric, skew, hermitian, upper, lower
-* Matlab .MAT v5 file input
-* MatrixMarket file input/output
-* Point Cloud Library PCD file reader
+* Input/output:
+  * Matlab .MAT v5 file input
+  * MatrixMarket file input/output
+  * Point Cloud Library PCD file input
 * C and C++ API
 * BLAS internal implementations (no library) and ATLAS (with library) access:
   * Level 1: xROT, xROTG (BLAS dtypes only), xASUM, xNRM2
@@ -130,7 +131,7 @@ The following features exist in the current version of NMatrix (0.1.0.rc1):
 
 === Planned Features (Short-to-Medium Term)
 
-We are nearly the release of NMatrix 0.1.0, our first beta.
+We are nearing the release of NMatrix 0.1.0, our first beta.
 
 These are features planned for NMatrix 0.2.0:
 
