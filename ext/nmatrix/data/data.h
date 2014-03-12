@@ -55,7 +55,7 @@ namespace nm {
 	const int NUM_DTYPES = 13;
 	const int NUM_ITYPES = 4;
 	const int NUM_EWOPS = 12;
-	const int NUM_UNARYOPS = 21;
+	const int NUM_UNARYOPS = 22;
 	const int NUM_NONCOM_EWOPS = 3;
 
   enum ewop_t {
@@ -99,7 +99,8 @@ namespace nm {
     UNARY_ERF,
     UNARY_ERFC,
     UNARY_CBRT,
-    UNARY_GAMMA
+    UNARY_GAMMA,
+    UNARY_NEGATE
   };
 
   // element-wise and scalar operators

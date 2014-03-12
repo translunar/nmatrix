@@ -53,6 +53,13 @@ describe "math" do
                   meth.to_s[1...meth.to_s.length].to_sym)
               next if meth == :atanh
 
+              if meth == :-@
+                it "should correctly apply elementwise negation" do
+                  expect(@m.send(meth)).to eq N.new(@size, @a.map { |e| -e }, dtype: :float64, stype: stype)
+                end
+                next
+              end
+
               it "should correctly apply elementwise #{meth}" do
 
                 expect(@m.send(meth)).to eq N.new(@size, @a.map{ |e| Math.send(meth, e) },

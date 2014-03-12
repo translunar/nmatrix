@@ -524,13 +524,15 @@
 
 === 0.1.0.rc2 / 2014-02-05
 
-* 2 major enhancements:
+* 3 major enhancements:
 
   * Implemented negative-index slicing (by @rajatkapoor)
 
   * Added reader for Point Cloud Library's PCD format
 
-* 10 minor enhancements:
+  * Added unary negation of matrices
+
+* 11 minor enhancements:
 
   * Added Travis CI testing for Ruby 2.1
 

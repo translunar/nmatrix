@@ -86,7 +86,8 @@ namespace nm {
     "asinh", "acosh", "atanh",
     "exp", "log2", 
     "log10", "sqrt", "erf", 
-    "erfc", "cbrt", "gamma"
+    "erfc", "cbrt", "gamma",
+    "negate"
   };
 
 } // end of namespace nm

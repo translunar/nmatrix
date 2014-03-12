@@ -131,6 +131,7 @@ DECL_UNARY_RUBY_ACCESSOR(erf)
 DECL_UNARY_RUBY_ACCESSOR(erfc)
 DECL_UNARY_RUBY_ACCESSOR(cbrt)
 DECL_UNARY_RUBY_ACCESSOR(gamma)
+DECL_UNARY_RUBY_ACCESSOR(negate)
 DECL_NONCOM_ELEMENTWISE_RUBY_ACCESSOR(atan2)
 DECL_NONCOM_ELEMENTWISE_RUBY_ACCESSOR(ldexp)
 DECL_NONCOM_ELEMENTWISE_RUBY_ACCESSOR(hypot)
@@ -309,6 +310,7 @@ void Init_nmatrix() {
   rb_define_method(cNMatrix, "cbrt",  (METHOD)nm_unary_cbrt,  0);
   rb_define_method(cNMatrix, "gamma", (METHOD)nm_unary_gamma, 0);
   rb_define_method(cNMatrix, "log",   (METHOD)nm_unary_log,  -1);
+  rb_define_method(cNMatrix, "-@",    (METHOD)nm_unary_negate,0);
 
 	rb_define_method(cNMatrix, "=~", (METHOD)nm_ew_eqeq, 1);
 	rb_define_method(cNMatrix, "!~", (METHOD)nm_ew_neq, 1);
@@ -921,6 +923,7 @@ DEF_UNARY_RUBY_ACCESSOR(ERF, erf)
 DEF_UNARY_RUBY_ACCESSOR(ERFC, erfc)
 DEF_UNARY_RUBY_ACCESSOR(CBRT, cbrt)
 DEF_UNARY_RUBY_ACCESSOR(GAMMA, gamma)
+DEF_UNARY_RUBY_ACCESSOR(NEGATE, negate)
 
 DEF_NONCOM_ELEMENTWISE_RUBY_ACCESSOR(ATAN2, atan2)
 DEF_NONCOM_ELEMENTWISE_RUBY_ACCESSOR(LDEXP, ldexp)
