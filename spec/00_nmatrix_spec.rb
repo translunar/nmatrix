@@ -296,6 +296,12 @@ describe NMatrix do
     expect(n.complex_conjugate!).to eq (NMatrix.new([2,3], [Complex(2,-3)]))
   end
 
+  it "calculates the complex conjugate non-in-place" do
+    n = NMatrix.new([2,3], [Complex(2,3)])
+    m = n.complex_conjugate
+    expect(m).to eq (NMatrix.new([2,3], [Complex(2,-3)]))
+  end
+
   it "converts from list to yale properly" do
     m = NMatrix.new(3, 0, stype: :list)
     m[0,2] = 333
