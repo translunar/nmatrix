@@ -583,3 +583,15 @@
   * NMatrix::random now raises an exception when rational matrices
     are requested
 
+=== 0.1.0.rc3 / 2014-04-??
+
+* No major enhancements.
+
+* 1 minor enhancements:
+
+  * Exposed NMatrix::LAPACK::geev for LAPACK's xGEEV
+
+* 0 bug fixes:
+
+  * ?
+
