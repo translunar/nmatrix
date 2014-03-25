@@ -1018,10 +1018,7 @@ static VALUE nm_complex_conjugate_bang(VALUE self) {
       reinterpret_cast<nm::Complex128*>(elem)[p].i = -reinterpret_cast<nm::Complex128*>(elem)[p].i;
     }
 
-  } else {
-    rb_raise(nm_eDataTypeError, "can only calculate in-place complex conjugate on matrices of type :complex64 or :complex128");
-  }
-
+  } 
   return self;
 }
 
