@@ -591,7 +591,8 @@
 
   * Exposed NMatrix::LAPACK::geev for LAPACK's xGEEV
 
-* 0 bug fixes:
+* 1 bug fixes:
 
-  * ?
+  * Fixed critical bug with transposing a matrix reference slice (by
+    @rajatkapoor)
 
