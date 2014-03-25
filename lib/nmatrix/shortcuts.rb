@@ -9,8 +9,8 @@
 #
 # == Copyright Information
 #
-# SciRuby is Copyright (c) 2010 - 2013, Ruby Science Foundation
-# NMatrix is Copyright (c) 2013, Ruby Science Foundation
+# SciRuby is Copyright (c) 2010 - 2014, Ruby Science Foundation
+# NMatrix is Copyright (c) 2012 - 2014, John Woods and the Ruby Science Foundation
 #
 # Please see LICENSE.txt for additional copyright notices.
 #
@@ -263,12 +263,17 @@ class NMatrix
     alias :diag :diagonal
     alias :diagonals :diagonal
 
+
     #
     # call-seq:
     #     random(shape) -> NMatrix
     #
     # Creates a +:dense+ NMatrix with random numbers between 0 and 1 generated
     # by +Random::rand+. The parameter is the dimension of the matrix.
+    #
+    # If you use an integer dtype, make sure to specify :scale as a parameter, or you'll
+    # only get a matrix of 0s. You may not currently generate random numbers for
+    # a rational matrix.
     #
     # * *Arguments* :
     #   - +shape+ -> Array (or integer for square matrix) specifying the dimensions.
@@ -280,16 +285,28 @@ class NMatrix
     #   NMatrix.random([2, 2]) # => 0.4859439730644226   0.1783195585012436
     #                               0.23193766176700592  0.4503345191478729
     #
+    #   NMatrix.random([2, 2], :dtype => :byte, :scale => 255) # => [ [252, 108] [44, 12] ]
+    #
     def random(shape, opts={})
+      scale = opts.delete(:scale) || 1.0
+
+      raise(NotImplementedError, "does not support rational random number generation") if opts[:dtype].to_s =~ /^rational/
+
       rng = Random.new
 
       random_values = []
 
+
       # Construct the values of the final matrix based on the dimension.
-      NMatrix.size(shape).times { |i| random_values << rng.rand }
+      if opts[:dtype] == :complex64 || opts[:dtype] == :complex128
+        NMatrix.size(shape).times { |i| random_values << Complex(rng.rand(scale), rng.rand(scale)) }
+      else
+        NMatrix.size(shape).times { |i| random_values << rng.rand(scale) }
+      end
 
       NMatrix.new(shape, random_values, {:dtype => :float64, :stype => :dense}.merge(opts))
     end
+    alias :rand :random
 
     #
     # call-seq:

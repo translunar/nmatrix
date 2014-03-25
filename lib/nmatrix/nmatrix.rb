@@ -9,8 +9,8 @@
 #
 # == Copyright Information
 #
-# SciRuby is Copyright (c) 2010 - 2013, Ruby Science Foundation
-# NMatrix is Copyright (c) 2013, Ruby Science Foundation
+# SciRuby is Copyright (c) 2010 - 2014, Ruby Science Foundation
+# NMatrix is Copyright (c) 2012 - 2014, John Woods and the Ruby Science Foundation
 #
 # Please see LICENSE.txt for additional copyright notices.
 #
@@ -49,22 +49,35 @@ class NMatrix
       autoload :Mat5Reader, 'nmatrix/io/mat5_reader'
     end
 
-    # FIXME: Remove autoloads
-    autoload :Market, 'nmatrix/io/market'
+    autoload :Market, 'nmatrix/io/market.rb'
+    autoload :PointCloud, 'nmatrix/io/point_cloud.rb'
   end
 
   class << self
     #
     # call-seq:
-    #     load_file(path) -> Mat5Reader
+    #     load_matlab_file(path) -> Mat5Reader
     #
     # * *Arguments* :
-    #   - +path+ -> The path to a version 5 .mat file.
+    #   - +file_path+ -> The path to a version 5 .mat file.
     # * *Returns* :
     #   - A Mat5Reader object.
     #
-    def load_file(file_path)
+    def load_matlab_file(file_path)
       NMatrix::IO::Mat5Reader.new(File.open(file_path, 'rb')).to_ruby
+    end
+
+    #
+    # call-seq:
+    #     load_pcd_file(path) -> PointCloudReader::MetaReader
+    #
+    # * *Arguments* :
+    #   - +file_path+ -> The path to a PCL PCD file.
+    # * *Returns* :
+    #   - A PointCloudReader::MetaReader object with the matrix stored in its +matrix+ property
+    #
+    def load_pcd_file(file_path)
+      NMatrix::IO::PointCloudReader::MetaReader.new(file_path)
     end
 
     #
@@ -116,25 +129,6 @@ class NMatrix
     end
   end
   #alias :pp :pretty_print
-
-  #
-  # See the note in #cast about why this is necessary.
-  # If this is a non-dense matrix with a complex dtype and to_dtype is
-  # non-complex, then this will convert the default value to noncomplex.
-  # Returns 0 if dense.  Returns existing default_value if there isn't a
-  # mismatch.
-  #
-  def maybe_get_noncomplex_default_value(to_dtype)
-    default_value = 0
-    unless self.stype == :dense then
-      if self.dtype.to_s.start_with?('complex') and not to_dtype.to_s.start_with?('complex') then
-        default_value = self.default_value.real
-      else
-        default_value = self.default_value
-      end
-    end
-    default_value
-  end
 
 
   #
@@ -245,7 +239,7 @@ class NMatrix
 
 
   ##
-  # call-seq: 
+  # call-seq:
   #   integer_dtype?() -> Boolean
   #
   # Checks if dtype is an integer type
@@ -407,6 +401,198 @@ class NMatrix
   #
   def row(row_number, get_by = :copy)
     rank(0, row_number, get_by)
+  end
+
+
+  #
+  # call-seq:
+  #     reshape(new_shape) -> NMatrix
+  #
+  # Clone a matrix, changing the shape in the process. Note that this function does not do a resize; the product of
+  # the new and old shapes' components must be equal.
+  #
+  # * *Arguments* :
+  #   - +new_shape+ -> Array of positive Fixnums.
+  # * *Returns* :
+  #   - A copy with a different shape.
+  #
+  def reshape new_shape,*shapes
+    if new_shape.is_a?Fixnum
+      newer_shape =  [new_shape]+shapes
+    else  # new_shape is an Array
+      newer_shape = new_shape
+    end
+    t = reshape_clone_structure(newer_shape)
+    left_params  = [:*]*newer_shape.size
+    puts(left_params)
+    right_params = [:*]*self.shape.size
+    t[*left_params] = self[*right_params]
+    t
+  end
+
+
+  #
+  # call-seq:
+  #     reshape!(new_shape) -> NMatrix
+  #     reshape! new_shape  -> NMatrix
+  #
+  # Reshapes the matrix (in-place) to the desired shape. Note that this function does not do a resize; the product of
+  # the new and old shapes' components must be equal.
+  #
+  # * *Arguments* :
+  #   - +new_shape+ -> Array of positive Fixnums.
+  #
+  def reshape! new_shape,*shapes
+    if self.is_ref?
+      raise(ArgumentError, "This operation cannot be performed on reference slices")
+    else
+      if new_shape.is_a?Fixnum
+        shape =  [new_shape]+shapes
+      else  # new_shape is an Array
+        shape = new_shape
+      end
+      self.reshape_bang(shape)
+    end
+  end
+
+  #
+  # call-seq:
+  #     transpose -> NMatrix
+  #     transpose(permutation) -> NMatrix
+  #
+  # Clone a matrix, transposing it in the process. If the matrix is two-dimensional, the permutation is taken to be [1,0]
+  # automatically (switch dimension 0 with dimension 1). If the matrix is n-dimensional, you must provide a permutation
+  # of +0...n+.
+  #
+  # * *Arguments* :
+  #   - +permutation+ -> Optional Array giving a permutation.
+  # * *Returns* :
+  #   - A copy of the matrix, but transposed.
+  #
+  def transpose(permute = nil)
+    if self.dim == 1
+      return self.clone
+    elsif self.dim == 2
+      new_shape = [self.shape[1], self.shape[0]]
+    elsif permute.nil?
+      raise(ArgumentError, "need permutation array of size #{self.dim}")
+    elsif permute.sort.uniq != (0...self.dim).to_a
+      raise(ArgumentError, "invalid permutation array")
+    else
+      # Figure out the new shape based on the permutation given as an argument.
+      new_shape = permute.map { |p| self.shape[p] }
+    end
+
+    if self.dim > 2 # FIXME: For dense, several of these are basically equivalent to reshape.
+
+      # Make the new data structure.
+      t = self.reshape_clone_structure(new_shape)
+
+      self.each_stored_with_indices do |v,*indices|
+        p_indices = permute.map { |p| indices[p] }
+        t[*p_indices] = v
+      end
+      t
+    elsif self.list? # TODO: Need a C list transposition algorithm.
+      # Make the new data structure.
+      t = self.reshape_clone_structure(new_shape)
+
+      self.each_column.with_index do |col,j|
+        t[j,:*] = col.to_flat_array
+      end
+      t
+    else
+      # Call C versions of Yale and List transpose, which do their own copies
+      self.clone_transpose
+    end
+  end
+
+
+  #
+  # call-seq:
+  #     matrix1.concat(*m2) -> NMatrix
+  #     matrix1.concat(*m2, rank) -> NMatrix
+  #     matrix1.hconcat(*m2) -> NMatrix
+  #     matrix1.vconcat(*m2) -> NMatrix
+  #     matrix1.dconcat(*m3) -> NMatrix
+  #
+  # Joins two matrices together into a new larger matrix. Attempts to determine which direction to concatenate
+  # on by looking for the first common element of the matrix +shape+ in reverse. In other words, concatenating two
+  # columns together without supplying +rank+ will glue them into an n x 2 matrix.
+  #
+  # You can also use hconcat, vconcat, and dconcat for the first three ranks. concat performs an hconcat when no
+  # rank argument is provided.
+  #
+  # The two matrices must have the same +dim+.
+  #
+  # * *Arguments* :
+  #   - +matrices+ -> one or more matrices
+  #   - +rank+ -> Fixnum (for rank); alternatively, may use :row, :column, or :layer for 0, 1, 2, respectively
+  #
+  def concat *matrices
+    rank = nil
+    rank = matrices.pop unless matrices.last.is_a?(NMatrix)
+
+    # Find the first matching dimension and concatenate along that (unless rank is specified)
+    if rank.nil?
+      rank = self.dim-1
+      self.shape.reverse_each.with_index do |s,i|
+        matrices.each do |m|
+          if m.shape[i] != s
+            rank -= 1
+            break
+          end
+        end
+      end
+    elsif rank.is_a?(Symbol) # Convert to numeric
+      rank = {:row => 0, :column => 1, :col => 1, :lay => 2, :layer => 2}[rank]
+    end
+
+    # Need to figure out the new shape.
+    new_shape = self.shape.dup
+    new_shape[rank] = matrices.inject(self.shape[rank]) { |total,m| total + m.shape[rank] }
+
+    # Now figure out the options for constructing the concatenated matrix.
+    opts = {stype: self.stype, default: self.default_value, dtype: self.dtype}
+    if self.yale?
+      # We can generally predict the new capacity for Yale. Subtract out the number of rows
+      # for each matrix being concatenated, and then add in the number of rows for the new
+      # shape. That takes care of the diagonal. The rest of the capacity is represented by
+      # the non-diagonal non-default values.
+      new_cap = matrices.inject(self.capacity - self.shape[0]) do |total,m|
+        total + m.capacity - m.shape[0]
+      end - self.shape[0] + new_shape[0]
+      opts = {capacity: self.new_cap}.merge(opts)
+    end
+
+    # Do the actual construction.
+    n = NMatrix.new(new_shape, opts)
+
+    # Figure out where to start and stop the concatenation. We'll use NMatrices instead of
+    # Arrays because then we can do elementwise addition.
+    ranges = self.shape.map.with_index { |s,i| 0...self.shape[i] }
+
+    matrices.unshift(self)
+    matrices.each do |m|
+      n[*ranges] = m
+
+      # move over by the requisite amount
+      ranges[rank]  = (ranges[rank].first + m.shape[rank])...(ranges[rank].last + m.shape[rank])
+    end
+
+    n
+  end
+
+  def hconcat *matrices
+    concat(*matrices, :column)
+  end
+
+  def vconcat *matrices
+    concat(*matrices, :row)
+  end
+
+  def dconcat *matrices
+    concat(*matrices, :layer)
   end
 
 
@@ -630,6 +816,21 @@ class NMatrix
   end
 
 
+  #
+  # call-seq:
+  #     clone_structure -> NMatrix
+  #
+  # This function is like clone, but it only copies the structure and the default value.
+  # None of the other values are copied. It takes an optional capacity argument. This is
+  # mostly only useful for dense, where you may not want to initialize; for other types,
+  # you should probably use +zeros_like+.
+  #
+  def clone_structure(capacity = nil)
+    opts = {stype: self.stype, default: self.default_value, dtype: self.dtype}
+    opts = {capacity: capacity}.merge(opts) if self.yale?
+    NMatrix.new(self.shape, opts)
+  end
+
   # This is how you write an individual element-wise operation function:
   #def __list_elementwise_add__ rhs
   #  self.__list_map_merged_stored__(rhs){ |l,r| l+r }.cast(self.stype, NMatrix.upcast(self.dtype, rhs.dtype))
@@ -656,19 +857,16 @@ protected
   end
 
 
-  #
-  # call-seq:
-  #     clone_structure -> NMatrix
-  #
-  # This function is like clone, but it only copies the structure and the default value.
-  # None of the other values are copied. It takes an optional capacity argument. This is
-  # mostly only useful for dense, where you may not want to initialize; for other types,
-  # you should probably use +zeros_like+.
-  #
-  def clone_structure(capacity = nil)
+  # Clone the structure as needed for a reshape
+  def reshape_clone_structure(new_shape) #:nodoc:
+    raise(ArgumentError, "reshape cannot resize; size of new and old matrices must match") unless self.size == new_shape.inject(1) { |p,i| p *= i }
+
     opts = {stype: self.stype, default: self.default_value, dtype: self.dtype}
-    opts = {capacity: capacity}.merge(opts) if self.yale?
-    NMatrix.new(self.shape, opts)
+    if self.yale?
+      # We can generally predict the change in capacity for Yale.
+      opts = {capacity: self.capacity - self.shape[0] + new_shape[0]}.merge(opts)
+    end
+    NMatrix.new(new_shape, opts)
   end
 
 
@@ -689,6 +887,48 @@ protected
   def __sparse_initial_set__(ary) #:nodoc:
     self[0...self.shape[0],0...self.shape[1]] = ary
   end
+
+
+  # Function assumes the dimensions and such have already been tested.
+  #
+  # Called from inside NMatrix: nm_eqeq
+  #
+  # There are probably more efficient ways to do this, but currently it's unclear how.
+  # We could use +each_row+, but for list matrices, it's still going to need to make a
+  # reference to each of those rows, and that is going to require a seek.
+  #
+  # It might be more efficient to convert one sparse matrix type to the other with a
+  # cast and then run the comparison. For now, let's assume that people aren't going
+  # to be doing this very often, and we can optimize as needed.
+  def dense_eql_sparse? m #:nodoc:
+    m.each_with_indices do |v,*indices|
+      return false if self[*indices] != v
+    end
+
+    return true
+  end
+  alias :sparse_eql_sparse? :dense_eql_sparse?
+
+
+  #
+  # See the note in #cast about why this is necessary.
+  # If this is a non-dense matrix with a complex dtype and to_dtype is
+  # non-complex, then this will convert the default value to noncomplex.
+  # Returns 0 if dense.  Returns existing default_value if there isn't a
+  # mismatch.
+  #
+  def maybe_get_noncomplex_default_value(to_dtype) #:nodoc:
+    default_value = 0
+    unless self.stype == :dense then
+      if self.dtype.to_s.start_with?('complex') and not to_dtype.to_s.start_with?('complex') then
+        default_value = self.default_value.real
+      else
+        default_value = self.default_value
+      end
+    end
+    default_value
+  end
+
 end
 
 require_relative './shortcuts.rb'

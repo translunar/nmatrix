@@ -1,5 +1,9 @@
 #!/bin/bash
-VERSION="4.7.2"
+
+# Script will not work for GCC 4.8 or 4.9. For those, please see
+# mac-mavericks-brew-gcc.sh
+
+VERSION="4.7.2" # Script should also work with GCC 4.7.1.
 PREFIX="/usr/gcc-${VERSION}"
 LANGUAGES="c,c++,fortran"
 MAKE="make -j 4"
@@ -8,11 +12,9 @@ brew-path() { brew info $1 | head -n3 | tail -n1 | cut -d' ' -f1; }
 
 # Prerequisites
 
-brew install gmp
-brew install mpfr
-brew install libmpc
+brew install gmp mpfr libmpc
 
-# Download & install the latest GCC
+# Next, download & install the latest GCC:
 
 mkdir -p $PREFIX
 mkdir temp-gcc
@@ -25,11 +27,12 @@ cd gcc-$VERSION
 mkdir build
 cd build
 
+# Older versions of brew need brew-path instead of brew --prefix.
 ../configure \
      --prefix=$PREFIX \
-     --with-gmp=$(brew-path gmp) \
-     --with-mpfr=$(brew-path mpfr) \
-     --with-mpc=$(brew-path libmpc) \
+     --with-gmp=$(brew --prefix gmp) \
+     --with-mpfr=$(brew --prefix mpfr) \
+     --with-mpc=$(brew --prefix libmpc) \
      --program-suffix=-$VERSION \
      --enable-languages=$LANGUAGES \
      --with-system-zlib \

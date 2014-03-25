@@ -9,8 +9,8 @@
 //
 // == Copyright Information
 //
-// SciRuby is Copyright (c) 2010 - 2013, Ruby Science Foundation
-// NMatrix is Copyright (c) 2013, Ruby Science Foundation
+// SciRuby is Copyright (c) 2010 - 2014, Ruby Science Foundation
+// NMatrix is Copyright (c) 2012 - 2014, John Woods and the Ruby Science Foundation
 //
 // Please see LICENSE.txt for additional copyright notices.
 //
@@ -98,7 +98,7 @@ ReturnDType nrm2(const int N, const DType* X, const int incX) {
 }
 
 
-#ifdef HAVE_CBLAS_H
+#if defined HAVE_CBLAS_H || defined HAVE_ATLAS_CBLAS_H
 template <>
 inline float nrm2(const int N, const float* X, const int incX) {
   return cblas_snrm2(N, X, incX);

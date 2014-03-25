@@ -9,8 +9,8 @@
 //
 // == Copyright Information
 //
-// SciRuby is Copyright (c) 2010 - 2013, Ruby Science Foundation
-// NMatrix is Copyright (c) 2013, Ruby Science Foundation
+// SciRuby is Copyright (c) 2010 - 2014, Ruby Science Foundation
+// NMatrix is Copyright (c) 2012 - 2014, John Woods and the Ruby Science Foundation
 //
 // Please see LICENSE.txt for additional copyright notices.
 //
@@ -55,7 +55,7 @@ namespace nm {
 	const int NUM_DTYPES = 13;
 	const int NUM_ITYPES = 4;
 	const int NUM_EWOPS = 12;
-	const int NUM_UNARYOPS = 21;
+	const int NUM_UNARYOPS = 22;
 	const int NUM_NONCOM_EWOPS = 3;
 
   enum ewop_t {
@@ -99,7 +99,8 @@ namespace nm {
     UNARY_ERF,
     UNARY_ERFC,
     UNARY_CBRT,
-    UNARY_GAMMA
+    UNARY_GAMMA,
+    UNARY_NEGATE
   };
 
   // element-wise and scalar operators
@@ -107,6 +108,48 @@ namespace nm {
   extern const std::string  EWOP_NAMES[nm::NUM_EWOPS];
   extern const std::string  UNARYOPS[nm::NUM_UNARYOPS];
   extern const std::string  NONCOM_EWOP_NAMES[nm::NUM_NONCOM_EWOPS];
+
+
+  template <typename Type>
+  Complex<Type>::Complex(const RubyObject& other) {
+    switch(TYPE(other.rval)) {
+    case T_COMPLEX:
+      r = NUM2DBL(rb_funcall(other.rval, rb_intern("real"), 0));
+      i = NUM2DBL(rb_funcall(other.rval, rb_intern("imag"), 0));
+      break;
+    case T_FLOAT:
+    case T_RATIONAL:
+    case T_FIXNUM:
+    case T_BIGNUM:
+      r = NUM2DBL(other.rval);
+      i = 0.0;
+      break;
+    default:
+      rb_raise(rb_eTypeError, "not sure how to convert this type of VALUE to a complex");
+    }
+  }
+
+
+  template <typename Type>
+  Rational<Type>::Rational(const RubyObject& other) {
+    switch (TYPE(other.rval)) {
+    case T_RATIONAL:
+      n = NUM2LONG(rb_funcall(other.rval, rb_intern("numerator"), 0));
+      d = NUM2LONG(rb_funcall(other.rval, rb_intern("denominator"), 0));
+      break;
+    case T_FIXNUM:
+    case T_BIGNUM:
+      n = NUM2LONG(other.rval);
+      d = 1;
+      break;
+    case T_COMPLEX:
+    case T_FLOAT:
+      rb_raise(rb_eTypeError, "cannot convert float to a rational");
+      break;
+    default:
+      rb_raise(rb_eTypeError, "not sure how to convert this type of VALUE to a rational");
+    }
+  }
 
 
 } // end of namespace nm

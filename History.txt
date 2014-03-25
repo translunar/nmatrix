@@ -428,16 +428,22 @@
   * Casting from dense to Yale now properly accepts the default
     value option
 
-=== 0.1.0.rc1
+=== 0.1.0.rc1 / 2013-12-28
 
-* 1 major enhancements:
+* 4 major enhancements:
 
   * Improved garbage collection strategy for partial object creation
     (i.e., when VALUEs are allocated but not registered right away),
     which in addition to fixing numerous bugs should prevent some new
     bugs from arising in the future (by @cjfuller)
 
-* 7 minor enhancements:
+  * Implemented list storage transpose
+
+  * Implemented generic n-dimensional transpose
+
+  * Implemented == comparison between differing matrix stypes
+
+* 9 minor enhancements:
 
   * User-friendly #gesvd and #gesdd updates (by @ryanmt)
 
@@ -462,7 +468,17 @@
   * Added NMatrix#potrf! and NMatrix#getrf, which are instance methods
     for calling CLAPACK functions (NMatrix#getrf! already existed)
 
-* 12 bug fixes:
+  * Added GCC installation instructions for Mac OS X Mavericks, and
+    updated the old installation instructions for Mac OS X (both
+    found in scripts/)
+
+  * Switched NMatrix::VERSION to work more like Rails::VERSION, with
+    support for MAJOR, MINOR, TINY, and PRE
+
+  * Added #concat, #hconcat, #vconcat, and #dconcat for joining
+    matrices together
+
+* 16 bug fixes:
 
   * Spec revisions for lapack_gesdd and lapack_gesvd (by @ryanmt)
 
@@ -497,3 +513,85 @@
     enhancements) (by @cjfuller)
 
   * Updated object cleaning target in extconf.rb
+
+  * Fixed possible compilation problem on Mavericks with Xcode 5.02
+
+  * Fixed errors involving undefined symbols, unresolved symbols, and
+    lazy symbol binding
+
+  * Improved LAPACK and BLAS header selection for Ubuntu/Debian
+    systems with ATLAS (by @mvz)
+
+=== 0.1.0.rc2 / 2014-03-12
+
+* No major enhancements.
+
+* 14 minor enhancements:
+
+  * Implemented negative-index slicing (by @rajatkapoor)
+
+  * Added reader for Point Cloud Library's PCD format
+
+  * Added Ruby 2.1 support (including Travis CI testing)
+
+  * Implemented LAPACK-independent exact inverse calculation for
+    dense matrices of size 2x2 and 3x3, as well as
+
+  * Added NMatrix::has_clapack? method to determine whether CLAPACK
+    support has been compiled in
+
+  * Improved conformance of specs to RSpec best practices (by 
+    @duggiefresh)
+
+  * Travis CI now updates the IRC channel when a check passes (by
+    @agarie)
+
+  * Added NMatrix#data_pointer, which returns the memory address of
+    the stored elements in a matrix (generally for use with FFI and
+    other libraries that need pointers)
+
+  * Made NMatrix#clone_structure a public method (was protected)
+
+  * Added :scale option for NMatrix::random to handle non-floating
+    point forms
+
+  * Added complex support to NMatrix::random
+
+  * Aliased NMatrix::random to NMatrix::rand
+
+  * Added NMatrix#reshape! for in-place reshape of dense matrices (by
+    @rajatkapoor)
+
+  * Implemented unary negation of matrices
+
+* 6 bug fixes:
+
+  * Fixed dot product operation on 1-dimensional matrices (by @rve
+    and @cjfuller)
+
+  * Fixed segfault on 1-dimensional matrix transpose (by @cjfuller)
+
+  * Fixed compile error with Ruby 2.1 (by @diminish7)
+
+  * Fixed regression which wasn't causing any problems but was
+    counter to design: stride was declared prior to data storage for
+    dense matrix storage
+
+  * Fixed Rakefile problem which was causing specs to run twice in a
+    row with each call to rake spec
+
+  * NMatrix::random now raises an exception when rational matrices
+    are requested
+
+=== 0.1.0.rc3 / 2014-04-??
+
+* No major enhancements.
+
+* 1 minor enhancements:
+
+  * Exposed NMatrix::LAPACK::geev for LAPACK's xGEEV
+
+* 0 bug fixes:
+
+  * ?
+

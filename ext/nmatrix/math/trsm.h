@@ -9,8 +9,8 @@
 //
 // == Copyright Information
 //
-// SciRuby is Copyright (c) 2010 - 2013, Ruby Science Foundation
-// NMatrix is Copyright (c) 2013, Ruby Science Foundation
+// SciRuby is Copyright (c) 2010 - 2014, Ruby Science Foundation
+// NMatrix is Copyright (c) 2012 - 2014, John Woods and the Ruby Science Foundation
 //
 // Please see LICENSE.txt for additional copyright notices.
 //
@@ -60,7 +60,11 @@
 
 
 extern "C" {
+#if defined HAVE_CBLAS_H
   #include <cblas.h>
+#elif defined HAVE_ATLAS_CBLAS_H
+  #include <atlas/cblas.h>
+#endif
 }
 
 namespace nm { namespace math {

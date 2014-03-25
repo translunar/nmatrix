@@ -8,8 +8,8 @@
 #
 # == Copyright Information
 #
-# SciRuby is Copyright (c) 2010 - 2013, Ruby Science Foundation
-# NMatrix is Copyright (c) 2013, Ruby Science Foundation
+# SciRuby is Copyright (c) 2010 - 2014, Ruby Science Foundation
+# NMatrix is Copyright (c) 2012 - 2014, John Woods and the Ruby Science Foundation
 #
 # Please see LICENSE.txt for additional copyright notices.
 #
@@ -70,13 +70,8 @@ def create_conf_h(file) #:nodoc:
     hfile.puts
 
     # FIXME: Find a better way to do this:
-    if RUBY_VERSION >= '2.0'
-      hfile.puts "#define RUBY_2 1"
-    end
-
-    if RUBY_VERSION < '1.9.3'
-      hfile.puts "#define OLD_RB_SCAN_ARGS"
-    end
+    hfile.puts "#define RUBY_2 1" if RUBY_VERSION >= '2.0'
+    hfile.puts "#define OLD_RB_SCAN_ARGS" if RUBY_VERSION < '1.9.3'
 
     for line in $defs
       line =~ /^-D(.*)/
@@ -111,71 +106,6 @@ basenames = %w{nmatrix ruby_constants data/data util/io math util/sl_list storag
 $objs = basenames.map { |b| "#{b}.o"   }
 $srcs = basenames.map { |b| "#{b}.cpp" }
 
-# add smmp in to get generic transp; remove smmp2 to eliminate funcptr transp
-
-# The next line allows the user to supply --with-atlas-dir=/usr/local/atlas,
-# --with-atlas-lib or --with-atlas-include and tell the compiler where to look
-# for ATLAS. The same for all the others
-#
-#dir_config("clapack", ["/usr/local/atlas/include"], [])
-#
-#
-
-# Is g++ having trouble finding your header files?
-# Try this:
-#   export C_INCLUDE_PATH=/usr/local/atlas/include
-#   export CPLUS_INCLUDE_PATH=/usr/local/atlas/include
-# (substituting in the path of your cblas.h and clapack.h for the path I used). -- JW 8/27/12
-
-idefaults = {lapack: ["/usr/include/atlas"],
-             cblas: ["/usr/local/atlas/include", "/usr/include/atlas"],
-             atlas: ["/usr/local/atlas/include", "/usr/include/atlas"]}
-
-ldefaults = {lapack: ["/usr/local/lib", "/usr/local/atlas/lib", "/usr/lib64/atlas"],
-             cblas: ["/usr/local/lib", "/usr/local/atlas/lib", "/usr/lib64/atlas"],
-             atlas: ["/usr/local/atlas/lib", "/usr/local/lib", "/usr/lib", "/usr/lib64/atlas"]}
-
-unless have_library("lapack")
-  dir_config("lapack", idefaults[:lapack], ldefaults[:lapack])
-end
-
-unless have_library("cblas")
-  dir_config("cblas", idefaults[:cblas], ldefaults[:cblas])
-end
-
-unless have_library("atlas")
-  dir_config("atlas", idefaults[:atlas], ldefaults[:atlas])
-end
-
-# this needs to go before cblas.h checks -- on Ubuntu, the clapack in the
-# include path found for cblas.h doesn't seem to contain all the necessary 
-# functions
-have_header("clapack.h")
-
-# this ensures that we find the header on Ubuntu, where by default the library 
-# can be found but not the header
-unless have_header("cblas.h")
-  find_header("cblas.h", *idefaults[:cblas])
-end
-
-have_header("cblas.h")
-
-have_func("clapack_dgetrf", ["cblas.h", "clapack.h"])
-have_func("clapack_dgetri", ["cblas.h", "clapack.h"])
-have_func("dgesvd_", "clapack.h")
-
-have_func("cblas_dgemm", "cblas.h")
-
-#have_func("rb_scan_args", "ruby.h")
-
-#find_library("lapack", "clapack_dgetrf")
-#find_library("cblas", "cblas_dgemm")
-#find_library("atlas", "ATL_dgemmNN")
-
-# Order matters here: ATLAS has to go after LAPACK: http://mail.scipy.org/pipermail/scipy-user/2007-January/010717.html
-$libs += " -llapack -lcblas -latlas "
-#$libs += " -lprofiler "
-
 #CONFIG['CXX'] = 'clang++'
 CONFIG['CXX'] = 'g++'
 
@@ -194,9 +124,14 @@ def find_newer_gplusplus #:nodoc:
 end
 
 def gplusplus_version #:nodoc:
-  version_match = `LANG="en_US" #{CONFIG['CXX']} -v 2>&1`.lines.to_a.last.match(/gcc\sversion\s(\d\.\d.\d)/)
-  raise("unable to determine g++ version (match to get version was nil)") if version_match.nil?
-  version_match.captures.first
+  cxxvar = proc { |n| `#{CONFIG['CXX']} -E -dM - </dev/null | grep #{n}`.chomp.split(' ')[2] }
+  major = cxxvar.call('__GNUC__')
+  minor = cxxvar.call('__GNUC_MINOR__')
+  patch = cxxvar.call('__GNUC_PATCHLEVEL__')
+
+  raise("unable to determine g++ version (match to get version was nil)") if major.nil? || minor.nil? || patch.nil?
+
+  "#{major}.#{minor}.#{patch}"
 end
 
 
@@ -221,10 +156,79 @@ else
   puts "g++ reports version... " + `#{CONFIG['CXX']} --version|head -n 1|cut -f 3 -d " "`
 end
 
+# add smmp in to get generic transp; remove smmp2 to eliminate funcptr transp
+
+# The next line allows the user to supply --with-atlas-dir=/usr/local/atlas,
+# --with-atlas-lib or --with-atlas-include and tell the compiler where to look
+# for ATLAS. The same for all the others
+#
+#dir_config("clapack", ["/usr/local/atlas/include"], [])
+#
+#
+
+# Is g++ having trouble finding your header files?
+# Try this:
+#   export C_INCLUDE_PATH=/usr/local/atlas/include
+#   export CPLUS_INCLUDE_PATH=/usr/local/atlas/include
+# (substituting in the path of your cblas.h and clapack.h for the path I used). -- JW 8/27/12
+
+idefaults = {lapack: ["/usr/include/atlas"],
+             cblas: ["/usr/local/atlas/include", "/usr/include/atlas"],
+             atlas: ["/usr/local/atlas/include", "/usr/include/atlas"]}
+
+# For some reason, if we try to look for /usr/lib64/atlas on a Mac OS X Mavericks system, and the directory does not
+# exist, it will give a linker error -- even if the lib dir is already correctly included with -L. So we need to check
+# that Dir.exists?(d) for each.
+ldefaults = {lapack: ["/usr/local/lib", "/usr/local/atlas/lib", "/usr/lib64/atlas"].delete_if { |d| !Dir.exists?(d) },
+             cblas: ["/usr/local/lib", "/usr/local/atlas/lib", "/usr/lib64/atlas"].delete_if { |d| !Dir.exists?(d) },
+             atlas: ["/usr/local/lib", "/usr/local/atlas/lib", "/usr/lib", "/usr/lib64/atlas"].delete_if { |d| !Dir.exists?(d) }}
+
+if have_library("clapack") # Usually only applies for Mac OS X
+  $libs += " -lclapack "
+end
+
+unless have_library("lapack")
+  dir_config("lapack", idefaults[:lapack], ldefaults[:lapack])
+end
+
+unless have_library("cblas")
+  dir_config("cblas", idefaults[:cblas], ldefaults[:cblas])
+end
+
+unless have_library("atlas")
+  dir_config("atlas", idefaults[:atlas], ldefaults[:atlas])
+end
+
+# If BLAS and LAPACK headers are in an atlas directory, prefer those. Otherwise,
+# we try our luck with the default location.
+if have_header("atlas/cblas.h")
+  have_header("atlas/clapack.h")
+else
+  have_header("cblas.h")
+  have_header("clapack.h")
+end
+
+
+have_func("clapack_dgetrf", ["cblas.h", "clapack.h"])
+have_func("clapack_dgetri", ["cblas.h", "clapack.h"])
+have_func("dgesvd_", "clapack.h") # This may not do anything. dgesvd_ seems to be in LAPACK, not CLAPACK.
+
+have_func("cblas_dgemm", "cblas.h")
+
+#have_func("rb_scan_args", "ruby.h")
+
+#find_library("lapack", "clapack_dgetrf")
+#find_library("cblas", "cblas_dgemm")
+#find_library("atlas", "ATL_dgemmNN")
+# Order matters here: ATLAS has to go after LAPACK: http://mail.scipy.org/pipermail/scipy-user/2007-January/010717.html
+$libs += " -llapack -lcblas -latlas "
+#$libs += " -lprofiler "
+
+
 # For release, these next two should both be changed to -O3.
-$CFLAGS += " -O3 -g" #" -O0 -g "
+$CFLAGS += " -O3" #" -O0 -g "
 #$CFLAGS += " -static -O0 -g "
-$CPPFLAGS += " -O3 -std=#{$CPP_STANDARD} -g" #" -O0 -g -std=#{$CPP_STANDARD} " #-fmax-errors=10 -save-temps
+$CPPFLAGS += " -O3 -std=#{$CPP_STANDARD}" #" -O0 -g -std=#{$CPP_STANDARD} " #-fmax-errors=10 -save-temps
 #$CPPFLAGS += " -static -O0 -g -std=#{$CPP_STANDARD} "
 
 CONFIG['warnflags'].gsub!('-Wshorten-64-to-32', '') # doesn't work except in Mac-patched gcc (4.2)

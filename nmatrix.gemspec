@@ -5,9 +5,9 @@ require 'nmatrix/version'
 
 Gem::Specification.new do |gem|
   gem.name = "nmatrix"
-  gem.version = NMatrix::VERSION
-  gem.summary = "NMatrix is an experimental linear algebra library for Ruby, written mostly in C." 
-  gem.description = "NMatrix is an experimental linear algebra library for Ruby, written mostly in C." 
+  gem.version = NMatrix::VERSION::STRING
+  gem.summary = "NMatrix is an experimental linear algebra library for Ruby, written mostly in C."
+  gem.description = "NMatrix is an experimental linear algebra library for Ruby, written mostly in C."
   gem.homepage = 'http://sciruby.com'
   gem.authors = ['John Woods', 'Chris Wailes', 'Aleksey Timin']
   gem.email =  ['john.o.woods@gmail.com']
@@ -15,12 +15,6 @@ Gem::Specification.new do |gem|
   gem.post_install_message = <<-EOF
 ***********************************************************
 Welcome to SciRuby: Tools for Scientific Computing in Ruby!
-
-                     *** WARNING ***
-Please be aware that NMatrix is in ALPHA status. If you're
-thinking of using NMatrix to write mission critical code,
-such as for driving a car or flying a space shuttle, you
-may wish to choose other software (for now).
 
 NMatrix requires a C compiler, and has been tested only
 with GCC 4.6+. We are happy to accept contributions

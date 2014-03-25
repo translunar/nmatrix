@@ -9,8 +9,8 @@
 //
 // == Copyright Information
 //
-// SciRuby is Copyright (c) 2010 - 2013, Ruby Science Foundation
-// NMatrix is Copyright (c) 2013, Ruby Science Foundation
+// SciRuby is Copyright (c) 2010 - 2014, Ruby Science Foundation
+// NMatrix is Copyright (c) 2012 - 2014, John Woods and the Ruby Science Foundation
 //
 // Please see LICENSE.txt for additional copyright notices.
 //
@@ -46,5 +46,15 @@
 #define NM_FREE(var) (xfree(var))
 
 #define NM_ALLOC_NONRUBY(type) ((type*) malloc(sizeof(type)))
+
+//Defines whether to do conservative gc registrations, i.e. those
+//registrations that we're not that sure are necessary.
+//#define NM_GC_CONSERVATIVE
+
+#ifdef NM_GC_CONSERVATIVE
+#define NM_CONSERVATIVE(statement) (statement)
+#else
+#define NM_CONSERVATIVE(statement)
+#endif //NM_GC_CONSERVATIVE
 
 #endif

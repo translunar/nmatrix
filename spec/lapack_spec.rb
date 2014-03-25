@@ -8,8 +8,8 @@
 #
 # == Copyright Information
 #
-# SciRuby is Copyright (c) 2010 - 2012, Ruby Science Foundation
-# NMatrix is Copyright (c) 2012, Ruby Science Foundation
+# SciRuby is Copyright (c) 2010 - 2014, Ruby Science Foundation
+# NMatrix is Copyright (c) 2012 - 2014, John Woods and the Ruby Science Foundation
 #
 # Please see LICENSE.txt for additional copyright notices.
 #
@@ -40,7 +40,7 @@ describe NMatrix::LAPACK do
         a = NMatrix.new(:dense, [3,4], [1,2,3,4,5,6,7,8,9,10,11,12], dtype)
         NMatrix::LAPACK::clapack_laswp(3, a, 4, 0, 3, [2,1,3,0], 1)
         b = NMatrix.new(:dense, [3,4], [3,2,4,1,7,6,8,5,11,10,12,9], dtype)
-        a.should == b
+        expect(a).to eq(b)
       end
 
       it "exposes NMatrix#permute_columns and #permute_columns! (user-friendly laswp)" do
@@ -48,10 +48,10 @@ describe NMatrix::LAPACK do
         b = NMatrix.new(:dense, [3,4], [3,2,4,1,7,6,8,5,11,10,12,9], dtype)
         piv = [2,1,3,0]
         r = a.permute_columns(piv)
-        r.should_not == a
-        r.should == b
+        expect(r).not_to eq(a)
+        expect(r).to eq(b)
         a.permute_columns!(piv)
-        a.should == b
+        expect(a).to eq(b)
       end
     end
   end
@@ -59,6 +59,22 @@ describe NMatrix::LAPACK do
   # where integer math is not allowed
   [:rational32, :rational64, :rational128, :float32, :float64, :complex64, :complex128].each do |dtype|
     context dtype do
+
+      it "exposes clapack_gesv" do
+        a = NMatrix[[1.quo(1), 2, 3], [0,1.quo(2),4],[3,3,9]].cast(dtype: dtype)
+        b = NMatrix[[1.quo(1)],[2],[3]].cast(dtype: dtype)
+        err = case dtype
+                when :float32, :complex64
+                  1e-6
+                when :float64, :complex128
+                  1e-8
+                else
+                  1e-64
+              end
+        expect(NMatrix::LAPACK::clapack_gesv(:row,a.shape[0],b.shape[1],a,a.shape[0],b,b.shape[0])).to be_within(err).of(NMatrix[[-1.quo(2)], [0], [1.quo(2)]].cast(dtype: dtype))
+      end
+
+
       it "exposes clapack_getrf" do
         a = NMatrix.new(3, [4,9,2,3,5,7,8,1,6], dtype: dtype)
         NMatrix::LAPACK::clapack_getrf(:row, 3, 3, a, 3)
@@ -73,15 +89,15 @@ describe NMatrix::LAPACK do
                   1e-64 # FIXME: should be 0, but be_within(0) does not work.
               end
 
-        a[0,0].should == 9 # 8
-        a[0,1].should be_within(err).of(2.quo(9)) # 1
-        a[0,2].should be_within(err).of(4.quo(9)) # 6
-        a[1,0].should == 5 # 1.quo(2)
-        a[1,1].should be_within(err).of(53.quo(9)) # 17.quo(2)
-        a[1,2].should be_within(err).of(7.quo(53)) # -1
-        a[2,0].should == 1 # 3.quo(8)
-        a[2,1].should be_within(err).of(52.quo(9))
-        a[2,2].should be_within(err).of(360.quo(53))
+        expect(a[0,0]).to eq(9) # 8
+        expect(a[0,1]).to be_within(err).of(2.quo(9)) # 1
+        expect(a[0,2]).to be_within(err).of(4.quo(9)) # 6
+        expect(a[1,0]).to eq(5) # 1.quo(2)
+        expect(a[1,1]).to be_within(err).of(53.quo(9)) # 17.quo(2)
+        expect(a[1,2]).to be_within(err).of(7.quo(53)) # -1
+        expect(a[2,0]).to eq(1) # 3.quo(8)
+        expect(a[2,1]).to be_within(err).of(52.quo(9))
+        expect(a[2,2]).to be_within(err).of(360.quo(53))
       end
 
       it "exposes clapack_potrf" do
@@ -90,7 +106,7 @@ describe NMatrix::LAPACK do
           a = NMatrix.new(:dense, 3, [25,15,-5, 0,18,0, 0,0,11], dtype)
           NMatrix::LAPACK::clapack_potrf(:row, :upper, 3, a, 3)
           b = NMatrix.new(:dense, 3, [5,3,-1, 0,3,1, 0,0,3], dtype)
-          a.should == b
+          expect(a).to eq(b)
         rescue NotImplementedError => e
           pending e.to_s
         end
@@ -99,7 +115,7 @@ describe NMatrix::LAPACK do
         a = NMatrix.new(:dense, 3, [25,0,0, 15,18,0,-5,0,11], dtype)
         NMatrix::LAPACK::clapack_potrf(:row, :lower, 3, a, 3)
         b = NMatrix.new(:dense, 3, [5,0,0, 3,3,0, -1,1,3], dtype)
-        a.should == b
+        expect(a).to eq(b)
       end
 
       # Together, these calls are basically xGESV from LAPACK: http://www.netlib.org/lapack/double/dgesv.f
@@ -110,9 +126,9 @@ describe NMatrix::LAPACK do
 
         NMatrix::LAPACK::clapack_getrs(:row, false, 3, 1, a, 3, ipiv, b, 3)
 
-        b[0].should == 5
-        b[1].should == -15.quo(2)
-        b[2].should == -13
+        expect(b[0]).to eq(5)
+        expect(b[1]).to eq(-15.quo(2))
+        expect(b[2]).to eq(-13)
       end
 
       it "exposes clapack_getri" do
@@ -123,7 +139,7 @@ describe NMatrix::LAPACK do
           NMatrix::LAPACK::clapack_getri(:row, 3, a, 3, ipiv)
 
           b = NMatrix.new(:dense, 3, [-5,0,-2,-4,1,-1,1.5,0,0.5], dtype)
-          a.should == b
+          expect(a).to eq(b)
         rescue NotImplementedError => e
           pending e.to_s
         end
@@ -184,10 +200,10 @@ describe NMatrix::LAPACK do
           pending e.to_s
         end
 
-        u.should be_within(err).of(left_true)
+        expect(u).to be_within(err).of(left_true)
         #FIXME: Is the next line correct?
-        vt[0...right_true.shape[0], 0...right_true.shape[1]-1].should be_within(err).of(right_true[0...right_true.shape[0],0...right_true.shape[1]-1])
-        s.transpose.should be_within(err).of(s_true.row(0))
+        expect(vt[0...right_true.shape[0], 0...right_true.shape[1]-1]).to be_within(err).of(right_true[0...right_true.shape[0],0...right_true.shape[1]-1])
+        expect(s.transpose).to be_within(err).of(s_true.row(0))
       end
 
 
@@ -256,10 +272,10 @@ describe NMatrix::LAPACK do
           pending e.to_s
         end
 
-        u.should be_within(err).of(left_true)
+        expect(u).to be_within(err).of(left_true)
         #FIXME: Is the next line correct?
-        vt[0...right_true.shape[0], 0...right_true.shape[1]-1].should be_within(err).of(right_true[0...right_true.shape[0],0...right_true.shape[1]-1])
-        s.transpose.should be_within(err).of(s_true.row(0))
+        expect(vt[0...right_true.shape[0], 0...right_true.shape[1]-1]).to be_within(err).of(right_true[0...right_true.shape[0],0...right_true.shape[1]-1])
+        expect(s.transpose).to be_within(err).of(s_true.row(0))
 
       end
  
@@ -325,10 +341,10 @@ describe NMatrix::LAPACK do
         rescue NotImplementedError => e
           pending e.to_s
         end
-        u.should be_within(err).of(left_true)
+        expect(u).to be_within(err).of(left_true)
         #FIXME: Is the next line correct?
-        vt[0...right_true.shape[0], 0...right_true.shape[1]-1].should be_within(err).of(right_true[0...right_true.shape[0],0...right_true.shape[1]-1])
-        s.transpose.should be_within(err).of(s_true.row(0))
+        expect(vt[0...right_true.shape[0], 0...right_true.shape[1]-1]).to be_within(err).of(right_true[0...right_true.shape[0],0...right_true.shape[1]-1])
+        expect(s.transpose).to be_within(err).of(s_true.row(0))
 
       end
       it "exposes the convenience gesdd method" do
@@ -384,10 +400,10 @@ describe NMatrix::LAPACK do
         rescue NotImplementedError => e
           pending e.to_s
         end
-        u.should be_within(err).of(left_true)
+        expect(u).to be_within(err).of(left_true)
         #FIXME: Is the next line correct?
-        vt[0...right_true.shape[0], 0...right_true.shape[1]-1].should be_within(err).of(right_true[0...right_true.shape[0],0...right_true.shape[1]-1])
-        s.transpose.should be_within(err).of(s_true.row(0))
+        expect(vt[0...right_true.shape[0], 0...right_true.shape[1]-1]).to be_within(err).of(right_true[0...right_true.shape[0],0...right_true.shape[1]-1])
+        expect(s.transpose).to be_within(err).of(s_true.row(0))
       end
 
 
@@ -412,7 +428,7 @@ describe NMatrix::LAPACK do
         ldvl = n
 
         info = NMatrix::LAPACK::lapack_geev(:left, :right, n, a.clone, lda, wr.clone, wi.nil? ? nil : wi.clone, vl.clone, ldvl, vr.clone, ldvr, -1)
-        info.should == 0
+        expect(info).to eq(0)
 
         info = NMatrix::LAPACK::lapack_geev(:left, :right, n, a, lda, wr, wi, vl, ldvl, vr, ldvr, 2*n)
 
@@ -427,7 +443,7 @@ describe NMatrix::LAPACK do
                                           0.28,  0.01,  0.02,  0.19,  0.80,
                                          -0.04,  0.34,  0.40, -0.22, -0.18 ], :float64)
 
-        vl.abs.should be_within(1e-2).of(vl_true.abs)
+        expect(vl.abs).to be_within(1e-2).of(vl_true.abs)
         # Not checking vr_true.
         # Example from:
         # http://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/mkl_lapack_examples/lapacke_dgeev_row.c.htm

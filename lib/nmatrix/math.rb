@@ -9,8 +9,8 @@
 #
 # == Copyright Information
 #
-# SciRuby is Copyright (c) 2010 - 2013, Ruby Science Foundation
-# NMatrix is Copyright (c) 2013, Ruby Science Foundation
+# SciRuby is Copyright (c) 2010 - 2014, Ruby Science Foundation
+# NMatrix is Copyright (c) 2012 - 2014, John Woods and the Ruby Science Foundation
 #
 # Please see LICENSE.txt for additional copyright notices.
 #
@@ -33,7 +33,7 @@ class NMatrix
   module NMMath
     METHODS_ARITY_2 = [:atan2, :ldexp, :hypot]
     METHODS_ARITY_1 = [:cos, :sin, :tan, :acos, :asin, :atan, :cosh, :sinh, :tanh, :acosh,
-      :asinh, :atanh, :exp, :log2, :log10, :sqrt, :cbrt, :erf, :erfc, :gamma]
+      :asinh, :atanh, :exp, :log2, :log10, :sqrt, :cbrt, :erf, :erfc, :gamma, :-@]
   end
 
   #
@@ -43,7 +43,8 @@ class NMatrix
   # Use LAPACK to calculate the inverse of the matrix (in-place). Only works on
   # dense matrices.
   #
-  # Note: If you don't have LAPACK, e.g., on a Mac, this may not work yet.
+  # Note: If you don't have LAPACK, e.g., on a Mac, this may not work yet. Use
+  # invert instead (which still probably won't work if your matrix is larger than 3x3).
   #
   def invert!
     # Get the pivot array; factor the matrix
@@ -59,13 +60,29 @@ class NMatrix
   # call-seq:
   #     invert -> NMatrix
   #
-  # Make a copy of the matrix, then invert it (requires LAPACK).
+  # Make a copy of the matrix, then invert it (requires LAPACK for matrices larger than 3x3).
+  #
+  #
   #
   # * *Returns* :
   #   - A dense NMatrix.
   #
   def invert
-    self.cast(:dense, self.dtype).invert!
+    if NMatrix.has_clapack?
+      begin
+        self.cast(:dense, self.dtype).invert! # call CLAPACK version
+      rescue NotImplementedError # probably a rational matrix
+        inverse = self.clone_structure
+        __inverse_exact__(inverse)
+      end
+    elsif self.integer_dtype? # FIXME: This check is probably too slow.
+      rational_self = self.cast(dtype: :rational128)
+      inverse       = rational_self.clone_structure
+      rational_self.__inverse_exact__(inverse)
+    else
+      inverse       = self.clone_structure
+      __inverse_exact__(inverse)
+    end
   end
   alias :inverse :invert
 
@@ -552,7 +569,7 @@ protected
 
   # These don't actually take an argument -- they're called reverse-polish style on the matrix.
   # This group always gets casted to float64.
-  [:log2, :log10, :sqrt, :sin, :cos, :tan, :acos, :asin, :atan, :cosh, :sinh, :tanh, :acosh, :asinh, :atanh, :exp, :erf, :erfc, :gamma, :cbrt].each do |ewop|
+  [:log, :log2, :log10, :sqrt, :sin, :cos, :tan, :acos, :asin, :atan, :cosh, :sinh, :tanh, :acosh, :asinh, :atanh, :exp, :erf, :erfc, :gamma, :cbrt].each do |ewop|
     define_method("__list_unary_#{ewop}__") do
       self.__list_map_stored__(nil) { |l| Math.send(ewop, l) }.cast(stype, NMatrix.upcast(dtype, :float64))
     end
@@ -575,6 +592,19 @@ protected
 
   def __dense_unary_log__(base)
     self.__dense_map__ { |l| Math.log(l, base) }.cast(stype, NMatrix.upcast(dtype, :float64))
+  end
+
+  # These are for negating matrix contents using -@
+  def __list_unary_negate__
+    self.__list_map_stored__(nil) { |l| -l }.cast(stype, dtype)
+  end
+
+  def __yale_unary_negate__
+    self.__yale_map_stored__ { |l| -l }.cast(stype, dtype)
+  end
+
+  def __dense_unary_negate__
+    self.__dense_map__ { |l| -l }.cast(stype, dtype)
   end
 
   # These take two arguments. One might be a matrix, and one might be a scalar.

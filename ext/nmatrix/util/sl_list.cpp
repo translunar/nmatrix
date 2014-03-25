@@ -1,6 +1,16 @@
+/////////////////////////////////////////////////////////////////////
+// = NMatrix
 //
-// SciRuby is Copyright (c) 2010 - 2013, Ruby Science Foundation
-// NMatrix is Copyright (c) 2013, Ruby Science Foundation
+// A linear algebra library for scientific computation in Ruby.
+// NMatrix is part of SciRuby.
+//
+// NMatrix was originally inspired by and derived from NArray, by
+// Masahiro Tanaka: http://narray.rubyforge.org
+//
+// == Copyright Information
+//
+// SciRuby is Copyright (c) 2010 - 2014, Ruby Science Foundation
+// NMatrix is Copyright (c) 2012 - 2014, John Woods and the Ruby Science Foundation
 //
 // Please see LICENSE.txt for additional copyright notices.
 //
@@ -38,6 +48,10 @@ namespace nm { namespace list {
 /*
  * Macros
  */
+
+#ifndef RHASH_SET_IFNONE
+#define RHASH_SET_IFNONE(h, v) (RHASH(h)->ifnone = (v))
+#endif
 
 /*
  * Global Variables
@@ -193,7 +207,6 @@ NODE* insert(LIST* list, bool replace, size_t key, void* val) {
       nm_list_storage_completely_unregister_node(ins);
       NM_FREE(ins->val);
       ins->val = val;
-      nm_list_storage_register_node(ins);
     } else {
       NM_FREE(val);
     }
@@ -571,9 +584,9 @@ extern "C" {
   static VALUE empty_list_to_hash(const nm::dtype_t dtype, size_t recursions, VALUE default_value) {
     VALUE h = rb_hash_new();
     if (recursions) {
-      RHASH_IFNONE(h) = empty_list_to_hash(dtype, recursions-1, default_value);
+      RHASH_SET_IFNONE(h, empty_list_to_hash(dtype, recursions-1, default_value));
     } else {
-      RHASH_IFNONE(h) = default_value;
+      RHASH_SET_IFNONE(h, default_value);
     }
     return h;
   }
