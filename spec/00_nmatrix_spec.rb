@@ -296,10 +296,16 @@ describe NMatrix do
     expect(n.complex_conjugate!).to eq (NMatrix.new([2,3], [Complex(2,-3)]))
   end
 
-  it "calculates the complex conjugate non-in-place" do
+  it "calculates the complex conjugate out-of-place" do
     n = NMatrix.new([2,3], [Complex(2,3)])
     m = n.complex_conjugate
     expect(m).to eq (NMatrix.new([2,3], [Complex(2,-3)]))
+  end
+
+  it "calculates the complex conjugate out-of-place for Ruby objects" do
+    n = NMatrix.new([2], [1,3], dtype: :object)
+    m = n.complex_conjugate
+    expect(m).to eq n
   end
 
   it "converts from list to yale properly" do
