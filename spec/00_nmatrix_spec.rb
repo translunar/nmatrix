@@ -296,14 +296,46 @@ describe NMatrix do
     expect(n.complex_conjugate!).to eq (NMatrix.new([2,3], [Complex(2,-3)]))
   end
 
-  it "calculates the complex conjugate out-of-place" do
+  it "calculates the complex conjugate out-of-place for all dtypes" do
     n = NMatrix.new([2,3], [Complex(2,3)])
     m = n.complex_conjugate
     expect(m).to eq (NMatrix.new([2,3], [Complex(2,-3)]))
-  end
 
-  it "calculates the complex conjugate out-of-place for Ruby objects" do
+    n = NMatrix.new([2,3], [Complex(2,3)], dtype: :complex64)
+    m = n.complex_conjugate
+    expect(m).to eq (NMatrix.new([2,3], [Complex(2,-3)], dtype: :complex64))
+
     n = NMatrix.new([2], [1,3], dtype: :object)
+    m = n.complex_conjugate
+    expect(m).to eq n
+
+    n = NMatrix.new([2], [1,3], dtype: :int64)
+    m = n.complex_conjugate
+    expect(m).to eq n
+    n = NMatrix.new([2], [1,3], dtype: :int32)
+    m = n.complex_conjugate
+    expect(m).to eq n
+    n = NMatrix.new([2], [1,3], dtype: :int16)
+    m = n.complex_conjugate
+    expect(m).to eq n
+    n = NMatrix.new([2], [1,3], dtype: :int8)
+    m = n.complex_conjugate
+    expect(m).to eq n
+    n = NMatrix.new([2], [1,3], dtype: :byte)
+    m = n.complex_conjugate
+    expect(m).to eq n
+
+    n = NMatrix.new([2], [1.2,3.3], dtype: :float64)
+    m = n.complex_conjugate
+    expect(m).to eq n
+    n = NMatrix.new([2], [1.2,3.3], dtype: :float32)
+    m = n.complex_conjugate
+    expect(m).to eq n
+
+    n = NMatrix.new(4, [0,1], dtype: :rational128)
+    m = n.complex_conjugate
+    expect(m).to eq n
+    n = NMatrix.new(4, [0,1], dtype: :rational64)
     m = n.complex_conjugate
     expect(m).to eq n
   end
