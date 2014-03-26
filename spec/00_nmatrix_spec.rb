@@ -296,48 +296,22 @@ describe NMatrix do
     expect(n.complex_conjugate!).to eq (NMatrix.new([2,3], [Complex(2,-3)]))
   end
 
-  it "calculates the complex conjugate out-of-place for all dtypes" do
-    n = NMatrix.new([2,3], [Complex(2,3)])
-    m = n.complex_conjugate
-    expect(m).to eq (NMatrix.new([2,3], [Complex(2,-3)]))
+  context "conjugate out-of-place" do
+    [:complex128, :complex64].each do |dtype|
+      it "calculates the complex conjugate out-of-place for #{dtype}" do
+        n = NMatrix.new([2,3], [Complex(2,3)], dtype: dtype)
+        m = n.complex_conjugate
+        expect(m).to eq (NMatrix.new([2,3], [Complex(2,-3)], dtype: dtype))
+      end
+    end
 
-    n = NMatrix.new([2,3], [Complex(2,3)], dtype: :complex64)
-    m = n.complex_conjugate
-    expect(m).to eq (NMatrix.new([2,3], [Complex(2,-3)], dtype: :complex64))
-
-    n = NMatrix.new([2], [1,3], dtype: :object)
-    m = n.complex_conjugate
-    expect(m).to eq n
-
-    n = NMatrix.new([2], [1,3], dtype: :int64)
-    m = n.complex_conjugate
-    expect(m).to eq n
-    n = NMatrix.new([2], [1,3], dtype: :int32)
-    m = n.complex_conjugate
-    expect(m).to eq n
-    n = NMatrix.new([2], [1,3], dtype: :int16)
-    m = n.complex_conjugate
-    expect(m).to eq n
-    n = NMatrix.new([2], [1,3], dtype: :int8)
-    m = n.complex_conjugate
-    expect(m).to eq n
-    n = NMatrix.new([2], [1,3], dtype: :byte)
-    m = n.complex_conjugate
-    expect(m).to eq n
-
-    n = NMatrix.new([2], [1.2,3.3], dtype: :float64)
-    m = n.complex_conjugate
-    expect(m).to eq n
-    n = NMatrix.new([2], [1.2,3.3], dtype: :float32)
-    m = n.complex_conjugate
-    expect(m).to eq n
-
-    n = NMatrix.new(4, [0,1], dtype: :rational128)
-    m = n.complex_conjugate
-    expect(m).to eq n
-    n = NMatrix.new(4, [0,1], dtype: :rational64)
-    m = n.complex_conjugate
-    expect(m).to eq n
+    [:object, :byte, :int8, :int16, :int32, :int64, :float64, :rational64, :rational128].each do |dtype|
+      it "calculates the complex conjugate out-of-place for #{dtype}" do
+        n = NMatrix.new([2], [1,3], dtype: dtype)
+        m = n.complex_conjugate
+        expect(m).to eq n
+      end
+    end
   end
 
   it "converts from list to yale properly" do
