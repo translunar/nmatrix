@@ -591,6 +591,9 @@
 
   * Exposed NMatrix::LAPACK::geev for LAPACK's xGEEV
 
+  * Added out-of-place complex conjugate for dense and yale storage 
+    (by @rve)
+
 * 1 bug fixes:
 
   * Fixed critical bug with transposing a matrix reference slice (by
