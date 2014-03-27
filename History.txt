@@ -599,3 +599,10 @@
   * Fixed critical bug with transposing a matrix reference slice (by
     @rajatkapoor)
 
+=== 0.1.0.rc4 / 2014-04-??
+
+* No major enhancements.
+
+* No minor enhancements.
+
+* No bug fixes.

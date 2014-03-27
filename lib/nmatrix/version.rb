@@ -31,7 +31,7 @@ class NMatrix
     MAJOR = 0
     MINOR = 1
     TINY = 0
-    PRE = "rc3"
+    PRE = "rc4"
 
     STRING = [MAJOR, MINOR, TINY, PRE].compact.join(".")
   end
