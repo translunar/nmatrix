@@ -352,6 +352,10 @@ class NMatrix
   #
   # See @row (dimension = 0), @column (dimension = 1)
   def rank(shape_idx, rank_idx, meth = :copy)
+    
+    if shape_idx > (self.dim-1)
+      raise(RangeError, "#rank call was out of bounds")
+    end
 
     params = Array.new(self.dim)
     params.each.with_index do |v,d|

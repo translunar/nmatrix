@@ -395,6 +395,18 @@ describe 'NMatrix' do
       expect(n.lower_triangle!(2)).to eq(NMatrix.new(4, [1,2,3,0,5,6,7,8,9,10,11,12,13,14,15,16]))
     end
   end
+  
+  context "#rank" do
+    it "should get the rank of a 2-dimensional matrix" do
+      n = NMatrix.seq([2,3])
+      expect(n.rank(0, 0)).to eq(N[[0,1,2]])
+    end
+    
+    it "should raise an error when the rank is out of bounds" do
+      n = NMatrix.seq([2,3])
+      expect { n.rank(2, 0) }.to raise_error(RangeError)
+    end
+  end
 
   context "#reshape" do
     it "should change the shape of a matrix without the contents changing" do
