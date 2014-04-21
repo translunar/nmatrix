@@ -603,6 +603,8 @@
 
 * No major enhancements.
 
-* No minor enhancements.
+* 1 minor enhancements:
+
+  * NMatrix#floor and #ceil implemented (by @v0dro)
 
 * No bug fixes.
