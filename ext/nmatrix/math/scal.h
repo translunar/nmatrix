@@ -85,8 +85,7 @@ inline void scal(const int n, const Complex128 alpha, Complex128* x, const int i
  */
 template <typename DType>
 inline void cblas_scal(const int n, const void* alpha, void* x, const int incx) {
-  scal<DType>(n, *reinterpret_cast<const DType*>(alpha),
-      reinterpret_cast<DType*>(x), incx);
+  scal<DType>(n, *reinterpret_cast<const DType*>(alpha), reinterpret_cast<DType*>(x), incx);
 }
 
 }} // end of nm::math
