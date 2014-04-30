@@ -34,7 +34,6 @@ namespace nm { namespace math {
 template<typename DType>
 inline int imax(const int n, const DType *x, const int incx) {
 
-  /* Function Body */
   if (n < 1 || incx <= 0) {
     return -1;
   }
@@ -99,4 +98,4 @@ inline int cblas_imax(const int n, const void* x, const int incx) {
 
 }} // end of namespace nm::math
 
-#endif /* imax */
+#endif /* IMAX_H */

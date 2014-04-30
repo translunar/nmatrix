@@ -759,6 +759,19 @@ static VALUE nm_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx) {
   return rubyobj_from_cval(Result, rdtype).rval;
 }
 
+/*
+ * call-seq:
+ *    NMatrix::BLAS.cblas_imax(n, vector, inc) -> Fixnum
+ *
+ * BLAS level 1 routine.
+ *
+ * Return the index of the largest element of +vector+.
+ *
+ * - +n+ -> Vector's size. Generally, you can use NMatrix#rows or NMatrix#cols.
+ * - +vector+ -> A NMatrix of shape [n,1] or [1,n] with any dtype.
+ * - +inc+ -> It's the increment used when searching. Use 1 except if you know
+ *   what you're doing.
+ */
 static VALUE nm_cblas_imax(VALUE self, VALUE n, VALUE x, VALUE incx) {
   NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::cblas_imax, int, const int n, const void* x, const int incx);
 
