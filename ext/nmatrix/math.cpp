@@ -122,7 +122,7 @@
 #include "math/gesvd.h"
 #include "math/geev.h"
 #include "math/swap.h"
-#include "math/idamax.h"
+#include "math/imax.h"
 #include "math/scal.h"
 #include "math/ger.h"
 #include "math/getf2.h"
@@ -156,11 +156,15 @@ extern "C" {
   #include <atlas/clapack.h>
 #endif
 
+  /* BLAS Level 1. */
   static VALUE nm_cblas_nrm2(VALUE self, VALUE n, VALUE x, VALUE incx);
   static VALUE nm_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx);
   static VALUE nm_cblas_rot(VALUE self, VALUE n, VALUE x, VALUE incx, VALUE y, VALUE incy, VALUE c, VALUE s);
   static VALUE nm_cblas_rotg(VALUE self, VALUE ab);
+  static VALUE nm_cblas_imax(VALUE self, VALUE n, VALUE x, VALUE incx);
 
+  /* BLAS Level 2. */
+  /* BLAS Level 3. */
   static VALUE nm_cblas_gemm(VALUE self, VALUE order, VALUE trans_a, VALUE trans_b, VALUE m, VALUE n, VALUE k, VALUE vAlpha,
                              VALUE a, VALUE lda, VALUE b, VALUE ldb, VALUE vBeta, VALUE c, VALUE ldc);
   static VALUE nm_cblas_gemv(VALUE self, VALUE trans_a, VALUE m, VALUE n, VALUE vAlpha, VALUE a, VALUE lda,
@@ -174,6 +178,7 @@ extern "C" {
   static VALUE nm_cblas_syrk(VALUE self, VALUE order, VALUE uplo, VALUE trans, VALUE n, VALUE k, VALUE alpha, VALUE a,
                              VALUE lda, VALUE beta, VALUE c, VALUE ldc);
 
+  /* LAPACK. */
   static VALUE nm_has_clapack(VALUE self);
   static VALUE nm_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda);
   static VALUE nm_clapack_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
@@ -408,6 +413,7 @@ void nm_math_init_blas() {
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_asum", (METHOD)nm_cblas_asum, 3);
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_rot",  (METHOD)nm_cblas_rot,  7);
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_rotg", (METHOD)nm_cblas_rotg, 1);
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_imax", (METHOD)nm_cblas_imax, 3);
 
 	rb_define_singleton_method(cNMatrix_BLAS, "cblas_gemm", (METHOD)nm_cblas_gemm, 14);
 	rb_define_singleton_method(cNMatrix_BLAS, "cblas_gemv", (METHOD)nm_cblas_gemv, 11);
@@ -753,7 +759,16 @@ static VALUE nm_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx) {
   return rubyobj_from_cval(Result, rdtype).rval;
 }
 
+static VALUE nm_cblas_imax(VALUE self, VALUE n, VALUE x, VALUE incx) {
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::cblas_imax, int, const int n, const void* x, const int incx);
 
+  nm::dtype_t dtype = NM_DTYPE(x);
+
+  index = ttable[dtype](FIX2INT(n), NM_STORAGE_DENSE(x)->elements, FIX2INT(incx));
+
+  // Convert to Ruby's Int value.
+  return index;
+}
 
 
 /* Call any of the cblas_xgemm functions as directly as possible.

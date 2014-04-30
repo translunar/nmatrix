@@ -21,32 +21,18 @@
 //
 // * https://github.com/SciRuby/sciruby/wiki/Contributor-Agreement
 //
-// == idamax.h
+// == imax.h
 //
-// LAPACK idamax function in native C.
+// BLAS level 1 function imax.
 //
 
-#ifndef IDAMAX_H
-#define IDAMAX_H
+#ifndef IMAX_H
+#define IMAX_H
 
 namespace nm { namespace math {
 
-/*  Purpose */
-/*  ======= */
-
-/*     IDAMAX finds the index of element having max. absolute value. */
-
-/*  Further Details */
-/*  =============== */
-
-/*     jack dongarra, linpack, 3/11/78. */
-/*     modified 3/93 to return if incx .le. 0. */
-/*     modified 12/3/93, array(1) declarations changed to array(*) */
-
-/*  ===================================================================== */
-
-template <typename DType>
-inline int idamax(size_t n, DType *dx, int incx) {
+template<typename DType>
+inline int imax(const int n, const DType *x, const int incx) {
 
   /* Function Body */
   if (n < 1 || incx <= 0) return -1;
@@ -57,30 +43,56 @@ inline int idamax(size_t n, DType *dx, int incx) {
 
   if (incx == 1) { // if incrementing by 1
 
-    dmax = abs(dx[0]);
+    dmax = abs(x[0]);
 
     for (size_t i = 1; i < n; ++i) {
-      if (std::abs(dx[i]) > dmax) {
+      if (std::abs(x[i]) > dmax) {
         imax = i;
-        dmax = std::abs(dx[i]);
+        dmax = std::abs(x[i]);
       }
     }
 
   } else { // if incrementing by more than 1
 
-    dmax = std::abs(dx[0]);
+    dmax = std::abs(x[0]);
 
     for (size_t i = 1, ix = incx; i < n; ++i, ix += incx) {
-      if (std::abs(dx[ix]) > dmax) {
+      if (std::abs(x[ix]) > dmax) {
         imax = i;
-        dmax = std::abs(dx[ix]);
+        dmax = std::abs(x[ix]);
       }
     }
   }
   return imax;
-} /* idamax_ */
+}
+
+#if defined HAVE_CBLAS_H || defined HAVE_ATLAS_CBLAS_H
+template<>
+inline int imax(const int n, const float* x, const int incx) {
+  return cblas_isamax(n, x, incx);
+}
+
+template<>
+inline int imax(const int n, const double* x, const int incx) {
+  return cblas_idamax(n, x, incx);
+}
+
+template<>
+inline int imax(const int n, const Complex64* x, const int incx) {
+  return cblas_icamax(n, x, incx);
+}
+
+template <>
+inline int imax(const int n, const Complex128* x, const int incx) {
+  return cblas_izamax(n, x, incx);
+}
+#endif
+
+template<typename DType>
+inline int cblas_imax(const int n, const void* x, const int incx) {
+  return imax<DType>(n, reinterpret_cast<const DType*>(x), incx);
+}
 
 }} // end of namespace nm::math
 
-#endif
-
+#endif /* imax */
