@@ -463,17 +463,26 @@ static inline enum CBLAS_TRANSPOSE blas_transpose_sym(VALUE op) {
   return CblasNoTrans;
 }
 
-
 /*
- * Based on BLAS's scal functions, but for any dtype.
+ * call-seq:
+ *     NMatrix::BLAS.cblas_scal(n, alpha, vector, inc) -> NMatrix
  *
- * In-place modification; returns the modified vector as well.
+ * BLAS level 1 function +scal+. Works with all dtypes.
+ *
+ * Scale +vector+ in-place by +alpha+ and also return it. The operation is as
+ * follows:
+ *  x <- alpha * x
+ *
+ * - +n+ -> Number of elements of +vector+.
+ * - +alpha+ -> Scalar value used in the operation.
+ * - +vector+ -> NMatrix of shape [n,1] or [1,n]. Modified in-place.
+ * - +inc+ -> Increment used in the scaling function. Should generally be 1.
  */
-static VALUE nm_cblas_scal(VALUE self, VALUE n, VALUE scale, VALUE vector, VALUE incx) {
+static VALUE nm_cblas_scal(VALUE self, VALUE n, VALUE alpha, VALUE vector, VALUE incx) {
   nm::dtype_t dtype = NM_DTYPE(vector);
 
   void* alpha = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
-  rubyval_to_cval(scale, dtype, alpha);
+  rubyval_to_cval(alpha, dtype, alpha);
 
   NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::cblas_scal, void, const int n,
       const void* alpha, void* x, const int incx);
@@ -483,7 +492,6 @@ static VALUE nm_cblas_scal(VALUE self, VALUE n, VALUE scale, VALUE vector, VALUE
 
   return vector;
 }
-
 
 /*
  * Interprets cblas argument which could be :left or :right
