@@ -764,10 +764,10 @@ static VALUE nm_cblas_imax(VALUE self, VALUE n, VALUE x, VALUE incx) {
 
   nm::dtype_t dtype = NM_DTYPE(x);
 
-  index = ttable[dtype](FIX2INT(n), NM_STORAGE_DENSE(x)->elements, FIX2INT(incx));
+  int index = ttable[dtype](FIX2INT(n), NM_STORAGE_DENSE(x)->elements, FIX2INT(incx));
 
   // Convert to Ruby's Int value.
-  return index;
+  return INT2FIX(index);
 }
 
 

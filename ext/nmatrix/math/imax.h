@@ -35,17 +35,21 @@ template<typename DType>
 inline int imax(const int n, const DType *x, const int incx) {
 
   /* Function Body */
-  if (n < 1 || incx <= 0) return -1;
-  if (n == 1)             return 0;
+  if (n < 1 || incx <= 0) {
+    return -1;
+  }
+  if (n == 1) {
+    return 0;
+  }
 
   DType dmax;
-  size_t imax = 0;
+  int imax = 0;
 
   if (incx == 1) { // if incrementing by 1
 
     dmax = abs(x[0]);
 
-    for (size_t i = 1; i < n; ++i) {
+    for (int i = 1; i < n; ++i) {
       if (std::abs(x[i]) > dmax) {
         imax = i;
         dmax = std::abs(x[i]);
@@ -56,7 +60,7 @@ inline int imax(const int n, const DType *x, const int incx) {
 
     dmax = std::abs(x[0]);
 
-    for (size_t i = 1, ix = incx; i < n; ++i, ix += incx) {
+    for (int i = 1, ix = incx; i < n; ++i, ix += incx) {
       if (std::abs(x[ix]) > dmax) {
         imax = i;
         dmax = std::abs(x[ix]);
