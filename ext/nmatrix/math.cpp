@@ -481,13 +481,13 @@ static inline enum CBLAS_TRANSPOSE blas_transpose_sym(VALUE op) {
 static VALUE nm_cblas_scal(VALUE self, VALUE n, VALUE alpha, VALUE vector, VALUE incx) {
   nm::dtype_t dtype = NM_DTYPE(vector);
 
-  void* alpha = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
-  rubyval_to_cval(alpha, dtype, alpha);
+  void* scalar = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
+  rubyval_to_cval(alpha, dtype, scalar);
 
   NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::cblas_scal, void, const int n,
-      const void* alpha, void* x, const int incx);
+      const void* scalar, void* x, const int incx);
 
-  ttable[dtype](FIX2INT(n), alpha, NM_STORAGE_DENSE(vector)->elements,
+  ttable[dtype](FIX2INT(n), scalar, NM_STORAGE_DENSE(vector)->elements,
       FIX2INT(incx));
 
   return vector;

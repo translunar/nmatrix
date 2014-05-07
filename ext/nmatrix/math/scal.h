@@ -47,36 +47,36 @@ namespace nm { namespace math {
 /*  ===================================================================== */
 
 template <typename DType>
-inline void scal(const int n, const DType alpha, DType* x, const int incx) {
+inline void scal(const int n, const DType scalar, DType* x, const int incx) {
 
   if (n <= 0 || incx <= 0) {
     return;
   }
 
   for (int i = 0; incx < 0 ? i > n*incx : i < n*incx; i += incx) {
-    x[i] = alpha * x[i];
+    x[i] = scalar * x[i];
   }
 }
 
 #if defined HAVE_CBLAS_H || defined HAVE_ATLAS_CBLAS_H
 template <>
-inline void scal(const int n, const float alpha, float* x, const int incx) {
-  cblas_sscal(n, alpha, x, incx);
+inline void scal(const int n, const float scalar, float* x, const int incx) {
+  cblas_sscal(n, scalar, x, incx);
 }
 
 template <>
-inline void scal(const int n, const double alpha, double* x, const int incx) {
-  cblas_dscal(n, alpha, x, incx);
+inline void scal(const int n, const double scalar, double* x, const int incx) {
+  cblas_dscal(n, scalar, x, incx);
 }
 
 template <>
-inline void scal(const int n, const Complex64 alpha, Complex64* x, const int incx) {
-  cblas_cscal(n, (const void*)(&alpha), (void*)(x), incx);
+inline void scal(const int n, const Complex64 scalar, Complex64* x, const int incx) {
+  cblas_cscal(n, (const void*)(&scalar), (void*)(x), incx);
 }
 
 template <>
-inline void scal(const int n, const Complex128 alpha, Complex128* x, const int incx) {
-  cblas_zscal(n, (const void*)(&alpha), (void*)(x), incx);
+inline void scal(const int n, const Complex128 scalar, Complex128* x, const int incx) {
+  cblas_zscal(n, (const void*)(&scalar), (void*)(x), incx);
 }
 #endif
 
@@ -84,8 +84,8 @@ inline void scal(const int n, const Complex128 alpha, Complex128* x, const int i
  * Function signature conversion for LAPACK's scal function.
  */
 template <typename DType>
-inline void cblas_scal(const int n, const void* alpha, void* x, const int incx) {
-  scal<DType>(n, *reinterpret_cast<const DType*>(alpha), reinterpret_cast<DType*>(x), incx);
+inline void cblas_scal(const int n, const void* scalar, void* x, const int incx) {
+  scal<DType>(n, *reinterpret_cast<const DType*>(scalar), reinterpret_cast<DType*>(x), incx);
 }
 
 }} // end of nm::math
