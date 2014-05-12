@@ -157,6 +157,7 @@ extern "C" {
 #endif
 
   /* BLAS Level 1. */
+  static VALUE nm_cblas_scal(VALUE self, VALUE n, VALUE scale, VALUE vector, VALUE incx);
   static VALUE nm_cblas_nrm2(VALUE self, VALUE n, VALUE x, VALUE incx);
   static VALUE nm_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx);
   static VALUE nm_cblas_rot(VALUE self, VALUE n, VALUE x, VALUE incx, VALUE y, VALUE incy, VALUE c, VALUE s);
@@ -187,7 +188,6 @@ extern "C" {
   static VALUE nm_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE lda, VALUE ipiv);
   static VALUE nm_clapack_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
   static VALUE nm_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1, VALUE k2, VALUE ipiv, VALUE incx);
-  static VALUE nm_clapack_scal(VALUE self, VALUE n, VALUE scale, VALUE vector, VALUE incx);
   static VALUE nm_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
 
   static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lworkspace_size);
@@ -399,7 +399,6 @@ void nm_math_init_blas() {
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getri", (METHOD)nm_clapack_getri, 5);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_potri", (METHOD)nm_clapack_potri, 5);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_laswp", (METHOD)nm_clapack_laswp, 7);
-  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_scal",  (METHOD)nm_clapack_scal,  4);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_lauum", (METHOD)nm_clapack_lauum, 5);
 
   /* Non-ATLAS regular LAPACK Functions called via Fortran interface */
@@ -409,6 +408,7 @@ void nm_math_init_blas() {
 
   cNMatrix_BLAS = rb_define_module_under(cNMatrix, "BLAS");
 
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_scal", (METHOD)nm_cblas_scal, 4);
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_nrm2", (METHOD)nm_cblas_nrm2, 3);
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_asum", (METHOD)nm_cblas_asum, 3);
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_rot",  (METHOD)nm_cblas_rot,  7);
@@ -463,6 +463,35 @@ static inline enum CBLAS_TRANSPOSE blas_transpose_sym(VALUE op) {
   return CblasNoTrans;
 }
 
+/*
+ * call-seq:
+ *     NMatrix::BLAS.cblas_scal(n, alpha, vector, inc) -> NMatrix
+ *
+ * BLAS level 1 function +scal+. Works with all dtypes.
+ *
+ * Scale +vector+ in-place by +alpha+ and also return it. The operation is as
+ * follows:
+ *  x <- alpha * x
+ *
+ * - +n+ -> Number of elements of +vector+.
+ * - +alpha+ -> Scalar value used in the operation.
+ * - +vector+ -> NMatrix of shape [n,1] or [1,n]. Modified in-place.
+ * - +inc+ -> Increment used in the scaling function. Should generally be 1.
+ */
+static VALUE nm_cblas_scal(VALUE self, VALUE n, VALUE alpha, VALUE vector, VALUE incx) {
+  nm::dtype_t dtype = NM_DTYPE(vector);
+
+  void* scalar = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
+  rubyval_to_cval(alpha, dtype, scalar);
+
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::cblas_scal, void, const int n,
+      const void* scalar, void* x, const int incx);
+
+  ttable[dtype](FIX2INT(n), scalar, NM_STORAGE_DENSE(vector)->elements,
+      FIX2INT(incx));
+
+  return vector;
+}
 
 /*
  * Interprets cblas argument which could be :left or :right
@@ -1223,25 +1252,6 @@ static VALUE nm_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_right,
 
     return INT2FIX(info);
   }
-}
-
-
-/*
- * Based on LAPACK's dscal function, but for any dtype.
- *
- * In-place modification; returns the modified vector as well.
- */
-static VALUE nm_clapack_scal(VALUE self, VALUE n, VALUE scale, VALUE vector, VALUE incx) {
-  nm::dtype_t dtype = NM_DTYPE(vector);
-
-  void* da      = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
-  rubyval_to_cval(scale, dtype, da);
-
-  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::clapack_scal, void, const int n, const void* da, void* dx, const int incx);
-
-  ttable[dtype](FIX2INT(n), da, NM_STORAGE_DENSE(vector)->elements, FIX2INT(incx));
-
-  return vector;
 }
 
 

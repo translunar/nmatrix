@@ -38,6 +38,12 @@ describe NMatrix::BLAS do
    :object
   ].each do |dtype|
     context dtype do
+      it "exposes cblas_scal" do
+        x = NMatrix.new([3, 1], [1, 2, 3], dtype: dtype)
+        NMatrix::BLAS.cblas_scal(3, 2, x, 1)
+        expect(x).to eq(NMatrix.new([3, 1], [2, 4, 6], dtype: dtype))
+      end
+
       it "exposes cblas_imax" do
         u = NMatrix.new([3,1], [1, 4, 3], dtype: dtype)
         index = NMatrix::BLAS.cblas_imax(3, u, 1)

@@ -49,7 +49,7 @@ inline void swap(int n, DType *dx, int incx, DType *dy, int incy) {
     dy[iy]      = dtemp;
   }
   return;
-} /* dswap */
+} */
 
 // This is the old BLAS version of this function. ATLAS has an optimized version, but
 // it's going to be tough to translate.
