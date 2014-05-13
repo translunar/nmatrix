@@ -172,20 +172,16 @@ end
 #   export CPLUS_INCLUDE_PATH=/usr/local/atlas/include
 # (substituting in the path of your cblas.h and clapack.h for the path I used). -- JW 8/27/12
 
-idefaults = {clapack: ["/usr/local/atlas/include"], 
-             lapack: ["/usr/local/atlas/include"],
+idefaults = {lapack: ["/usr/local/atlas/include"],
              cblas: ["/usr/local/atlas/include", "/usr/include/atlas"],
              atlas: ["/usr/local/atlas/include", "/usr/include/atlas"]}
 
 # For some reason, if we try to look for /usr/lib64/atlas on a Mac OS X Mavericks system, and the directory does not
 # exist, it will give a linker error -- even if the lib dir is already correctly included with -L. So we need to check
 # that Dir.exists?(d) for each.
-ldefaults = {clapack: ["/usr/local/atlas/lib"], 
-             lapack: ["/usr/local/atlas/lib", "/usr/local/lib", "/usr/lib64/atlas"].delete_if { |d| !Dir.exists?(d) },
+ldefaults = {lapack: ["/usr/local/atlas/lib", "/usr/local/lib", "/usr/lib64/atlas"].delete_if { |d| !Dir.exists?(d) },
              cblas: ["/usr/local/atlas/lib", "/usr/local/lib", "/usr/lib64/atlas"].delete_if { |d| !Dir.exists?(d) },
              atlas: ["/usr/local/atlas/lib", "/usr/local/lib", "/usr/lib", "/usr/lib64/atlas"].delete_if { |d| !Dir.exists?(d) }}
-
-dir_config("clapack", idefaults[:clapack], ldefaults[:clapack])
  
 if have_library("clapack") # Usually only applies for Mac OS X
   $libs += " -lclapack "
