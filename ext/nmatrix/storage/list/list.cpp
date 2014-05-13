@@ -784,11 +784,8 @@ static NODE* list_storage_get_single_node(LIST_STORAGE* s, SLICE* slice) {
   for (size_t r = 0; r < s->dim; r++) {
     n = nm::list::find(l, s->offset[r] + slice->coords[r]);
 
-    if (n) {
-      l = reinterpret_cast<LIST*>(n->val);
-    } else {
-      return NULL;
-    }
+    if (n) l = reinterpret_cast<LIST*>(n->val);
+    else return NULL;
   }
 
   return n;
