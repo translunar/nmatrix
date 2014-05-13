@@ -69,10 +69,10 @@ class NMatrix
   # Note that #map will always return an :object matrix, because it has no way of knowing
   # how to handle operations on the different dtypes.
   #
-  def map(&bl)
+  def map &bl
     return enum_for(:map) unless block_given?
     cp = self.cast(dtype: :object)
-    cp.map! &bl
+    cp.map!(&bl)
     cp
   end
 
