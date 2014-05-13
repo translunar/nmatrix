@@ -46,16 +46,13 @@ probably use +brew install gcc48+ instead of using the install script.
 
 == Documentation
 
-Carlos Agarie (@agarie) is currently working to improve the documentation. The best way to get help is by posting
-{issues}[https://github.com/SciRuby/nmatrix/issues] or sending e-mails to our
-{mailing list}[https://groups.google.com/forum/?fromgroups#!forum/sciruby-dev]. You may also email @agarie, or look for
-`agarie` on #sciruby at chat.freenode.net if you want to ask questions or offer suggestions.
+If you have a suggestion or want to add documentation for any class or method in NMatrix, please open an issue or send a pull request with the changes.
 
 You can find the complete API documentation {on our website}[http://sciruby.com/nmatrix/docs/].
 
 == Examples
 
-Create a new NMatrix from a ruby Array: 
+Create a new NMatrix from a ruby Array:
 
     >> require 'nmatrix'
     >> NMatrix.new([2, 3], [0, 1, 2, 3, 4, 5], dtype: :int64)
@@ -107,7 +104,7 @@ The following features exist in the current version of NMatrix (0.1.0.rc1):
   * Point Cloud Library PCD file input
 * C and C++ API
 * BLAS internal implementations (no library) and ATLAS (with library) access:
-  * Level 1: xROT, xROTG (BLAS dtypes only), xASUM, xNRM2
+  * Level 1: xROT, xROTG (BLAS dtypes only), xASUM, xNRM2, IxAMAX
   * Level 2: xGEMV
   * Level 3: xGEMM, xTRSM
 * LAPACK ATLAS access:
