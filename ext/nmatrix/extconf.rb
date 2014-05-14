@@ -182,7 +182,7 @@ idefaults = {lapack: ["/usr/include/atlas"],
 ldefaults = {lapack: ["/usr/local/lib", "/usr/local/atlas/lib", "/usr/lib64/atlas"].delete_if { |d| !Dir.exists?(d) },
              cblas: ["/usr/local/lib", "/usr/local/atlas/lib", "/usr/lib64/atlas"].delete_if { |d| !Dir.exists?(d) },
              atlas: ["/usr/local/lib", "/usr/local/atlas/lib", "/usr/lib", "/usr/lib64/atlas"].delete_if { |d| !Dir.exists?(d) }}
- 
+
 if have_library("clapack") # Usually only applies for Mac OS X
   $libs += " -lclapack "
 end
@@ -209,9 +209,9 @@ else
 end
 
 
-have_func("int clapack_dgetrf", ["cblas.h", "clapack.h"])
-have_func("int clapack_dgetri", ["cblas.h", "clapack.h"])
-have_func("int dgesvd_", "clapack.h") # This may not do anything. dgesvd_ seems to be in LAPACK, not CLAPACK.
+have_func("clapack_dgetrf", ["cblas.h", "clapack.h"])
+have_func("clapack_dgetri", ["cblas.h", "clapack.h"])
+have_func("dgesvd_", "clapack.h") # This may not do anything. dgesvd_ seems to be in LAPACK, not CLAPACK.
 
 have_func("cblas_dgemm", "cblas.h")
 
