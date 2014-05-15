@@ -207,7 +207,10 @@ end
 require "rdoc/task"
 RDoc::Task.new do |rdoc|
   rdoc.main = "README.rdoc"
-  rdoc.rdoc_files.include(%w{README.rdoc History.txt LICENSE.txt CONTRIBUTING.md ext/nmatrix/binary_format.txt lib/nmatrix/**/*.rb ext/nmatrix/**/*.cpp ext/nmatrix/**/*.c ext/nmatrix/**/*.h})
+  rdoc.rdoc_files.include(%w{README.rdoc History.txt LICENSE.txt CONTRIBUTING.md lib ext})
+  rdoc.options << "--exclude=ext/nmatrix/extconf.rb"
+  rdoc.options << "--exclude=ext/nmatrix/ttable_helper.rb"
+  rdoc.options << "--exclude=lib/nmatrix/rspec.rb"
 end
 
 # vim: syntax=ruby

@@ -34,6 +34,11 @@ else
   require "nmatrix.so"
 end
 
+require 'nmatrix/io/mat_reader'
+require 'nmatrix/io/mat5_reader'
+require 'nmatrix/io/market'
+require 'nmatrix/io/point_cloud'
+
 require 'nmatrix/nmatrix.rb'
 require 'nmatrix/version.rb'
 require 'nmatrix/blas.rb'

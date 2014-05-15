@@ -100,7 +100,7 @@ class Object #:nodoc:
 end
 
 
-module Math
+module Math #:nodoc:
   class << self
     NMatrix::NMMath::METHODS_ARITY_2.each do |meth|
       define_method "nm_#{meth}" do |arg0, arg1|

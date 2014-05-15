@@ -148,7 +148,6 @@ void nm_init_ruby_constants(void) {
 	nm_rb_column            = rb_intern("column");
 	nm_rb_row               = rb_intern("row");
 
-  //Added by Ryan
   nm_rb_both              = rb_intern("both");
   nm_rb_none              = rb_intern("none");
 }

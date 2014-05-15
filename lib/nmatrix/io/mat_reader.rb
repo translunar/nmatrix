@@ -30,13 +30,12 @@
 require 'packable'
 
 module NMatrix::IO::Matlab
-  #
+
   # Class for parsing a .mat file stream.
   #
   # The full format of .mat files is available here:
   # * http://www.mathworks.com/help/pdf_doc/matlab/matfile_format.pdf
-  #
-  class MatReader
+  class MatReader #:nodoc:
     MDTYPE_UNPACK_ARGS = {
       :miINT8   => [Integer, {:signed    => true,    :bytes => 1}],
       :miUINT8  => [Integer, {:signed    => false,   :bytes => 1}],
@@ -146,7 +145,7 @@ module NMatrix::IO::Matlab
 
     attr_reader :byte_order
 
-    #
+
     # call-seq:
     #     new(stream, options = {}) -> MatReader
     #
@@ -160,7 +159,6 @@ module NMatrix::IO::Matlab
       @byte_order = options[:byte_order] || guess_byte_order
     end
 
-    #
     # call-seq:
     #     guess_byte_order -> Symbol
     #
