@@ -25,8 +25,7 @@
 # Test of slice operations. High priority tests since reference
 # slicing is needed for pretty_print.
 #
-require 'pry'
-require File.dirname(__FILE__) + "/spec_helper.rb"
+require 'spec_helper'
 
 describe "Slice operation" do
   include RSpec::Longrun::DSL

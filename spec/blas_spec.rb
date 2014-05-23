@@ -25,13 +25,9 @@
 # Tests for properly exposed BLAS functions.
 #
 
-# Can we use require_relative here instead?
-require File.join(File.dirname(__FILE__), "spec_helper.rb")
+require 'spec_helper'
 
 describe NMatrix::BLAS do
-  #after :each do
-  #  GC.start
-  #end
   [:byte, :int8, :int16, :int32, :int64,
    :float32, :float64, :complex64, :complex128,
    :rational32, :rational64, :rational128,
