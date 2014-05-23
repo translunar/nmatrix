@@ -554,14 +554,17 @@ static inline enum CBLAS_ORDER blas_order_sym(VALUE op) {
  *
  * The Givens plane rotation can be used to introduce zero elements into a matrix selectively.
  *
- * This function differs from most of the other raw BLAS accessors. Instead of providing a, b, c, s as arguments, you
- * should only provide a and b (the inputs), and you should provide them as a single NVector (or the first two elements
- * of any dense NMatrix or NVector type, specifically).
+ * This function differs from most of the other raw BLAS accessors. Instead of
+ * providing a, b, c, s as arguments, you should only provide a and b (the
+ * inputs), and you should provide them as the first two elements of any dense
+ * NMatrix type.
  *
- * The outputs [c,s] will be returned in a Ruby Array at the end; the input NVector will also be modified in-place.
+ * The outputs [c,s] will be returned in a Ruby Array at the end; the input
+ * NMatrix will also be modified in-place.
  *
- * If you provide rationals, be aware that there's a high probability of an error, since rotg includes a square root --
- * and most rationals' square roots are irrational. You're better off converting to Float first.
+ * If you provide rationals, be aware that there's a high probability of an
+ * error, since rotg includes a square root -- and most rationals' square roots
+ * are irrational. You're better off converting to Float first.
  *
  * This function, like the other cblas_ functions, does minimal type-checking.
  */
@@ -1424,7 +1427,6 @@ static VALUE nm_clapack_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VAL
   };
 
   // Allocate the C version of the pivot index array
-  // TODO: Allow for an NVector here also, maybe?
   int* ipiv_;
   if (TYPE(ipiv) != T_ARRAY) {
     rb_raise(rb_eArgError, "ipiv must be of type Array");
@@ -1531,7 +1533,6 @@ static VALUE nm_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE l
   };
 
   // Allocate the C version of the pivot index array
-  // TODO: Allow for an NVector here also, maybe?
   int* ipiv_;
   if (TYPE(ipiv) != T_ARRAY) {
     rb_raise(rb_eArgError, "ipiv must be of type Array");
@@ -1628,7 +1629,6 @@ static VALUE nm_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1,
   };
 
   // Allocate the C version of the pivot index array
-  // TODO: Allow for an NVector here also, maybe?
   int* ipiv_;
   if (TYPE(ipiv) != T_ARRAY) {
     rb_raise(rb_eArgError, "ipiv must be of type Array");
