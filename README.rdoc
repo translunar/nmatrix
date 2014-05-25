@@ -4,6 +4,7 @@ Fast Numerical Linear Algebra Library for Ruby
 
 * {sciruby.com}[http://sciruby.com]
 * {Google+}[https://plus.google.com/109304769076178160953/posts]
+* {Google Group - Mailing List}[https://groups.google.com/forum/#!forum/sciruby-dev]
 * {NMatrix Installation wiki}[https://github.com/SciRuby/nmatrix/wiki/Installation]
 * {SciRuby Installation guide}[http://sciruby.com/docs#installation]
 
