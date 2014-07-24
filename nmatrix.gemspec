@@ -47,8 +47,8 @@ EOF
   #gem.add_dependency 'yard'
   gem.add_development_dependency 'rake'
   gem.add_development_dependency 'bundler'
-  gem.add_development_dependency 'rspec'
-  gem.add_development_dependency 'rspec-longrun'
+  gem.add_development_dependency 'rspec', '~>2.14.1'
+  gem.add_development_dependency 'rspec-longrun', '~>1.0.1'
   gem.add_development_dependency 'pry'
   gem.add_development_dependency 'rake-compiler', '~>0.8.1'
 end
