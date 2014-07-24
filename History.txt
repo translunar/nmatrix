@@ -599,7 +599,7 @@
   * Fixed critical bug with transposing a matrix reference slice (by
     @rajatkapoor)
 
-=== 0.1.0.rc4 / 2014-04-??
+=== 0.1.0.rc4 / 2014-07-24
 
 * No major enhancements.
 
@@ -607,6 +607,8 @@
 
   * NMatrix#floor and #ceil implemented (by @v0dro)
 
-* 1 bug fixes:
+* 2 bug fixes:
 
   * Disallowed out-of-bounds rank calls (by @andrewcsmith)
+
+  * Fixed rspec 3.0 conflict with rspec-longrun 1.0.1

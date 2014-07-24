@@ -20,7 +20,6 @@ lib/nmatrix/lapack.rb
 lib/nmatrix/math.rb
 lib/nmatrix/monkeys.rb
 lib/nmatrix/nmatrix.rb
-lib/nmatrix/nvector.rb
 lib/nmatrix/rspec.rb
 lib/nmatrix/shortcuts.rb
 lib/nmatrix/version.rb
