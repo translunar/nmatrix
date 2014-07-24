@@ -612,3 +612,11 @@
   * Disallowed out-of-bounds rank calls (by @andrewcsmith)
 
   * Fixed rspec 3.0 conflict with rspec-longrun 1.0.1
+
+=== 0.1.0.rc5 / 2014-08-??
+
+* No major enhancements.
+
+* No minor enhancements.
+
+* No bug fixes.
