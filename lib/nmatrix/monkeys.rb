@@ -82,3 +82,23 @@ module Math
   end
 end
 
+class String
+  def underscore
+    self.gsub(/::/, '/').
+    gsub(/([A-Z]+)([A-Z][a-z])/,'\1_\2').
+    gsub(/([a-z\d])([A-Z])/,'\1_\2').
+    tr("-", "_").
+    downcase
+  end
+end
+
+# Since `autoload` will most likely be deprecated (due to multi-threading concerns),
+# we'll use `const_missing`. See: https://www.ruby-forum.com/topic/3036681 for more info.
+module AutoloadPatch #:nodoc
+  def const_missing(name)
+    file = name.to_s.underscore
+    require "nmatrix/io/#{file}"
+    klass = const_get(name)
+    return klass if klass
+  end
+end
