@@ -603,7 +603,7 @@
 
 * No major enhancements.
 
-* 1 minor enhancements:
+* 1 minor enhancement:
 
   * NMatrix#floor and #ceil implemented (by @v0dro)
 
@@ -617,6 +617,10 @@
 
 * No major enhancements.
 
-* No minor enhancements.
+* 1 minor enhancements:
+
+  * Added optional extension for generating homogeneous
+    transformation matrices for rotations and translations in three
+    dimensions
 
 * No bug fixes.
