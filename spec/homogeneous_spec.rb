@@ -39,7 +39,10 @@ describe 'NMatrix' do
                                                       0.0, 0.5, Math.cos(Math::PI.quo(6)), 0.0,
                                                       0.0, 0.0, 0.0, 1.0] ))
     end
+  end
 
+
+  context "#y_rotation" do
     it "should generate a matrix representing a rotation about the y axis" do
       y = NMatrix.y_rotation(Math::PI.quo(6))
       expect(y).to be_within(1e-8).of(NMatrix.new([4,4], [Math.cos(Math::PI.quo(6)), 0.0, 0.5, 0.0,
@@ -47,7 +50,9 @@ describe 'NMatrix' do
                                                      -0.5, 0.0, Math.cos(Math::PI.quo(6)), 0.0,
                                                       0.0, 0.0, 0.0, 1.0] ))
     end
+  end
 
+  context "#z_rotation" do
     it "should generate a matrix representing a rotation about the z axis" do
       z = NMatrix.z_rotation(Math::PI.quo(6))
       expect(z).to be_within(1e-8).of(NMatrix.new([4,4], [Math.cos(Math::PI.quo(6)), -0.5, 0.0, 0.0,
@@ -55,7 +60,9 @@ describe 'NMatrix' do
                                                       0.0, 0.0, 1.0, 0.0,
                                                       0.0, 0.0, 0.0, 1.0] ))
     end
+  end
 
+  context "#translation" do
     it "should generate a translation matrix from an Array" do
       t = NMatrix.translation([4,5,6])
       expect(t).to be_within(1e-8).of(NMatrix.new([4,4], [1, 0, 0, 4,
@@ -78,7 +85,7 @@ describe 'NMatrix' do
                                                       0, 1, 0, 5,
                                                       0, 0, 1, 6,
                                                       0, 0, 0, 1] ))
-      expect(t).dtype.to == :float64
+      expect(t.dtype).to be(:float64)
     end
   end
 end

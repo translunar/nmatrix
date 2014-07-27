@@ -129,13 +129,14 @@ class NMatrix
       default_dtype = xyz.respond_to?(:dtype) ? xyz.dtype : NMatrix.guess_dtype(xyz)
       opts = {dtype: default_dtype}
       opts = opts.merge(args.pop) if args.size > 0 && args.last.is_a?(Hash)
+      xyz ||= args
 
       n = if args.size > 0
         NMatrix.eye(4, opts)
       else
         NMatrix.eye(4, opts)
       end
-      n[0..2,3] = args
+      n[0..2,3] = xyz
       n
     end
   end
