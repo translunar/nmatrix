@@ -613,7 +613,7 @@
 
   * Fixed rspec 3.0 conflict with rspec-longrun 1.0.1
 
-=== 0.1.0.rc5 / 2014-08-??
+=== 0.1.0.rc5 / 2014-07-27
 
 * No major enhancements.
 
@@ -623,4 +623,7 @@
     transformation matrices for rotations and translations in three
     dimensions
 
-* No bug fixes.
+* 1 bug fix:
+
+  * Fixed API problems which prevented NMatrix from working with
+    the SciRuby rb-gsl fork
