@@ -44,10 +44,10 @@ class Array
   def to_nm(shape, dtype = nil, stype = :dense)
     dtype ||=
       case self[0]
-      when Fixnum		then :int64
-      when Float		then :float64
-      when Rational	then :rational128
-      when Complex	then :complex128
+      when Fixnum   then :int64
+      when Float    then :float64
+      when Rational then :rational128
+      when Complext then :complex128
       end
 
     matrix = NMatrix.new(:dense, shape, self, dtype)
