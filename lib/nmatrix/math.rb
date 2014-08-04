@@ -219,7 +219,7 @@ class NMatrix
   # Optionally accepts a +workspace_size+ parameter, which will be honored only if it is larger than what LAPACK
   # requires.
   #
-  def gesdd!(workspace_size=1)
+  def gesdd!(workspace_size=nil)
     NMatrix::LAPACK::gesdd(self, workspace_size)
   end
 
@@ -234,7 +234,7 @@ class NMatrix
   # Optionally accepts a +workspace_size+ parameter, which will be honored only if it is larger than what LAPACK
   # requires.
   #
-  def gesdd(workspace_size=1)
+  def gesdd(workspace_size=nil)
     self.clone.gesdd!(workspace_size)
   end
   #

@@ -168,7 +168,9 @@ class NMatrix
       # Optionally accepts a +workspace_size+ parameter, which will be honored only if it is larger than what LAPACK
       # requires.
       #
-      def gesdd(matrix, workspace_size=100000)
+      def gesdd(matrix, workspace_size=nil)
+        min_workspace_size = matrix.shape.min * (6 + 4 * matrix.shape.min) + matrix.shape.max
+        workspace_size = min_workspace_size if workspace_size.nil? || workspace_size < min_workspace_size
         result = alloc_svd_result(matrix)
         NMatrix::LAPACK::lapack_gesdd(:a, matrix.shape[0], matrix.shape[1], matrix, matrix.shape[0], result[1], result[0], matrix.shape[0], result[2], matrix.shape[1], workspace_size)
         result
