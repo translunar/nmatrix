@@ -44,10 +44,10 @@ class Array
   def to_nm(shape, dtype = nil, stype = :dense)
     dtype ||=
       case self[0]
-      when Fixnum		then :int64
-      when Float		then :float64
-      when Rational	then :rational128
-      when Complex	then :complex128
+      when Fixnum   then :int64
+      when Float    then :float64
+      when Rational then :rational128
+      when Complext then :complex128
       end
 
     matrix = NMatrix.new(:dense, shape, self, dtype)
@@ -82,3 +82,23 @@ module Math
   end
 end
 
+class String
+  def underscore
+    self.gsub(/::/, '/').
+    gsub(/([A-Z]+)([A-Z][a-z])/,'\1_\2').
+    gsub(/([a-z\d])([A-Z])/,'\1_\2').
+    tr("-", "_").
+    downcase
+  end
+end
+
+# Since `autoload` will most likely be deprecated (due to multi-threading concerns),
+# we'll use `const_missing`. See: https://www.ruby-forum.com/topic/3036681 for more info.
+module AutoloadPatch #:nodoc
+  def const_missing(name)
+    file = name.to_s.underscore
+    require "nmatrix/io/#{file}"
+    klass = const_get(name)
+    return klass if klass
+  end
+end
