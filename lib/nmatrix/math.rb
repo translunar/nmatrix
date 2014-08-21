@@ -360,6 +360,26 @@ class NMatrix
     end
   end
 
+  #
+  # call-seq:
+  #     trace -> Numeric
+  #
+  # Calculates the trace of an nxn matrix.
+  #
+  # * *Raises* :
+  #   - +ShapeError+ -> Expected square matrix
+  #
+  # * *Returns* :
+  #   - The trace of the matrix (a numeric value)
+  #
+  def trace
+    raise(ShapeError, "Expected square matrix") unless self.shape[0] == self.shape[1] && self.dim == 2
+
+    (0...self.shape[0]).inject(0) do |total,i|
+      total + self[i,i]
+    end
+  end
+
   ##
   # call-seq:
   #   mean() -> NMatrix

@@ -613,7 +613,7 @@
 
   * Fixed rspec 3.0 conflict with rspec-longrun 1.0.1
 
-=== 0.1.0.rc5 / 2014-07-27
+=== 0.1.0.rc5 / 2014-08-01
 
 * No major enhancements.
 
@@ -631,3 +631,27 @@
     the SciRuby rb-gsl fork
 
   * Fixed Yale #inject behavior (by @yoongkang)
+
+=== 0.1.0.rc6 / 2014-08-??
+
+* No major enhancements.
+
+* 4 minor enhancements:
+
+  * Added trace method for square matrices
+
+  * Improved Array#to_nm monkey patch so matrices and
+    arrays can be interconverted easily, without need for a
+    shape argument (by @andrewcsmith)
+
+  * Added Harwell-Boeing and Fortran matrix format parsers
+    (by @v0dro)
+
+  * Removed soon-to-be-deprecated autoloads and replaced
+    with a more robust method (by @duggiefresh)
+
+  * Updated rake install task to use Bundler's GemHelper
+    install task (by @duggiefresh)
+
+* No bug fixes.
+
