@@ -653,5 +653,9 @@
   * Updated rake install task to use Bundler's GemHelper
     install task (by @duggiefresh)
 
-* No bug fixes.
+* 1 bug fix:
+
+  * Corrected Ubuntu clapack functionality checking, which
+    should fix most functions which rely on the ATLAS
+    version of clapack
 

@@ -68,7 +68,7 @@ inline int getri(const enum CBLAS_ORDER order, const int n, DType* a, const int 
   return 0;
 }
 
-#ifdef HAVE_CLAPACK_H
+#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
 template <>
 inline int getri(const enum CBLAS_ORDER order, const int n, float* a, const int lda, const int* ipiv) {
   return clapack_sgetri(order, n, a, lda, ipiv);

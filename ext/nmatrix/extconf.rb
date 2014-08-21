@@ -209,8 +209,12 @@ else
 end
 
 
-have_func("clapack_dgetrf", ["cblas.h", "clapack.h"])
-have_func("clapack_dgetri", ["cblas.h", "clapack.h"])
+# Although have_func is supposed to take a list as its second argument, I find that it simply
+# applies a :to_s to the second arg and doesn't actually check each one. We may want to put
+# have_func calls inside an :each block which checks atlas/clapack.h, cblas.h, clapack.h, and 
+# lastly lapack.h. On Ubuntu, it only works if I use atlas/clapack.h. --@mohawkjohn 8/20/14
+have_func("clapack_dgetrf", "atlas/clapack.h")
+have_func("clapack_dgetri", "atlas/clapack.h")
 have_func("dgesvd_", "clapack.h") # This may not do anything. dgesvd_ seems to be in LAPACK, not CLAPACK.
 
 have_func("cblas_dgemm", "cblas.h")
