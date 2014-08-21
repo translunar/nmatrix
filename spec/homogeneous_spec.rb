@@ -31,7 +31,7 @@ require "./lib/nmatrix/homogeneous.rb"
 require 'pry'
 
 describe 'NMatrix' do
-  context "#x_rotation" do
+  context ".x_rotation" do
     it "should generate a matrix representing a rotation about the x axis" do
       x = NMatrix.x_rotation(Math::PI.quo(6))
       expect(x).to be_within(1e-8).of(NMatrix.new([4,4], [1.0, 0.0, 0.0, 0.0,
@@ -42,7 +42,7 @@ describe 'NMatrix' do
   end
 
 
-  context "#y_rotation" do
+  context ".y_rotation" do
     it "should generate a matrix representing a rotation about the y axis" do
       y = NMatrix.y_rotation(Math::PI.quo(6))
       expect(y).to be_within(1e-8).of(NMatrix.new([4,4], [Math.cos(Math::PI.quo(6)), 0.0, 0.5, 0.0,
@@ -52,7 +52,7 @@ describe 'NMatrix' do
     end
   end
 
-  context "#z_rotation" do
+  context ".z_rotation" do
     it "should generate a matrix representing a rotation about the z axis" do
       z = NMatrix.z_rotation(Math::PI.quo(6))
       expect(z).to be_within(1e-8).of(NMatrix.new([4,4], [Math.cos(Math::PI.quo(6)), -0.5, 0.0, 0.0,
@@ -62,7 +62,7 @@ describe 'NMatrix' do
     end
   end
 
-  context "#translation" do
+  context ".translation" do
     it "should generate a translation matrix from an Array" do
       t = NMatrix.translation([4,5,6])
       expect(t).to be_within(1e-8).of(NMatrix.new([4,4], [1, 0, 0, 4,
@@ -86,6 +86,14 @@ describe 'NMatrix' do
                                                       0, 0, 1, 6,
                                                       0, 0, 0, 1] ))
       expect(t.dtype).to be(:float64)
+    end
+  end
+
+  context "#quaternion" do
+    it "should generate a singularity-free quaternion" do
+      transform = NMatrix.new([4,4], [-0.9995825,-0.02527934,-0.0139845,50.61761,-0.02732551,0.9844284,0.1736463,-22.95566,0.009376526,0.1739562,-0.9847089,7.1521,0,0,0,1])
+      q = transform.quaternion
+      expect(Math.sqrt(q[0]**2 + q[1]**2 + q[2]**2 + q[3]**2)).to be_within(1e-6).of(1.0)
     end
   end
 end

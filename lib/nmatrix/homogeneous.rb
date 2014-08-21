@@ -184,15 +184,15 @@ class NMatrix
         qq[j] = (self[ii,jj] + self[jj,ii]) * s
         qq[k] = (self[kk,ii] + self[ii,kk]) * s
         qq[0] = (self[kk,jj] - self[jj,kk]) * s
-        return qq
+        qq
       end
 
       case h
-      when h == 0
+      when 0
         q = case_macro.call(1,2,3, 0,1,2)
-      when h == 1
+      when 1
         q = case_macro.call(2,3,1, 1,2,0)
-      when h == 2
+      when 2
         q = case_macro.call(3,1,2, 2,0,1)
       end
 
