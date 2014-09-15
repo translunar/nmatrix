@@ -26,30 +26,42 @@
 #
 #++
 
+# Matrix Market is a repository of test data for use in studies of algorithms
+# for numerical linear algebra. There are 3 file formats used:
+#
+# - Matrix Market Exchange Format.
+# - Harwell-Boeing Exchange Format.
+# - Coordinate Text File Format. (to be phased out)
+#
+# This module can load and save the first format. We might support
+# Harwell-Boeing in the future.
+#
+# The MatrixMarket format is documented in:
+# * http://math.nist.gov/MatrixMarket/formats.html
 module NMatrix::IO::Market
   CONVERTER_AND_DTYPE = {
     :real => [:to_f, :float64],
     :complex => [:to_c, :complex128],
     :integer => [:to_i, :int64],
     :pattern => [:to_i, :byte]
-  }
+  } #:nodoc:
 
   ENTRY_TYPE = {
     :byte => :integer, :int8 => :integer, :int16 => :integer, :int32 => :integer, :int64 => :integer,
     :float32 => :real, :float64 => :real, :complex64 => :complex, :complex128 => :complex
-  }
+  } #:nodoc:
 
   class << self
-    #
+
     # call-seq:
-    #     load(filename) ->
+    #     load(filename) -> NMatrix
+    #
+    # Load a MatrixMarket file. Requires a +filename+ as an argument.
     #
     # * *Arguments* :
     #   - +filename+ -> String with the filename to be saved.
     # * *Raises* :
     #   - +IOError+ -> expected type code line beginning with '%%MatrixMarket matrix'
-    #
-    # Load a MatrixMarket file. Requires a filename as an argument.
     def load(filename)
 
       f = File.new(filename, "r")
@@ -71,7 +83,6 @@ module NMatrix::IO::Market
       end
     end
 
-    #
     # call-seq:
     #     save(matrix, filename, options = {}) -> true
     #
@@ -85,7 +96,6 @@ module NMatrix::IO::Market
     # * *Raises* :
     #   - +DataTypeError+ -> MatrixMarket does not support rational or Ruby objects.
     #   - +ArgumentError+ -> Expected two-dimensional NMatrix.
-    #
     def save(matrix, filename, options = {})
       options = {:pattern => false,
         :symmetry => :general}.merge(options)

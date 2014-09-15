@@ -29,7 +29,7 @@
 require 'rspec'
 
 # Amend RSpec to allow #be_within for matrices.
-module RSpec::Matchers::BuiltIn #:nodoc:
+module RSpec::Matchers::BuiltIn
   class BeWithin
 
     def of(expected)

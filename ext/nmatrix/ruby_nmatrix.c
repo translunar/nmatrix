@@ -208,6 +208,7 @@ void Init_nmatrix() {
   nm_eNotInvertibleError = rb_define_class("NotInvertibleError", rb_eStandardError);
 
   /*
+   * :nodoc:
    * Class that holds values in use by the C code.
    */
   cNMatrix_GC_holder = rb_define_class("NMGCHolder", rb_cObject);

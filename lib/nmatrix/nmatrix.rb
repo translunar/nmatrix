@@ -32,16 +32,29 @@ require_relative './lapack.rb'
 require_relative './yale_functions.rb'
 require_relative './monkeys'
 
-
+# NMatrix is a matrix class that supports both multidimensional arrays
+# (`:dense` stype) and sparse storage (`:list` or `:yale` stypes) and 13 data
+# types, including complex and rational numbers, various integer and
+# floating-point sizes and ruby objects.
 class NMatrix
+  # Read and write extensions for NMatrix.
   module IO
     extend AutoloadPatch
 
+    # Reader (and eventually writer) of Matlab .mat files.
+    #
+    # The .mat file format is documented in the following link:
+    # * http://www.mathworks.com/help/pdf_doc/matlab/matfile_format.pdf
     module Matlab
       extend AutoloadPatch
 
       class << self
-        def load_mat file_path
+        # call-seq:
+        #     load(mat_file_path) -> NMatrix
+        #     load_mat(mat_file_path) -> NMatrix
+        #
+        # Load a .mat file and return a NMatrix corresponding to it.
+        def load_mat(file_path)
           NMatrix::IO::Matlab::Mat5Reader.new(File.open(file_path, "rb+")).to_ruby
         end
         alias :load :load_mat
@@ -50,7 +63,6 @@ class NMatrix
   end
 
   class << self
-    #
     # call-seq:
     #     load_matlab_file(path) -> Mat5Reader
     #
@@ -58,12 +70,10 @@ class NMatrix
     #   - +file_path+ -> The path to a version 5 .mat file.
     # * *Returns* :
     #   - A Mat5Reader object.
-    #
     def load_matlab_file(file_path)
       NMatrix::IO::Mat5Reader.new(File.open(file_path, 'rb')).to_ruby
     end
 
-    #
     # call-seq:
     #     load_pcd_file(path) -> PointCloudReader::MetaReader
     #
@@ -71,12 +81,10 @@ class NMatrix
     #   - +file_path+ -> The path to a PCL PCD file.
     # * *Returns* :
     #   - A PointCloudReader::MetaReader object with the matrix stored in its +matrix+ property
-    #
     def load_pcd_file(file_path)
       NMatrix::IO::PointCloudReader::MetaReader.new(file_path)
     end
 
-    #
     # Calculate the size of an NMatrix of a given shape.
     def size(shape)
       shape = [shape,shape] unless shape.is_a?(Array)
@@ -124,8 +132,6 @@ class NMatrix
       end
     end
   end
-  #alias :pp :pretty_print
-
 
   #
   # call-seq:
@@ -234,7 +240,6 @@ class NMatrix
   end
 
 
-  ##
   # call-seq:
   #   integer_dtype?() -> Boolean
   #
@@ -348,7 +353,7 @@ class NMatrix
   #
   # See @row (dimension = 0), @column (dimension = 1)
   def rank(shape_idx, rank_idx, meth = :copy)
-    
+
     if shape_idx > (self.dim-1)
       raise(RangeError, "#rank call was out of bounds")
     end
@@ -508,7 +513,6 @@ class NMatrix
   end
 
 
-  #
   # call-seq:
   #     matrix1.concat(*m2) -> NMatrix
   #     matrix1.concat(*m2, rank) -> NMatrix
@@ -516,20 +520,21 @@ class NMatrix
   #     matrix1.vconcat(*m2) -> NMatrix
   #     matrix1.dconcat(*m3) -> NMatrix
   #
-  # Joins two matrices together into a new larger matrix. Attempts to determine which direction to concatenate
-  # on by looking for the first common element of the matrix +shape+ in reverse. In other words, concatenating two
-  # columns together without supplying +rank+ will glue them into an n x 2 matrix.
+  # Joins two matrices together into a new larger matrix. Attempts to determine
+  # which direction to concatenate on by looking for the first common element
+  # of the matrix +shape+ in reverse. In other words, concatenating two columns
+  # together without supplying +rank+ will glue them into an n x 2 matrix.
   #
-  # You can also use hconcat, vconcat, and dconcat for the first three ranks. concat performs an hconcat when no
-  # rank argument is provided.
+  # You can also use hconcat, vconcat, and dconcat for the first three ranks.
+  # concat performs an hconcat when no rank argument is provided.
   #
   # The two matrices must have the same +dim+.
   #
   # * *Arguments* :
   #   - +matrices+ -> one or more matrices
-  #   - +rank+ -> Fixnum (for rank); alternatively, may use :row, :column, or :layer for 0, 1, 2, respectively
-  #
-  def concat *matrices
+  #   - +rank+ -> Fixnum (for rank); alternatively, may use :row, :column, or
+  #   :layer for 0, 1, 2, respectively
+  def concat(*matrices)
     rank = nil
     rank = matrices.pop unless matrices.last.is_a?(NMatrix)
 
@@ -583,15 +588,18 @@ class NMatrix
     n
   end
 
-  def hconcat *matrices
+  # Horizontal concatenation with +matrices+.
+  def hconcat(*matrices)
     concat(*matrices, :column)
   end
 
-  def vconcat *matrices
+  # Vertical concatenation with +matrices+.
+  def vconcat(*matrices)
     concat(*matrices, :row)
   end
 
-  def dconcat *matrices
+  # Depth concatenation with +matrices+.
+  def dconcat(*matrices)
     concat(*matrices, :layer)
   end
 

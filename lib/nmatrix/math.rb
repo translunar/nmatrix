@@ -30,7 +30,7 @@
 
 class NMatrix
 
-  module NMMath
+  module NMMath #:nodoc:
     METHODS_ARITY_2 = [:atan2, :ldexp, :hypot]
     METHODS_ARITY_1 = [:cos, :sin, :tan, :acos, :asin, :atan, :cosh, :sinh, :tanh, :acosh,
       :asinh, :atanh, :exp, :log2, :log10, :sqrt, :cbrt, :erf, :erfc, :gamma, :-@]
@@ -182,7 +182,7 @@ class NMatrix
   #     gesvd! -> [u, sigma, v_transpose]
   #     gesvd! -> [u, sigma, v_conjugate_transpose] # complex
   #
-  # Compute the singular value decomposition of a matrix using LAPACK's GESVD function. 
+  # Compute the singular value decomposition of a matrix using LAPACK's GESVD function.
   # This is destructive, modifying the source NMatrix.  See also #gesdd.
   #
   # Optionally accepts a +workspace_size+ parameter, which will be honored only if it is larger than what LAPACK
@@ -589,7 +589,8 @@ protected
 
   # These don't actually take an argument -- they're called reverse-polish style on the matrix.
   # This group always gets casted to float64.
-  [:log, :log2, :log10, :sqrt, :sin, :cos, :tan, :acos, :asin, :atan, :cosh, :sinh, :tanh, :acosh, :asinh, :atanh, :exp, :erf, :erfc, :gamma, :cbrt].each do |ewop|
+  [:log, :log2, :log10, :sqrt, :sin, :cos, :tan, :acos, :asin, :atan, :cosh, :sinh, :tanh, :acosh,
+   :asinh, :atanh, :exp, :erf, :erfc, :gamma, :cbrt].each do |ewop|
     define_method("__list_unary_#{ewop}__") do
       self.__list_map_stored__(nil) { |l| Math.send(ewop, l) }.cast(stype, NMatrix.upcast(dtype, :float64))
     end
@@ -601,7 +602,8 @@ protected
     end
   end
 
-  # log takes an optional single argument, the base.  Default to natural log.
+  #:stopdoc:
+  # log takes an optional single argument, the base. Default to natural log.
   def __list_unary_log__(base)
     self.__list_map_stored__(nil) { |l| Math.log(l, base) }.cast(stype, NMatrix.upcast(dtype, :float64))
   end
@@ -626,6 +628,7 @@ protected
   def __dense_unary_negate__
     self.__dense_map__ { |l| -l }.cast(stype, dtype)
   end
+  #:startdoc:
 
   # These are for calculating the floor or ceil of matrix
   def dtype_for_floor_or_ceil
@@ -638,36 +641,36 @@ protected
     return_dtype
   end
 
-  [:floor, :ceil].each do |meth|  
+  [:floor, :ceil].each do |meth|
     define_method("__list_unary_#{meth}__") do
       return_dtype = dtype_for_floor_or_ceil
 
       if [:complex64, :complex128].include?(self.dtype)
-        self.__list_map_stored__(nil) { |l| Complex(l.real.send(meth), l.imag.send(meth)) }.cast(stype, return_dtype) 
+        self.__list_map_stored__(nil) { |l| Complex(l.real.send(meth), l.imag.send(meth)) }.cast(stype, return_dtype)
       else
-        self.__list_map_stored__(nil) { |l| l.send(meth) }.cast(stype, return_dtype)   
+        self.__list_map_stored__(nil) { |l| l.send(meth) }.cast(stype, return_dtype)
       end
     end
-    
-    define_method("__yale_unary_#{meth}__") do 
+
+    define_method("__yale_unary_#{meth}__") do
       return_dtype = dtype_for_floor_or_ceil
 
       if [:complex64, :complex128].include?(self.dtype)
-        self.__yale_map_stored__ { |l| Complex(l.real.send(meth), l.imag.send(meth)) }.cast(stype, return_dtype) 
+        self.__yale_map_stored__ { |l| Complex(l.real.send(meth), l.imag.send(meth)) }.cast(stype, return_dtype)
       else
-        self.__yale_map_stored__ { |l| l.send(meth) }.cast(stype, return_dtype)   
+        self.__yale_map_stored__ { |l| l.send(meth) }.cast(stype, return_dtype)
       end
     end
-    
+
     define_method("__dense_unary_#{meth}__") do
       return_dtype = dtype_for_floor_or_ceil
-       
+
       if [:complex64, :complex128].include?(self.dtype)
-        self.__dense_map__ { |l| Complex(l.real.send(meth), l.imag.send(meth)) }.cast(stype, return_dtype) 
+        self.__dense_map__ { |l| Complex(l.real.send(meth), l.imag.send(meth)) }.cast(stype, return_dtype)
       else
-        self.__dense_map__ { |l| l.send(meth) }.cast(stype, return_dtype)   
+        self.__dense_map__ { |l| l.send(meth) }.cast(stype, return_dtype)
       end
-    end     
+    end
   end
 
   # These take two arguments. One might be a matrix, and one might be a scalar.
