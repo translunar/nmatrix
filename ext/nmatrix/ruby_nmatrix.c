@@ -741,7 +741,7 @@ static VALUE nm_each_with_indices(VALUE nmatrix) {
     to_return = nm_list_each_with_indices(nmatrix, false);
     break;
   default:
-    NM_CONSERVATIVE(nm_unregister_value(nmatrix));
+    NM_CONSERVATIVE(nm_unregister_value(&nmatrix));
     rb_raise(nm_eDataTypeError, "Not a proper storage type");
   }
 
