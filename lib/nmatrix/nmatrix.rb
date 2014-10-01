@@ -244,6 +244,26 @@ class NMatrix
     [:byte, :int8, :int16, :int32, :int64].include?(self.dtype)
   end
 
+  ##
+  # call-seq:
+  #   complex_dtype?() -> Boolean
+  #
+  # Checks if dtype is a complex type
+  #
+  def complex_dtype?
+    [:complex64, :complex128].include?(self.dtype)
+  end
+
+  ##
+  # call-seq:
+  #   complex_dtype?() -> Boolean
+  #
+  # Checks if dtype is a rational type
+  #
+  def rational_dtype?
+    [:rational32, :rational64, :rational128].include?(self.dtype)
+  end
+
 
   #
   # call-seq:

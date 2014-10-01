@@ -40,48 +40,65 @@ class NMatrix
   # call-seq:
   #     invert! -> NMatrix
   #
-  # Use LAPACK to calculate the inverse of the matrix (in-place). Only works on
-  # dense matrices.
-  #
-  # Note: If you don't have LAPACK, e.g., on a Mac, this may not work yet. Use
-  # invert instead (which still probably won't work if your matrix is larger than 3x3).
+  # Use LAPACK to calculate the inverse of the matrix (in-place) if available. 
+  # Only works on dense matrices. Alternatively uses in-place Gauss-Jordan 
+  # elimination.
   #
   def invert!
-    # Get the pivot array; factor the matrix
-    pivot = self.getrf!
+    if NMatrix.has_clapack?
+      # Get the pivot array; factor the matrix
+      pivot = self.getrf!
 
-    # Now calculate the inverse using the pivot array
-    NMatrix::LAPACK::clapack_getri(:row, self.shape[1], self, self.shape[1], pivot)
+      # Now calculate the inverse using the pivot array
+      NMatrix::LAPACK::clapack_getri(:row, self.shape[1], self, self.shape[1], pivot)
 
-    self
+      self
+    else
+      if self.integer_dtype?
+        __inverse__(self.cast(dtype: :rational128), true)
+      else
+        dtype = self.dtype
+        __inverse__(self, true)
+      end
+    end
   end
 
   #
   # call-seq:
   #     invert -> NMatrix
   #
-  # Make a copy of the matrix, then invert it (requires LAPACK for matrices larger than 3x3).
-  #
+  # Make a copy of the matrix, then invert using Gauss-Jordan elimination.
+  # Works without LAPACK.
   #
   #
   # * *Returns* :
   #   - A dense NMatrix.
   #
-  def invert
-    if NMatrix.has_clapack?
-      begin
-        self.cast(:dense, self.dtype).invert! # call CLAPACK version
-      rescue NotImplementedError # probably a rational matrix
-        inverse = self.clone_structure
-        __inverse_exact__(inverse)
+  def invert lda=nil, ldb=nil
+    if lda.nil? and ldb.nil?
+      if NMatrix.has_clapack?
+        begin
+          self.cast(:dense, self.dtype).invert! # call CLAPACK version
+        rescue NotImplementedError # probably a rational matrix
+          inverse = self.clone
+          __inverse__(inverse, false)
+        end
+      elsif self.integer_dtype? # FIXME: This check is probably too slow.
+        rational_self = self.cast(dtype: :rational128)
+        inverse       = rational_self.clone
+        rational_self.__inverse__(inverse, false)
+      else
+        inverse       = self.clone
+        __inverse__(inverse, false)
       end
-    elsif self.integer_dtype? # FIXME: This check is probably too slow.
-      rational_self = self.cast(dtype: :rational128)
-      inverse       = rational_self.clone_structure
-      rational_self.__inverse_exact__(inverse)
     else
-      inverse       = self.clone_structure
-      __inverse_exact__(inverse)
+      inverse = self.clone_structure
+      if self.integer_dtype?
+        __inverse_exact__(inverse.cast(dtype: :rational128), lda, ldb)
+      else
+        dtype = self.dtype
+        __inverse_exact__(inverse, lda, ldb)
+      end
     end
   end
   alias :inverse :invert
@@ -625,6 +642,34 @@ protected
 
   def __dense_unary_negate__
     self.__dense_map__ { |l| -l }.cast(stype, dtype)
+  end
+
+  # These are for rounding each value of a matrix
+  def __list_unary_round__
+    if self.complex_dtype?
+      self.__list_map_stored__(nil) { |l| Complex(l.real.round, l.imag.round) }
+                                    .cast(stype, dtype)
+    else
+      self.__list_map_stored__(nil) { |l| l.round }.cast(stype, dtype)
+    end
+  end
+
+  def __yale_unary_round__
+    if self.complex_dtype?
+      self.__yale_map_stored__ { |l| Complex(l.real.round, l.imag.round) }
+                                    .cast(stype, dtype)
+    else
+      self.__yale_map_stored__ { |l| l.round }.cast(stype, dtype)
+    end
+  end
+
+  def __dense_unary_round__
+    if self.complex_dtype?
+      self.__dense_map__ { |l| Complex(l.real.round, l.imag.round) }
+                                    .cast(stype, dtype)
+    else
+      self.__dense_map__ { |l| l.round }.cast(stype, dtype)
+    end
   end
 
   # These are for calculating the floor or ceil of matrix

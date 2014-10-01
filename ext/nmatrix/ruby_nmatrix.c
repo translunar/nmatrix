@@ -134,6 +134,7 @@ DECL_UNARY_RUBY_ACCESSOR(gamma)
 DECL_UNARY_RUBY_ACCESSOR(negate)
 DECL_UNARY_RUBY_ACCESSOR(floor)
 DECL_UNARY_RUBY_ACCESSOR(ceil)
+DECL_UNARY_RUBY_ACCESSOR(round)
 DECL_NONCOM_ELEMENTWISE_RUBY_ACCESSOR(atan2)
 DECL_NONCOM_ELEMENTWISE_RUBY_ACCESSOR(ldexp)
 DECL_NONCOM_ELEMENTWISE_RUBY_ACCESSOR(hypot)
@@ -154,7 +155,8 @@ static VALUE matrix_multiply_scalar(NMATRIX* left, VALUE scalar);
 static VALUE matrix_multiply(NMATRIX* left, NMATRIX* right);
 static VALUE nm_multiply(VALUE left_v, VALUE right_v);
 static VALUE nm_det_exact(VALUE self);
-static VALUE nm_inverse_exact(VALUE self, VALUE inverse);
+static VALUE nm_inverse(VALUE self, VALUE inverse, VALUE bang);
+static VALUE nm_inverse_exact(VALUE self, VALUE inverse, VALUE lda, VALUE ldb);
 static VALUE nm_complex_conjugate_bang(VALUE self);
 static VALUE nm_complex_conjugate(VALUE self);
 static VALUE nm_reshape_bang(VALUE self, VALUE arg);
@@ -260,7 +262,8 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "supershape", (METHOD)nm_supershape, 0);
 	rb_define_method(cNMatrix, "offset", (METHOD)nm_offset, 0);
 	rb_define_method(cNMatrix, "det_exact", (METHOD)nm_det_exact, 0);
-	rb_define_protected_method(cNMatrix, "__inverse_exact__", (METHOD)nm_inverse_exact, 1);
+	rb_define_protected_method(cNMatrix, "__inverse__", (METHOD)nm_inverse, 2);
+  rb_define_protected_method(cNMatrix, "__inverse_exact__", (METHOD)nm_inverse_exact, 3);
 	rb_define_method(cNMatrix, "complex_conjugate!", (METHOD)nm_complex_conjugate_bang, 0);
 	rb_define_method(cNMatrix, "complex_conjugate", (METHOD)nm_complex_conjugate, 0);
 	rb_define_protected_method(cNMatrix, "reshape_bang", (METHOD)nm_reshape_bang, 1);
@@ -316,6 +319,8 @@ void Init_nmatrix() {
   rb_define_method(cNMatrix, "-@",    (METHOD)nm_unary_negate,0);
   rb_define_method(cNMatrix, "floor", (METHOD)nm_unary_floor, 0);
   rb_define_method(cNMatrix, "ceil", (METHOD)nm_unary_ceil, 0);
+  rb_define_method(cNMatrix, "round", (METHOD)nm_unary_round, 0);
+
 
 	rb_define_method(cNMatrix, "=~", (METHOD)nm_ew_eqeq, 1);
 	rb_define_method(cNMatrix, "!~", (METHOD)nm_ew_neq, 1);
@@ -932,6 +937,7 @@ DEF_UNARY_RUBY_ACCESSOR(GAMMA, gamma)
 DEF_UNARY_RUBY_ACCESSOR(NEGATE, negate)
 DEF_UNARY_RUBY_ACCESSOR(FLOOR, floor)
 DEF_UNARY_RUBY_ACCESSOR(CEIL, ceil)
+DEF_UNARY_RUBY_ACCESSOR(ROUND, round)
 
 DEF_NONCOM_ELEMENTWISE_RUBY_ACCESSOR(ATAN2, atan2)
 DEF_NONCOM_ELEMENTWISE_RUBY_ACCESSOR(LDEXP, ldexp)
@@ -2948,11 +2954,12 @@ static VALUE matrix_multiply(NMATRIX* left, NMATRIX* right) {
 
 
 /*
- * Calculate the exact inverse of a 2x2 or 3x3 matrix.
+ * Calculate the inverse of a matrix with in-place Gauss-Jordan elimination.
+ * Inverse will fail if the largest element in any column in zero. 
  *
- * Does not test for invertibility!
+ * LAPACK free.
  */
-static VALUE nm_inverse_exact(VALUE self, VALUE inverse) {
+static VALUE nm_inverse(VALUE self, VALUE inverse, VALUE bang) {
 
   if (NM_STYPE(self) != nm::DENSE_STORE) {
     rb_raise(rb_eNotImpError, "needs exact determinant implementation for this matrix stype");
@@ -2964,8 +2971,39 @@ static VALUE nm_inverse_exact(VALUE self, VALUE inverse) {
     return Qnil;
   }
 
-  // Calculate the exact inverse.
-  nm_math_inverse_exact(NM_SHAPE0(self), NM_STORAGE_DENSE(self)->elements, NM_SHAPE0(self), NM_STORAGE_DENSE(inverse)->elements, NM_SHAPE0(inverse), NM_DTYPE(self));
+  if (bang == Qtrue) {
+    nm_math_inverse(NM_SHAPE0(self), NM_STORAGE_DENSE(self)->elements, 
+      NM_DTYPE(self));
+          
+    return self;
+  }
+
+  nm_math_inverse(NM_SHAPE0(inverse), NM_STORAGE_DENSE(inverse)->elements, 
+    NM_DTYPE(inverse));
+
+  return inverse;
+}
+
+/*
+ * Calculate the exact inverse of a 2x2 or 3x3 matrix.
+ *
+ * Does not test for invertibility!
+ */
+static VALUE nm_inverse_exact(VALUE self, VALUE inverse, VALUE lda, VALUE ldb) {
+
+  if (NM_STYPE(self) != nm::DENSE_STORE) {
+    rb_raise(rb_eNotImpError, "needs exact determinant implementation for this matrix stype");
+    return Qnil;
+  }
+
+  if (NM_DIM(self) != 2 || NM_SHAPE0(self) != NM_SHAPE1(self)) {
+    rb_raise(nm_eShapeError, "matrices must be square to have an inverse defined");
+    return Qnil;
+  }
+
+  nm_math_inverse_exact(NM_SHAPE0(self), 
+    NM_STORAGE_DENSE(self)->elements, FIX2INT(lda), 
+    NM_STORAGE_DENSE(inverse)->elements, FIX2INT(ldb), NM_DTYPE(self));
 
   return inverse;
 }

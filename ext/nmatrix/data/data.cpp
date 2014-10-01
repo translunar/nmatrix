@@ -88,7 +88,7 @@ namespace nm {
     "exp", "log2", 
     "log10", "sqrt", "erf", 
     "erfc", "cbrt", "gamma",
-    "negate", "floor", "ceil"
+    "negate", "floor", "ceil", "round"
   };
 
 } // end of namespace nm

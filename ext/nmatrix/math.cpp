@@ -115,6 +115,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <cmath>
 
 #include "math/inc.h"
 #include "data/data.h"
@@ -199,185 +200,263 @@ extern "C" {
 // Math Functions //
 ////////////////////
 
-namespace nm { namespace math {
+namespace nm { 
+  namespace math {
 
-/*
- * Calculate the determinant for a dense matrix (A [elements]) of size 2 or 3. Return the result.
- */
-template <typename DType>
-void det_exact(const int M, const void* A_elements, const int lda, void* result_arg) {
-  DType* result  = reinterpret_cast<DType*>(result_arg);
-  const DType* A = reinterpret_cast<const DType*>(A_elements);
+    /*
+     * Calculate the determinant for a dense matrix (A [elements]) of size 2 or 3. Return the result.
+     */
+    template <typename DType>
+    void det_exact(const int M, const void* A_elements, const int lda, void* result_arg) {
+      DType* result  = reinterpret_cast<DType*>(result_arg);
+      const DType* A = reinterpret_cast<const DType*>(A_elements);
 
-  typename LongDType<DType>::type x, y;
+      typename LongDType<DType>::type x, y;
 
-  if (M == 2) {
-    *result = A[0] * A[lda+1] - A[1] * A[lda];
+      if (M == 2) {
+        *result = A[0] * A[lda+1] - A[1] * A[lda];
 
-  } else if (M == 3) {
-    x = A[lda+1] * A[2*lda+2] - A[lda+2] * A[2*lda+1]; // ei - fh
-    y = A[lda] * A[2*lda+2] -   A[lda+2] * A[2*lda];   // fg - di
-    x = A[0]*x - A[1]*y ; // a*(ei-fh) - b*(fg-di)
+      } else if (M == 3) {
+        x = A[lda+1] * A[2*lda+2] - A[lda+2] * A[2*lda+1]; // ei - fh
+        y = A[lda] * A[2*lda+2] -   A[lda+2] * A[2*lda];   // fg - di
+        x = A[0]*x - A[1]*y ; // a*(ei-fh) - b*(fg-di)
 
-    y = A[lda] * A[2*lda+1] - A[lda+1] * A[2*lda];    // dh - eg
-    *result = A[2]*y + x; // c*(dh-eg) + _
-  } else if (M < 2) {
-    rb_raise(rb_eArgError, "can only calculate exact determinant of a square matrix of size 2 or larger");
-  } else {
-    rb_raise(rb_eNotImpError, "exact determinant calculation needed for matrices larger than 3x3");
-  }
-}
-
-
-/*
- * Calculate the inverse for a dense matrix (A [elements]) of size 2 or 3. Places the result in B_elements.
- */
-template <typename DType>
-void inverse_exact(const int M, const void* A_elements, const int lda, void* B_elements, const int ldb) {
-  const DType* A = reinterpret_cast<const DType*>(A_elements);
-  DType* B       = reinterpret_cast<DType*>(B_elements);
-
-  if (M == 2) {
-    DType det = A[0] * A[lda+1] - A[1] * A[lda];
-    B[0] = A[lda+1] / det;
-    B[1] = -A[1] / det;
-    B[ldb] = -A[lda] / det;
-    B[ldb+1] = -A[0] / det;
-
-  } else if (M == 3) {
-    // Calculate the exact determinant.
-    DType det;
-    det_exact<DType>(M, A_elements, lda, reinterpret_cast<void*>(&det));
-    if (det == 0) {
-      rb_raise(nm_eNotInvertibleError, "matrix must have non-zero determinant to be invertible (not getting this error does not mean matrix is invertible if you're dealing with floating points)");
+        y = A[lda] * A[2*lda+1] - A[lda+1] * A[2*lda];    // dh - eg
+        *result = A[2]*y + x; // c*(dh-eg) + _
+      } else if (M < 2) {
+        rb_raise(rb_eArgError, "can only calculate exact determinant of a square matrix of size 2 or larger");
+      } else {
+        rb_raise(rb_eNotImpError, "exact determinant calculation needed for matrices larger than 3x3");
+      }
     }
 
-    B[0]      = (  A[lda+1] * A[2*lda+2] - A[lda+2] * A[2*lda+1]) / det; // A = ei - fh
-    B[1]      = (- A[1]     * A[2*lda+2] + A[2]     * A[2*lda+1]) / det; // D = -bi + ch
-    B[2]      = (  A[1]     * A[lda+2]   - A[2]     * A[lda+1])   / det; // G = bf - ce
-    B[ldb]    = (- A[lda]   * A[2*lda+2] + A[lda+2] * A[2*lda])   / det; // B = -di + fg
-    B[ldb+1]  = (  A[0]     * A[2*lda+2] - A[2]     * A[2*lda])   / det; // E = ai - cg
-    B[ldb+2]  = (- A[0]     * A[lda+2]   + A[2]     * A[lda])     / det; // H = -af + cd
-    B[2*ldb]  = (  A[lda]   * A[2*lda+1] - A[lda+1] * A[2*lda])   / det; // C = dh - eg
-    B[2*ldb+1]= ( -A[0]     * A[2*lda+1] + A[1]     * A[2*lda])   / det; // F = -ah + bg
-    B[2*ldb+2]= (  A[0]     * A[lda+1]   - A[1]     * A[lda])     / det; // I = ae - bd
-  } else if (M == 1) {
-    B[0] = 1 / A[0];
-  } else {
-    rb_raise(rb_eNotImpError, "exact inverse calculation needed for matrices larger than 3x3");
+
+    /*
+     * Calculates in-place inverse of A_elements. Uses Gauss-Jordan elimination technique.
+     * In-place inversion of the matrix saves on memory and time.
+     *
+     * args - M - Shape of the matrix
+     *        a_elements - A duplicate of the original expressed as a contiguos array
+     */
+    template <typename DType>
+    void inverse(const int M, void* a_elements) {
+      DType* matrix   = reinterpret_cast<DType*>(a_elements);
+      int* row_index = new int[M]; // arrays for keeping track of column scrambling
+      int* col_index = new int[M];
+
+      for (int k = 0;k < M; ++k) {
+        DType akk = std::abs( matrix[k * (M + 1)] ) ; // diagonal element
+        int interchange = k;
+
+        for (int row = k + 1; row < M; ++row) {
+          DType big = std::abs( matrix[M*row + k] ); // element below the temp pivot
+          
+          if ( big > akk ) {
+            interchange = row;
+            akk = big; 
+          }
+        } 
+
+        if (interchange != k) { // check if rows need flipping
+          DType temp;
+
+          for (int col = 0; col < M; ++col) {
+            NM_SWAP(matrix[interchange*M + col], matrix[k*M + col], temp);            
+          }
+        }
+
+        row_index[k] = interchange;
+        col_index[k] = k;
+
+        if (matrix[k * (M + 1)] == (DType)(0)) {
+          rb_raise(rb_eZeroDivError, "Expected Non-Singular Matrix.");
+        }
+
+        DType pivot = matrix[k * (M + 1)];
+        matrix[k * (M + 1)] = (DType)(1); // set diagonal as 1 for in-place inversion
+
+        for (int col = 0; col < M; ++col) { 
+          // divide each element in the kth row with the pivot
+          matrix[k*M + col] = matrix[k*M + col] / pivot;
+        }
+
+        for (int kk = 0; kk < M; ++kk) { // iterate and reduce all rows
+          if (kk == k) continue;
+
+          DType dum = matrix[k + M*kk];
+          matrix[k + M*kk] = (DType)(0); // prepare for inplace inversion 
+          for (int col = 0; col < M; ++col) {
+            matrix[M*kk + col] = matrix[M*kk + col] - matrix[M*k + col] * dum;
+          }
+        }
+      }
+
+      // Unscramble columns
+      DType temp;
+
+      for (int k = M - 1; k >= 0; --k) {
+        if (row_index[k] != col_index[k]) {
+
+          for (int row = 0; row < M; ++row) {
+            NM_SWAP(matrix[row * M + row_index[k]], matrix[row * M + col_index[k]],
+              temp);  
+          }
+        }
+      }
+
+      delete[] row_index;
+      delete[] col_index;
+    }
+
+    /*
+     * Calculate the exact inverse for a dense matrix (A [elements]) of size 2 or 3. Places the result in B_elements.
+     */
+    template <typename DType>
+    void inverse_exact(const int M, const void* A_elements, const int lda, void* B_elements, const int ldb) {
+      const DType* A = reinterpret_cast<const DType*>(A_elements);
+      DType* B       = reinterpret_cast<DType*>(B_elements);
+
+      if (M == 2) {
+        DType det = A[0] * A[lda+1] - A[1] * A[lda];
+        B[0] = A[lda+1] / det;
+        B[1] = -A[1] / det;
+        B[ldb] = -A[lda] / det;
+        B[ldb+1] = -A[0] / det;
+
+      } else if (M == 3) {
+        // Calculate the exact determinant.
+        DType det;
+        det_exact<DType>(M, A_elements, lda, reinterpret_cast<void*>(&det));
+        if (det == 0) {
+          rb_raise(nm_eNotInvertibleError, "matrix must have non-zero determinant to be invertible (not getting this error does not mean matrix is invertible if you're dealing with floating points)");
+        }
+
+        B[0]      = (  A[lda+1] * A[2*lda+2] - A[lda+2] * A[2*lda+1]) / det; // A = ei - fh
+        B[1]      = (- A[1]     * A[2*lda+2] + A[2]     * A[2*lda+1]) / det; // D = -bi + ch
+        B[2]      = (  A[1]     * A[lda+2]   - A[2]     * A[lda+1])   / det; // G = bf - ce
+        B[ldb]    = (- A[lda]   * A[2*lda+2] + A[lda+2] * A[2*lda])   / det; // B = -di + fg
+        B[ldb+1]  = (  A[0]     * A[2*lda+2] - A[2]     * A[2*lda])   / det; // E = ai - cg
+        B[ldb+2]  = (- A[0]     * A[lda+2]   + A[2]     * A[lda])     / det; // H = -af + cd
+        B[2*ldb]  = (  A[lda]   * A[2*lda+1] - A[lda+1] * A[2*lda])   / det; // C = dh - eg
+        B[2*ldb+1]= ( -A[0]     * A[2*lda+1] + A[1]     * A[2*lda])   / det; // F = -ah + bg
+        B[2*ldb+2]= (  A[0]     * A[lda+1]   - A[1]     * A[lda])     / det; // I = ae - bd
+      } else if (M == 1) {
+        B[0] = 1 / A[0];
+      } else {
+        rb_raise(rb_eNotImpError, "exact inverse calculation needed for matrices larger than 3x3");
+      }
+    }
+
+    /*
+     * Function signature conversion for calling CBLAS' gesvd functions as directly as possible.
+     */
+    template <typename DType, typename CType>
+    inline static int lapack_gesvd(char jobu, char jobvt, int m, int n, void* a, int lda, void* s, void* u, int ldu, void* vt, int ldvt, void* work, int lwork, void* rwork) {
+      return gesvd<DType,CType>(jobu, jobvt, m, n, reinterpret_cast<DType*>(a), lda, reinterpret_cast<DType*>(s), reinterpret_cast<DType*>(u), ldu, reinterpret_cast<DType*>(vt), ldvt, reinterpret_cast<DType*>(work), lwork, reinterpret_cast<CType*>(rwork));
+    }
+
+    /*
+     * Function signature conversion for calling CBLAS' gesvd functions as directly as possible.
+     */
+    template <typename DType, typename CType>
+    inline static int lapack_gesdd(char jobz, int m, int n, void* a, int lda, void* s, void* u, int ldu, void* vt, int ldvt, void* work, int lwork, int* iwork, void* rwork) {
+      return gesdd<DType,CType>(jobz, m, n, reinterpret_cast<DType*>(a), lda, reinterpret_cast<DType*>(s), reinterpret_cast<DType*>(u), ldu, reinterpret_cast<DType*>(vt), ldvt, reinterpret_cast<DType*>(work), lwork, iwork, reinterpret_cast<CType*>(rwork));
+    }
+
+    /*
+     * Function signature conversion for calling CBLAS' gemm functions as directly as possible.
+     *
+     * For documentation: http://www.netlib.org/blas/dgemm.f
+     */
+    template <typename DType>
+    inline static void cblas_gemm(const enum CBLAS_ORDER order,
+                                  const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
+                                  int m, int n, int k,
+                                  void* alpha,
+                                  void* a, int lda,
+                                  void* b, int ldb,
+                                  void* beta,
+                                  void* c, int ldc)
+    {
+      gemm<DType>(order, trans_a, trans_b, m, n, k, reinterpret_cast<DType*>(alpha),
+                  reinterpret_cast<DType*>(a), lda,
+                  reinterpret_cast<DType*>(b), ldb, reinterpret_cast<DType*>(beta),
+                  reinterpret_cast<DType*>(c), ldc);
+    }
+
+
+    /*
+     * Function signature conversion for calling CBLAS's gemv functions as directly as possible.
+     *
+     * For documentation: http://www.netlib.org/lapack/double/dgetrf.f
+     */
+    template <typename DType>
+    inline static bool cblas_gemv(const enum CBLAS_TRANSPOSE trans,
+                                  const int m, const int n,
+                                  const void* alpha,
+                                  const void* a, const int lda,
+                                  const void* x, const int incx,
+                                  const void* beta,
+                                  void* y, const int incy)
+    {
+      return gemv<DType>(trans,
+                         m, n, reinterpret_cast<const DType*>(alpha),
+                         reinterpret_cast<const DType*>(a), lda,
+                         reinterpret_cast<const DType*>(x), incx, reinterpret_cast<const DType*>(beta),
+                         reinterpret_cast<DType*>(y), incy);
+    }
+
+
+    /*
+     * Function signature conversion for calling CBLAS' trsm functions as directly as possible.
+     *
+     * For documentation: http://www.netlib.org/blas/dtrsm.f
+     */
+    template <typename DType>
+    inline static void cblas_trsm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
+                                   const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_DIAG diag,
+                                   const int m, const int n, const void* alpha, const void* a,
+                                   const int lda, void* b, const int ldb)
+    {
+      trsm<DType>(order, side, uplo, trans_a, diag, m, n, *reinterpret_cast<const DType*>(alpha),
+                  reinterpret_cast<const DType*>(a), lda, reinterpret_cast<DType*>(b), ldb);
+    }
+
+
+    /*
+     * Function signature conversion for calling CBLAS' trmm functions as directly as possible.
+     *
+     * For documentation: http://www.netlib.org/blas/dtrmm.f
+     */
+    template <typename DType>
+    inline static void cblas_trmm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
+                                  const enum CBLAS_TRANSPOSE ta, const enum CBLAS_DIAG diag, const int m, const int n, const void* alpha,
+                                  const void* A, const int lda, void* B, const int ldb)
+    {
+      trmm<DType>(order, side, uplo, ta, diag, m, n, reinterpret_cast<const DType*>(alpha),
+                  reinterpret_cast<const DType*>(A), lda, reinterpret_cast<DType*>(B), ldb);
+    }
+
+
+    /*
+     * Function signature conversion for calling CBLAS' syrk functions as directly as possible.
+     *
+     * For documentation: http://www.netlib.org/blas/dsyrk.f
+     */
+    template <typename DType>
+    inline static void cblas_syrk(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const enum CBLAS_TRANSPOSE trans,
+                                  const int n, const int k, const void* alpha,
+                                  const void* A, const int lda, const void* beta, void* C, const int ldc)
+    {
+      syrk<DType>(order, uplo, trans, n, k, reinterpret_cast<const DType*>(alpha),
+                  reinterpret_cast<const DType*>(A), lda, reinterpret_cast<const DType*>(beta), reinterpret_cast<DType*>(C), ldc);
+    }
+
+
+
+
   }
-}
-
-
-/*
- * Function signature conversion for calling CBLAS' gesvd functions as directly as possible.
- */
-template <typename DType, typename CType>
-inline static int lapack_gesvd(char jobu, char jobvt, int m, int n, void* a, int lda, void* s, void* u, int ldu, void* vt, int ldvt, void* work, int lwork, void* rwork) {
-  return gesvd<DType,CType>(jobu, jobvt, m, n, reinterpret_cast<DType*>(a), lda, reinterpret_cast<DType*>(s), reinterpret_cast<DType*>(u), ldu, reinterpret_cast<DType*>(vt), ldvt, reinterpret_cast<DType*>(work), lwork, reinterpret_cast<CType*>(rwork));
-}
-
-/*
- * Function signature conversion for calling CBLAS' gesvd functions as directly as possible.
- */
-template <typename DType, typename CType>
-inline static int lapack_gesdd(char jobz, int m, int n, void* a, int lda, void* s, void* u, int ldu, void* vt, int ldvt, void* work, int lwork, int* iwork, void* rwork) {
-  return gesdd<DType,CType>(jobz, m, n, reinterpret_cast<DType*>(a), lda, reinterpret_cast<DType*>(s), reinterpret_cast<DType*>(u), ldu, reinterpret_cast<DType*>(vt), ldvt, reinterpret_cast<DType*>(work), lwork, iwork, reinterpret_cast<CType*>(rwork));
-}
-
-/*
- * Function signature conversion for calling CBLAS' gemm functions as directly as possible.
- *
- * For documentation: http://www.netlib.org/blas/dgemm.f
- */
-template <typename DType>
-inline static void cblas_gemm(const enum CBLAS_ORDER order,
-                              const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
-                              int m, int n, int k,
-                              void* alpha,
-                              void* a, int lda,
-                              void* b, int ldb,
-                              void* beta,
-                              void* c, int ldc)
-{
-  gemm<DType>(order, trans_a, trans_b, m, n, k, reinterpret_cast<DType*>(alpha),
-              reinterpret_cast<DType*>(a), lda,
-              reinterpret_cast<DType*>(b), ldb, reinterpret_cast<DType*>(beta),
-              reinterpret_cast<DType*>(c), ldc);
-}
-
-
-/*
- * Function signature conversion for calling CBLAS's gemv functions as directly as possible.
- *
- * For documentation: http://www.netlib.org/lapack/double/dgetrf.f
- */
-template <typename DType>
-inline static bool cblas_gemv(const enum CBLAS_TRANSPOSE trans,
-                              const int m, const int n,
-                              const void* alpha,
-                              const void* a, const int lda,
-                              const void* x, const int incx,
-                              const void* beta,
-                              void* y, const int incy)
-{
-  return gemv<DType>(trans,
-                     m, n, reinterpret_cast<const DType*>(alpha),
-                     reinterpret_cast<const DType*>(a), lda,
-                     reinterpret_cast<const DType*>(x), incx, reinterpret_cast<const DType*>(beta),
-                     reinterpret_cast<DType*>(y), incy);
-}
-
-
-/*
- * Function signature conversion for calling CBLAS' trsm functions as directly as possible.
- *
- * For documentation: http://www.netlib.org/blas/dtrsm.f
- */
-template <typename DType>
-inline static void cblas_trsm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
-                               const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_DIAG diag,
-                               const int m, const int n, const void* alpha, const void* a,
-                               const int lda, void* b, const int ldb)
-{
-  trsm<DType>(order, side, uplo, trans_a, diag, m, n, *reinterpret_cast<const DType*>(alpha),
-              reinterpret_cast<const DType*>(a), lda, reinterpret_cast<DType*>(b), ldb);
-}
-
-
-/*
- * Function signature conversion for calling CBLAS' trmm functions as directly as possible.
- *
- * For documentation: http://www.netlib.org/blas/dtrmm.f
- */
-template <typename DType>
-inline static void cblas_trmm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
-                              const enum CBLAS_TRANSPOSE ta, const enum CBLAS_DIAG diag, const int m, const int n, const void* alpha,
-                              const void* A, const int lda, void* B, const int ldb)
-{
-  trmm<DType>(order, side, uplo, ta, diag, m, n, reinterpret_cast<const DType*>(alpha),
-              reinterpret_cast<const DType*>(A), lda, reinterpret_cast<DType*>(B), ldb);
-}
-
-
-/*
- * Function signature conversion for calling CBLAS' syrk functions as directly as possible.
- *
- * For documentation: http://www.netlib.org/blas/dsyrk.f
- */
-template <typename DType>
-inline static void cblas_syrk(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const enum CBLAS_TRANSPOSE trans,
-                              const int n, const int k, const void* alpha,
-                              const void* A, const int lda, const void* beta, void* C, const int ldc)
-{
-  syrk<DType>(order, uplo, trans, n, k, reinterpret_cast<const DType*>(alpha),
-              reinterpret_cast<const DType*>(A), lda, reinterpret_cast<const DType*>(beta), reinterpret_cast<DType*>(C), ldc);
-}
-
-
-
-
-}} // end of namespace nm::math
+} // end of namespace nm::math
 
 
 extern "C" {
@@ -1657,6 +1736,15 @@ void nm_math_det_exact(const int M, const void* elements, const int lda, nm::dty
 }
 
 /*
+ * C accessor for calculating an in-place inverse.
+ */
+void nm_math_inverse(const int M, void* a_elements, nm::dtype_t dtype) {
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::inverse, void, const int, void*);
+
+  ttable[dtype](M, a_elements);
+}
+
+/*
  * C accessor for calculating an exact inverse.
  */
 void nm_math_inverse_exact(const int M, const void* A_elements, const int lda, void* B_elements, const int ldb, nm::dtype_t dtype) {
@@ -1664,7 +1752,6 @@ void nm_math_inverse_exact(const int M, const void* A_elements, const int lda, v
 
   ttable[dtype](M, A_elements, lda, B_elements, ldb);
 }
-
 
 /*
  * Transpose an array of elements that represent a row-major dense matrix. Does not allocate anything, only does an memcpy.

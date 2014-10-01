@@ -102,7 +102,8 @@ namespace nm {
     UNARY_GAMMA,
     UNARY_NEGATE,
     UNARY_FLOOR,
-    UNARY_CEIL
+    UNARY_CEIL,
+    UNARY_ROUND
   };
 
   // element-wise and scalar operators
