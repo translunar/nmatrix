@@ -429,7 +429,6 @@ class NMatrix
     end
     t = reshape_clone_structure(newer_shape)
     left_params  = [:*]*newer_shape.size
-    puts(left_params)
     right_params = [:*]*self.shape.size
     t[*left_params] = self[*right_params]
     t
