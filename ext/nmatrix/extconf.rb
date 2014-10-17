@@ -123,7 +123,7 @@ def find_newer_gplusplus #:nodoc:
   false
 end
 
-def gplusplus_version #:nodoc:
+def gplusplus_version
   cxxvar = proc { |n| `#{CONFIG['CXX']} -E -dM - </dev/null | grep #{n}`.chomp.split(' ')[2] }
   major = cxxvar.call('__GNUC__')
   minor = cxxvar.call('__GNUC_MINOR__')
@@ -211,7 +211,7 @@ end
 
 # Although have_func is supposed to take a list as its second argument, I find that it simply
 # applies a :to_s to the second arg and doesn't actually check each one. We may want to put
-# have_func calls inside an :each block which checks atlas/clapack.h, cblas.h, clapack.h, and 
+# have_func calls inside an :each block which checks atlas/clapack.h, cblas.h, clapack.h, and
 # lastly lapack.h. On Ubuntu, it only works if I use atlas/clapack.h. --@mohawkjohn 8/20/14
 have_func("clapack_dgetrf", "atlas/clapack.h")
 have_func("clapack_dgetri", "atlas/clapack.h")

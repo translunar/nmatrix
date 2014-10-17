@@ -30,27 +30,16 @@
 require_relative './mat_reader.rb'
 
 module NMatrix::IO::Matlab
-  #
+
   # Reader (and eventual writer) for a version 5 .mat file.
-  #
-  class Mat5Reader < MatReader
+  class Mat5Reader < MatReader #:nodoc:
     attr_reader :file_header, :first_tag_field, :first_data_field
 
-    class Compressed
+    class Compressed #:nodoc:
       include Packable
-      # include TaggedDataEnumerable
 
       attr_reader :byte_order
 
-      #
-      # call-seq:
-      #     new(stream = nil, byte_order = nil, content_or_bytes = nil) -> Mat5Reader::Compressed
-      #
-      # * *Arguments* :
-      #   - ++ ->
-      # * *Raises* :
-      #   - ++ ->
-      #
       def initialize(stream = nil, byte_order = nil, content_or_bytes = nil)
         @stream			= stream
         @byte_order	= byte_order
@@ -60,69 +49,33 @@ module NMatrix::IO::Matlab
 
         elsif content_or_bytes.is_a?(Fixnum)
           @padded_bytes = content_or_bytes
-          #else
-          #  raise ArgumentError, "Need a content string or a number of bytes; content_or_bytes is #{content_or_bytes.class.to_s}."
         end
       end
 
-      #
-      # call-seq:
-      #     compressed ->
-      #
       def compressed
         require "zlib"
         # [2..-5] removes headers
         @compressed ||= Zlib::Deflate.deflate(content)
       end
 
-      #
-      # call-seq:
-      #     content ->
-      #
       def content
         @content ||= extract
       end
 
-      #
-      # call-seq:
-      #     padded_bytes ->
-      #
       def padded_bytes
         @padded_bytes ||= content.size % 4 == 0 ? content.size : (content.size / 4 + 1) * 4
       end
 
-      #
-      # call-seq:
-      #     write_packed(packedio, options = {}) ->
-      #
-      # * *Arguments* :
-      #   - ++ ->
-      # * *Returns* :
-      #   -
-      #
       def write_packed(packedio, options = {})
         packedio << [compressed, {:bytes => padded_bytes}.merge(options)]
       end
 
-      #
-      # call-seq:
-      #     read_packed(packedio, options = {}) ->
-      #
-      # * *Arguments* :
-      #   - ++ ->
-      # * *Returns* :
-      #   -
-      #
       def read_packed(packedio, options)
         @compressed = (packedio >> [String, options]).first
         content
       end
 
       protected
-      #
-      # call-seq:
-      #     extract ->
-      #
       def extract
         require 'zlib'
 
@@ -140,26 +93,17 @@ module NMatrix::IO::Matlab
                                   :matlab_class, :dimensions, :matlab_name, :real_part,
                                   :imaginary_part, :row_index, :column_index)
 
-    class MatrixData < MatrixDataStruct
+    class MatrixData < MatrixDataStruct #:nodoc:
       include Packable
 
-      #
-      # call-seq:
-      #     write_packed(packedio, options) ->
-      #
-      # * *Arguments* :
-      #   - ++ ->
-      # * *Returns* :
-      #   -
-      #
       def write_packed(packedio, options)
         raise NotImplementedError
         packedio << [info, {:bytes => padded_bytes}.merge(options)]
       end
 
-      #
       # call-seq:
-      #     to_ruby -> NMatrix or Array
+      #     to_ruby -> NMatrix
+      #     to_ruby -> Array
       #
       # Figure out the appropriate Ruby type to convert to, and do it. There
       # are basically two possible types: +NMatrix+ and +Array+. This method
@@ -172,7 +116,6 @@ module NMatrix::IO::Matlab
       # appropriate stype (:yale or :dense, respectively).
       #
       # See also to_nm, which is responsible for NMatrix instantiation.
-      #
       def to_ruby
         case matlab_class
         when :mxSPARSE	then	return to_nm
@@ -181,7 +124,6 @@ module NMatrix::IO::Matlab
         end
       end
 
-      #
       # call-seq:
       #     guess_dtype_from_mdtype -> Symbol
       #
@@ -189,7 +131,6 @@ module NMatrix::IO::Matlab
       #
       # TODO: Needs to be verified that unsigned MATLAB types are being
       # converted to the correct NMatrix signed dtypes.
-      #
       def guess_dtype_from_mdtype
         dtype = MatReader::MDTYPE_TO_DTYPE[self.real_part.tag.data_type]
 
@@ -228,10 +169,6 @@ module NMatrix::IO::Matlab
 
       end
 
-      #
-      # call-seq:
-      #     repacked_data(to_dtype = nil) ->
-      #
       # Unpacks and repacks data into the appropriate format for NMatrix.
       #
       # If data is already in the appropriate format, does not unpack or
@@ -291,15 +228,10 @@ module NMatrix::IO::Matlab
          to_dtype]
       end
 
-      #
-      # call-seq:
-      #     repacked_indices ->
-      #
       # Unpacks and repacks index data into the appropriate format for NMatrix.
       #
       # If data is already in the appropriate format, does not unpack or
       # repack, just returns directly.
-      #
       def repacked_indices
         repacked_row_indices = ::NMatrix::IO::Matlab.repack( self.row_index.data, :miINT32, :itype )
         repacked_col_indices = ::NMatrix::IO::Matlab.repack( self.column_index.data, :miINT32, :itype )
@@ -352,29 +284,17 @@ module NMatrix::IO::Matlab
         end
       end
 
-      #
-      # call-seq:
-      #     read_packed(packedio, options) ->
-      #
-      # * *Arguments* :
-      #   - ++ ->
-      # * *Returns* :
-      #   -
-      #
       def read_packed(packedio, options)
         flags_class, self.nonzero_max = packedio.read([Element, options]).data
 
         self.matlab_class   = MatReader::MCLASSES[flags_class % 16]
-        #STDERR.puts "Matrix class: #{self.matlab_class}"
 
         self.logical        = (flags_class >> 8) % 2 == 1 ? true : false
         self.global         = (flags_class >> 9) % 2 == 1 ? true : false
         self.complex        = (flags_class >> 10) % 2 == 1 ? true : false
-        #STDERR.puts "nzmax: #{self.nonzero_max}"
 
         dimensions_tag_data = packedio.read([Element, options])
         self.dimensions     = dimensions_tag_data.data
-        #STDERR.puts "dimensions: #{self.dimensions}"
 
         begin
           name_tag_data			= packedio.read([Element, options])
@@ -390,7 +310,6 @@ module NMatrix::IO::Matlab
           raise(e)
         end
 
-        #STDERR.puts [flags_class.to_s(2), self.complex, self.global, self.logical, nil, self.mclass, self.nonzero_max].join("\t")
         if self.matlab_class == :mxCELL
           # Read what may be a series of matrices
           self.cells = []
@@ -404,8 +323,6 @@ module NMatrix::IO::Matlab
           if self.matlab_class == :mxSPARSE
             self.column_index = packedio.read(read_opts)
             self.row_index    = packedio.read(read_opts)
-
-            # STDERR.puts "row and col indices: #{self.row_index.inspect}, #{self.column_index.inspect}"
           end
 
           self.real_part			= packedio.read(read_opts)
@@ -413,15 +330,6 @@ module NMatrix::IO::Matlab
         end
       end
 
-      #
-      # call-seq:
-      #     ignore_padding(packedio, bytes) ->
-      #
-      # * *Arguments* :
-      #   - ++ ->
-      # * *Returns* :
-      #   -
-      #
       def ignore_padding(packedio, bytes)
         packedio.read([Integer, {:unsigned => true, :bytes => bytes}]) if bytes > 0
       end
@@ -433,7 +341,6 @@ module NMatrix::IO::Matlab
                                             :miCOMPRESSED	=> [Compressed, {}],
                                             :miMATRIX			=> [MatrixData, {}]
                                           })
-    # include TaggedDataEnumerable
 
     FIRST_TAG_FIELD_POS = 128
 
@@ -441,6 +348,8 @@ module NMatrix::IO::Matlab
     # Instance Methods for Mat5Reader #
     ###################################
 
+    # call-seq:
+    #     NMatrix::IO::Mat5Reader.new(stream, options = {}) -> NMatrix
     def initialize(stream, options = {})
       super(stream, options)
       @file_header = seek_and_read_file_header
@@ -492,11 +401,9 @@ module NMatrix::IO::Matlab
       self
     end
 
-    ####################
-    # Internal Classes #
-    ####################
+    # Internal Classes.
 
-    class Header < Struct.new(:desc, :data_offset, :version, :endian)
+    class Header < Struct.new(:desc, :data_offset, :version, :endian) #:nodoc:
 
       include Packable
 
@@ -506,7 +413,7 @@ module NMatrix::IO::Matlab
       VERSION_LENGTH			= 2
       BYTE_ORDER_POS			= 126
 
-      ## TODO: TEST WRITE.
+      # TODO: TEST WRITE.
       def write_packed(packedio, options)
         packedio <<	[desc,				{:bytes => DESC_LENGTH				}] <<
           [data_offset,	{:bytes => DATA_OFFSET_LENGTH	}] <<
@@ -529,13 +436,13 @@ module NMatrix::IO::Matlab
       end
     end
 
-    class Tag < Struct.new(:data_type, :raw_data_type, :bytes, :small)
+    class Tag < Struct.new(:data_type, :raw_data_type, :bytes, :small) #:nodoc:
       include Packable
 
       DATA_TYPE_OPTS = BYTES_OPTS = {:bytes => 4, :signed => false}
       LENGTH = DATA_TYPE_OPTS[:bytes] + BYTES_OPTS[:bytes]
 
-      ## TODO: TEST WRITE.
+      # TODO: TEST WRITE.
       def write_packed packedio, options
         packedio << [data_type, DATA_TYPE_OPTS] << [bytes, BYTES_OPTS]
       end
@@ -575,7 +482,7 @@ module NMatrix::IO::Matlab
     end
 
 
-    class ElementDataIOError < IOError
+    class ElementDataIOError < IOError #:nodoc:
       attr_reader :tag
 
       def initialize(tag = nil, msg = nil)
@@ -589,7 +496,7 @@ module NMatrix::IO::Matlab
     end
 
 
-    class Element < Struct.new(:tag, :data)
+    class Element < Struct.new(:tag, :data) #:nodoc:
       include Packable
 
       def write_packed packedio, options
@@ -600,11 +507,9 @@ module NMatrix::IO::Matlab
         raise(ArgumentError, 'Missing mandatory option :endian.') unless options.has_key?(:endian)
 
         tag = packedio.read([Tag, {:endian => options[:endian]}])
-        #STDERR.puts tag.inspect
         data_type = MDTYPE_UNPACK_ARGS[tag.data_type]
 
         self.tag = tag
-        #STDERR.puts self.tag.inspect
 
         raise ElementDataIOError.new(tag, "Unrecognized Matlab type #{tag.raw_data_type}") if data_type.nil?
 
@@ -651,7 +556,7 @@ module NMatrix::IO::Matlab
 
     # Doesn't unpack the contents of the element, e.g., if we want to handle
     # manually, or pass the raw string of bytes into NMatrix.
-    class RawElement < Element
+    class RawElement < Element #:nodoc:
       def read_packed(packedio, options)
         raise(ArgumentError, 'Missing mandatory option :endian.') unless options.has_key?(:endian)
 

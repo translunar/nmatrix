@@ -34,29 +34,40 @@
 
 class NMatrix
 
-
-
-  #
   # call-seq:
-  #     dense? -> true or false
-  #     list? -> true or false
-  #     yale? -> true or false
+  #     m.dense? -> true or false
   #
-  # Shortcut functions for quickly determining a matrix's stype.
-  #
+  # Determine if +m+ is a dense matrix.
   def dense?; return stype == :dense; end
-  def yale?;  return stype == :yale;  end
-  def list?;  return stype == :list;  end
 
+  # call-seq:
+  #     m.yale? -> true or false
+  #
+  # Determine if +m+ is a Yale matrix.
+  def yale?;  return stype == :yale; end
+
+  # call-seq:
+  #     m.list? -> true or false
+  #
+  # Determine if +m+ is a list-of-lists matrix.
+  def list?;  return stype == :list; end
 
   class << self
-    #
     # call-seq:
-    #     NMatrix[array-of-arrays, dtype = nil]
+    #     NMatrix[Numeric, ..., Numeric, dtype: Symbol] -> NMatrix
+    #     NMatrix[Array, dtype: Symbol] -> NMatrix
     #
-    # You can use the old +N+ constant in this way:
+    # The default value for +dtype+ is guessed from the first parameter. For example:
+    #   NMatrix[1.0, 2.0].dtype # => :float64
+    #   NMatrix[1r, 2r].dtype   # => :rational64
+    #
+    # But this is just a *guess*. If the other values can't be converted to
+    # this dtype, a +TypeError+ will be raised.
+    #
+    # You can use the +N+ constant in this way:
     #   N = NMatrix
     #   N[1, 2, 3]
+    #
     # NMatrix needs to have a succinct way to create a matrix by specifying the
     # components directly. This is very useful for using it as an advanced
     # calculator, it is useful for learning how to use, for testing language
@@ -68,12 +79,16 @@ class NMatrix
     #
     # Examples:
     #
-    #   a = NMatrix[ 1,2,3,4 ]          =>  1.0  2.0  3.0  4.0
+    #   a = N[ 1,2,3,4 ]          =>  1  2  3  4
     #
-    #   a = NMatrix[ 1,2,3,4, dtype: :int32 ]  =>  1  2  3  4
+    #   a = N[ 1,2,3,4, :int32 ]  =>  1  2  3  4
     #
-    #   a = NMatrix[ [1,2,3], [3,4,5] ] =>  1.0  2.0  3.0
-    #                                       3.0  4.0  5.0
+    #   a = N[ [1,2,3], [3,4,5] ] =>  1.0  2.0  3.0
+    #                                 3.0  4.0  5.0
+    #
+    #   a = N[ 3,6,9 ].transpose => 3
+    #                               6
+    #                               9
     #
     # SYNTAX COMPARISON:
     #
@@ -83,7 +98,6 @@ class NMatrix
     #
     #   SciRuby:      a = NMatrix[ [1,2,3], [4,5,6] ]
     #   Ruby array:   a =  [ [1,2,3], [4,5,6] ]
-    #
     def [](*params)
       options = params.last.is_a?(Hash) ? params.pop : {}
 
@@ -159,7 +173,6 @@ class NMatrix
       NMatrix.new(shape, 1, {:dtype => :float64, :default => 1}.merge(opts))
     end
 
-    ##
     # call-seq:
     #   ones_like(nm) -> NMatrix
     #
@@ -173,7 +186,6 @@ class NMatrix
       NMatrix.ones(nm.shape, dtype: nm.dtype, stype: nm.stype, capacity: nm.capacity, default: 1)
     end
 
-    ##
     # call-seq:
     #   zeros_like(nm) -> NMatrix
     #
@@ -355,7 +367,7 @@ class NMatrix
   end
 end
 
-module NVector
+module NVector #:nodoc:
 
   class << self
     #
@@ -648,14 +660,19 @@ module NVector
 end
 
 
-# Use this constant as you would use NMatrix[].
+# This constant is intended as a simple constructor for NMatrix meant for
+# experimenting.
+#
 # Examples:
 #
-#   a = N[ 1,2,3,4 ]          =>  1.0  2.0  3.0  4.0
+#   a = N[ 1,2,3,4 ]          =>  1  2  3  4
 #
 #   a = N[ 1,2,3,4, :int32 ]  =>  1  2  3  4
 #
-#   a = N[ [1,2,3], [3,4,5] ] =>  1.0  2.0  3.0
-#                                 3.0  4.0  5.0
+#   a = N[ [1,2,3], [3,4,5] ] =>  1  2  3
+#                                 3  4  5
 #
+#   a = N[ 3,6,9 ].transpose => 3
+#                               6
+#                               9
 N = NMatrix

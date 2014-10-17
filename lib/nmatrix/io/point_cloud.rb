@@ -27,15 +27,34 @@
 #
 #++
 
-# Reader for a PCD file, specified here:
+# Reader for Point Cloud Data (PCD) file format.
 #
-# * http://pointclouds.org/documentation/tutorials/pcd_file_format.php
+# The documentation of this format can be found in:
 #
-# Note that this does not take the width or height parameters into account.
+# http://pointclouds.org/documentation/tutorials/pcd_file_format.php
 #
+# Note that this implementation does not take the width or height parameters
+# into account.
 module NMatrix::IO::PointCloud
 
-  class MetaReader
+  # For UINT, just add 1 to the index.
+  INT_DTYPE_BY_SIZE   = [:int8, :int8, :int16, :int32, :int64, :int64] #:nodoc:
+  FLOAT_DTYPE_BY_SIZE = {4 => :float32, 8 => :float64} #:nodoc:
+
+  class << self
+    # call-seq:
+    #     load(filename) -> NMatrix
+    #
+    # * *Arguments* :
+    #   - +filename+ -> String giving the name of the file to be loaded.
+    #
+    # Load a Point Cloud Library PCD file as a matrix.
+    def load(filename)
+      MetaReader.new(filename).matrix
+    end
+  end
+
+  class MetaReader #:nodoc:
     ENTRIES = [:version,  :fields,           :size,  :type,            :count,  :width,  :height,  :viewpoint,  :points,  :data]
     ASSIGNS = [:version=, :fields=,          :size=, :type=,           :count=, :width=, :height=, :viewpoint=, :points=, :data=]
     CONVERT = [:to_s,     :downcase_to_sym,  :to_i,  :downcase_to_sym, :to_i,   :to_i,   :to_i,    :to_f,       :to_i,    :downcase_to_sym]
@@ -49,7 +68,7 @@ module NMatrix::IO::PointCloud
     class << self
 
       # Given a type and a number of bytes, figure out an appropriate dtype
-      def dtype_by_type_and_size t, s #:nodoc:
+      def dtype_by_type_and_size t, s
         if t == :f
           FLOAT_DTYPE_BY_SIZE[s]
         elsif t == :u
@@ -104,7 +123,7 @@ module NMatrix::IO::PointCloud
 
   protected
     # Read the current entry of the header.
-    def read_entry f, entry, assign=nil, convert=nil #:nodoc:
+    def read_entry f, entry, assign=nil, convert=nil
       assign ||= (entry.to_s + "=").to_sym
 
       while line = f.gets
@@ -133,7 +152,7 @@ module NMatrix::IO::PointCloud
 
     # Determine the dtype for a matrix based on the types and sizes given in the PCD.
     # Call this only after read_entry has been called.
-    def dtype #:nodoc:
+    def dtype
       @dtype ||= begin
         dtypes = self.type.map.with_index do |t,k|
           MetaReader.dtype_by_type_and_size(t, size[k])
@@ -157,26 +176,6 @@ module NMatrix::IO::PointCloud
           self.points[0],
           self.fields.size
       ]
-    end
-
-  end
-
-    # For UINT, just add 1 to the index.
-    INT_DTYPE_BY_SIZE   = [:int8, :int8, :int16, :int32, :int64, :int64]
-    FLOAT_DTYPE_BY_SIZE = {4 => :float32, 8 => :float64}
-
-  class << self
-
-    #
-    # call-seq:
-    #     load(filename) -> NMatrix
-    #
-    # * *Arguments* :
-    #   - +filename+ -> String giving the name of the file to be loaded.
-    #
-    # Load a Point Cloud Library PCD file as a matrix.
-    def load(filename)
-      MetaReader.new(filename).matrix
     end
   end
 end

@@ -208,6 +208,7 @@ void Init_nmatrix() {
   nm_eNotInvertibleError = rb_define_class("NotInvertibleError", rb_eStandardError);
 
   /*
+   * :nodoc:
    * Class that holds values in use by the C code.
    */
   cNMatrix_GC_holder = rb_define_class("NMGCHolder", rb_cObject);
@@ -445,11 +446,11 @@ static VALUE nm_capacity(VALUE self) {
     break;
 
   default:
-    NM_CONSERVATIVE(nm_unregister_value(self));
+    NM_CONSERVATIVE(nm_unregister_value(&self));
     rb_raise(nm_eStorageTypeError, "unrecognized stype in nm_capacity()");
   }
 
-  NM_CONSERVATIVE(nm_unregister_value(self));
+  NM_CONSERVATIVE(nm_unregister_value(&self));
   return cap;
 }
 
@@ -740,11 +741,11 @@ static VALUE nm_each_with_indices(VALUE nmatrix) {
     to_return = nm_list_each_with_indices(nmatrix, false);
     break;
   default:
-    NM_CONSERVATIVE(nm_unregister_value(nmatrix));
+    NM_CONSERVATIVE(nm_unregister_value(&nmatrix));
     rb_raise(nm_eDataTypeError, "Not a proper storage type");
   }
 
-  NM_CONSERVATIVE(nm_unregister_value(nmatrix));
+  NM_CONSERVATIVE(nm_unregister_value(&nmatrix));
   return to_return;
 }
 
@@ -771,11 +772,11 @@ static VALUE nm_each_stored_with_indices(VALUE nmatrix) {
     to_return = nm_list_each_with_indices(nmatrix, true);
     break;
   default:
-    NM_CONSERVATIVE(nm_unregister_value(nmatrix));
+    NM_CONSERVATIVE(nm_unregister_value(&nmatrix));
     rb_raise(nm_eDataTypeError, "Not a proper storage type");
   }
 
-  NM_CONSERVATIVE(nm_unregister_value(nmatrix));
+  NM_CONSERVATIVE(nm_unregister_value(&nmatrix));
   return to_return;
 }
 
@@ -803,11 +804,11 @@ static VALUE nm_map_stored(VALUE nmatrix) {
     to_return = nm_list_map_stored(nmatrix, Qnil);
     break;
   default:
-    NM_CONSERVATIVE(nm_unregister_value(nmatrix));
+    NM_CONSERVATIVE(nm_unregister_value(&nmatrix));
     rb_raise(nm_eDataTypeError, "Not a proper storage type");
   }
 
-  NM_CONSERVATIVE(nm_unregister_value(nmatrix));
+  NM_CONSERVATIVE(nm_unregister_value(&nmatrix));
   return to_return;
 }
 
@@ -833,11 +834,11 @@ static VALUE nm_each_ordered_stored_with_indices(VALUE nmatrix) {
     to_return = nm_list_each_with_indices(nmatrix, true);
     break;
   default:
-    NM_CONSERVATIVE(nm_unregister_value(nmatrix));
+    NM_CONSERVATIVE(nm_unregister_value(&nmatrix));
     rb_raise(nm_eDataTypeError, "Not a proper storage type");
   }
 
-  NM_CONSERVATIVE(nm_unregister_value(nmatrix));
+  NM_CONSERVATIVE(nm_unregister_value(&nmatrix));
   return to_return;
 }
 
