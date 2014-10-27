@@ -28,6 +28,9 @@
 
 require 'spec_helper'
 
+ALL_DTYPES = [:byte,:int8,:int16,:int32,:int64, :float32,:float64, :object,
+  :rational32,:rational64,:rational128, :complex64, :complex128]
+
 describe "math" do
   context "elementwise math functions" do
 
@@ -124,7 +127,7 @@ describe "math" do
         context "Floor and ceil for #{stype}" do  
 
           [:floor, :ceil].each do |meth|
-            [:byte,:int8,:int16,:int32,:int64, :float32,:float64, :object,:rational32,:rational64,:rational128, :complex64, :complex128].each do |dtype|
+            ALL_DTYPES.each do |dtype|
               context dtype do
                 before :each do
                   @size = [2,2]
@@ -163,6 +166,30 @@ describe "math" do
             end
           end
         end
+
+        context "#round for #{stype}" do
+          ALL_DTYPES.each do |dtype|
+            context dtype do
+              before :each do
+                @size = [2,2]
+                @mat  = NMatrix.new @size, [1.33334, 0.9998, 1.9999, -8.9999], 
+                  dtype: dtype, stype: stype
+                @ans  = @mat.to_a.flatten
+              end
+
+              it "rounds #{dtype} for #{stype}" do
+                expect(@mat.round).to eq(N.new(@size, @ans.map { |a| a.round}, 
+                  dtype: dtype, stype: stype))
+              end unless(/complex/ =~ dtype)
+
+              it "rounds complex dtype #{dtype} for #{stype}" do
+                
+                expect(@mat.round).to eq(N.new [2,2], @ans.map {|a| 
+                  Complex(a.real.round, a.imag.round)},dtype: dtype, stype: stype)
+              end if(/complex/ =~ dtype)
+            end
+          end
+        end
         
       end
     end
@@ -184,9 +211,9 @@ describe "math" do
     end
 
     context dtype do
-      it "should correctly invert a matrix in place" do
-        a = NMatrix.new(:dense, 3, [1,0,4,1,1,6,-3,0,-10], dtype)
-        b = NMatrix.new(:dense, 3, [-5,0,-2,-4,1,-1,3.quo(2),0,1.quo(2)], dtype)
+      it "should correctly invert a matrix in place (bang)", :focus => true do
+        a = NMatrix.new(:dense, 3, [1,2,3,0,1,4,5,6,0], dtype)
+        b = NMatrix.new(:dense, 3, [-24,18,5,20,-15,-4,-5,4,1], dtype)
         begin
           a.invert!
         rescue NotImplementedError => e
@@ -196,15 +223,30 @@ describe "math" do
             pending e.to_s
           end
         end
-        expect(a).to eq(b)
+        expect(a.round).to eq(b)
       end
 
       unless NMatrix.has_clapack?
-        it "should correctly exact-invert a matrix" do
-          a = NMatrix.new(:dense, 3, [1,0,4,1,1,6,-3,0,-10], dtype)
-          b = NMatrix.new(:dense, 3, [-5,0,-2,-4,1,-1,3.quo(2),0,1.quo(2)], dtype)
-          a.invert.should == b
+        it "should correctly invert a matrix in place" do
+          a = NMatrix.new(:dense, 5, [1, 8,-9, 7, 5, 
+                                      0, 1, 0, 4, 4, 
+                                      0, 0, 1, 2, 5, 
+                                      0, 0, 0, 1,-5,
+                                      0, 0, 0, 0, 1 ], dtype)
+          b = NMatrix.new(:dense, 5, [1,-8, 9, 7, 17,
+                                      0, 1, 0,-4,-24,
+                                      0, 0, 1,-2,-15,
+                                      0, 0, 0, 1,  5,
+                                      0, 0, 0, 0,  1,], dtype)
+          expect(a.invert).to eq(b)
         end
+      end
+
+      it "should correctly invert a matrix out-of-place" do
+        a = NMatrix.new(:dense, 3, [1,2,3,0,1,4,5,6,0], dtype)
+        b = NMatrix.new(:dense, 3, [-24,18,5,20,-15,-4,-5,4,1], dtype)
+
+        expect(a.invert(3,3)).to eq(b)
       end
     end
   end

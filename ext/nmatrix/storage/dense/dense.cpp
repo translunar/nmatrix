@@ -979,6 +979,7 @@ bool eqeq(const DENSE_STORAGE* left, const DENSE_STORAGE* right) {
   if (left->dim != right->dim) {
     nm_dense_storage_unregister(right);
     nm_dense_storage_unregister(left);
+
     return false;
   }
 
