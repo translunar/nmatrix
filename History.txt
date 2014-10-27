@@ -634,7 +634,13 @@
 
 === 0.1.0.rc6 / 2014-08-??
 
-* No major enhancements.
+* 2 major enhancements:
+
+  * Removed Ruby 1.9.2 support; now requires Ruby 1.9.3 or 
+    higher (by @v0dro)
+
+  * Added Gauss-Jordan elimination for calculation of
+    matrix inverses (by @v0dro)
 
 * 4 minor enhancements:
 
@@ -653,9 +659,12 @@
   * Updated rake install task to use Bundler's GemHelper
     install task (by @duggiefresh)
 
-* 1 bug fix:
+* 2 bug fixes:
 
   * Corrected Ubuntu clapack functionality checking, which
     should fix most functions which rely on the ATLAS
     version of clapack
+
+  * Corrected NMatrix::gesdd workspace request size (by
+    @yoongkang)
 
