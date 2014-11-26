@@ -854,6 +854,22 @@ class NMatrix
     return self.map_stored.inject(sym)
   end
 
+  # Returns the index of the first occurence of the specified value. Returns 
+  # an array containing the position of the value, nil in case the value is not found.
+  # 
+  def index(value)
+    index = nil
+
+    self.each_with_indices do |yields|
+      if yields.first == value
+        yields.shift
+        index = yields
+        break
+      end
+    end 
+
+    index
+  end
 
   #
   # call-seq:
