@@ -6,12 +6,12 @@ require 'nmatrix/version'
 Gem::Specification.new do |gem|
   gem.name = "nmatrix"
   gem.version = NMatrix::VERSION::STRING
-  gem.summary = "NMatrix is an experimental linear algebra library for Ruby, written mostly in C."
-  gem.description = "NMatrix is an experimental linear algebra library for Ruby, written mostly in C."
+  gem.summary = "NMatrix is a linear algebra library for Ruby"
+  gem.description = "NMatrix is a linear algebra library for Ruby, written mostly in C and C++."
   gem.homepage = 'http://sciruby.com'
   gem.authors = ['John Woods', 'Chris Wailes', 'Aleksey Timin']
   gem.email =  ['john.o.woods@gmail.com']
-  gem.license = 'BSD 2-clause'
+  gem.license = 'BSD 3-clause'
   gem.post_install_message = <<-EOF
 ***********************************************************
 Welcome to SciRuby: Tools for Scientific Computing in Ruby!
@@ -44,7 +44,7 @@ EOF
   gem.required_ruby_version = '>= 1.9'
 
   gem.add_dependency 'rdoc', '~>4.0', '>=4.0.1'
-  gem.add_dependency 'packable', '>=1.3.5'
+  gem.add_dependency 'packable', '~> 1.3', '>= 1.3.5'
   gem.add_development_dependency 'rake', '~>10.3'
   gem.add_development_dependency 'bundler', '~>1.6'
   gem.add_development_dependency 'rspec', '~>2.14'

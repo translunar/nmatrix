@@ -634,7 +634,9 @@
 
 === 0.1.0 / 2014-12-11
 
-* 2 major enhancements:
+* 3 major enhancements:
+
+  * Updated to BSD 3-clause license
 
   * Removed Ruby 1.9.2 support; now requires Ruby 1.9.3 or 
     higher (by @v0dro)
