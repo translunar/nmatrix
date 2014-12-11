@@ -14,6 +14,8 @@ lib/nmatrix/io/market.rb
 lib/nmatrix/io/mat5_reader.rb
 lib/nmatrix/io/mat_reader.rb
 lib/nmatrix/io/point_cloud.rb
+lib/nmatrix/io/fortran_format.rb
+lib/nmatrix/io/harwell_boeing.rb
 lib/nmatrix/blas.rb
 lib/nmatrix/enumerate.rb
 lib/nmatrix/homogeneous.rb
