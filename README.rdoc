@@ -123,9 +123,8 @@ The following features exist in the current version of NMatrix (0.1.0.rc1):
   * xGESVD, xGESDD (singular value decomposition)
   * xGEEV (eigenvalue decomposition of a asymmetric square matrices)
 * LU decomposition
-* Matrix inversions (requires LAPACK; BLAS dtypes only)
+* Matrix inversions
 * Determinant calculation for BLAS dtypes
-* Vector 2-norms
 * Traces
 * Ruby/GSL interoperability (requires {SciRuby's fork of rb-gsl}[http://github.com/SciRuby/rb-gsl])
 * slice assignments, e.g.,
@@ -133,20 +132,11 @@ The following features exist in the current version of NMatrix (0.1.0.rc1):
 
 === Planned Features (Short-to-Medium Term)
 
-We are nearing the release of NMatrix 0.1.0, our first beta.
-
-These are features planned for NMatrix 0.2.0:
-
-* LAPACK-free calculation of determinant, trace, and eigenvalues (characteristic polynomial)
-* LAPACK-free matrix inversions
-* tensor products
-* improved file I/O
-  * compression of yale symmetries in I/O
-* optimization of non-BLAS data types on BLAS-like operations (e.g., matrix multiplication for rational numbers)
+See the issues tracker for a list of planned features or to request new ones.
 
 == License
 
-Copyright (c) 2012--14, John Woods and the Ruby Science Foundation.
+Copyright (c) 2012--15, John Woods and the Ruby Science Foundation.
 
 All rights reserved.
 

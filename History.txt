@@ -632,7 +632,7 @@
 
   * Fixed Yale #inject behavior (by @yoongkang)
 
-=== 0.1.0.rc6 / 2014-08-??
+=== 0.1.0 / 2014-12-11
 
 * 2 major enhancements:
 
@@ -642,7 +642,7 @@
   * Added Gauss-Jordan elimination for calculation of
     matrix inverses (by @v0dro)
 
-* 4 minor enhancements:
+* 6 minor enhancements:
 
   * Added trace method for square matrices
 
@@ -659,7 +659,10 @@
   * Updated rake install task to use Bundler's GemHelper
     install task (by @duggiefresh)
 
-* 2 bug fixes:
+  * Moved packable requirement from Gemfile to gemspec
+    (by @andrewcsmith)
+
+* 3 bug fixes:
 
   * Corrected Ubuntu clapack functionality checking, which
     should fix most functions which rely on the ATLAS
@@ -668,3 +671,5 @@
   * Corrected NMatrix::gesdd workspace request size (by
     @yoongkang)
 
+  * Fixed definition of NMatrix#asum for one-by-one
+    matrices (by @andrewcsmith)
