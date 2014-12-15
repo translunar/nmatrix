@@ -578,4 +578,27 @@ describe 'NMatrix' do
     end
   end
 
+  context "#index" do
+    it "returns index of first occurence of an element for a vector" do
+      n = NMatrix.new([5], [0,22,22,11,11])
+
+      expect(n.index(22)).to eq([1])
+    end
+
+    it "returns index of first occurence of an element for 2-D matrix" do
+      n = NMatrix.new([3,3], [23,11,23,
+                              44, 2, 0,
+                              33, 0, 32])
+
+      expect(n.index(0)).to eq([1,2])
+    end
+
+    it "returns index of first occerence of an element for N-D matrix" do
+      n = NMatrix.new([3,3,3], [23,11,23, 44, 2, 0, 33, 0, 32,
+                                23,11,23, 44, 2, 0, 33, 0, 32,
+                                23,11,23, 44, 2, 0, 33, 0, 32])
+
+      expect(n.index(44)).to eq([0,1,0])
+    end
+  end
 end
