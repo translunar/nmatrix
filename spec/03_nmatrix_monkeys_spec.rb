@@ -67,6 +67,12 @@ describe Array do
       a = [[0, 1, 2], [3], [4, 5]]
       expect(a).to eq(a.to_nm.to_a)
     end
+
+    it "does not permanently alter the Array" do
+      a = [[0, 1], [2, 3], [4, 5]]
+      expect(a.to_nm).to eq(NMatrix.new([3,2], a.flatten))
+      expect(a).to eq([[0, 1], [2, 3], [4, 5]])
+    end
   end
 end
 

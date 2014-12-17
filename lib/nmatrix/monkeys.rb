@@ -44,7 +44,7 @@ class Array
   #   instead of :float64) -- optional.
   # <tt>stype</tt> :: Optional storage type (defaults to :dense)
   def to_nm(shape = nil, dtype = nil, stype = :dense)
-    elements = self
+    elements = self.dup
 
     guess_dtype = ->(type) {
       case type
@@ -75,7 +75,7 @@ class Array
     }
 
     unless shape
-      shape = guess_shape.call(self)
+      shape = guess_shape.call(elements)
       elements.flatten!(shape.size - 1)
       if elements.flatten != elements
         dtype = :object
