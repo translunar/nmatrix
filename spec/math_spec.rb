@@ -174,13 +174,23 @@ describe "math" do
                 @ans  = @mat.to_a.flatten
               end
 
-              it "rounds #{dtype} for #{stype}" do
+              it "rounds" do
                 expect(@mat.round).to eq(N.new(@size, @ans.map { |a| a.round}, 
                   dtype: dtype, stype: stype))
               end unless(/complex/ =~ dtype)
 
-              it "rounds complex dtype #{dtype} for #{stype}" do
-                
+              it "rounds with args" do
+                expect(@mat.round(2)).to eq(N.new(@size, @ans.map { |a| a.round(2)}, 
+                  dtype: dtype, stype: stype))
+              end unless(/complex/ =~ dtype)
+
+              it "rounds complex with args" do
+                puts @mat.round(2)
+                expect(@mat.round(2)).to be_within(0.0001).of(N.new [2,2], @ans.map {|a| 
+                  Complex(a.real.round(2), a.imag.round(2))},dtype: dtype, stype: stype)
+              end if(/complex/ =~ dtype)
+
+              it "rounds complex" do
                 expect(@mat.round).to eq(N.new [2,2], @ans.map {|a| 
                   Complex(a.real.round, a.imag.round)},dtype: dtype, stype: stype)
               end if(/complex/ =~ dtype)

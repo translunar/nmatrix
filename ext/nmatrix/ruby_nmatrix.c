@@ -134,13 +134,13 @@ DECL_UNARY_RUBY_ACCESSOR(gamma)
 DECL_UNARY_RUBY_ACCESSOR(negate)
 DECL_UNARY_RUBY_ACCESSOR(floor)
 DECL_UNARY_RUBY_ACCESSOR(ceil)
-DECL_UNARY_RUBY_ACCESSOR(round)
 DECL_NONCOM_ELEMENTWISE_RUBY_ACCESSOR(atan2)
 DECL_NONCOM_ELEMENTWISE_RUBY_ACCESSOR(ldexp)
 DECL_NONCOM_ELEMENTWISE_RUBY_ACCESSOR(hypot)
 
-//log can be unary, but also take a base argument, as with Math.log
+//log/round can be unary, but also take a base argument, as with Math.log
 static VALUE nm_unary_log(int argc, VALUE* argv, VALUE self);
+static VALUE nm_unary_round(int argc, VALUE* argv, VALUE self);
 
 static VALUE elementwise_op(nm::ewop_t op, VALUE left_val, VALUE right_val);
 static VALUE unary_op(nm::unaryop_t op, VALUE self);
@@ -320,7 +320,7 @@ void Init_nmatrix() {
   rb_define_method(cNMatrix, "-@",    (METHOD)nm_unary_negate,0);
   rb_define_method(cNMatrix, "floor", (METHOD)nm_unary_floor, 0);
   rb_define_method(cNMatrix, "ceil", (METHOD)nm_unary_ceil, 0);
-  rb_define_method(cNMatrix, "round", (METHOD)nm_unary_round, 0);
+  rb_define_method(cNMatrix, "round", (METHOD)nm_unary_round, -1);
 
 
 	rb_define_method(cNMatrix, "=~", (METHOD)nm_ew_eqeq, 1);
@@ -938,7 +938,6 @@ DEF_UNARY_RUBY_ACCESSOR(GAMMA, gamma)
 DEF_UNARY_RUBY_ACCESSOR(NEGATE, negate)
 DEF_UNARY_RUBY_ACCESSOR(FLOOR, floor)
 DEF_UNARY_RUBY_ACCESSOR(CEIL, ceil)
-DEF_UNARY_RUBY_ACCESSOR(ROUND, round)
 
 DEF_NONCOM_ELEMENTWISE_RUBY_ACCESSOR(ATAN2, atan2)
 DEF_NONCOM_ELEMENTWISE_RUBY_ACCESSOR(LDEXP, ldexp)
@@ -967,6 +966,31 @@ static VALUE nm_unary_log(int argc, VALUE* argv, VALUE self) {
     return rb_funcall(self, rb_intern(sym.c_str()), 1, argv[0]);
   }
   return rb_funcall(self, rb_intern(sym.c_str()), 1, nm::RubyObject(default_log_base).rval);
+}
+
+static VALUE nm_unary_round(int argc, VALUE* argv, VALUE self) {
+  NM_CONSERVATIVE(nm_register_values(argv, argc));
+  const int default_precision = 0;
+  NMATRIX* left;
+  UnwrapNMatrix(self, left);
+  std::string sym;
+
+  switch(left->stype) {
+  case nm::DENSE_STORE:
+    sym = "__dense_unary_round__";
+    break;
+  case nm::YALE_STORE:
+    sym = "__yale_unary_round__";
+    break;
+  case nm::LIST_STORE:
+    sym = "__list_unary_round__";
+    break;
+  }
+  NM_CONSERVATIVE(nm_unregister_values(argv, argc));
+  if (argc > 0) { //supplied precision
+    return rb_funcall(self, rb_intern(sym.c_str()), 1, argv[0]);
+  }
+  return rb_funcall(self, rb_intern(sym.c_str()), 1, nm::RubyObject(default_precision).rval);
 }
 
 //DEF_ELEMENTWISE_RUBY_ACCESSOR(ATAN2, atan2)

@@ -608,7 +608,7 @@ protected
   # These don't actually take an argument -- they're called reverse-polish style on the matrix.
   # This group always gets casted to float64.
   [:log, :log2, :log10, :sqrt, :sin, :cos, :tan, :acos, :asin, :atan, :cosh, :sinh, :tanh, :acosh,
-   :asinh, :atanh, :exp, :erf, :erfc, :gamma, :cbrt].each do |ewop|
+   :asinh, :atanh, :exp, :erf, :erfc, :gamma, :cbrt, :round].each do |ewop|
     define_method("__list_unary_#{ewop}__") do
       self.__list_map_stored__(nil) { |l| Math.send(ewop, l) }.cast(stype, NMatrix.upcast(dtype, :float64))
     end
@@ -648,31 +648,31 @@ protected
   end
   #:startdoc:
 
-  # These are for rounding each value of a matrix
-  def __list_unary_round__
+  # These are for rounding each value of a matrix. Takes an optional argument
+  def __list_unary_round__(precision)
     if self.complex_dtype?
-      self.__list_map_stored__(nil) { |l| Complex(l.real.round, l.imag.round) }
+      self.__list_map_stored__(nil) { |l| Complex(l.real.round(precision), l.imag.round(precision)) }
                                     .cast(stype, dtype)
     else
-      self.__list_map_stored__(nil) { |l| l.round }.cast(stype, dtype)
+      self.__list_map_stored__(nil) { |l| l.round(precision) }.cast(stype, dtype)
     end
   end
 
-  def __yale_unary_round__
+  def __yale_unary_round__(precision)
     if self.complex_dtype?
-      self.__yale_map_stored__ { |l| Complex(l.real.round, l.imag.round) }
+      self.__yale_map_stored__ { |l| Complex(l.real.round(precision), l.imag.round(precision)) }
                                     .cast(stype, dtype)
     else
-      self.__yale_map_stored__ { |l| l.round }.cast(stype, dtype)
+      self.__yale_map_stored__ { |l| l.round(precision) }.cast(stype, dtype)
     end
   end
 
-  def __dense_unary_round__
+  def __dense_unary_round__(precision)
     if self.complex_dtype?
-      self.__dense_map__ { |l| Complex(l.real.round, l.imag.round) }
+      self.__dense_map__ { |l| Complex(l.real.round(precision), l.imag.round(precision)) }
                                     .cast(stype, dtype)
     else
-      self.__dense_map__ { |l| l.round }.cast(stype, dtype)
+      self.__dense_map__ { |l| l.round(precision) }.cast(stype, dtype)
     end
   end
 
