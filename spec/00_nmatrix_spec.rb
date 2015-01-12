@@ -601,4 +601,41 @@ describe 'NMatrix' do
       expect(n.index(44)).to eq([0,1,0])
     end
   end
+
+  context "#diagonal" do
+    ALL_DTYPES.each do |dtype|
+      before do 
+        @square_matrix =  NMatrix.new([3,3], [
+          23,11,23,
+          44, 2, 0,
+          33, 0, 32
+          ], dtype: dtype
+        )
+
+        @rect_matrix = NMatrix.new([4,3], [
+          23,11,23,
+          44, 2, 0,
+          33, 0,32,
+          11,22,33
+          ], dtype: dtype
+        )
+      end
+
+      it "returns main diagonal for square matrix" do
+        expect(@square_matrix.diagonal).to eq(NMatrix.new [3], [23,2,32])
+      end
+
+      it "returns main diagonal for rectangular matrix" do
+        expect(@rect_matrix.diagonal).to eq(NMatrix.new [3], [23,2,32])
+      end
+
+      it "returns anti-diagonal for square matrix" do
+        expect(@square_matrix.diagonal(false)).to eq(NMatrix.new [3], [23,2,33])
+      end
+
+      it "returns anti-diagonal for rectangular matrix" do
+        expect(@square_matrix.diagonal(false)).to eq(NMatrix.new [3], [23,2,33])
+      end
+    end
+  end
 end

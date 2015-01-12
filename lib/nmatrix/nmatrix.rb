@@ -200,6 +200,35 @@ class NMatrix
     shape[1]
   end
 
+  # Return the main diagonal or antidiagonal a matrix. Only works with 2D matrices.
+  # 
+  # == Arguments
+  # 
+  # * +main_diagonal+ - Defaults to true. If passed 'false', then will return the 
+  #   antidiagonal of the matrix.
+  # 
+  # == References
+  # 
+  # * http://en.wikipedia.org/wiki/Main_diagonal
+  def diagonal main_diagonal=true
+    diag_size = [cols, rows].min
+    diag = NMatrix.new [diag_size], dtype: dtype
+
+    if main_diagonal
+      0.upto(diag_size-1) do |i|
+        diag[i] = self[i,i]
+      end
+    else
+      row = 0
+      (diag_size-1).downto(0) do |col|
+        diag[row] = self[row,col]
+        row += 1
+      end
+    end
+
+    diag
+  end
+
   #
   # call-seq:
   #     to_hash -> Hash
