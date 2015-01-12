@@ -129,6 +129,13 @@ class Complex {
     return *this;
   }
 
+  template <typename OtherType>
+  inline Complex<Type>& operator-=(const Complex<OtherType>& other) {
+    this->r -= other.r;
+    this->i -= other.i;
+    return *this;
+  }
+
 	template <typename OtherType>
 	inline Complex<Type> operator-(const Complex<OtherType>& other) const {
 		return Complex<Type>(this->r - other.r, this->i - other.i);
