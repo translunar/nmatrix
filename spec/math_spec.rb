@@ -174,13 +174,23 @@ describe "math" do
                 @ans  = @mat.to_a.flatten
               end
 
-              it "rounds #{dtype} for #{stype}" do
+              it "rounds" do
                 expect(@mat.round).to eq(N.new(@size, @ans.map { |a| a.round}, 
                   dtype: dtype, stype: stype))
               end unless(/complex/ =~ dtype)
 
-              it "rounds complex dtype #{dtype} for #{stype}" do
-                
+              it "rounds with args" do
+                expect(@mat.round(2)).to eq(N.new(@size, @ans.map { |a| a.round(2)}, 
+                  dtype: dtype, stype: stype))
+              end unless(/complex/ =~ dtype)
+
+              it "rounds complex with args" do
+                puts @mat.round(2)
+                expect(@mat.round(2)).to be_within(0.0001).of(N.new [2,2], @ans.map {|a| 
+                  Complex(a.real.round(2), a.imag.round(2))},dtype: dtype, stype: stype)
+              end if(/complex/ =~ dtype)
+
+              it "rounds complex" do
                 expect(@mat.round).to eq(N.new [2,2], @ans.map {|a| 
                   Complex(a.real.round, a.imag.round)},dtype: dtype, stype: stype)
               end if(/complex/ =~ dtype)
@@ -337,6 +347,35 @@ describe "math" do
         expect(r[3,0]).to eq(31)
 
         #r.dtype.should == :float64 unless left_dtype == :float32 && right_dtype == :float32
+      end
+    end
+  end
+
+  ALL_DTYPES.each do |dtype|
+    next if rational_dtype?(dtype) or integer_dtype?(dtype)
+    context "#cov dtype #{dtype}" do
+      before do 
+        @n = NMatrix.new( [5,3], [4.0,2.0,0.60,
+                                  4.2,2.1,0.59,
+                                  3.9,2.0,0.58,
+                                  4.3,2.1,0.62,
+                                  4.1,2.2,0.63], dtype: dtype)
+      end
+
+      it "calculates variance co-variance matrix (sample)" do
+        expect(@n.cov).to be_within(0.0001).of(NMatrix.new([3,3], 
+          [0.025  , 0.0075, 0.00175,
+           0.0075, 0.007 , 0.00135,
+           0.00175, 0.00135 , 0.00043 ], dtype: dtype)
+        )
+      end
+
+      it "calculates variance co-variance matrix (population)" do
+        expect(@n.cov(for_sample_data: false)).to be_within(0.0001).of(NMatrix.new([3,3], 
+                  [2.0000e-02, 6.0000e-03, 1.4000e-03,
+                   6.0000e-03, 5.6000e-03, 1.0800e-03,
+                   1.4000e-03, 1.0800e-03, 3.4400e-04], dtype: dtype)
+                )
       end
     end
   end
