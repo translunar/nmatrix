@@ -342,6 +342,28 @@ class NMatrix
     self.cast(new_stype, NMatrix::upcast(dtype, :complex64)).complex_conjugate!
   end
 
+  # Calculate the variance co-variance matrix
+  # 
+  # == Options
+  # 
+  # * +:for_sample_data+ - Default true. If set to false will consider the denominator for
+  #   population data (i.e. N-1).
+  # 
+  # == References
+  # 
+  # * http://stattrek.com/matrix-algebra/covariance-matrix.aspx
+  def cov(opts={})
+    raise TypeError, "Only works for non-integer/non-rational dtypes" if integer_dtype? or rational_dtype?
+     opts = {
+      for_sample_data: true
+    }.merge(opts)
+    
+    denominator      = opts[:for_sample_data] ? rows - 1 : rows
+    ones             = NMatrix.ones [5,1] 
+    deviation_scores = self - ones.dot(ones.transpose).dot(self) / rows
+    deviation_scores.transpose.dot(deviation_scores) / denominator
+  end
+
   #
   # call-seq:
   #     conjugate_transpose -> NMatrix

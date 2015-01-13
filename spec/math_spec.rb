@@ -350,4 +350,33 @@ describe "math" do
       end
     end
   end
+
+  ALL_DTYPES.each do |dtype|
+    next if rational_dtype?(dtype) or integer_dtype?(dtype)
+    context "#cov dtype #{dtype}" do
+      before do 
+        @n = NMatrix.new( [5,3], [4.0,2.0,0.60,
+                                  4.2,2.1,0.59,
+                                  3.9,2.0,0.58,
+                                  4.3,2.1,0.62,
+                                  4.1,2.2,0.63], dtype: dtype)
+      end
+
+      it "calculates variance co-variance matrix (sample)" do
+        expect(@n.cov).to be_within(0.0001).of(NMatrix.new([3,3], 
+          [0.025  , 0.0075, 0.00175,
+           0.0075, 0.007 , 0.00135,
+           0.00175, 0.00135 , 0.00043 ], dtype: dtype)
+        )
+      end
+
+      it "calculates variance co-variance matrix (population)" do
+        expect(@n.cov(for_sample_data: false)).to be_within(0.0001).of(NMatrix.new([3,3], 
+                  [2.0000e-02, 6.0000e-03, 1.4000e-03,
+                   6.0000e-03, 5.6000e-03, 1.0800e-03,
+                   1.4000e-03, 1.0800e-03, 3.4400e-04], dtype: dtype)
+                )
+      end
+    end
+  end
 end

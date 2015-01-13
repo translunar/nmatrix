@@ -129,3 +129,10 @@ def nm_eql(n, m) #:nodoc:
   true
 end
 
+def rational_dtype? dtype
+  [:rational32,:rational64,:rational128].include?(dtype)
+end
+
+def integer_dtype? dtype
+  [:byte,:int8,:int16,:int32,:int64].include?(dtype)
+end
