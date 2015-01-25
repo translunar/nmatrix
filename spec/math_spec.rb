@@ -378,5 +378,19 @@ describe "math" do
                 )
       end
     end
+
+    context "#corr #{dtype}" do
+      it "calculates the correlation matrix" do
+        n = NMatrix.new([5,3], [4.0,2.0,0.60,
+                                4.2,2.1,0.59,
+                                3.9,2.0,0.58,
+                                4.3,2.1,0.62,
+                                4.1,2.2,0.63], dtype: dtype)
+        expect(n.corr).to be_within(0.001).of(NMatrix.new([3,3], 
+          [1.00000, 0.56695, 0.53374,
+           0.56695, 1.00000, 0.77813,
+           0.53374, 0.77813, 1.00000], dtype: dtype))
+      end unless dtype =~ /complex/
+    end
   end
 end

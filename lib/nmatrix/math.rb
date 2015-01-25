@@ -359,9 +359,16 @@ class NMatrix
     }.merge(opts)
     
     denominator      = opts[:for_sample_data] ? rows - 1 : rows
-    ones             = NMatrix.ones [5,1] 
+    ones             = NMatrix.ones [rows,1] 
     deviation_scores = self - ones.dot(ones.transpose).dot(self) / rows
     deviation_scores.transpose.dot(deviation_scores) / denominator
+  end
+
+  # Calculate the correlation matrix.
+  def corr
+    raise NotImplementedError, "Does not work for complex dtypes" if complex_dtype?
+    standard_deviation = std
+    cov / (standard_deviation.transpose.dot(standard_deviation))
   end
 
   #
