@@ -379,4 +379,23 @@ describe "math" do
       end
     end
   end
+
+  context "#solve" do
+    NON_INTEGER_DTYPES.each do |dtype|
+      next if dtype == :object # LU factorization doesnt work for :object yet
+      it "solves linear equation for dtype #{dtype}" do
+        a = NMatrix.new [2,2], [3,1,1,2], dtype: dtype
+        b = NMatrix.new [2,1], [9,8], dtype: dtype
+
+        expect(a.solve(b)).to eq(NMatrix.new [2,1], [2,3], dtype: dtype)
+      end
+
+      it "solves linear equation for #{dtype} (non-symmetric matrix)" do
+        a = NMatrix.new [3,3], [1,2,3,5,6,7,3,5,3], dtype: dtype
+        b = NMatrix.new [3,1], [2,3,4], dtype: dtype
+
+        expect(a.solve(b)).to be_within(0.01).of(NMatrix.new([3,1], [-1.437,1.62,0.062], dtype: dtype))
+      end unless [:rational32, :rational64, :rational128].include?(dtype)
+    end
+  end
 end

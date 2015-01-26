@@ -298,6 +298,16 @@ class NMatrix
     [:rational32, :rational64, :rational128].include?(self.dtype)
   end
 
+  ##
+  # call-seq:
+  # 
+  # object_dtype?() -> Boolean
+  # 
+  # Checks if dtype is a ruby object
+  def object_dtype?
+    dtype == :object
+  end
+
 
   #
   # call-seq:

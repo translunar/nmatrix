@@ -230,6 +230,49 @@ namespace nm {
       }
     }
 
+    /*
+     * Solve a system of linear equations using forward-substution followed by 
+     * back substution from the LU factorization of the matrix of co-efficients.
+     * Replaces x_elements with the result. Works only with non-integer, non-object
+     * data types.
+     *
+     * args - r           -> The number of rows of the matrix.
+     *        lu_elements -> Elements of the LU decomposition of the co-efficients 
+     *                       matrix, as a contiguos array.
+     *        b_elements  -> Elements of the the right hand sides, as a contiguous array.
+     *        x_elements  -> The array that will contain the results of the computation.
+     *        pivot       -> Positions of permuted rows.
+     */
+    template <typename DType>
+    void solve(const int r, const void* lu_elements, const void* b_elements, void* x_elements, const int* pivot) {
+      int ii = 0, ip;
+      DType sum;
+
+      const DType* matrix = reinterpret_cast<const DType*>(lu_elements);
+      const DType* b      = reinterpret_cast<const DType*>(b_elements);
+      DType* x            = reinterpret_cast<DType*>(x_elements);
+
+      for (int i = 0; i < r; ++i) { x[i] = b[i]; } 
+      for (int i = 0; i < r; ++i) { // forward substitution loop
+        ip = pivot[i];
+        sum = x[ip];
+        x[ip] = x[i];
+
+        if (ii != 0) {
+          for (int j = ii - 1;j < i; ++j) { sum = sum - matrix[i * r + j] * x[j]; }
+        }
+        else if (sum != 0.0) {
+          ii = i + 1;
+        }
+        x[i] = sum;
+      }
+
+      for (int i = r - 1; i >= 0; --i) { // back substitution loop
+        sum = x[i];
+        for (int j = i + 1; j < r; j++) { sum = sum - matrix[i * r + j] * x[j]; }
+        x[i] = sum/matrix[i * r + i];
+      }
+    }
 
     /*
      * Calculates in-place inverse of A_elements. Uses Gauss-Jordan elimination technique.
@@ -1733,6 +1776,22 @@ void nm_math_det_exact(const int M, const void* elements, const int lda, nm::dty
   NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::det_exact, void, const int M, const void* A_elements, const int lda, void* result_arg);
 
   ttable[dtype](M, elements, lda, result);
+}
+
+/*
+ * C accessor for solving a system of linear equations. 
+ */
+void nm_math_solve(VALUE lu, VALUE b, VALUE x, VALUE ipiv) {
+  int* pivot = new int[RARRAY_LEN(ipiv)];
+
+  for (int i = 0; i < RARRAY_LEN(ipiv); ++i) {
+    pivot[i] = FIX2INT(rb_ary_entry(ipiv, i));  
+  }
+
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::solve, void, const int, const void*, const void*, void*, const int*);
+
+  ttable[NM_DTYPE(x)](NM_SHAPE0(b), NM_STORAGE_DENSE(lu)->elements, 
+    NM_STORAGE_DENSE(b)->elements, NM_STORAGE_DENSE(x)->elements, pivot);
 }
 
 /*
