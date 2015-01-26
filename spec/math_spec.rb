@@ -28,6 +28,11 @@
 
 require 'spec_helper'
 
+ALL_DTYPES = [:byte,:int8,:int16,:int32,:int64, :float32,:float64, :object,
+  :rational32,:rational64,:rational128, :complex64, :complex128]
+
+NON_INTEGER_DTYPES = [:float32, :float64, :complex64, :complex128, :rational32, :rational64, :rational128, :object]
+
 describe "math" do
   context "elementwise math functions" do
 
@@ -202,11 +207,15 @@ describe "math" do
     end
   end
 
-  [:float32, :float64, :complex64, :complex128, :rational32, :rational64, :rational128].each do |dtype|
+  NON_INTEGER_DTYPES.each do |dtype|
+    next if dtype == :object
     context dtype do
+      before do
+        @m = NMatrix.new(:dense, 3, [4,9,2,3,5,7,8,1,6], dtype)
+      end
+
       it "should correctly factorize a matrix" do
-        m = NMatrix.new(:dense, 3, [4,9,2,3,5,7,8,1,6], dtype)
-        a = m.factorize_lu
+        a = @m.factorize_lu
         expect(a[0,0]).to eq(8)
         expect(a[0,1]).to eq(1)
         expect(a[0,2]).to eq(6)
@@ -215,10 +224,27 @@ describe "math" do
         expect(a[1,2]).to eq(-1)
         expect(a[2,0]).to eq(0.375)
       end
+
+      it "also returns the permutation matrix" do
+        a, p = @m.factorize_lu perm_matrix: true
+
+        expect(a[0,0]).to eq(8)
+        expect(a[0,1]).to eq(1)
+        expect(a[0,2]).to eq(6)
+        expect(a[1,0]).to eq(0.5)
+        expect(a[1,1]).to eq(8.5)
+        expect(a[1,2]).to eq(-1)
+        expect(a[2,0]).to eq(0.375)
+
+        puts p
+        expect(p[1,0]).to eq(1)
+        expect(p[2,1]).to eq(1)
+        expect(p[0,2]).to eq(1)
+      end
     end
 
     context dtype do
-      it "should correctly invert a matrix in place (bang)", :focus => true do
+      it "should correctly invert a matrix in place (bang)" do
         a = NMatrix.new(:dense, 3, [1,2,3,0,1,4,5,6,0], dtype)
         b = NMatrix.new(:dense, 3, [-24,18,5,20,-15,-4,-5,4,1], dtype)
         begin

@@ -36,6 +36,29 @@ class NMatrix
       :asinh, :atanh, :exp, :log2, :log10, :sqrt, :cbrt, :erf, :erfc, :gamma, :-@]
   end
 
+  # Methods for generating permutation matrix from LU factorization results.
+  module FactorizeLUMethods
+    class << self
+      def permutation_matrix_from pivot_array
+        perm_arry = permutation_array_for pivot_array
+        n         = NMatrix.zeros perm_arry.size, dtype: :byte
+
+        perm_arry.each_with_index { |e, i| n[i,e] = 1 }
+
+        n
+      end
+
+      def permutation_array_for pivot_array
+        perm_arry = Array.new(pivot_array.size) { |i| i }
+        perm_arry.each_index do |i|
+          perm_arry[i], perm_arry[pivot_array[i]] = perm_arry[pivot_array[i]], perm_arry[i]
+        end
+
+        perm_arry
+      end
+    end
+  end
+
   #
   # call-seq:
   #     invert! -> NMatrix
@@ -120,6 +143,7 @@ class NMatrix
     NMatrix::LAPACK::clapack_getrf(:row, self.shape[0], self.shape[1], self, self.shape[1])
   end
 
+  alias :lu_decomposition! :getrf!
 
   #
   # call-seq:
