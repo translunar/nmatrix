@@ -82,6 +82,15 @@ Basically, follow a practice of 'once you enter C, never look back!'.
 
 If you have something more in mind, discuss it in the issue tracker or on [this](https://groups.google.com/forum/#!topic/sciruby-dev/OJxhrGG309o) thread.
 
+## C/C++ style guide
+
+This section is a work in progress. Add stuff to it whenever you feel that something should be stated explicitly, but isn't.
+
+* Single statements following a `if`/`while`/`for` etc. should be preferably on the same line and _enclosed within braces_.
+* Use camel_case notation for arguments. No upper case.
+* Write a brief description of the arguments that your function receives in the comments directly above the function.
+* Explicitly state in the comments any anomalies that your function might have. For example, that it does not work with a certain storage or data type.
+
 ## Documentation
 
 There are two ways in which NMatrix is being documented: guides and comments, which are converted with RDoc into the
