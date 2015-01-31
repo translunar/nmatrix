@@ -28,11 +28,6 @@
 
 require 'spec_helper'
 
-ALL_DTYPES = [:byte,:int8,:int16,:int32,:int64, :float32,:float64, :object,
-  :rational32,:rational64,:rational128, :complex64, :complex128]
-
-NON_INTEGER_DTYPES = [:float32, :float64, :complex64, :complex128, :rational32, :rational64, :rational128, :object]
-
 describe "math" do
   context "elementwise math functions" do
 
@@ -422,6 +417,30 @@ describe "math" do
 
         expect(a.solve(b)).to be_within(0.01).of(NMatrix.new([3,1], [-1.437,1.62,0.062], dtype: dtype))
       end unless [:rational32, :rational64, :rational128].include?(dtype)
+    end
+  end
+
+  context "#hessenberg" do
+    FLOAT_DTYPES.each do |dtype|
+      context dtype do
+        before do
+          @n = NMatrix.new [5,5], 
+            [0, 2, 0, 1, 1,
+             2, 2, 3, 2, 2,
+             4,-3, 0, 1, 3,
+             6, 1,-6,-5, 4,
+             5, 6, 4, 1, 5], dtype: dtype
+        end
+
+        it "transforms a matrix to Hessenberg form" do
+          expect(@n.hessenberg).to be_within(0.0001).of(NMatrix.new([5,5],    
+            [0.00000,-1.66667, 0.79432,-0.45191,-1.54501,
+            -9.00000, 2.95062,-6.89312, 3.22250,-0.19012,
+             0.00000,-8.21682,-0.57379, 5.26966,-1.69976,
+             0.00000, 0.00000,-3.74630,-0.80893, 3.99708,
+             0.00000, 0.00000, 0.00000, 0.04102, 0.43211], dtype: dtype))
+        end
+      end
     end
   end
 end

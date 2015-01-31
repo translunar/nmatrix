@@ -156,6 +156,7 @@ static VALUE matrix_multiply(NMATRIX* left, NMATRIX* right);
 static VALUE nm_multiply(VALUE left_v, VALUE right_v);
 static VALUE nm_det_exact(VALUE self);
 static VALUE nm_solve(VALUE self, VALUE lu, VALUE b, VALUE x, VALUE ipiv);
+static VALUE nm_hessenberg(VALUE self, VALUE a);
 static VALUE nm_inverse(VALUE self, VALUE inverse, VALUE bang);
 static VALUE nm_inverse_exact(VALUE self, VALUE inverse, VALUE lda, VALUE ldb);
 static VALUE nm_complex_conjugate_bang(VALUE self);
@@ -264,20 +265,21 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "supershape", (METHOD)nm_supershape, 0);
 	rb_define_method(cNMatrix, "offset", (METHOD)nm_offset, 0);
 	rb_define_method(cNMatrix, "det_exact", (METHOD)nm_det_exact, 0);
-  rb_define_private_method(cNMatrix, "__solve__", (METHOD)nm_solve, 4);
-	rb_define_protected_method(cNMatrix, "__inverse__", (METHOD)nm_inverse, 2);
-  rb_define_protected_method(cNMatrix, "__inverse_exact__", (METHOD)nm_inverse_exact, 3);
-	rb_define_method(cNMatrix, "complex_conjugate!", (METHOD)nm_complex_conjugate_bang, 0);
-	rb_define_method(cNMatrix, "complex_conjugate", (METHOD)nm_complex_conjugate, 0);
+  rb_define_method(cNMatrix, "complex_conjugate!", (METHOD)nm_complex_conjugate_bang, 0);
+  rb_define_method(cNMatrix, "complex_conjugate", (METHOD)nm_complex_conjugate, 0);
+
 	rb_define_protected_method(cNMatrix, "reshape_bang", (METHOD)nm_reshape_bang, 1);
 
+  // Iterators public methods
+  rb_define_method(cNMatrix, "each_with_indices", (METHOD)nm_each_with_indices, 0);
+  rb_define_method(cNMatrix, "each_stored_with_indices", (METHOD)nm_each_stored_with_indices, 0);
+  rb_define_method(cNMatrix, "map_stored", (METHOD)nm_map_stored, 0);
+  rb_define_method(cNMatrix, "each_ordered_stored_with_indices", (METHOD)nm_each_ordered_stored_with_indices, 0);
+
+  // Iterators protected methods
 	rb_define_protected_method(cNMatrix, "__dense_each__", (METHOD)nm_dense_each, 0);
 	rb_define_protected_method(cNMatrix, "__dense_map__", (METHOD)nm_dense_map, 0);
 	rb_define_protected_method(cNMatrix, "__dense_map_pair__", (METHOD)nm_dense_map_pair, 1);
-	rb_define_method(cNMatrix, "each_with_indices", (METHOD)nm_each_with_indices, 0);
-	rb_define_method(cNMatrix, "each_stored_with_indices", (METHOD)nm_each_stored_with_indices, 0);
-	rb_define_method(cNMatrix, "map_stored", (METHOD)nm_map_stored, 0);
-	rb_define_method(cNMatrix, "each_ordered_stored_with_indices", (METHOD)nm_each_ordered_stored_with_indices, 0);
 	rb_define_protected_method(cNMatrix, "__list_map_merged_stored__", (METHOD)nm_list_map_merged_stored, 2);
 	rb_define_protected_method(cNMatrix, "__list_map_stored__", (METHOD)nm_list_map_stored, 1);
 	rb_define_protected_method(cNMatrix, "__yale_map_merged_stored__", (METHOD)nm_yale_map_merged_stored, 2);
@@ -340,12 +342,18 @@ void Init_nmatrix() {
 	/////////////////////////
 	// Matrix Math Methods //
 	/////////////////////////
-	rb_define_method(cNMatrix, "dot",		(METHOD)nm_multiply,		1);
-
+	rb_define_method(cNMatrix, "dot", (METHOD)nm_multiply, 1);
 	rb_define_method(cNMatrix, "symmetric?", (METHOD)nm_symmetric, 0);
 	rb_define_method(cNMatrix, "hermitian?", (METHOD)nm_hermitian, 0);
-
 	rb_define_method(cNMatrix, "capacity", (METHOD)nm_capacity, 0);
+
+  // protected methods
+  rb_define_protected_method(cNMatrix, "__inverse__", (METHOD)nm_inverse, 2);
+  rb_define_protected_method(cNMatrix, "__inverse_exact__", (METHOD)nm_inverse_exact, 3);
+
+  // private methods
+  rb_define_private_method(cNMatrix, "__solve__", (METHOD)nm_solve, 4);
+  rb_define_private_method(cNMatrix, "__hessenberg__", (METHOD)nm_hessenberg, 1);
 
 	/////////////////
 	// FFI Methods //
@@ -2986,6 +2994,24 @@ static VALUE nm_solve(VALUE self, VALUE lu, VALUE b, VALUE x, VALUE ipiv) {
 
   return x;
 }
+
+/*
+ * Reduce a matrix to hessenberg form.
+ *
+ * == Arguments
+ *
+ * a - The NMatrix to be reduced. This matrix is replaced with the hessenberg form.
+ *
+ * == Notes 
+ *
+ * LAPACK free.
+ */
+static VALUE nm_hessenberg(VALUE self, VALUE a) {
+  nm_math_hessenberg(a);
+  
+  return a;
+}
+
 /*
  * Calculate the inverse of a matrix with in-place Gauss-Jordan elimination.
  * Inverse will fail if the largest element in any column in zero. 
