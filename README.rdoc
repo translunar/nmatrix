@@ -23,7 +23,7 @@ NMatrix was inspired by {NArray}[http://narray.rubyforge.org], by Masahiro Tanak
 
 To install the latest stable version:
 
-    gem install nmatrix --pre
+    gem install nmatrix
 
 However, you will need to install {ATLAS}[http://math-atlas.sourceforge.net/] with CBLAS (C interface to
 {BLAS}[http://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms]) first. Detailed directions can be found
