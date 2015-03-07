@@ -871,13 +871,13 @@ class NMatrix
   end
 
 
-  def respond_to?(method) #:nodoc:
+  def respond_to?(method, include_all = false) #:nodoc:
     if [:shuffle, :shuffle!, :each_with_index, :sorted_indices, :binned_sorted_indices, :nrm2, :asum].include?(method.intern) # vector-only methods
       return vector?
     elsif [:each_layer, :layer].include?(method.intern) # 3-or-more dimensions only
       return dim > 2
     else
-      super(method)
+      super
     end
   end
 
