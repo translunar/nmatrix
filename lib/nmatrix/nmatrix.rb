@@ -90,6 +90,59 @@ class NMatrix
       shape = [shape,shape] unless shape.is_a?(Array)
       (0...shape.size).inject(1) { |x,i| x * shape[i] }
     end
+
+    # Make N-D coordinate arrays for vectorized evaluations of
+    # N-D scalar/vector fields over N-D grids, given N
+    # coordinate arrays arrs. N > 1.
+    #
+    # call-seq:
+    #     meshgrid(arrs) -> Array of NMatrix
+    #     meshgrid(arrs, options) -> Array of NMatrix
+    #
+    # * *Arguments* :
+    #   - +vectors+ -> Array of N coordinate arrays (Array or NMatrix), if any have more than one dimension they will be flatten
+    #   - +options+ -> Hash with options (:sparse Boolean, false by default; :indexing Symbol, may be :ij or :xy, :xy by default)
+    # * *Returns* :
+    #   - Array of N N-D NMatrixes
+    # * *Examples* :
+    #     x, y = NMatrix::meshgrid([[1, [2, 3]], [4, 5]])
+    #     x.to_a #<= [[1, 2, 3], [1, 2, 3]]
+    #     y.to_a #<= [[4, 4, 4], [5, 5, 5]]
+    #
+    # * *Using* *options* :
+    #
+    #     x, y = NMatrix::meshgrid([[[1, 2], 3], [4, 5]], sparse: true)
+    #     x.to_a #<= [[1, 2, 3]]
+    #     y.to_a #<= [[4], [5]]
+    #
+    #     x, y = NMatrix::meshgrid([[1, 2, 3], [[4], 5]], indexing: :ij)
+    #     x.to_a #<= [[1, 1], [2, 2], [3, 3]]
+    #     y.to_a #<= [[4, 5], [4, 5], [4, 5]]
+    def meshgrid(vectors, options = {})
+      raise(ArgumentError, 'Expected at least 2 arrays.') if vectors.size < 2
+      options[:indexing] ||= :xy
+      raise(ArgumentError, 'Indexing must be :xy of :ij') unless [:ij, :xy].include? options[:indexing]
+      mats = vectors.map { |arr| arr.respond_to?(:flatten) ? arr.flatten : arr.to_flat_array }
+      mats[0], mats[1] = mats[1], mats[0] if options[:indexing] == :xy
+      new_dim = mats.size
+      lengths = mats.map(&:size)
+      result = mats.map.with_index do |matrix, axis|
+        if options[:sparse]
+          new_shape = Array.new(new_dim, 1)
+          new_shape[axis] = lengths[axis]
+          new_elements = matrix
+        else
+          before_axis = lengths[0...axis].reduce(:*)
+          after_axis = lengths[(axis+1)..-1].reduce(:*)
+          new_shape = lengths
+          new_elements = after_axis ? matrix.map{ |el| [el] * after_axis }.flatten : matrix
+          new_elements *= before_axis if before_axis
+        end
+        NMatrix.new(new_shape, new_elements)
+      end
+      result[0], result[1] = result[1], result[0] if options[:indexing] == :xy
+      result
+    end
   end
 
   # TODO: Make this actually pretty.
@@ -923,6 +976,33 @@ class NMatrix
     opts = {stype: self.stype, default: self.default_value, dtype: self.dtype}
     opts = {capacity: capacity}.merge(opts) if self.yale?
     NMatrix.new(self.shape, opts)
+  end
+
+  #
+  # call-seq:
+  #     repeat(count, axis) -> NMatrix
+  # 
+  # * *Arguments* :
+  #   - +count+ -> how many times NMatrix should be repeated
+  #   - +axis+ -> index of axis along which NMatrix should be repeated
+  # * *Returns* :
+  #   - NMatrix created by repeating the existing one along an axis
+  # * *Examples* :
+  #     m = NMatrix.new([2, 2], [1, 2, 3, 4])
+  #     m.repeat(2, 0).to_a #<= [[1, 2], [3, 4], [1, 2], [3, 4]]
+  #     m.repeat(2, 1).to_a #<= [[1, 2, 1, 2], [3, 4, 3, 4]]
+  def repeat(count, axis)
+    raise(ArgumentError, 'Matrix should be repeated at least 2 times.') if count < 2
+    new_shape = shape
+    new_shape[axis] *= count
+    new_matrix = NMatrix.new(new_shape)
+    slice = new_shape.map { |axis_size| 0...axis_size }
+    start = 0
+    count.times do
+      slice[axis] = start...(start += shape[axis])
+      new_matrix[*slice] = self
+    end
+    new_matrix
   end
 
   # This is how you write an individual element-wise operation function:
