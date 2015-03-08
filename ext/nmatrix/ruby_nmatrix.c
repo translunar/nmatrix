@@ -2483,14 +2483,15 @@ static VALUE is_symmetric(VALUE self, bool hermitian) {
 
   NMATRIX* m;
   UnwrapNMatrix(self, m);
+  bool is_symmetric = false;
 
   if (m->storage->shape[0] == m->storage->shape[1] and m->storage->dim == 2) {
     if (NM_STYPE(self) == nm::DENSE_STORE) {
       if (hermitian) {
-        nm_dense_storage_is_hermitian((DENSE_STORAGE*)(m->storage), m->storage->shape[0]);
+        is_symmetric = nm_dense_storage_is_hermitian((DENSE_STORAGE*)(m->storage), m->storage->shape[0]);
 
       } else {
-      	nm_dense_storage_is_symmetric((DENSE_STORAGE*)(m->storage), m->storage->shape[0]);
+        is_symmetric = nm_dense_storage_is_symmetric((DENSE_STORAGE*)(m->storage), m->storage->shape[0]);
       }
 
     } else {
@@ -2501,7 +2502,7 @@ static VALUE is_symmetric(VALUE self, bool hermitian) {
 
   }
   NM_CONSERVATIVE(nm_unregister_value(&self));
-  return Qfalse;
+  return is_symmetric ? Qtrue : Qfalse;
 }
 
 ///////////////////////
