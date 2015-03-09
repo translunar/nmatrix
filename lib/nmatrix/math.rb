@@ -227,6 +227,30 @@ class NMatrix
     [t.transpose, FactorizeLUMethods.permutation_matrix_from(pivot)]
   end
 
+  # Reduce self to upper hessenberg form using householder transforms.
+  # 
+  # == References
+  #
+  # * http://en.wikipedia.org/wiki/Hessenberg_matrix
+  # * http://www.mymathlib.com/c_source/matrices/eigen/hessenberg_orthog.c
+  def hessenberg
+    clone.hessenberg!
+  end
+
+  # Destructive version of #hessenberg
+  def hessenberg!
+    raise ShapeError, "Trying to reduce non 2D matrix to hessenberg form" if 
+      shape.size != 2
+    raise ShapeError, "Trying to reduce non-square matrix to hessenberg form" if 
+      shape[0] != shape[1]
+    raise StorageTypeError, "Matrix must be dense" if stype != :dense
+    raise TypeError, "Works with float matrices only" unless 
+      [:float64,:float32].include?(dtype)
+
+    __hessenberg__(self)
+    self
+  end
+
   # Solve a system of linear equations where *self* is the matrix of co-efficients
   # and *b* is the vertical vector of right hand sides. Only works with dense
   # matrices and non-integer, non-object data types.

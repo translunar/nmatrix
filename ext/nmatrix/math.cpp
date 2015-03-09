@@ -352,6 +352,80 @@ namespace nm {
     }
 
     /*
+     * Reduce a square matrix to hessenberg form with householder transforms
+     *
+     * == Arguments
+     *
+     * nrows - The number of rows present in matrix a.
+     * a_elements - Elements of the matrix to be reduced in 1D array form.
+     *
+     * == References
+     *
+     * http://www.mymathlib.com/c_source/matrices/eigen/hessenberg_orthog.c
+     * This code has been included by permission of the author.
+     */
+    template <typename DType>
+    void hessenberg(const int nrows, void* a_elements) {
+      DType* a = reinterpret_cast<DType*>(a_elements);
+      DType* u = new DType[nrows]; // auxillary storage for the chosen vector
+      DType sum_of_squares, *p_row, *psubdiag, *p_a, scale, innerproduct;
+      int i, k, col;
+
+      // For each column use a Householder transformation to zero all entries 
+      // below the subdiagonal.
+      for (psubdiag = a + nrows, col = 0; col < nrows - 2; psubdiag += nrows + 1, 
+        col++) {
+        // Calculate the signed square root of the sum of squares of the
+        // elements below the diagonal.
+
+        for (p_a = psubdiag, sum_of_squares = 0.0, i = col + 1; i < nrows; 
+          p_a += nrows, i++) {
+          sum_of_squares += *p_a * *p_a;
+        }
+        if (sum_of_squares == 0.0) { continue; }
+        sum_of_squares = std::sqrt(sum_of_squares);
+
+        if ( *psubdiag >= 0.0 ) { sum_of_squares = -sum_of_squares; }
+
+        // Calculate the Householder transformation Q = I - 2uu'/u'u.
+        u[col + 1] = *psubdiag - sum_of_squares;
+        *psubdiag = sum_of_squares;
+
+        for (p_a = psubdiag + nrows, i = col + 2; i < nrows; p_a += nrows, i++) {
+          u[i] = *p_a;
+          *p_a = 0.0;
+        }
+
+        // Premultiply A by Q
+        scale = -1.0 / (sum_of_squares * u[col+1]);
+        for (p_row = psubdiag - col, i = col + 1; i < nrows; i++) {
+          p_a = a + nrows * (col + 1) + i;
+          for (innerproduct = 0.0, k = col + 1; k < nrows; p_a += nrows, k++) {
+            innerproduct += u[k] * *p_a;
+          }
+          innerproduct *= scale;
+          for (p_a = p_row + i, k = col + 1; k < nrows; p_a += nrows, k++) {
+            *p_a -= u[k] * innerproduct;
+          }
+        }
+           
+        // Postmultiply QA by Q
+        for (p_row = a, i = 0; i < nrows; p_row += nrows, i++) {
+          for (innerproduct = 0.0, k = col + 1; k < nrows; k++) {
+            innerproduct += u[k] * *(p_row + k);
+          }
+          innerproduct *= scale;
+
+          for (k = col + 1; k < nrows; k++) {
+            *(p_row + k) -= u[k] * innerproduct;
+          }
+        }
+      }
+
+      delete[] u;
+    }
+
+    /*
      * Calculate the exact inverse for a dense matrix (A [elements]) of size 2 or 3. Places the result in B_elements.
      */
     template <typename DType>
@@ -1794,6 +1868,21 @@ void nm_math_solve(VALUE lu, VALUE b, VALUE x, VALUE ipiv) {
     NM_STORAGE_DENSE(b)->elements, NM_STORAGE_DENSE(x)->elements, pivot);
 }
 
+/*
+ * C accessor for reducing a matrix to hessenberg form.
+ */
+void nm_math_hessenberg(VALUE a) {
+  static void (*ttable[nm::NUM_DTYPES])(const int, void*) = {
+      NULL, NULL, NULL, NULL, NULL, // does not support ints
+      nm::math::hessenberg<float>,
+      nm::math::hessenberg<double>,
+      NULL, NULL, // does not support Complex
+      NULL,NULL, NULL, // no support for rationals
+      NULL // no support for Ruby Object
+  };
+    
+  ttable[NM_DTYPE(a)](NM_SHAPE0(a), NM_STORAGE_DENSE(a)->elements);
+}
 /*
  * C accessor for calculating an in-place inverse.
  */
