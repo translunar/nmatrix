@@ -193,7 +193,7 @@ void rubyval_to_cval(VALUE val, nm::dtype_t dtype, void* loc) {
 			break;
 
 		case COMPLEX128:
-			*reinterpret_cast<Complex128*>(loc)		= RubyObject(val).to<Complex64>();
+			*reinterpret_cast<Complex128*>(loc)		= RubyObject(val).to<Complex128>();
 			break;
 
 		case RATIONAL32:
