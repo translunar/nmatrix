@@ -422,6 +422,18 @@ describe "math" do
         expect(n.symmetric?).to be_truthy
       end
     end
+
+    context "#hermitian? for #{dtype}" do
+      it "should return true for complex hermitian or non-complex symmetric matrix" do 
+        n = NMatrix.new([3,3], [1.00000, 0.56695, 0.53374,
+                                0.56695, 1.00000, 0.77813,
+                                0.53374, 0.77813, 1.00000], dtype: dtype) unless dtype =~ /complex/
+        n = NMatrix.new([3,3], [1.1, Complex(1.2,1.3), Complex(1.4,1.5),
+                                Complex(1.2,-1.3), 1.9, Complex(1.8,1.7),
+                                Complex(1.4,-1.5), Complex(1.8,-1.7), 1.3], dtype: dtype) if dtype =~ /complex/
+        expect(n.hermitian?).to be_truthy
+      end
+    end
   end
 
   context "#solve" do

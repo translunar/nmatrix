@@ -475,27 +475,6 @@ class NMatrix
 
   #
   # call-seq:
-  #     hermitian? -> Boolean
-  #
-  # A hermitian matrix is a complex square matrix that is equal to its
-  # conjugate transpose. (http://en.wikipedia.org/wiki/Hermitian_matrix)
-  #
-  # * *Returns* :
-  #   - True if +self+ is a hermitian matrix, nil otherwise.
-  #
-  def hermitian?
-    return false if self.dim != 2 or self.shape[0] != self.shape[1]
-
-    if [:complex64, :complex128].include?(self.dtype)
-      # TODO: Write much faster Hermitian test in C
-      self.eql?(self.conjugate_transpose)
-    else
-      symmetric?
-    end
-  end
-
-  #
-  # call-seq:
   #     trace -> Numeric
   #
   # Calculates the trace of an nxn matrix.
