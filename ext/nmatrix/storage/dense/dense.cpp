@@ -1030,7 +1030,7 @@ bool is_hermitian(const DENSE_STORAGE* mat, int lda) {
 
 	for (i = mat->shape[0]; i-- > 0;) {
 		for (j = i + 1; j < mat->shape[1]; ++j) {
-			complex_conj		= els[j*lda + 1];
+			complex_conj		= els[j*lda + i];
 			complex_conj.i	= -complex_conj.i;
 
 			if (els[i*lda+j] != complex_conj) {
