@@ -435,6 +435,10 @@ namespace nm {
 
       if (M == 2) {
         DType det = A[0] * A[lda+1] - A[1] * A[lda];
+        if (det == 0) {
+          rb_raise(nm_eNotInvertibleError, 
+              "matrix must have non-zero determinant to be invertible (not getting this error does not mean matrix is invertible if you're dealing with floating points)");
+        }
         B[0] = A[lda+1] / det;
         B[1] = -A[1] / det;
         B[ldb] = -A[lda] / det;
@@ -445,7 +449,8 @@ namespace nm {
         DType det;
         det_exact<DType>(M, A_elements, lda, reinterpret_cast<void*>(&det));
         if (det == 0) {
-          rb_raise(nm_eNotInvertibleError, "matrix must have non-zero determinant to be invertible (not getting this error does not mean matrix is invertible if you're dealing with floating points)");
+          rb_raise(nm_eNotInvertibleError, 
+              "matrix must have non-zero determinant to be invertible (not getting this error does not mean matrix is invertible if you're dealing with floating points)");
         }
 
         B[0]      = (  A[lda+1] * A[2*lda+2] - A[lda+2] * A[2*lda+1]) / det; // A = ei - fh
