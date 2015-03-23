@@ -119,7 +119,6 @@ class NMatrix
       if self.integer_dtype?
         __inverse_exact__(inverse.cast(dtype: :rational128), lda, ldb)
       else
-        dtype = self.dtype
         __inverse_exact__(inverse, lda, ldb)
       end
     end
