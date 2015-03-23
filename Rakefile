@@ -20,7 +20,7 @@ Rake::ExtensionTask.new do |ext|
     ext.name = 'nmatrix'
     ext.ext_dir = 'ext/nmatrix'
     ext.lib_dir = 'lib/'
-    ext.source_pattern = "**/*.{c,cpp, h}"
+    ext.source_pattern = "**/*.{c,cpp,h}"
 end
 
 gemspec = eval(IO.read("nmatrix.gemspec"))
