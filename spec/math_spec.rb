@@ -434,6 +434,50 @@ describe "math" do
         expect(n.hermitian?).to be_truthy
       end
     end
+
+    context "#permute_columns for #{dtype}" do
+      it "check that #permute_columns works correctly by considering every premutation of a 3x3 matrix" do
+        n = NMatrix.new([3,3], [1,0,0,
+                                0,2,0,
+                                0,0,3], dtype: dtype)
+        expect(n.permute_columns([0,1,2], {convention: :intuitive})).to eq(NMatrix.new([3,3], [1,0,0,
+                                                                                              0,2,0,
+                                                                                              0,0,3], dtype: dtype))
+        expect(n.permute_columns([0,2,1], {convention: :intuitive})).to eq(NMatrix.new([3,3], [1,0,0,
+                                                                                              0,0,2,
+                                                                                              0,3,0], dtype: dtype))
+        expect(n.permute_columns([1,0,2], {convention: :intuitive})).to eq(NMatrix.new([3,3], [0,1,0,
+                                                                                              2,0,0,
+                                                                                              0,0,3], dtype: dtype))
+        expect(n.permute_columns([1,2,0], {convention: :intuitive})).to eq(NMatrix.new([3,3], [0,0,1,
+                                                                                              2,0,0,
+                                                                                              0,3,0], dtype: dtype))
+        expect(n.permute_columns([2,0,1], {convention: :intuitive})).to eq(NMatrix.new([3,3], [0,1,0,
+                                                                                              0,0,2,
+                                                                                              3,0,0], dtype: dtype))
+        expect(n.permute_columns([2,1,0], {convention: :intuitive})).to eq(NMatrix.new([3,3], [0,0,1,
+                                                                                              0,2,0,
+                                                                                              3,0,0], dtype: dtype))
+        expect(n.permute_columns([0,1,2], {convention: :lapack})).to eq(NMatrix.new([3,3], [1,0,0,
+                                                                                           0,2,0,
+                                                                                           0,0,3], dtype: dtype))
+        expect(n.permute_columns([0,2,2], {convention: :lapack})).to eq(NMatrix.new([3,3], [1,0,0,
+                                                                                           0,0,2,
+                                                                                           0,3,0], dtype: dtype))
+        expect(n.permute_columns([1,1,2], {convention: :lapack})).to eq(NMatrix.new([3,3], [0,1,0,
+                                                                                           2,0,0,
+                                                                                           0,0,3], dtype: dtype))
+        expect(n.permute_columns([1,2,2], {convention: :lapack})).to eq(NMatrix.new([3,3], [0,0,1,
+                                                                                           2,0,0,
+                                                                                           0,3,0], dtype: dtype))
+        expect(n.permute_columns([2,2,2], {convention: :lapack})).to eq(NMatrix.new([3,3], [0,1,0,
+                                                                                           0,0,2,
+                                                                                           3,0,0], dtype: dtype))
+        expect(n.permute_columns([2,1,2], {convention: :lapack})).to eq(NMatrix.new([3,3], [0,0,1,
+                                                                                           0,2,0,
+                                                                                           3,0,0], dtype: dtype))
+      end
+    end
   end
 
   context "#solve" do
