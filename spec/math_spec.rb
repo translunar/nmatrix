@@ -477,6 +477,27 @@ describe "math" do
                                                                                            0,2,0,
                                                                                            3,0,0], dtype: dtype))
       end
+      it "additional tests for  #permute_columns with convention :intuitive" do
+        m = NMatrix.new([1,4], [0,1,2,3], dtype: dtype)
+        perm = [1,0,3,2]
+        expect(m.permute_columns(perm, {convention: :intuitive})).to eq(NMatrix.new([1,4], perm, dtype: dtype))
+
+        m = NMatrix.new([1,5], [0,1,2,3,4], dtype: dtype)
+        perm = [1,0,4,3,2]
+        expect(m.permute_columns(perm, {convention: :intuitive})).to eq(NMatrix.new([1,5], perm, dtype: dtype))
+
+        m = NMatrix.new([1,6], [0,1,2,3,4,5], dtype: dtype)
+        perm = [2,4,1,0,5,3]
+        expect(m.permute_columns(perm, {convention: :intuitive})).to eq(NMatrix.new([1,6], perm, dtype: dtype))
+
+        m = NMatrix.new([1,7], [0,1,2,3,4,5,6], dtype: dtype)
+        perm = [1,3,5,6,0,2,4]
+        expect(m.permute_columns(perm, {convention: :intuitive})).to eq(NMatrix.new([1,7], perm, dtype: dtype))
+
+        m = NMatrix.new([1,8], [0,1,2,3,4,5,6,7], dtype: dtype)
+        perm = [6,7,5,4,1,3,0,2]
+        expect(m.permute_columns(perm, {convention: :intuitive})).to eq(NMatrix.new([1,8], perm, dtype: dtype))
+      end
     end
   end
 
