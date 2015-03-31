@@ -350,11 +350,11 @@ class NMatrix
   #
   # If +:convention+ is +:lapack+, then +ary+ represents a sequence of pair-wise permutations which are 
   # performed successively. That is, the i'th entry of +ary+ is the index of the column to swap 
-  # the i'th column with, having already applied all earlier swaps. This is the default.
+  # the i'th column with, having already applied all earlier swaps. 
   #
   # If +:convention+ is +:intuitive+, then +ary+ represents the order of columns after the permutation. 
   # That is, the i'th entry of +ary+ is the index of the column that will be in position i after the 
-  # reordering (Matlab-like behaviour). 
+  # reordering (Matlab-like behaviour). This is the default.
   #
   # Not yet implemented for yale or list. 
   #
@@ -364,11 +364,11 @@ class NMatrix
   # 
   # == Options
   # 
-  # * +:covention+ - Possible values are +:lapack+ and +:intuitive+. Default is +:lapack+. See above for details.
+  # * +:covention+ - Possible values are +:lapack+ and +:intuitive+. Default is +:intuitive+. See above for details.
   #
   def laswp!(ary, opts={})
     raise(StorageTypeError, "ATLAS functions only work on dense matrices") unless self.dense?
-    opts = { convention: :lapack }.merge(opts)
+    opts = { convention: :intuitive }.merge(opts)
     
     if opts[:convention] == :intuitive
       if ary.length != ary.uniq.length
