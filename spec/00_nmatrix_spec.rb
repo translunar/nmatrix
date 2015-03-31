@@ -638,4 +638,70 @@ describe 'NMatrix' do
       end
     end
   end
+
+  context "#repeat" do
+    before do
+      @sample_matrix = NMatrix.new([2, 2], [1, 2, 3, 4])
+    end
+
+    it "checks count argument" do
+      expect{@sample_matrix.repeat(1, 0)}.to raise_error(ArgumentError)
+      expect{@sample_matrix.repeat(-2, 0)}.to raise_error(ArgumentError)
+    end
+
+    it "returns repeated matrix" do
+      expect(@sample_matrix.repeat(2, 0)).to eq(NMatrix.new([4, 2], [1, 2, 3, 4, 1, 2, 3, 4]))
+      expect(@sample_matrix.repeat(2, 1)).to eq(NMatrix.new([2, 4], [1, 2, 1, 2, 3, 4, 3, 4]))
+    end
+  end
+
+  context "#meshgrid" do
+    before do
+      @x, @y, @z = [1, 2, 3], NMatrix.new([2, 1], [4, 5]), [6, 7]
+      @two_dim = NMatrix.new([2, 2], [1, 2, 3, 4])
+      @two_dim_array = [[4], [5]]
+      @expected_result = [NMatrix.new([2, 3], [1, 2, 3, 1, 2, 3]), NMatrix.new([2, 3], [4, 4, 4, 5, 5, 5])]
+      @expected_for_ij = [NMatrix.new([3, 2], [1, 1, 2, 2, 3, 3]), NMatrix.new([3, 2], [4, 5, 4, 5, 4, 5])]
+      @expected_for_sparse = [NMatrix.new([1, 3], [1, 2, 3]), NMatrix.new([2, 1], [4, 5])]
+      @expected_for_sparse_ij = [NMatrix.new([3, 1], [1, 2, 3]), NMatrix.new([1, 2], [4, 5])]
+      @expected_3dim = [NMatrix.new([1, 3, 1], [1, 2, 3]).repeat(2, 0).repeat(2, 2),
+                        NMatrix.new([2, 1, 1], [4, 5]).repeat(3, 1).repeat(2, 2),
+                        NMatrix.new([1, 1, 2], [6, 7]).repeat(2, 0).repeat(3, 1)]
+      @expected_3dim_sparse_ij = [NMatrix.new([3, 1, 1], [1, 2, 3]),
+                                  NMatrix.new([1, 2, 1], [4, 5]),
+                                  NMatrix.new([1, 1, 2], [6, 7])]
+    end
+
+    it "checks arrays count" do
+      expect{NMatrix.meshgrid([@x])}.to raise_error(ArgumentError)
+      expect{NMatrix.meshgrid([])}.to raise_error(ArgumentError)
+    end
+
+    it "flattens input arrays before use" do
+      expect(NMatrix.meshgrid([@two_dim, @two_dim_array])).to eq(NMatrix.meshgrid([@two_dim.to_flat_array, @two_dim_array.flatten]))
+    end
+
+    it "returns new NMatrixes" do
+      expect(NMatrix.meshgrid([@x, @y])).to eq(@expected_result)
+    end
+
+    it "has option :sparse" do
+      expect(NMatrix.meshgrid([@x, @y], sparse: true)).to eq(@expected_for_sparse)
+    end
+
+    it "has option :indexing" do
+      expect(NMatrix.meshgrid([@x, @y], indexing: :ij)).to eq(@expected_for_ij)
+      expect(NMatrix.meshgrid([@x, @y], indexing: :xy)).to eq(@expected_result)
+      expect{NMatrix.meshgrid([@x, @y], indexing: :not_ij_not_xy)}.to raise_error(ArgumentError)
+    end
+
+    it "works well with both options set" do
+      expect(NMatrix.meshgrid([@x, @y], sparse: true, indexing: :ij)).to eq(@expected_for_sparse_ij)
+    end
+
+    it "is able to take more than two arrays as arguments and works well with options" do
+      expect(NMatrix.meshgrid([@x, @y, @z])).to eq(@expected_3dim)
+      expect(NMatrix.meshgrid([@x, @y, @z], sparse: true, indexing: :ij)).to eq(@expected_3dim_sparse_ij)
+    end
+  end
 end
