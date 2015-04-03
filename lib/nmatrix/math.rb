@@ -341,24 +341,80 @@ class NMatrix
   def gesdd(workspace_size=nil)
     self.clone.gesdd!(workspace_size)
   end
+
   #
   # call-seq:
   #     laswp!(ary) -> NMatrix
   #
-  # In-place permute the columns of a dense matrix using LASWP according to the order given in an Array +ary+.
-  # Not yet implemented for yale or list.
-  def laswp!(ary)
-    NMatrix::LAPACK::laswp(self, ary)
+  # In-place permute the columns of a dense matrix using LASWP according to the order given as an array +ary+.
+  #
+  # If +:convention+ is +:lapack+, then +ary+ represents a sequence of pair-wise permutations which are 
+  # performed successively. That is, the i'th entry of +ary+ is the index of the column to swap 
+  # the i'th column with, having already applied all earlier swaps. 
+  #
+  # If +:convention+ is +:intuitive+, then +ary+ represents the order of columns after the permutation. 
+  # That is, the i'th entry of +ary+ is the index of the column that will be in position i after the 
+  # reordering (Matlab-like behaviour). This is the default.
+  #
+  # Not yet implemented for yale or list. 
+  #
+  # == Arguments
+  #
+  # * +ary+ - An Array specifying the order of the columns. See above for details.
+  # 
+  # == Options
+  # 
+  # * +:covention+ - Possible values are +:lapack+ and +:intuitive+. Default is +:intuitive+. See above for details.
+  #
+  def laswp!(ary, opts={})
+    raise(StorageTypeError, "ATLAS functions only work on dense matrices") unless self.dense?
+    opts = { convention: :intuitive }.merge(opts)
+    
+    if opts[:convention] == :intuitive
+      if ary.length != ary.uniq.length
+        raise(ArgumentError, "No duplicated entries in the order array are allowed under convention :intuitive")
+      end
+      n = self.shape[1]
+      p = []
+      order = (0...n).to_a
+      0.upto(n-2) do |i|
+        p[i] = order.index(ary[i])
+        order[i], order[p[i]] = order[p[i]], order[i]
+      end
+      p[n-1] = n-1
+    else
+      p = ary
+    end
+
+    NMatrix::LAPACK::laswp(self, p)
   end
 
   #
   # call-seq:
   #     laswp(ary) -> NMatrix
   #
-  # Permute the columns of a dense matrix using LASWP according to the order given in an Array +ary+.
-  # Not yet implemented for yale or list.
-  def laswp(ary)
-    self.clone.laswp!(ary)
+  # Permute the columns of a dense matrix using LASWP according to the order given in an array +ary+.
+  #
+  # If +:convention+ is +:lapack+, then +ary+ represents a sequence of pair-wise permutations which are 
+  # performed successively. That is, the i'th entry of +ary+ is the index of the column to swap 
+  # the i'th column with, having already applied all earlier swaps. This is the default.
+  #
+  # If +:convention+ is +:intuitive+, then +ary+ represents the order of columns after the permutation. 
+  # That is, the i'th entry of +ary+ is the index of the column that will be in position i after the 
+  # reordering (Matlab-like behaviour). 
+  #
+  # Not yet implemented for yale or list. 
+  #
+  # == Arguments
+  #
+  # * +ary+ - An Array specifying the order of the columns. See above for details.
+  # 
+  # == Options
+  # 
+  # * +:covention+ - Possible values are +:lapack+ and +:intuitive+. Default is +:lapack+. See above for details.
+  #
+  def laswp(ary, opts={})
+    self.clone.laswp!(ary, opts)
   end
 
   #
@@ -434,7 +490,7 @@ class NMatrix
   # == Options
   # 
   # * +:for_sample_data+ - Default true. If set to false will consider the denominator for
-  #   population data (i.e. N-1).
+  #   population data (i.e. N, as opposed to N-1 for sample data).
   # 
   # == References
   # 
@@ -459,7 +515,7 @@ class NMatrix
   end
 
   # Raise a square matrix to a power. Be careful of numeric overflows!
-  # In case *n* is 0, a matrix of ones of the same dimension is returned. In case
+  # In case *n* is 0, an identity matrix of the same dimension is returned. In case
   # of negative *n*, the matrix is inverted and the absolute value of *n* taken 
   # for computing the power.
   # 
