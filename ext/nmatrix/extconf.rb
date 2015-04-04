@@ -210,8 +210,17 @@ end
 if have_header("atlas/cblas.h")
   have_header("atlas/clapack.h")
 else
-  have_header("cblas.h")
-  have_header("clapack.h")
+  find_header("cblas.h", *idefaults[:cblas]) and have_header("cblas.h")
+  if find_header("clapack.h", *idefaults[:cblas])
+    # set HAVE_CLAPACK_H only if clapack.h provides clapack_dgetrf
+    try_compile(<<EOS) and have_header("clapack.h", "-Werror=implicit-function-declaration")
+#include <cblas.h>
+#include <clapack.h>
+int test(void){
+  return clapack_dgetrf(CblasRowMajor, CblasNoTrans, 0, 0, (double*)NULL, 0, (int*)NULL);
+}
+EOS
+  end
 end
 
 
