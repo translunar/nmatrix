@@ -193,16 +193,18 @@ if have_library("clapack") # Usually only applies for Mac OS X
   $libs += " -lclapack "
 end
 
-unless have_library("lapack")
-  dir_config("lapack", idefaults[:lapack], ldefaults[:lapack])
+# Order matters here: ATLAS has to go after LAPACK: http://mail.scipy.org/pipermail/scipy-user/2007-January/010717.html
+#$libs += " -llapack -lcblas -latlas "
+unless have_library("atlas")
+  dir_config("atlas", idefaults[:atlas], ldefaults[:atlas])
 end
 
 unless have_library("cblas")
   dir_config("cblas", idefaults[:cblas], ldefaults[:cblas])
 end
 
-unless have_library("atlas")
-  dir_config("atlas", idefaults[:atlas], ldefaults[:atlas])
+unless have_library("lapack")
+  dir_config("lapack", idefaults[:lapack], ldefaults[:lapack])
 end
 
 # If BLAS and LAPACK headers are in an atlas directory, prefer those. Otherwise,
@@ -239,8 +241,6 @@ have_func("cblas_dgemm", "cblas.h")
 #find_library("lapack", "clapack_dgetrf")
 #find_library("cblas", "cblas_dgemm")
 #find_library("atlas", "ATL_dgemmNN")
-# Order matters here: ATLAS has to go after LAPACK: http://mail.scipy.org/pipermail/scipy-user/2007-January/010717.html
-$libs += " -llapack -lcblas -latlas "
 #$libs += " -lprofiler "
 
 
