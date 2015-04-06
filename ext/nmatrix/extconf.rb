@@ -195,17 +195,14 @@ end
 
 # Order matters here: ATLAS has to go after LAPACK: http://mail.scipy.org/pipermail/scipy-user/2007-January/010717.html
 #$libs += " -llapack -lcblas -latlas "
-unless have_library("atlas")
-  dir_config("atlas", idefaults[:atlas], ldefaults[:atlas])
-end
+dir_config("atlas")
+find_library("atlas", nil, *ldefaults[:atlas])
 
-unless have_library("cblas")
-  dir_config("cblas", idefaults[:cblas], ldefaults[:cblas])
-end
+dir_config("cblas")
+find_library("cblas", nil, *ldefaults[:cblas])
 
-unless have_library("lapack")
-  dir_config("lapack", idefaults[:lapack], ldefaults[:lapack])
-end
+dir_config("lapack")
+find_library("lapack", nil, *ldefaults[:lapack])
 
 # If BLAS and LAPACK headers are in an atlas directory, prefer those. Otherwise,
 # we try our luck with the default location.
