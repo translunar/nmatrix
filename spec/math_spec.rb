@@ -581,7 +581,7 @@ describe "math" do
              8.6956e-03,-8.6569e-03, 2.8993e-02, 7.2015e-03,
              5.0034e-02,-1.7500e-02,-3.6777e-02,-1.2128e-02], dtype: answer_dtype, 
              stype: stype)) 
-        end unless stype =~ /yale/ or dtype =~ /(rational|object)/
+        end unless stype =~ /yale/ or dtype =~ /(rational|object)/ or ALL_DTYPES.grep(/int/).include? dtype
 
         it "raises a square matrix to zero" do
           expect(@n.pow(0)).to eq(NMatrix.eye([4,4], dtype: answer_dtype, 
