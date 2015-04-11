@@ -1694,9 +1694,9 @@ static VALUE nm_clapack_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALU
  */
 static VALUE nm_has_clapack(VALUE self) {
 #if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
-  return Qfalse;
-#else
   return Qtrue;
+#else
+  return Qfalse;
 #endif
 }
 
