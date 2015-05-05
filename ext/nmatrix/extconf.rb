@@ -195,17 +195,18 @@ end
 
 # Order matters here: ATLAS has to go after LAPACK: http://mail.scipy.org/pipermail/scipy-user/2007-January/010717.html
 #$libs += " -llapack -lcblas -latlas "
-dir_config("atlas")
-find_library("atlas", nil, *ldefaults[:atlas])
+#dir_config("atlas")
+#find_library("atlas", nil, *ldefaults[:atlas])
 
 dir_config("cblas")
 find_library("cblas", nil, *ldefaults[:cblas])
 
-dir_config("lapack")
-find_library("lapack", nil, *ldefaults[:lapack])
+#dir_config("lapack")
+#find_library("lapack", nil, *ldefaults[:lapack])
 
 # If BLAS and LAPACK headers are in an atlas directory, prefer those. Otherwise,
 # we try our luck with the default location.
+=begin
 if have_header("atlas/cblas.h")
   have_header("atlas/clapack.h")
 else
@@ -221,6 +222,7 @@ int test(void){
 EOS
   end
 end
+=end
 
 
 # Although have_func is supposed to take a list as its second argument, I find that it simply
