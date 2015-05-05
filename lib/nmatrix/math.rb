@@ -30,58 +30,97 @@
 
 class NMatrix
 
-  module NMMath
+  module NMMath #:nodoc:
     METHODS_ARITY_2 = [:atan2, :ldexp, :hypot]
     METHODS_ARITY_1 = [:cos, :sin, :tan, :acos, :asin, :atan, :cosh, :sinh, :tanh, :acosh,
       :asinh, :atanh, :exp, :log2, :log10, :sqrt, :cbrt, :erf, :erfc, :gamma, :-@]
+  end
+
+  # Methods for generating permutation matrix from LU factorization results.
+  module FactorizeLUMethods
+    class << self
+      def permutation_matrix_from pivot_array
+        perm_arry = permutation_array_for pivot_array
+        n         = NMatrix.zeros perm_arry.size, dtype: :byte
+
+        perm_arry.each_with_index { |e, i| n[i,e] = 1 }
+
+        n
+      end
+
+      def permutation_array_for pivot_array
+        perm_arry = Array.new(pivot_array.size) { |i| i }
+        perm_arry.each_index do |i|
+          perm_arry[i], perm_arry[pivot_array[i]] = perm_arry[pivot_array[i]], perm_arry[i]
+        end
+
+        perm_arry
+      end
+    end
   end
 
   #
   # call-seq:
   #     invert! -> NMatrix
   #
-  # Use LAPACK to calculate the inverse of the matrix (in-place). Only works on
-  # dense matrices.
-  #
-  # Note: If you don't have LAPACK, e.g., on a Mac, this may not work yet. Use
-  # invert instead (which still probably won't work if your matrix is larger than 3x3).
+  # Use LAPACK to calculate the inverse of the matrix (in-place) if available. 
+  # Only works on dense matrices. Alternatively uses in-place Gauss-Jordan 
+  # elimination.
   #
   def invert!
-    # Get the pivot array; factor the matrix
-    pivot = self.getrf!
+    if NMatrix.has_clapack?
+      # Get the pivot array; factor the matrix
+      pivot = self.getrf!
 
-    # Now calculate the inverse using the pivot array
-    NMatrix::LAPACK::clapack_getri(:row, self.shape[1], self, self.shape[1], pivot)
+      # Now calculate the inverse using the pivot array
+      NMatrix::LAPACK::clapack_getri(:row, self.shape[1], self, self.shape[1], pivot)
 
-    self
+      self
+    else
+      if self.integer_dtype?
+        __inverse__(self.cast(dtype: :rational128), true)
+      else
+        dtype = self.dtype
+        __inverse__(self, true)
+      end
+    end
   end
 
   #
   # call-seq:
   #     invert -> NMatrix
   #
-  # Make a copy of the matrix, then invert it (requires LAPACK for matrices larger than 3x3).
-  #
+  # Make a copy of the matrix, then invert using Gauss-Jordan elimination.
+  # Works without LAPACK.
   #
   #
   # * *Returns* :
   #   - A dense NMatrix.
   #
-  def invert
-    if NMatrix.has_clapack?
-      begin
-        self.cast(:dense, self.dtype).invert! # call CLAPACK version
-      rescue NotImplementedError # probably a rational matrix
-        inverse = self.clone_structure
-        __inverse_exact__(inverse)
+  def invert lda=nil, ldb=nil
+    if lda.nil? and ldb.nil?
+      if NMatrix.has_clapack?
+        begin
+          self.cast(:dense, self.dtype).invert! # call CLAPACK version
+        rescue NotImplementedError # probably a rational matrix
+          inverse = self.clone
+          __inverse__(inverse, false)
+        end
+      elsif self.integer_dtype? # FIXME: This check is probably too slow.
+        rational_self = self.cast(dtype: :rational128)
+        inverse       = rational_self.clone
+        rational_self.__inverse__(inverse, false)
+      else
+        inverse       = self.clone
+        __inverse__(inverse, false)
       end
-    elsif self.integer_dtype? # FIXME: This check is probably too slow.
-      rational_self = self.cast(dtype: :rational128)
-      inverse       = rational_self.clone_structure
-      rational_self.__inverse_exact__(inverse)
     else
-      inverse       = self.clone_structure
-      __inverse_exact__(inverse)
+      inverse = self.clone_structure
+      if self.integer_dtype?
+        __inverse_exact__(inverse.cast(dtype: :rational128), lda, ldb)
+      else
+        __inverse_exact__(inverse, lda, ldb)
+      end
     end
   end
   alias :inverse :invert
@@ -103,6 +142,7 @@ class NMatrix
     NMatrix::LAPACK::clapack_getrf(:row, self.shape[0], self.shape[1], self, self.shape[1])
   end
 
+  alias :lu_decomposition! :getrf!
 
   #
   # call-seq:
@@ -163,18 +203,82 @@ class NMatrix
   # call-seq:
   #     factorize_lu -> ...
   #
-  # LU factorization of a matrix.
-  #
+  # LU factorization of a matrix. Optionally return the permutation matrix.
+  #   Note that computing the permutation matrix will introduce a slight memory
+  #   and time overhead. 
+  # 
+  # == Arguments
+  # 
+  # +with_permutation_matrix+ - If set to *true* will return the permutation 
+  #   matrix alongwith the LU factorization as a second return value.
+  # 
   # FIXME: For some reason, getrf seems to require that the matrix be transposed first -- and then you have to transpose the
   # FIXME: result again. Ideally, this would be an in-place factorize instead, and would be called nm_factorize_lu_bang.
   #
-  def factorize_lu
+  def factorize_lu with_permutation_matrix=nil
     raise(NotImplementedError, "only implemented for dense storage") unless self.stype == :dense
     raise(NotImplementedError, "matrix is not 2-dimensional") unless self.dimensions == 2
 
-    t = self.transpose
-    NMatrix::LAPACK::clapack_getrf(:row, t.shape[0], t.shape[1], t, t.shape[1])
-    t.transpose
+    t     = self.transpose
+    pivot = NMatrix::LAPACK::clapack_getrf(:row, t.shape[0], t.shape[1], t, t.shape[1])
+    return t.transpose unless with_permutation_matrix
+
+    [t.transpose, FactorizeLUMethods.permutation_matrix_from(pivot)]
+  end
+
+  # Reduce self to upper hessenberg form using householder transforms.
+  # 
+  # == References
+  #
+  # * http://en.wikipedia.org/wiki/Hessenberg_matrix
+  # * http://www.mymathlib.com/c_source/matrices/eigen/hessenberg_orthog.c
+  def hessenberg
+    clone.hessenberg!
+  end
+
+  # Destructive version of #hessenberg
+  def hessenberg!
+    raise ShapeError, "Trying to reduce non 2D matrix to hessenberg form" if 
+      shape.size != 2
+    raise ShapeError, "Trying to reduce non-square matrix to hessenberg form" if 
+      shape[0] != shape[1]
+    raise StorageTypeError, "Matrix must be dense" if stype != :dense
+    raise TypeError, "Works with float matrices only" unless 
+      [:float64,:float32].include?(dtype)
+
+    __hessenberg__(self)
+    self
+  end
+
+  # Solve a system of linear equations where *self* is the matrix of co-efficients
+  # and *b* is the vertical vector of right hand sides. Only works with dense
+  # matrices and non-integer, non-object data types.
+  # 
+  # == Arguments
+  # 
+  # +b+ - Vector of Right Hand Sides.
+  # 
+  # == Usage
+  # 
+  #   a = NMatrix.new [2,2], [3,1,1,2], dtype: dtype
+  #   b = NMatrix.new [2,1], [9,8], dtype: dtype
+  #   a.solve(b)
+  def solve b
+    raise ArgumentError, "b must be a column vector" if b.shape[1] != 1
+    raise ArgumentError, "number of rows of b must equal number of cols of self" if 
+      self.shape[1] != b.shape[0]
+    raise ArgumentError, "only works with dense matrices" if self.stype != :dense
+    raise ArgumentError, "only works for non-integer, non-object dtypes" if 
+      integer_dtype? or object_dtype? or b.integer_dtype? or b.object_dtype?
+
+    x     = b.clone_structure
+    clone = self.clone
+    t     = clone.transpose # transpose because of the getrf anomaly described above.
+    pivot = t.lu_decomposition!
+    t     = t.transpose
+    
+    __solve__(t, b, x, pivot)
+    x
   end
 
   #
@@ -182,7 +286,7 @@ class NMatrix
   #     gesvd! -> [u, sigma, v_transpose]
   #     gesvd! -> [u, sigma, v_conjugate_transpose] # complex
   #
-  # Compute the singular value decomposition of a matrix using LAPACK's GESVD function. 
+  # Compute the singular value decomposition of a matrix using LAPACK's GESVD function.
   # This is destructive, modifying the source NMatrix.  See also #gesdd.
   #
   # Optionally accepts a +workspace_size+ parameter, which will be honored only if it is larger than what LAPACK
@@ -219,7 +323,7 @@ class NMatrix
   # Optionally accepts a +workspace_size+ parameter, which will be honored only if it is larger than what LAPACK
   # requires.
   #
-  def gesdd!(workspace_size=1)
+  def gesdd!(workspace_size=nil)
     NMatrix::LAPACK::gesdd(self, workspace_size)
   end
 
@@ -234,27 +338,83 @@ class NMatrix
   # Optionally accepts a +workspace_size+ parameter, which will be honored only if it is larger than what LAPACK
   # requires.
   #
-  def gesdd(workspace_size=1)
+  def gesdd(workspace_size=nil)
     self.clone.gesdd!(workspace_size)
   end
+
   #
   # call-seq:
   #     laswp!(ary) -> NMatrix
   #
-  # In-place permute the columns of a dense matrix using LASWP according to the order given in an Array +ary+.
-  # Not yet implemented for yale or list.
-  def laswp!(ary)
-    NMatrix::LAPACK::laswp(self, ary)
+  # In-place permute the columns of a dense matrix using LASWP according to the order given as an array +ary+.
+  #
+  # If +:convention+ is +:lapack+, then +ary+ represents a sequence of pair-wise permutations which are 
+  # performed successively. That is, the i'th entry of +ary+ is the index of the column to swap 
+  # the i'th column with, having already applied all earlier swaps. 
+  #
+  # If +:convention+ is +:intuitive+, then +ary+ represents the order of columns after the permutation. 
+  # That is, the i'th entry of +ary+ is the index of the column that will be in position i after the 
+  # reordering (Matlab-like behaviour). This is the default.
+  #
+  # Not yet implemented for yale or list. 
+  #
+  # == Arguments
+  #
+  # * +ary+ - An Array specifying the order of the columns. See above for details.
+  # 
+  # == Options
+  # 
+  # * +:covention+ - Possible values are +:lapack+ and +:intuitive+. Default is +:intuitive+. See above for details.
+  #
+  def laswp!(ary, opts={})
+    raise(StorageTypeError, "ATLAS functions only work on dense matrices") unless self.dense?
+    opts = { convention: :intuitive }.merge(opts)
+    
+    if opts[:convention] == :intuitive
+      if ary.length != ary.uniq.length
+        raise(ArgumentError, "No duplicated entries in the order array are allowed under convention :intuitive")
+      end
+      n = self.shape[1]
+      p = []
+      order = (0...n).to_a
+      0.upto(n-2) do |i|
+        p[i] = order.index(ary[i])
+        order[i], order[p[i]] = order[p[i]], order[i]
+      end
+      p[n-1] = n-1
+    else
+      p = ary
+    end
+
+    NMatrix::LAPACK::laswp(self, p)
   end
 
   #
   # call-seq:
   #     laswp(ary) -> NMatrix
   #
-  # Permute the columns of a dense matrix using LASWP according to the order given in an Array +ary+.
-  # Not yet implemented for yale or list.
-  def laswp(ary)
-    self.clone.laswp!(ary)
+  # Permute the columns of a dense matrix using LASWP according to the order given in an array +ary+.
+  #
+  # If +:convention+ is +:lapack+, then +ary+ represents a sequence of pair-wise permutations which are 
+  # performed successively. That is, the i'th entry of +ary+ is the index of the column to swap 
+  # the i'th column with, having already applied all earlier swaps. This is the default.
+  #
+  # If +:convention+ is +:intuitive+, then +ary+ represents the order of columns after the permutation. 
+  # That is, the i'th entry of +ary+ is the index of the column that will be in position i after the 
+  # reordering (Matlab-like behaviour). 
+  #
+  # Not yet implemented for yale or list. 
+  #
+  # == Arguments
+  #
+  # * +ary+ - An Array specifying the order of the columns. See above for details.
+  # 
+  # == Options
+  # 
+  # * +:covention+ - Possible values are +:lapack+ and +:intuitive+. Default is +:lapack+. See above for details.
+  #
+  def laswp(ary, opts={})
+    self.clone.laswp!(ary, opts)
   end
 
   #
@@ -325,6 +485,76 @@ class NMatrix
     self.cast(new_stype, NMatrix::upcast(dtype, :complex64)).complex_conjugate!
   end
 
+  # Calculate the variance co-variance matrix
+  # 
+  # == Options
+  # 
+  # * +:for_sample_data+ - Default true. If set to false will consider the denominator for
+  #   population data (i.e. N, as opposed to N-1 for sample data).
+  # 
+  # == References
+  # 
+  # * http://stattrek.com/matrix-algebra/covariance-matrix.aspx
+  def cov(opts={})
+    raise TypeError, "Only works for non-integer/non-rational dtypes" if integer_dtype? or rational_dtype?
+     opts = {
+      for_sample_data: true
+    }.merge(opts)
+    
+    denominator      = opts[:for_sample_data] ? rows - 1 : rows
+    ones             = NMatrix.ones [rows,1] 
+    deviation_scores = self - ones.dot(ones.transpose).dot(self) / rows
+    deviation_scores.transpose.dot(deviation_scores) / denominator
+  end
+
+  # Calculate the correlation matrix.
+  def corr
+    raise NotImplementedError, "Does not work for complex dtypes" if complex_dtype?
+    standard_deviation = std
+    cov / (standard_deviation.transpose.dot(standard_deviation))
+  end
+
+  # Raise a square matrix to a power. Be careful of numeric overflows!
+  # In case *n* is 0, an identity matrix of the same dimension is returned. In case
+  # of negative *n*, the matrix is inverted and the absolute value of *n* taken 
+  # for computing the power.
+  # 
+  # == Arguments
+  # 
+  # * +n+ - Integer to which self is to be raised.
+  # 
+  # == References
+  # 
+  # * R.G Dromey - How to Solve it by Computer. Link - 
+  #     http://www.amazon.com/Solve-Computer-Prentice-Hall-International-Science/dp/0134340019/ref=sr_1_1?ie=UTF8&qid=1422605572&sr=8-1&keywords=how+to+solve+it+by+computer
+  def pow n
+    raise ShapeError, "Only works with 2D square matrices." if 
+      shape[0] != shape[1] or shape.size != 2
+    raise TypeError, "Only works with integer powers" unless n.is_a?(Integer)
+
+    sequence = (integer_dtype? ? self.cast(dtype: :int64) : self).clone
+    product  = NMatrix.eye shape[0], dtype: sequence.dtype, stype: sequence.stype 
+
+    if n == 0
+      return NMatrix.eye(shape, dtype: dtype, stype: stype)
+    elsif n == 1
+      return sequence
+    elsif n < 0
+      n = n.abs
+      sequence.invert!
+      product = NMatrix.eye shape[0], dtype: sequence.dtype, stype: sequence.stype
+    end
+
+    # Decompose n to reduce the number of multiplications.
+    while n > 0
+      product = product.dot(sequence) if n % 2 == 1
+      n = n / 2
+      sequence = sequence.dot(sequence)
+    end
+
+    product
+  end
+
   #
   # call-seq:
   #     conjugate_transpose -> NMatrix
@@ -341,22 +571,21 @@ class NMatrix
 
   #
   # call-seq:
-  #     hermitian? -> Boolean
+  #     trace -> Numeric
   #
-  # A hermitian matrix is a complex square matrix that is equal to its
-  # conjugate transpose. (http://en.wikipedia.org/wiki/Hermitian_matrix)
+  # Calculates the trace of an nxn matrix.
+  #
+  # * *Raises* :
+  #   - +ShapeError+ -> Expected square matrix
   #
   # * *Returns* :
-  #   - True if +self+ is a hermitian matrix, nil otherwise.
+  #   - The trace of the matrix (a numeric value)
   #
-  def hermitian?
-    return false if self.dim != 2 or self.shape[0] != self.shape[1]
+  def trace
+    raise(ShapeError, "Expected square matrix") unless self.shape[0] == self.shape[1] && self.dim == 2
 
-    if [:complex64, :complex128].include?(self.dtype)
-      # TODO: Write much faster Hermitian test in C
-      self.eql?(self.conjugate_transpose)
-    else
-      symmetric?
+    (0...self.shape[0]).inject(0) do |total,i|
+      total + self[i,i]
     end
   end
 
@@ -518,6 +747,7 @@ class NMatrix
   #
   # Return the sum of the contents of the vector. This is the BLAS asum routine.
   def asum incx=1, n=nil
+    return self[0].abs if self.shape == [1]
     return method_missing(:asum, incx, n) unless vector?
     NMatrix::BLAS::asum(self, incx, self.size / incx)
   end
@@ -569,7 +799,8 @@ protected
 
   # These don't actually take an argument -- they're called reverse-polish style on the matrix.
   # This group always gets casted to float64.
-  [:log, :log2, :log10, :sqrt, :sin, :cos, :tan, :acos, :asin, :atan, :cosh, :sinh, :tanh, :acosh, :asinh, :atanh, :exp, :erf, :erfc, :gamma, :cbrt].each do |ewop|
+  [:log, :log2, :log10, :sqrt, :sin, :cos, :tan, :acos, :asin, :atan, :cosh, :sinh, :tanh, :acosh,
+   :asinh, :atanh, :exp, :erf, :erfc, :gamma, :cbrt, :round].each do |ewop|
     define_method("__list_unary_#{ewop}__") do
       self.__list_map_stored__(nil) { |l| Math.send(ewop, l) }.cast(stype, NMatrix.upcast(dtype, :float64))
     end
@@ -581,7 +812,8 @@ protected
     end
   end
 
-  # log takes an optional single argument, the base.  Default to natural log.
+  #:stopdoc:
+  # log takes an optional single argument, the base. Default to natural log.
   def __list_unary_log__(base)
     self.__list_map_stored__(nil) { |l| Math.log(l, base) }.cast(stype, NMatrix.upcast(dtype, :float64))
   end
@@ -605,6 +837,78 @@ protected
 
   def __dense_unary_negate__
     self.__dense_map__ { |l| -l }.cast(stype, dtype)
+  end
+  #:startdoc:
+
+  # These are for rounding each value of a matrix. Takes an optional argument
+  def __list_unary_round__(precision)
+    if self.complex_dtype?
+      self.__list_map_stored__(nil) { |l| Complex(l.real.round(precision), l.imag.round(precision)) }
+                                    .cast(stype, dtype)
+    else
+      self.__list_map_stored__(nil) { |l| l.round(precision) }.cast(stype, dtype)
+    end
+  end
+
+  def __yale_unary_round__(precision)
+    if self.complex_dtype?
+      self.__yale_map_stored__ { |l| Complex(l.real.round(precision), l.imag.round(precision)) }
+                                    .cast(stype, dtype)
+    else
+      self.__yale_map_stored__ { |l| l.round(precision) }.cast(stype, dtype)
+    end
+  end
+
+  def __dense_unary_round__(precision)
+    if self.complex_dtype?
+      self.__dense_map__ { |l| Complex(l.real.round(precision), l.imag.round(precision)) }
+                                    .cast(stype, dtype)
+    else
+      self.__dense_map__ { |l| l.round(precision) }.cast(stype, dtype)
+    end
+  end
+
+  # These are for calculating the floor or ceil of matrix
+  def dtype_for_floor_or_ceil
+    if self.integer_dtype? or [:complex64, :complex128, :object].include?(self.dtype)
+      return_dtype = dtype
+    elsif [:float32, :float64, :rational32,:rational64, :rational128].include?(self.dtype)
+      return_dtype = :int64
+    end
+
+    return_dtype
+  end
+
+  [:floor, :ceil].each do |meth|
+    define_method("__list_unary_#{meth}__") do
+      return_dtype = dtype_for_floor_or_ceil
+
+      if [:complex64, :complex128].include?(self.dtype)
+        self.__list_map_stored__(nil) { |l| Complex(l.real.send(meth), l.imag.send(meth)) }.cast(stype, return_dtype)
+      else
+        self.__list_map_stored__(nil) { |l| l.send(meth) }.cast(stype, return_dtype)
+      end
+    end
+
+    define_method("__yale_unary_#{meth}__") do
+      return_dtype = dtype_for_floor_or_ceil
+
+      if [:complex64, :complex128].include?(self.dtype)
+        self.__yale_map_stored__ { |l| Complex(l.real.send(meth), l.imag.send(meth)) }.cast(stype, return_dtype)
+      else
+        self.__yale_map_stored__ { |l| l.send(meth) }.cast(stype, return_dtype)
+      end
+    end
+
+    define_method("__dense_unary_#{meth}__") do
+      return_dtype = dtype_for_floor_or_ceil
+
+      if [:complex64, :complex128].include?(self.dtype)
+        self.__dense_map__ { |l| Complex(l.real.send(meth), l.imag.send(meth)) }.cast(stype, return_dtype)
+      else
+        self.__dense_map__ { |l| l.send(meth) }.cast(stype, return_dtype)
+      end
+    end
   end
 
   # These take two arguments. One might be a matrix, and one might be a scalar.

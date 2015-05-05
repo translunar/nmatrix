@@ -3,6 +3,9 @@
 require 'rubygems'
 require 'rubygems/package_task'
 require 'bundler'
+
+Bundler::GemHelper.install_tasks
+
 begin
   Bundler.setup(:default, :development)
 rescue Bundler::BundlerError => e
@@ -14,20 +17,15 @@ end
 require 'rake'
 require "rake/extensiontask"
 Rake::ExtensionTask.new do |ext|
-    ext.name = 'nmatrix'          
-    ext.ext_dir = 'ext/nmatrix' 
-    ext.lib_dir = 'lib/'             
-    ext.source_pattern = "**/*.{c,cpp, h}" 
+    ext.name = 'nmatrix'
+    ext.ext_dir = 'ext/nmatrix'
+    ext.lib_dir = 'lib/'
+    ext.source_pattern = "**/*.{c,cpp,h}"
 end
 
 gemspec = eval(IO.read("nmatrix.gemspec"))
 
 Gem::PackageTask.new(gemspec).define
-
-desc "install the gem locally"
-task :install => [:package] do
-  sh %{gem install pkg/nmatrix-#{NMatrix::VERSION}.gem}
-end
 
 require 'rspec/core/rake_task'
 require 'rspec/core'
@@ -209,7 +207,10 @@ end
 require "rdoc/task"
 RDoc::Task.new do |rdoc|
   rdoc.main = "README.rdoc"
-  rdoc.rdoc_files.include(%w{README.rdoc History.txt LICENSE.txt CONTRIBUTING.md ext/nmatrix/binary_format.txt lib/nmatrix/**/*.rb ext/nmatrix/**/*.cpp ext/nmatrix/**/*.c ext/nmatrix/**/*.h})
+  rdoc.rdoc_files.include(%w{README.rdoc History.txt LICENSE.txt CONTRIBUTING.md lib ext})
+  rdoc.options << "--exclude=ext/nmatrix/extconf.rb"
+  rdoc.options << "--exclude=ext/nmatrix/ttable_helper.rb"
+  rdoc.options << "--exclude=lib/nmatrix/rspec.rb"
 end
 
 # vim: syntax=ruby

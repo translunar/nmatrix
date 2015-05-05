@@ -583,11 +583,11 @@
   * NMatrix::random now raises an exception when rational matrices
     are requested
 
-=== 0.1.0.rc3 / 2014-04-??
+=== 0.1.0.rc3 / 2014-03-27
 
 * No major enhancements.
 
-* 1 minor enhancements:
+* 2 minor enhancements:
 
   * Exposed NMatrix::LAPACK::geev for LAPACK's xGEEV
 
@@ -599,3 +599,79 @@
   * Fixed critical bug with transposing a matrix reference slice (by
     @rajatkapoor)
 
+=== 0.1.0.rc4 / 2014-07-24
+
+* No major enhancements.
+
+* 1 minor enhancement:
+
+  * NMatrix#floor and #ceil implemented (by @v0dro)
+
+* 2 bug fixes:
+
+  * Disallowed out-of-bounds rank calls (by @andrewcsmith)
+
+  * Fixed rspec 3.0 conflict with rspec-longrun 1.0.1
+
+=== 0.1.0.rc5 / 2014-08-01
+
+* No major enhancements.
+
+* 1 minor enhancements:
+
+  * Added optional extension for generating homogeneous
+    transformation matrices for rotations and translations in three
+    dimensions
+
+* 3 bug fixes:
+
+  * Fixed rake install (by @duggiefresh)
+
+  * Fixed API problems which prevented NMatrix from working with
+    the SciRuby rb-gsl fork
+
+  * Fixed Yale #inject behavior (by @yoongkang)
+
+=== 0.1.0 / 2014-12-11
+
+* 3 major enhancements:
+
+  * Updated to BSD 3-clause license
+
+  * Removed Ruby 1.9.2 support; now requires Ruby 1.9.3 or 
+    higher (by @v0dro)
+
+  * Added Gauss-Jordan elimination for calculation of
+    matrix inverses (by @v0dro)
+
+* 6 minor enhancements:
+
+  * Added trace method for square matrices
+
+  * Improved Array#to_nm monkey patch so matrices and
+    arrays can be interconverted easily, without need for a
+    shape argument (by @andrewcsmith)
+
+  * Added Harwell-Boeing and Fortran matrix format parsers
+    (by @v0dro)
+
+  * Removed soon-to-be-deprecated autoloads and replaced
+    with a more robust method (by @duggiefresh)
+
+  * Updated rake install task to use Bundler's GemHelper
+    install task (by @duggiefresh)
+
+  * Moved packable requirement from Gemfile to gemspec
+    (by @andrewcsmith)
+
+* 3 bug fixes:
+
+  * Corrected Ubuntu clapack functionality checking, which
+    should fix most functions which rely on the ATLAS
+    version of clapack
+
+  * Corrected NMatrix::gesdd workspace request size (by
+    @yoongkang)
+
+  * Fixed definition of NMatrix#asum for one-by-one
+    matrices (by @andrewcsmith)

@@ -115,6 +115,11 @@
 
 #include <algorithm>
 #include <limits>
+#include <cmath>
+
+#ifndef HAVE_CBLAS_H
+#include "math/cblas_enums.h"
+#endif
 
 #include "math/inc.h"
 #include "data/data.h"
@@ -122,7 +127,7 @@
 #include "math/gesvd.h"
 #include "math/geev.h"
 #include "math/swap.h"
-#include "math/idamax.h"
+#include "math/imax.h"
 #include "math/scal.h"
 #include "math/ger.h"
 #include "math/getf2.h"
@@ -156,11 +161,16 @@ extern "C" {
   #include <atlas/clapack.h>
 #endif
 
+  /* BLAS Level 1. */
+  static VALUE nm_cblas_scal(VALUE self, VALUE n, VALUE scale, VALUE vector, VALUE incx);
   static VALUE nm_cblas_nrm2(VALUE self, VALUE n, VALUE x, VALUE incx);
   static VALUE nm_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx);
   static VALUE nm_cblas_rot(VALUE self, VALUE n, VALUE x, VALUE incx, VALUE y, VALUE incy, VALUE c, VALUE s);
   static VALUE nm_cblas_rotg(VALUE self, VALUE ab);
+  static VALUE nm_cblas_imax(VALUE self, VALUE n, VALUE x, VALUE incx);
 
+  /* BLAS Level 2. */
+  /* BLAS Level 3. */
   static VALUE nm_cblas_gemm(VALUE self, VALUE order, VALUE trans_a, VALUE trans_b, VALUE m, VALUE n, VALUE k, VALUE vAlpha,
                              VALUE a, VALUE lda, VALUE b, VALUE ldb, VALUE vBeta, VALUE c, VALUE ldc);
   static VALUE nm_cblas_gemv(VALUE self, VALUE trans_a, VALUE m, VALUE n, VALUE vAlpha, VALUE a, VALUE lda,
@@ -174,6 +184,7 @@ extern "C" {
   static VALUE nm_cblas_syrk(VALUE self, VALUE order, VALUE uplo, VALUE trans, VALUE n, VALUE k, VALUE alpha, VALUE a,
                              VALUE lda, VALUE beta, VALUE c, VALUE ldc);
 
+  /* LAPACK. */
   static VALUE nm_has_clapack(VALUE self);
   static VALUE nm_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda);
   static VALUE nm_clapack_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
@@ -182,7 +193,6 @@ extern "C" {
   static VALUE nm_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE lda, VALUE ipiv);
   static VALUE nm_clapack_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
   static VALUE nm_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1, VALUE k2, VALUE ipiv, VALUE incx);
-  static VALUE nm_clapack_scal(VALUE self, VALUE n, VALUE scale, VALUE vector, VALUE incx);
   static VALUE nm_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
 
   static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lworkspace_size);
@@ -194,185 +204,385 @@ extern "C" {
 // Math Functions //
 ////////////////////
 
-namespace nm { namespace math {
+namespace nm { 
+  namespace math {
 
-/*
- * Calculate the determinant for a dense matrix (A [elements]) of size 2 or 3. Return the result.
- */
-template <typename DType>
-void det_exact(const int M, const void* A_elements, const int lda, void* result_arg) {
-  DType* result  = reinterpret_cast<DType*>(result_arg);
-  const DType* A = reinterpret_cast<const DType*>(A_elements);
+    /*
+     * Calculate the determinant for a dense matrix (A [elements]) of size 2 or 3. Return the result.
+     */
+    template <typename DType>
+    void det_exact(const int M, const void* A_elements, const int lda, void* result_arg) {
+      DType* result  = reinterpret_cast<DType*>(result_arg);
+      const DType* A = reinterpret_cast<const DType*>(A_elements);
 
-  typename LongDType<DType>::type x, y;
+      typename LongDType<DType>::type x, y;
 
-  if (M == 2) {
-    *result = A[0] * A[lda+1] - A[1] * A[lda];
+      if (M == 2) {
+        *result = A[0] * A[lda+1] - A[1] * A[lda];
 
-  } else if (M == 3) {
-    x = A[lda+1] * A[2*lda+2] - A[lda+2] * A[2*lda+1]; // ei - fh
-    y = A[lda] * A[2*lda+2] -   A[lda+2] * A[2*lda];   // fg - di
-    x = A[0]*x - A[1]*y ; // a*(ei-fh) - b*(fg-di)
+      } else if (M == 3) {
+        x = A[lda+1] * A[2*lda+2] - A[lda+2] * A[2*lda+1]; // ei - fh
+        y = A[lda] * A[2*lda+2] -   A[lda+2] * A[2*lda];   // fg - di
+        x = A[0]*x - A[1]*y ; // a*(ei-fh) - b*(fg-di)
 
-    y = A[lda] * A[2*lda+1] - A[lda+1] * A[2*lda];    // dh - eg
-    *result = A[2]*y + x; // c*(dh-eg) + _
-  } else if (M < 2) {
-    rb_raise(rb_eArgError, "can only calculate exact determinant of a square matrix of size 2 or larger");
-  } else {
-    rb_raise(rb_eNotImpError, "exact determinant calculation needed for matrices larger than 3x3");
-  }
-}
-
-
-/*
- * Calculate the inverse for a dense matrix (A [elements]) of size 2 or 3. Places the result in B_elements.
- */
-template <typename DType>
-void inverse_exact(const int M, const void* A_elements, const int lda, void* B_elements, const int ldb) {
-  const DType* A = reinterpret_cast<const DType*>(A_elements);
-  DType* B       = reinterpret_cast<DType*>(B_elements);
-
-  if (M == 2) {
-    DType det = A[0] * A[lda+1] - A[1] * A[lda];
-    B[0] = A[lda+1] / det;
-    B[1] = -A[1] / det;
-    B[ldb] = -A[lda] / det;
-    B[ldb+1] = -A[0] / det;
-
-  } else if (M == 3) {
-    // Calculate the exact determinant.
-    DType det;
-    det_exact<DType>(M, A_elements, lda, reinterpret_cast<void*>(&det));
-    if (det == 0) {
-      rb_raise(nm_eNotInvertibleError, "matrix must have non-zero determinant to be invertible (not getting this error does not mean matrix is invertible if you're dealing with floating points)");
+        y = A[lda] * A[2*lda+1] - A[lda+1] * A[2*lda];    // dh - eg
+        *result = A[2]*y + x; // c*(dh-eg) + _
+      } else if (M < 2) {
+        rb_raise(rb_eArgError, "can only calculate exact determinant of a square matrix of size 2 or larger");
+      } else {
+        rb_raise(rb_eNotImpError, "exact determinant calculation needed for matrices larger than 3x3");
+      }
     }
 
-    B[0]      = (  A[lda+1] * A[2*lda+2] - A[lda+2] * A[2*lda+1]) / det; // A = ei - fh
-    B[1]      = (- A[1]     * A[2*lda+2] + A[2]     * A[2*lda+1]) / det; // D = -bi + ch
-    B[2]      = (  A[1]     * A[lda+2]   - A[2]     * A[lda+1])   / det; // G = bf - ce
-    B[ldb]    = (- A[lda]   * A[2*lda+2] + A[lda+2] * A[2*lda])   / det; // B = -di + fg
-    B[ldb+1]  = (  A[0]     * A[2*lda+2] - A[2]     * A[2*lda])   / det; // E = ai - cg
-    B[ldb+2]  = (- A[0]     * A[lda+2]   + A[2]     * A[lda])     / det; // H = -af + cd
-    B[2*ldb]  = (  A[lda]   * A[2*lda+1] - A[lda+1] * A[2*lda])   / det; // C = dh - eg
-    B[2*ldb+1]= ( -A[0]     * A[2*lda+1] + A[1]     * A[2*lda])   / det; // F = -ah + bg
-    B[2*ldb+2]= (  A[0]     * A[lda+1]   - A[1]     * A[lda])     / det; // I = ae - bd
-  } else if (M == 1) {
-    B[0] = 1 / A[0];
-  } else {
-    rb_raise(rb_eNotImpError, "exact inverse calculation needed for matrices larger than 3x3");
+    /*
+     * Solve a system of linear equations using forward-substution followed by 
+     * back substution from the LU factorization of the matrix of co-efficients.
+     * Replaces x_elements with the result. Works only with non-integer, non-object
+     * data types.
+     *
+     * args - r           -> The number of rows of the matrix.
+     *        lu_elements -> Elements of the LU decomposition of the co-efficients 
+     *                       matrix, as a contiguos array.
+     *        b_elements  -> Elements of the the right hand sides, as a contiguous array.
+     *        x_elements  -> The array that will contain the results of the computation.
+     *        pivot       -> Positions of permuted rows.
+     */
+    template <typename DType>
+    void solve(const int r, const void* lu_elements, const void* b_elements, void* x_elements, const int* pivot) {
+      int ii = 0, ip;
+      DType sum;
+
+      const DType* matrix = reinterpret_cast<const DType*>(lu_elements);
+      const DType* b      = reinterpret_cast<const DType*>(b_elements);
+      DType* x            = reinterpret_cast<DType*>(x_elements);
+
+      for (int i = 0; i < r; ++i) { x[i] = b[i]; } 
+      for (int i = 0; i < r; ++i) { // forward substitution loop
+        ip = pivot[i];
+        sum = x[ip];
+        x[ip] = x[i];
+
+        if (ii != 0) {
+          for (int j = ii - 1;j < i; ++j) { sum = sum - matrix[i * r + j] * x[j]; }
+        }
+        else if (sum != 0.0) {
+          ii = i + 1;
+        }
+        x[i] = sum;
+      }
+
+      for (int i = r - 1; i >= 0; --i) { // back substitution loop
+        sum = x[i];
+        for (int j = i + 1; j < r; j++) { sum = sum - matrix[i * r + j] * x[j]; }
+        x[i] = sum/matrix[i * r + i];
+      }
+    }
+
+    /*
+     * Calculates in-place inverse of A_elements. Uses Gauss-Jordan elimination technique.
+     * In-place inversion of the matrix saves on memory and time.
+     *
+     * args - M - Shape of the matrix
+     *        a_elements - A duplicate of the original expressed as a contiguos array
+     */
+    template <typename DType>
+    void inverse(const int M, void* a_elements) {
+      DType* matrix   = reinterpret_cast<DType*>(a_elements);
+      int* row_index = new int[M]; // arrays for keeping track of column scrambling
+      int* col_index = new int[M];
+
+      for (int k = 0;k < M; ++k) {
+        DType akk = std::abs( matrix[k * (M + 1)] ) ; // diagonal element
+        int interchange = k;
+
+        for (int row = k + 1; row < M; ++row) {
+          DType big = std::abs( matrix[M*row + k] ); // element below the temp pivot
+          
+          if ( big > akk ) {
+            interchange = row;
+            akk = big; 
+          }
+        } 
+
+        if (interchange != k) { // check if rows need flipping
+          DType temp;
+
+          for (int col = 0; col < M; ++col) {
+            NM_SWAP(matrix[interchange*M + col], matrix[k*M + col], temp);            
+          }
+        }
+
+        row_index[k] = interchange;
+        col_index[k] = k;
+
+        if (matrix[k * (M + 1)] == (DType)(0)) {
+          rb_raise(rb_eZeroDivError, "Expected Non-Singular Matrix.");
+        }
+
+        DType pivot = matrix[k * (M + 1)];
+        matrix[k * (M + 1)] = (DType)(1); // set diagonal as 1 for in-place inversion
+
+        for (int col = 0; col < M; ++col) { 
+          // divide each element in the kth row with the pivot
+          matrix[k*M + col] = matrix[k*M + col] / pivot;
+        }
+
+        for (int kk = 0; kk < M; ++kk) { // iterate and reduce all rows
+          if (kk == k) continue;
+
+          DType dum = matrix[k + M*kk];
+          matrix[k + M*kk] = (DType)(0); // prepare for inplace inversion 
+          for (int col = 0; col < M; ++col) {
+            matrix[M*kk + col] = matrix[M*kk + col] - matrix[M*k + col] * dum;
+          }
+        }
+      }
+
+      // Unscramble columns
+      DType temp;
+
+      for (int k = M - 1; k >= 0; --k) {
+        if (row_index[k] != col_index[k]) {
+
+          for (int row = 0; row < M; ++row) {
+            NM_SWAP(matrix[row * M + row_index[k]], matrix[row * M + col_index[k]],
+              temp);  
+          }
+        }
+      }
+
+      delete[] row_index;
+      delete[] col_index;
+    }
+
+    /*
+     * Reduce a square matrix to hessenberg form with householder transforms
+     *
+     * == Arguments
+     *
+     * nrows - The number of rows present in matrix a.
+     * a_elements - Elements of the matrix to be reduced in 1D array form.
+     *
+     * == References
+     *
+     * http://www.mymathlib.com/c_source/matrices/eigen/hessenberg_orthog.c
+     * This code has been included by permission of the author.
+     */
+    template <typename DType>
+    void hessenberg(const int nrows, void* a_elements) {
+      DType* a = reinterpret_cast<DType*>(a_elements);
+      DType* u = new DType[nrows]; // auxillary storage for the chosen vector
+      DType sum_of_squares, *p_row, *psubdiag, *p_a, scale, innerproduct;
+      int i, k, col;
+
+      // For each column use a Householder transformation to zero all entries 
+      // below the subdiagonal.
+      for (psubdiag = a + nrows, col = 0; col < nrows - 2; psubdiag += nrows + 1, 
+        col++) {
+        // Calculate the signed square root of the sum of squares of the
+        // elements below the diagonal.
+
+        for (p_a = psubdiag, sum_of_squares = 0.0, i = col + 1; i < nrows; 
+          p_a += nrows, i++) {
+          sum_of_squares += *p_a * *p_a;
+        }
+        if (sum_of_squares == 0.0) { continue; }
+        sum_of_squares = std::sqrt(sum_of_squares);
+
+        if ( *psubdiag >= 0.0 ) { sum_of_squares = -sum_of_squares; }
+
+        // Calculate the Householder transformation Q = I - 2uu'/u'u.
+        u[col + 1] = *psubdiag - sum_of_squares;
+        *psubdiag = sum_of_squares;
+
+        for (p_a = psubdiag + nrows, i = col + 2; i < nrows; p_a += nrows, i++) {
+          u[i] = *p_a;
+          *p_a = 0.0;
+        }
+
+        // Premultiply A by Q
+        scale = -1.0 / (sum_of_squares * u[col+1]);
+        for (p_row = psubdiag - col, i = col + 1; i < nrows; i++) {
+          p_a = a + nrows * (col + 1) + i;
+          for (innerproduct = 0.0, k = col + 1; k < nrows; p_a += nrows, k++) {
+            innerproduct += u[k] * *p_a;
+          }
+          innerproduct *= scale;
+          for (p_a = p_row + i, k = col + 1; k < nrows; p_a += nrows, k++) {
+            *p_a -= u[k] * innerproduct;
+          }
+        }
+           
+        // Postmultiply QA by Q
+        for (p_row = a, i = 0; i < nrows; p_row += nrows, i++) {
+          for (innerproduct = 0.0, k = col + 1; k < nrows; k++) {
+            innerproduct += u[k] * *(p_row + k);
+          }
+          innerproduct *= scale;
+
+          for (k = col + 1; k < nrows; k++) {
+            *(p_row + k) -= u[k] * innerproduct;
+          }
+        }
+      }
+
+      delete[] u;
+    }
+
+    /*
+     * Calculate the exact inverse for a dense matrix (A [elements]) of size 2 or 3. Places the result in B_elements.
+     */
+    template <typename DType>
+    void inverse_exact(const int M, const void* A_elements, const int lda, void* B_elements, const int ldb) {
+      const DType* A = reinterpret_cast<const DType*>(A_elements);
+      DType* B       = reinterpret_cast<DType*>(B_elements);
+
+      if (M == 2) {
+        DType det = A[0] * A[lda+1] - A[1] * A[lda];
+        if (det == 0) {
+          rb_raise(nm_eNotInvertibleError, 
+              "matrix must have non-zero determinant to be invertible (not getting this error does not mean matrix is invertible if you're dealing with floating points)");
+        }
+        B[0] = A[lda+1] / det;
+        B[1] = -A[1] / det;
+        B[ldb] = -A[lda] / det;
+        B[ldb+1] = -A[0] / det;
+
+      } else if (M == 3) {
+        // Calculate the exact determinant.
+        DType det;
+        det_exact<DType>(M, A_elements, lda, reinterpret_cast<void*>(&det));
+        if (det == 0) {
+          rb_raise(nm_eNotInvertibleError, 
+              "matrix must have non-zero determinant to be invertible (not getting this error does not mean matrix is invertible if you're dealing with floating points)");
+        }
+
+        B[0]      = (  A[lda+1] * A[2*lda+2] - A[lda+2] * A[2*lda+1]) / det; // A = ei - fh
+        B[1]      = (- A[1]     * A[2*lda+2] + A[2]     * A[2*lda+1]) / det; // D = -bi + ch
+        B[2]      = (  A[1]     * A[lda+2]   - A[2]     * A[lda+1])   / det; // G = bf - ce
+        B[ldb]    = (- A[lda]   * A[2*lda+2] + A[lda+2] * A[2*lda])   / det; // B = -di + fg
+        B[ldb+1]  = (  A[0]     * A[2*lda+2] - A[2]     * A[2*lda])   / det; // E = ai - cg
+        B[ldb+2]  = (- A[0]     * A[lda+2]   + A[2]     * A[lda])     / det; // H = -af + cd
+        B[2*ldb]  = (  A[lda]   * A[2*lda+1] - A[lda+1] * A[2*lda])   / det; // C = dh - eg
+        B[2*ldb+1]= ( -A[0]     * A[2*lda+1] + A[1]     * A[2*lda])   / det; // F = -ah + bg
+        B[2*ldb+2]= (  A[0]     * A[lda+1]   - A[1]     * A[lda])     / det; // I = ae - bd
+      } else if (M == 1) {
+        B[0] = 1 / A[0];
+      } else {
+        rb_raise(rb_eNotImpError, "exact inverse calculation needed for matrices larger than 3x3");
+      }
+    }
+
+    /*
+     * Function signature conversion for calling CBLAS' gesvd functions as directly as possible.
+     */
+    template <typename DType, typename CType>
+    inline static int lapack_gesvd(char jobu, char jobvt, int m, int n, void* a, int lda, void* s, void* u, int ldu, void* vt, int ldvt, void* work, int lwork, void* rwork) {
+      return gesvd<DType,CType>(jobu, jobvt, m, n, reinterpret_cast<DType*>(a), lda, reinterpret_cast<DType*>(s), reinterpret_cast<DType*>(u), ldu, reinterpret_cast<DType*>(vt), ldvt, reinterpret_cast<DType*>(work), lwork, reinterpret_cast<CType*>(rwork));
+    }
+
+    /*
+     * Function signature conversion for calling CBLAS' gesvd functions as directly as possible.
+     */
+    template <typename DType, typename CType>
+    inline static int lapack_gesdd(char jobz, int m, int n, void* a, int lda, void* s, void* u, int ldu, void* vt, int ldvt, void* work, int lwork, int* iwork, void* rwork) {
+      return gesdd<DType,CType>(jobz, m, n, reinterpret_cast<DType*>(a), lda, reinterpret_cast<DType*>(s), reinterpret_cast<DType*>(u), ldu, reinterpret_cast<DType*>(vt), ldvt, reinterpret_cast<DType*>(work), lwork, iwork, reinterpret_cast<CType*>(rwork));
+    }
+
+    /*
+     * Function signature conversion for calling CBLAS' gemm functions as directly as possible.
+     *
+     * For documentation: http://www.netlib.org/blas/dgemm.f
+     */
+    template <typename DType>
+    inline static void cblas_gemm(const enum CBLAS_ORDER order,
+                                  const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
+                                  int m, int n, int k,
+                                  void* alpha,
+                                  void* a, int lda,
+                                  void* b, int ldb,
+                                  void* beta,
+                                  void* c, int ldc)
+    {
+      gemm<DType>(order, trans_a, trans_b, m, n, k, reinterpret_cast<DType*>(alpha),
+                  reinterpret_cast<DType*>(a), lda,
+                  reinterpret_cast<DType*>(b), ldb, reinterpret_cast<DType*>(beta),
+                  reinterpret_cast<DType*>(c), ldc);
+    }
+
+
+    /*
+     * Function signature conversion for calling CBLAS's gemv functions as directly as possible.
+     *
+     * For documentation: http://www.netlib.org/lapack/double/dgetrf.f
+     */
+    template <typename DType>
+    inline static bool cblas_gemv(const enum CBLAS_TRANSPOSE trans,
+                                  const int m, const int n,
+                                  const void* alpha,
+                                  const void* a, const int lda,
+                                  const void* x, const int incx,
+                                  const void* beta,
+                                  void* y, const int incy)
+    {
+      return gemv<DType>(trans,
+                         m, n, reinterpret_cast<const DType*>(alpha),
+                         reinterpret_cast<const DType*>(a), lda,
+                         reinterpret_cast<const DType*>(x), incx, reinterpret_cast<const DType*>(beta),
+                         reinterpret_cast<DType*>(y), incy);
+    }
+
+
+    /*
+     * Function signature conversion for calling CBLAS' trsm functions as directly as possible.
+     *
+     * For documentation: http://www.netlib.org/blas/dtrsm.f
+     */
+    template <typename DType>
+    inline static void cblas_trsm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
+                                   const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_DIAG diag,
+                                   const int m, const int n, const void* alpha, const void* a,
+                                   const int lda, void* b, const int ldb)
+    {
+      trsm<DType>(order, side, uplo, trans_a, diag, m, n, *reinterpret_cast<const DType*>(alpha),
+                  reinterpret_cast<const DType*>(a), lda, reinterpret_cast<DType*>(b), ldb);
+    }
+
+
+    /*
+     * Function signature conversion for calling CBLAS' trmm functions as directly as possible.
+     *
+     * For documentation: http://www.netlib.org/blas/dtrmm.f
+     */
+    template <typename DType>
+    inline static void cblas_trmm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
+                                  const enum CBLAS_TRANSPOSE ta, const enum CBLAS_DIAG diag, const int m, const int n, const void* alpha,
+                                  const void* A, const int lda, void* B, const int ldb)
+    {
+      trmm<DType>(order, side, uplo, ta, diag, m, n, reinterpret_cast<const DType*>(alpha),
+                  reinterpret_cast<const DType*>(A), lda, reinterpret_cast<DType*>(B), ldb);
+    }
+
+
+    /*
+     * Function signature conversion for calling CBLAS' syrk functions as directly as possible.
+     *
+     * For documentation: http://www.netlib.org/blas/dsyrk.f
+     */
+    template <typename DType>
+    inline static void cblas_syrk(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const enum CBLAS_TRANSPOSE trans,
+                                  const int n, const int k, const void* alpha,
+                                  const void* A, const int lda, const void* beta, void* C, const int ldc)
+    {
+      syrk<DType>(order, uplo, trans, n, k, reinterpret_cast<const DType*>(alpha),
+                  reinterpret_cast<const DType*>(A), lda, reinterpret_cast<const DType*>(beta), reinterpret_cast<DType*>(C), ldc);
+    }
+
+
+
+
   }
-}
-
-
-/*
- * Function signature conversion for calling CBLAS' gesvd functions as directly as possible.
- */
-template <typename DType, typename CType>
-inline static int lapack_gesvd(char jobu, char jobvt, int m, int n, void* a, int lda, void* s, void* u, int ldu, void* vt, int ldvt, void* work, int lwork, void* rwork) {
-  return gesvd<DType,CType>(jobu, jobvt, m, n, reinterpret_cast<DType*>(a), lda, reinterpret_cast<DType*>(s), reinterpret_cast<DType*>(u), ldu, reinterpret_cast<DType*>(vt), ldvt, reinterpret_cast<DType*>(work), lwork, reinterpret_cast<CType*>(rwork));
-}
-
-/*
- * Function signature conversion for calling CBLAS' gesvd functions as directly as possible.
- */
-template <typename DType, typename CType>
-inline static int lapack_gesdd(char jobz, int m, int n, void* a, int lda, void* s, void* u, int ldu, void* vt, int ldvt, void* work, int lwork, int* iwork, void* rwork) {
-  return gesdd<DType,CType>(jobz, m, n, reinterpret_cast<DType*>(a), lda, reinterpret_cast<DType*>(s), reinterpret_cast<DType*>(u), ldu, reinterpret_cast<DType*>(vt), ldvt, reinterpret_cast<DType*>(work), lwork, iwork, reinterpret_cast<CType*>(rwork));
-}
-
-/*
- * Function signature conversion for calling CBLAS' gemm functions as directly as possible.
- *
- * For documentation: http://www.netlib.org/blas/dgemm.f
- */
-template <typename DType>
-inline static void cblas_gemm(const enum CBLAS_ORDER order,
-                              const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
-                              int m, int n, int k,
-                              void* alpha,
-                              void* a, int lda,
-                              void* b, int ldb,
-                              void* beta,
-                              void* c, int ldc)
-{
-  gemm<DType>(order, trans_a, trans_b, m, n, k, reinterpret_cast<DType*>(alpha),
-              reinterpret_cast<DType*>(a), lda,
-              reinterpret_cast<DType*>(b), ldb, reinterpret_cast<DType*>(beta),
-              reinterpret_cast<DType*>(c), ldc);
-}
-
-
-/*
- * Function signature conversion for calling CBLAS's gemv functions as directly as possible.
- *
- * For documentation: http://www.netlib.org/lapack/double/dgetrf.f
- */
-template <typename DType>
-inline static bool cblas_gemv(const enum CBLAS_TRANSPOSE trans,
-                              const int m, const int n,
-                              const void* alpha,
-                              const void* a, const int lda,
-                              const void* x, const int incx,
-                              const void* beta,
-                              void* y, const int incy)
-{
-  return gemv<DType>(trans,
-                     m, n, reinterpret_cast<const DType*>(alpha),
-                     reinterpret_cast<const DType*>(a), lda,
-                     reinterpret_cast<const DType*>(x), incx, reinterpret_cast<const DType*>(beta),
-                     reinterpret_cast<DType*>(y), incy);
-}
-
-
-/*
- * Function signature conversion for calling CBLAS' trsm functions as directly as possible.
- *
- * For documentation: http://www.netlib.org/blas/dtrsm.f
- */
-template <typename DType>
-inline static void cblas_trsm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
-                               const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_DIAG diag,
-                               const int m, const int n, const void* alpha, const void* a,
-                               const int lda, void* b, const int ldb)
-{
-  trsm<DType>(order, side, uplo, trans_a, diag, m, n, *reinterpret_cast<const DType*>(alpha),
-              reinterpret_cast<const DType*>(a), lda, reinterpret_cast<DType*>(b), ldb);
-}
-
-
-/*
- * Function signature conversion for calling CBLAS' trmm functions as directly as possible.
- *
- * For documentation: http://www.netlib.org/blas/dtrmm.f
- */
-template <typename DType>
-inline static void cblas_trmm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
-                              const enum CBLAS_TRANSPOSE ta, const enum CBLAS_DIAG diag, const int m, const int n, const void* alpha,
-                              const void* A, const int lda, void* B, const int ldb)
-{
-  trmm<DType>(order, side, uplo, ta, diag, m, n, reinterpret_cast<const DType*>(alpha),
-              reinterpret_cast<const DType*>(A), lda, reinterpret_cast<DType*>(B), ldb);
-}
-
-
-/*
- * Function signature conversion for calling CBLAS' syrk functions as directly as possible.
- *
- * For documentation: http://www.netlib.org/blas/dsyrk.f
- */
-template <typename DType>
-inline static void cblas_syrk(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const enum CBLAS_TRANSPOSE trans,
-                              const int n, const int k, const void* alpha,
-                              const void* A, const int lda, const void* beta, void* C, const int ldc)
-{
-  syrk<DType>(order, uplo, trans, n, k, reinterpret_cast<const DType*>(alpha),
-              reinterpret_cast<const DType*>(A), lda, reinterpret_cast<const DType*>(beta), reinterpret_cast<DType*>(C), ldc);
-}
-
-
-
-
-}} // end of namespace nm::math
+} // end of namespace nm::math
 
 
 extern "C" {
@@ -394,7 +604,6 @@ void nm_math_init_blas() {
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getri", (METHOD)nm_clapack_getri, 5);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_potri", (METHOD)nm_clapack_potri, 5);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_laswp", (METHOD)nm_clapack_laswp, 7);
-  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_scal",  (METHOD)nm_clapack_scal,  4);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_lauum", (METHOD)nm_clapack_lauum, 5);
 
   /* Non-ATLAS regular LAPACK Functions called via Fortran interface */
@@ -404,10 +613,12 @@ void nm_math_init_blas() {
 
   cNMatrix_BLAS = rb_define_module_under(cNMatrix, "BLAS");
 
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_scal", (METHOD)nm_cblas_scal, 4);
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_nrm2", (METHOD)nm_cblas_nrm2, 3);
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_asum", (METHOD)nm_cblas_asum, 3);
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_rot",  (METHOD)nm_cblas_rot,  7);
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_rotg", (METHOD)nm_cblas_rotg, 1);
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_imax", (METHOD)nm_cblas_imax, 3);
 
 	rb_define_singleton_method(cNMatrix_BLAS, "cblas_gemm", (METHOD)nm_cblas_gemm, 14);
 	rb_define_singleton_method(cNMatrix_BLAS, "cblas_gemv", (METHOD)nm_cblas_gemv, 11);
@@ -457,6 +668,35 @@ static inline enum CBLAS_TRANSPOSE blas_transpose_sym(VALUE op) {
   return CblasNoTrans;
 }
 
+/*
+ * call-seq:
+ *     NMatrix::BLAS.cblas_scal(n, alpha, vector, inc) -> NMatrix
+ *
+ * BLAS level 1 function +scal+. Works with all dtypes.
+ *
+ * Scale +vector+ in-place by +alpha+ and also return it. The operation is as
+ * follows:
+ *  x <- alpha * x
+ *
+ * - +n+ -> Number of elements of +vector+.
+ * - +alpha+ -> Scalar value used in the operation.
+ * - +vector+ -> NMatrix of shape [n,1] or [1,n]. Modified in-place.
+ * - +inc+ -> Increment used in the scaling function. Should generally be 1.
+ */
+static VALUE nm_cblas_scal(VALUE self, VALUE n, VALUE alpha, VALUE vector, VALUE incx) {
+  nm::dtype_t dtype = NM_DTYPE(vector);
+
+  void* scalar = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
+  rubyval_to_cval(alpha, dtype, scalar);
+
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::cblas_scal, void, const int n,
+      const void* scalar, void* x, const int incx);
+
+  ttable[dtype](FIX2INT(n), scalar, NM_STORAGE_DENSE(vector)->elements,
+      FIX2INT(incx));
+
+  return vector;
+}
 
 /*
  * Interprets cblas argument which could be :left or :right
@@ -519,14 +759,17 @@ static inline enum CBLAS_ORDER blas_order_sym(VALUE op) {
  *
  * The Givens plane rotation can be used to introduce zero elements into a matrix selectively.
  *
- * This function differs from most of the other raw BLAS accessors. Instead of providing a, b, c, s as arguments, you
- * should only provide a and b (the inputs), and you should provide them as a single NVector (or the first two elements
- * of any dense NMatrix or NVector type, specifically).
+ * This function differs from most of the other raw BLAS accessors. Instead of
+ * providing a, b, c, s as arguments, you should only provide a and b (the
+ * inputs), and you should provide them as the first two elements of any dense
+ * NMatrix type.
  *
- * The outputs [c,s] will be returned in a Ruby Array at the end; the input NVector will also be modified in-place.
+ * The outputs [c,s] will be returned in a Ruby Array at the end; the input
+ * NMatrix will also be modified in-place.
  *
- * If you provide rationals, be aware that there's a high probability of an error, since rotg includes a square root --
- * and most rationals' square roots are irrational. You're better off converting to Float first.
+ * If you provide rationals, be aware that there's a high probability of an
+ * error, since rotg includes a square root -- and most rationals' square roots
+ * are irrational. You're better off converting to Float first.
  *
  * This function, like the other cblas_ functions, does minimal type-checking.
  */
@@ -548,8 +791,8 @@ static VALUE nm_cblas_rotg(VALUE self, VALUE ab) {
     return Qnil;
 
   } else {
-    NM_CONSERVATIVE(nm_register_value(self));
-    NM_CONSERVATIVE(nm_register_value(ab));
+    NM_CONSERVATIVE(nm_register_value(&self));
+    NM_CONSERVATIVE(nm_register_value(&ab));
     void *pC = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]),
          *pS = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
 
@@ -569,8 +812,8 @@ static VALUE nm_cblas_rotg(VALUE self, VALUE ab) {
       rb_ary_store(result, 0, rubyobj_from_cval(pC, dtype).rval);
       rb_ary_store(result, 1, rubyobj_from_cval(pS, dtype).rval);
     }
-    NM_CONSERVATIVE(nm_unregister_value(ab));
-    NM_CONSERVATIVE(nm_unregister_value(self));
+    NM_CONSERVATIVE(nm_unregister_value(&ab));
+    NM_CONSERVATIVE(nm_unregister_value(&self));
     return result;
   }
 }
@@ -753,7 +996,29 @@ static VALUE nm_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx) {
   return rubyobj_from_cval(Result, rdtype).rval;
 }
 
+/*
+ * call-seq:
+ *    NMatrix::BLAS.cblas_imax(n, vector, inc) -> Fixnum
+ *
+ * BLAS level 1 routine.
+ *
+ * Return the index of the largest element of +vector+.
+ *
+ * - +n+ -> Vector's size. Generally, you can use NMatrix#rows or NMatrix#cols.
+ * - +vector+ -> A NMatrix of shape [n,1] or [1,n] with any dtype.
+ * - +inc+ -> It's the increment used when searching. Use 1 except if you know
+ *   what you're doing.
+ */
+static VALUE nm_cblas_imax(VALUE self, VALUE n, VALUE x, VALUE incx) {
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::cblas_imax, int, const int n, const void* x, const int incx);
 
+  nm::dtype_t dtype = NM_DTYPE(x);
+
+  int index = ttable[dtype](FIX2INT(n), NM_STORAGE_DENSE(x)->elements, FIX2INT(incx));
+
+  // Convert to Ruby's Int value.
+  return INT2FIX(index);
+}
 
 
 /* Call any of the cblas_xgemm functions as directly as possible.
@@ -861,7 +1126,12 @@ static VALUE nm_cblas_trsm(VALUE self,
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
       nm::math::cblas_trsm<float>,
       nm::math::cblas_trsm<double>,
+#ifdef HAVE_CBLAS_H
       cblas_ctrsm, cblas_ztrsm, // call directly, same function signature!
+#else
+      nm::math::cblas_trsm<nm::Complex64>,
+      nm::math::cblas_trsm<nm::Complex128>,
+#endif
       nm::math::cblas_trsm<nm::Rational32>,
       nm::math::cblas_trsm<nm::Rational64>,
       nm::math::cblas_trsm<nm::Rational128>,
@@ -900,7 +1170,12 @@ static VALUE nm_cblas_trmm(VALUE self,
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
       nm::math::cblas_trmm<float>,
       nm::math::cblas_trmm<double>,
+#ifdef HAVE_CBLAS_H
       cblas_ctrmm, cblas_ztrmm // call directly, same function signature!
+#else
+      nm::math::cblas_trmm<nm::Complex64>,
+      nm::math::cblas_trmm<nm::Complex128>
+#endif
       /*
       nm::math::cblas_trmm<nm::Rational32>,
       nm::math::cblas_trmm<nm::Rational64>,
@@ -939,7 +1214,12 @@ static VALUE nm_cblas_syrk(VALUE self,
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
       nm::math::cblas_syrk<float>,
       nm::math::cblas_syrk<double>,
+#ifdef HAVE_CBLAS_H
       cblas_csyrk, cblas_zsyrk// call directly, same function signature!
+#else
+      nm::math::cblas_syrk<nm::Complex64>,
+      nm::math::cblas_syrk<nm::Complex128>
+#endif
       /*nm::math::cblas_trsm<nm::Rational32>,
       nm::math::cblas_trsm<nm::Rational64>,
       nm::math::cblas_trsm<nm::Rational128>,
@@ -977,9 +1257,17 @@ static VALUE nm_cblas_herk(VALUE self,
   nm::dtype_t dtype = NM_DTYPE(a);
 
   if (dtype == nm::COMPLEX64) {
+#ifdef HAVE_CBLAS_H
     cblas_cherk(blas_order_sym(order), blas_uplo_sym(uplo), blas_transpose_sym(trans), FIX2INT(n), FIX2INT(k), NUM2DBL(alpha), NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), NUM2DBL(beta), NM_STORAGE_DENSE(c)->elements, FIX2INT(ldc));
+#else
+  rb_raise(rb_eNotImpError, "BLAS not linked");
+#endif
   } else if (dtype == nm::COMPLEX128) {
+#ifdef HAVE_CBLAS_H
     cblas_zherk(blas_order_sym(order), blas_uplo_sym(uplo), blas_transpose_sym(trans), FIX2INT(n), FIX2INT(k), NUM2DBL(alpha), NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), NUM2DBL(beta), NM_STORAGE_DENSE(c)->elements, FIX2INT(ldc));
+#else
+  rb_raise(rb_eNotImpError, "BLAS not linked");
+#endif
   } else
     rb_raise(rb_eNotImpError, "this matrix operation undefined for non-complex dtypes");
   return Qtrue;
@@ -1198,25 +1486,6 @@ static VALUE nm_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_right,
 }
 
 
-/*
- * Based on LAPACK's dscal function, but for any dtype.
- *
- * In-place modification; returns the modified vector as well.
- */
-static VALUE nm_clapack_scal(VALUE self, VALUE n, VALUE scale, VALUE vector, VALUE incx) {
-  nm::dtype_t dtype = NM_DTYPE(vector);
-
-  void* da      = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
-  rubyval_to_cval(scale, dtype, da);
-
-  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::clapack_scal, void, const int n, const void* da, void* dx, const int incx);
-
-  ttable[dtype](FIX2INT(n), da, NM_STORAGE_DENSE(vector)->elements, FIX2INT(incx));
-
-  return vector;
-}
-
-
 static VALUE nm_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
   static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const enum CBLAS_UPLO, const int n, void* a, const int lda) = {
       /*nm::math::clapack_lauum<uint8_t, false>,
@@ -1227,7 +1496,7 @@ static VALUE nm_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALU
       NULL, NULL, NULL, NULL, NULL,
       nm::math::clapack_lauum<false, float>,
       nm::math::clapack_lauum<false, double>,
-#ifdef HAVE_CLAPACK_H
+#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
       clapack_clauum, clapack_zlauum, // call directly, same function signature!
 #else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
       nm::math::clapack_lauum<true, nm::Complex64>,
@@ -1282,7 +1551,7 @@ static VALUE nm_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
       nm::math::clapack_getrf<float>,
       nm::math::clapack_getrf<double>,
-#ifdef HAVE_CLAPACK_H
+#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
       clapack_cgetrf, clapack_zgetrf, // call directly, same function signature!
 #else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
       nm::math::clapack_getrf<nm::Complex64>,
@@ -1329,7 +1598,7 @@ static VALUE nm_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a
  * Returns an array giving the pivot indices (normally these are argument #5).
  */
 static VALUE nm_clapack_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
-#ifndef HAVE_CLAPACK_H
+#if !defined(HAVE_CLAPACK_H) && !defined(HAVE_ATLAS_CLAPACK_H)
   rb_raise(rb_eNotImpError, "potrf currently requires CLAPACK");
 #endif
 
@@ -1337,7 +1606,7 @@ static VALUE nm_clapack_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n, VALU
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
       nm::math::clapack_potrf<float>,
       nm::math::clapack_potrf<double>,
-#ifdef HAVE_CLAPACK_H
+#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
       clapack_cpotrf, clapack_zpotrf, // call directly, same function signature!
 #else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
       nm::math::clapack_potrf<nm::Complex64>,
@@ -1373,7 +1642,7 @@ static VALUE nm_clapack_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VAL
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
       nm::math::clapack_getrs<float>,
       nm::math::clapack_getrs<double>,
-#ifdef HAVE_CLAPACK_H
+#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
       clapack_cgetrs, clapack_zgetrs, // call directly, same function signature!
 #else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
       nm::math::clapack_getrs<nm::Complex64>,
@@ -1386,7 +1655,6 @@ static VALUE nm_clapack_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VAL
   };
 
   // Allocate the C version of the pivot index array
-  // TODO: Allow for an NVector here also, maybe?
   int* ipiv_;
   if (TYPE(ipiv) != T_ARRAY) {
     rb_raise(rb_eArgError, "ipiv must be of type Array");
@@ -1420,7 +1688,7 @@ static VALUE nm_clapack_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALU
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
       nm::math::clapack_potrs<float,false>,
       nm::math::clapack_potrs<double,false>,
-#ifdef HAVE_CLAPACK_H
+#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
       clapack_cpotrs, clapack_zpotrs, // call directly, same function signature!
 #else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
       nm::math::clapack_potrs<nm::Complex64,true>,
@@ -1452,10 +1720,10 @@ static VALUE nm_clapack_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALU
  * having to wait around for an exception to be thrown.
  */
 static VALUE nm_has_clapack(VALUE self) {
-#ifndef HAVE_CLAPACK_H
-  return Qfalse;
-#else
+#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
   return Qtrue;
+#else
+  return Qfalse;
 #endif
 }
 
@@ -1471,7 +1739,7 @@ static VALUE nm_has_clapack(VALUE self) {
  * Returns an array giving the pivot indices (normally these are argument #5).
  */
 static VALUE nm_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE lda, VALUE ipiv) {
-#ifndef HAVE_CLAPACK_H
+#if !defined (HAVE_CLAPACK_H) && !defined (HAVE_ATLAS_CLAPACK_H)
   rb_raise(rb_eNotImpError, "getri currently requires CLAPACK");
 #endif
 
@@ -1479,7 +1747,7 @@ static VALUE nm_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE l
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
       nm::math::clapack_getri<float>,
       nm::math::clapack_getri<double>,
-#ifdef HAVE_CLAPACK_H
+#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
       clapack_cgetri, clapack_zgetri, // call directly, same function signature!
 #else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
       nm::math::clapack_getri<nm::Complex64>,
@@ -1493,7 +1761,6 @@ static VALUE nm_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE l
   };
 
   // Allocate the C version of the pivot index array
-  // TODO: Allow for an NVector here also, maybe?
   int* ipiv_;
   if (TYPE(ipiv) != T_ARRAY) {
     rb_raise(rb_eArgError, "ipiv must be of type Array");
@@ -1528,7 +1795,7 @@ static VALUE nm_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE l
  * Returns an array giving the pivot indices (normally these are argument #5).
  */
 static VALUE nm_clapack_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
-#ifndef HAVE_CLAPACK_H
+#if !defined (HAVE_CLAPACK_H) && !defined (HAVE_ATLAS_CLAPACK_H)
   rb_raise(rb_eNotImpError, "getri currently requires CLAPACK");
 #endif
 
@@ -1536,7 +1803,7 @@ static VALUE nm_clapack_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALU
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
       nm::math::clapack_potri<float>,
       nm::math::clapack_potri<double>,
-#ifdef HAVE_CLAPACK_H
+#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
       clapack_cpotri, clapack_zpotri, // call directly, same function signature!
 #else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
       nm::math::clapack_potri<nm::Complex64>,
@@ -1590,7 +1857,6 @@ static VALUE nm_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1,
   };
 
   // Allocate the C version of the pivot index array
-  // TODO: Allow for an NVector here also, maybe?
   int* ipiv_;
   if (TYPE(ipiv) != T_ARRAY) {
     rb_raise(rb_eArgError, "ipiv must be of type Array");
@@ -1619,6 +1885,46 @@ void nm_math_det_exact(const int M, const void* elements, const int lda, nm::dty
 }
 
 /*
+ * C accessor for solving a system of linear equations. 
+ */
+void nm_math_solve(VALUE lu, VALUE b, VALUE x, VALUE ipiv) {
+  int* pivot = new int[RARRAY_LEN(ipiv)];
+
+  for (int i = 0; i < RARRAY_LEN(ipiv); ++i) {
+    pivot[i] = FIX2INT(rb_ary_entry(ipiv, i));  
+  }
+
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::solve, void, const int, const void*, const void*, void*, const int*);
+
+  ttable[NM_DTYPE(x)](NM_SHAPE0(b), NM_STORAGE_DENSE(lu)->elements, 
+    NM_STORAGE_DENSE(b)->elements, NM_STORAGE_DENSE(x)->elements, pivot);
+}
+
+/*
+ * C accessor for reducing a matrix to hessenberg form.
+ */
+void nm_math_hessenberg(VALUE a) {
+  static void (*ttable[nm::NUM_DTYPES])(const int, void*) = {
+      NULL, NULL, NULL, NULL, NULL, // does not support ints
+      nm::math::hessenberg<float>,
+      nm::math::hessenberg<double>,
+      NULL, NULL, // does not support Complex
+      NULL,NULL, NULL, // no support for rationals
+      NULL // no support for Ruby Object
+  };
+    
+  ttable[NM_DTYPE(a)](NM_SHAPE0(a), NM_STORAGE_DENSE(a)->elements);
+}
+/*
+ * C accessor for calculating an in-place inverse.
+ */
+void nm_math_inverse(const int M, void* a_elements, nm::dtype_t dtype) {
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::inverse, void, const int, void*);
+
+  ttable[dtype](M, a_elements);
+}
+
+/*
  * C accessor for calculating an exact inverse.
  */
 void nm_math_inverse_exact(const int M, const void* A_elements, const int lda, void* B_elements, const int ldb, nm::dtype_t dtype) {
@@ -1626,7 +1932,6 @@ void nm_math_inverse_exact(const int M, const void* A_elements, const int lda, v
 
   ttable[dtype](M, A_elements, lda, B_elements, ldb);
 }
-
 
 /*
  * Transpose an array of elements that represent a row-major dense matrix. Does not allocate anything, only does an memcpy.

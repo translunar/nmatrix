@@ -30,31 +30,39 @@
 
 require_relative './lapack.rb'
 require_relative './yale_functions.rb'
+require_relative './monkeys'
 
+# NMatrix is a matrix class that supports both multidimensional arrays
+# (`:dense` stype) and sparse storage (`:list` or `:yale` stypes) and 13 data
+# types, including complex and rational numbers, various integer and
+# floating-point sizes and ruby objects.
 class NMatrix
-
-  # Read and write extensions for NMatrix. These are only loaded when needed.
-  #
+  # Read and write extensions for NMatrix.
   module IO
+    extend AutoloadPatch
+
+    # Reader (and eventually writer) of Matlab .mat files.
+    #
+    # The .mat file format is documented in the following link:
+    # * http://www.mathworks.com/help/pdf_doc/matlab/matfile_format.pdf
     module Matlab
+      extend AutoloadPatch
+
       class << self
-        def load_mat file_path
+        # call-seq:
+        #     load(mat_file_path) -> NMatrix
+        #     load_mat(mat_file_path) -> NMatrix
+        #
+        # Load a .mat file and return a NMatrix corresponding to it.
+        def load_mat(file_path)
           NMatrix::IO::Matlab::Mat5Reader.new(File.open(file_path, "rb+")).to_ruby
         end
         alias :load :load_mat
       end
-
-      # FIXME: Remove autoloads
-      autoload :MatReader, 'nmatrix/io/mat_reader'
-      autoload :Mat5Reader, 'nmatrix/io/mat5_reader'
     end
-
-    autoload :Market, 'nmatrix/io/market.rb'
-    autoload :PointCloud, 'nmatrix/io/point_cloud.rb'
   end
 
   class << self
-    #
     # call-seq:
     #     load_matlab_file(path) -> Mat5Reader
     #
@@ -62,12 +70,10 @@ class NMatrix
     #   - +file_path+ -> The path to a version 5 .mat file.
     # * *Returns* :
     #   - A Mat5Reader object.
-    #
     def load_matlab_file(file_path)
       NMatrix::IO::Mat5Reader.new(File.open(file_path, 'rb')).to_ruby
     end
 
-    #
     # call-seq:
     #     load_pcd_file(path) -> PointCloudReader::MetaReader
     #
@@ -75,16 +81,67 @@ class NMatrix
     #   - +file_path+ -> The path to a PCL PCD file.
     # * *Returns* :
     #   - A PointCloudReader::MetaReader object with the matrix stored in its +matrix+ property
-    #
     def load_pcd_file(file_path)
       NMatrix::IO::PointCloudReader::MetaReader.new(file_path)
     end
 
-    #
     # Calculate the size of an NMatrix of a given shape.
     def size(shape)
       shape = [shape,shape] unless shape.is_a?(Array)
       (0...shape.size).inject(1) { |x,i| x * shape[i] }
+    end
+
+    # Make N-D coordinate arrays for vectorized evaluations of
+    # N-D scalar/vector fields over N-D grids, given N
+    # coordinate arrays arrs. N > 1.
+    #
+    # call-seq:
+    #     meshgrid(arrs) -> Array of NMatrix
+    #     meshgrid(arrs, options) -> Array of NMatrix
+    #
+    # * *Arguments* :
+    #   - +vectors+ -> Array of N coordinate arrays (Array or NMatrix), if any have more than one dimension they will be flatten
+    #   - +options+ -> Hash with options (:sparse Boolean, false by default; :indexing Symbol, may be :ij or :xy, :xy by default)
+    # * *Returns* :
+    #   - Array of N N-D NMatrixes
+    # * *Examples* :
+    #     x, y = NMatrix::meshgrid([[1, [2, 3]], [4, 5]])
+    #     x.to_a #<= [[1, 2, 3], [1, 2, 3]]
+    #     y.to_a #<= [[4, 4, 4], [5, 5, 5]]
+    #
+    # * *Using* *options* :
+    #
+    #     x, y = NMatrix::meshgrid([[[1, 2], 3], [4, 5]], sparse: true)
+    #     x.to_a #<= [[1, 2, 3]]
+    #     y.to_a #<= [[4], [5]]
+    #
+    #     x, y = NMatrix::meshgrid([[1, 2, 3], [[4], 5]], indexing: :ij)
+    #     x.to_a #<= [[1, 1], [2, 2], [3, 3]]
+    #     y.to_a #<= [[4, 5], [4, 5], [4, 5]]
+    def meshgrid(vectors, options = {})
+      raise(ArgumentError, 'Expected at least 2 arrays.') if vectors.size < 2
+      options[:indexing] ||= :xy
+      raise(ArgumentError, 'Indexing must be :xy of :ij') unless [:ij, :xy].include? options[:indexing]
+      mats = vectors.map { |arr| arr.respond_to?(:flatten) ? arr.flatten : arr.to_flat_array }
+      mats[0], mats[1] = mats[1], mats[0] if options[:indexing] == :xy
+      new_dim = mats.size
+      lengths = mats.map(&:size)
+      result = mats.map.with_index do |matrix, axis|
+        if options[:sparse]
+          new_shape = Array.new(new_dim, 1)
+          new_shape[axis] = lengths[axis]
+          new_elements = matrix
+        else
+          before_axis = lengths[0...axis].reduce(:*)
+          after_axis = lengths[(axis+1)..-1].reduce(:*)
+          new_shape = lengths
+          new_elements = after_axis ? matrix.map{ |el| [el] * after_axis }.flatten : matrix
+          new_elements *= before_axis if before_axis
+        end
+        NMatrix.new(new_shape, new_elements)
+      end
+      result[0], result[1] = result[1], result[0] if options[:indexing] == :xy
+      result
     end
   end
 
@@ -128,8 +185,6 @@ class NMatrix
       end
     end
   end
-  #alias :pp :pretty_print
-
 
   #
   # call-seq:
@@ -198,6 +253,35 @@ class NMatrix
     shape[1]
   end
 
+  # Return the main diagonal or antidiagonal a matrix. Only works with 2D matrices.
+  # 
+  # == Arguments
+  # 
+  # * +main_diagonal+ - Defaults to true. If passed 'false', then will return the 
+  #   antidiagonal of the matrix.
+  # 
+  # == References
+  # 
+  # * http://en.wikipedia.org/wiki/Main_diagonal
+  def diagonal main_diagonal=true
+    diag_size = [cols, rows].min
+    diag = NMatrix.new [diag_size], dtype: dtype
+
+    if main_diagonal
+      0.upto(diag_size-1) do |i|
+        diag[i] = self[i,i]
+      end
+    else
+      row = 0
+      (diag_size-1).downto(0) do |col|
+        diag[row] = self[row,col]
+        row += 1
+      end
+    end
+
+    diag
+  end
+
   #
   # call-seq:
   #     to_hash -> Hash
@@ -238,7 +322,6 @@ class NMatrix
   end
 
 
-  ##
   # call-seq:
   #   integer_dtype?() -> Boolean
   #
@@ -246,6 +329,45 @@ class NMatrix
   #
   def integer_dtype?
     [:byte, :int8, :int16, :int32, :int64].include?(self.dtype)
+  end
+
+  # call-seq:
+  #   float_dtype?() -> Boolean
+  #
+  # Checks if dtype is a floating point type
+  #
+  def float_dtype?
+    [:float32, :float64].include?(dtype)
+  end
+
+  ##
+  # call-seq:
+  #   complex_dtype?() -> Boolean
+  #
+  # Checks if dtype is a complex type
+  #
+  def complex_dtype?
+    [:complex64, :complex128].include?(self.dtype)
+  end
+
+  ##
+  # call-seq:
+  #   complex_dtype?() -> Boolean
+  #
+  # Checks if dtype is a rational type
+  #
+  def rational_dtype?
+    [:rational32, :rational64, :rational128].include?(self.dtype)
+  end
+
+  ##
+  # call-seq:
+  # 
+  # object_dtype?() -> Boolean
+  # 
+  # Checks if dtype is a ruby object
+  def object_dtype?
+    dtype == :object
   end
 
 
@@ -353,6 +475,10 @@ class NMatrix
   # See @row (dimension = 0), @column (dimension = 1)
   def rank(shape_idx, rank_idx, meth = :copy)
 
+    if shape_idx > (self.dim-1)
+      raise(RangeError, "#rank call was out of bounds")
+    end
+
     params = Array.new(self.dim)
     params.each.with_index do |v,d|
       params[d] = d == shape_idx ? rank_idx : 0...self.shape[d]
@@ -424,7 +550,6 @@ class NMatrix
     end
     t = reshape_clone_structure(newer_shape)
     left_params  = [:*]*newer_shape.size
-    puts(left_params)
     right_params = [:*]*self.shape.size
     t[*left_params] = self[*right_params]
     t
@@ -508,7 +633,6 @@ class NMatrix
   end
 
 
-  #
   # call-seq:
   #     matrix1.concat(*m2) -> NMatrix
   #     matrix1.concat(*m2, rank) -> NMatrix
@@ -516,20 +640,21 @@ class NMatrix
   #     matrix1.vconcat(*m2) -> NMatrix
   #     matrix1.dconcat(*m3) -> NMatrix
   #
-  # Joins two matrices together into a new larger matrix. Attempts to determine which direction to concatenate
-  # on by looking for the first common element of the matrix +shape+ in reverse. In other words, concatenating two
-  # columns together without supplying +rank+ will glue them into an n x 2 matrix.
+  # Joins two matrices together into a new larger matrix. Attempts to determine
+  # which direction to concatenate on by looking for the first common element
+  # of the matrix +shape+ in reverse. In other words, concatenating two columns
+  # together without supplying +rank+ will glue them into an n x 2 matrix.
   #
-  # You can also use hconcat, vconcat, and dconcat for the first three ranks. concat performs an hconcat when no
-  # rank argument is provided.
+  # You can also use hconcat, vconcat, and dconcat for the first three ranks.
+  # concat performs an hconcat when no rank argument is provided.
   #
   # The two matrices must have the same +dim+.
   #
   # * *Arguments* :
   #   - +matrices+ -> one or more matrices
-  #   - +rank+ -> Fixnum (for rank); alternatively, may use :row, :column, or :layer for 0, 1, 2, respectively
-  #
-  def concat *matrices
+  #   - +rank+ -> Fixnum (for rank); alternatively, may use :row, :column, or
+  #   :layer for 0, 1, 2, respectively
+  def concat(*matrices)
     rank = nil
     rank = matrices.pop unless matrices.last.is_a?(NMatrix)
 
@@ -562,7 +687,7 @@ class NMatrix
       new_cap = matrices.inject(self.capacity - self.shape[0]) do |total,m|
         total + m.capacity - m.shape[0]
       end - self.shape[0] + new_shape[0]
-      opts = {capacity: self.new_cap}.merge(opts)
+      opts = {capacity: new_cap}.merge(opts)
     end
 
     # Do the actual construction.
@@ -583,15 +708,18 @@ class NMatrix
     n
   end
 
-  def hconcat *matrices
+  # Horizontal concatenation with +matrices+.
+  def hconcat(*matrices)
     concat(*matrices, :column)
   end
 
-  def vconcat *matrices
+  # Vertical concatenation with +matrices+.
+  def vconcat(*matrices)
     concat(*matrices, :row)
   end
 
-  def dconcat *matrices
+  # Depth concatenation with +matrices+.
+  def dconcat(*matrices)
     concat(*matrices, :layer)
   end
 
@@ -805,16 +933,44 @@ class NMatrix
   end
 
 
-  def respond_to?(method) #:nodoc:
+  def respond_to?(method, include_all = false) #:nodoc:
     if [:shuffle, :shuffle!, :each_with_index, :sorted_indices, :binned_sorted_indices, :nrm2, :asum].include?(method.intern) # vector-only methods
       return vector?
     elsif [:each_layer, :layer].include?(method.intern) # 3-or-more dimensions only
       return dim > 2
     else
-      super(method)
+      super
     end
   end
 
+
+  #
+  # call-seq:
+  #     inject -> symbol
+  #
+  # This overrides the inject function to use map_stored for yale matrices
+  #
+  def inject(sym)
+    return super(sym) unless self.yale?
+    return self.map_stored.inject(sym)
+  end
+
+  # Returns the index of the first occurence of the specified value. Returns 
+  # an array containing the position of the value, nil in case the value is not found.
+  # 
+  def index(value)
+    index = nil
+
+    self.each_with_indices do |yields|
+      if yields.first == value
+        yields.shift
+        index = yields
+        break
+      end
+    end 
+
+    index
+  end
 
   #
   # call-seq:
@@ -829,6 +985,33 @@ class NMatrix
     opts = {stype: self.stype, default: self.default_value, dtype: self.dtype}
     opts = {capacity: capacity}.merge(opts) if self.yale?
     NMatrix.new(self.shape, opts)
+  end
+
+  #
+  # call-seq:
+  #     repeat(count, axis) -> NMatrix
+  # 
+  # * *Arguments* :
+  #   - +count+ -> how many times NMatrix should be repeated
+  #   - +axis+ -> index of axis along which NMatrix should be repeated
+  # * *Returns* :
+  #   - NMatrix created by repeating the existing one along an axis
+  # * *Examples* :
+  #     m = NMatrix.new([2, 2], [1, 2, 3, 4])
+  #     m.repeat(2, 0).to_a #<= [[1, 2], [3, 4], [1, 2], [3, 4]]
+  #     m.repeat(2, 1).to_a #<= [[1, 2, 1, 2], [3, 4, 3, 4]]
+  def repeat(count, axis)
+    raise(ArgumentError, 'Matrix should be repeated at least 2 times.') if count < 2
+    new_shape = shape
+    new_shape[axis] *= count
+    new_matrix = NMatrix.new(new_shape)
+    slice = new_shape.map { |axis_size| 0...axis_size }
+    start = 0
+    count.times do
+      slice[axis] = start...(start += shape[axis])
+      new_matrix[*slice] = self
+    end
+    new_matrix
   end
 
   # This is how you write an individual element-wise operation function:

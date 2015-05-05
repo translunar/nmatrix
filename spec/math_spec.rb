@@ -29,10 +29,6 @@
 require 'spec_helper'
 
 describe "math" do
-  #after :each do
-  #  GC.start
-  #end
-
   context "elementwise math functions" do
 
     [:dense,:list,:yale].each do |stype|
@@ -124,16 +120,97 @@ describe "math" do
             end
           end
         end
+          
+        context "Floor and ceil for #{stype}" do  
 
+          [:floor, :ceil].each do |meth|
+            ALL_DTYPES.each do |dtype|
+              context dtype do
+                before :each do
+                  @size = [2,2]
+                  @m    = NMatrix.seq(@size, dtype: dtype, stype: stype)+1
+                  @a    = @m.to_a.flatten
+                end
+
+                if dtype.to_s.match(/int/) or [:byte, :object].include?(dtype)
+                  it "should return #{dtype} for #{dtype}" do
+                    
+                    expect(@m.send(meth)).to eq N.new(@size, @a.map { |e| e.send(meth) }, dtype: dtype, stype: stype)
+
+                    if dtype == :object
+                      expect(@m.send(meth).dtype).to eq :object
+                    else
+                      expect(@m.send(meth).integer_dtype?).to eq true
+                    end
+                  end
+                elsif dtype.to_s.match(/float/) or dtype.to_s.match(/rational/) 
+                  it "should return dtype int64 for #{dtype}" do
+
+                    expect(@m.send(meth)).to eq N.new(@size, @a.map { |e| e.send(meth) }, dtype: dtype, stype: stype)
+                    
+                    expect(@m.send(meth).dtype).to eq :int64
+                  end
+                elsif dtype.to_s.match(/complex/) 
+                  it "should properly calculate #{meth} for #{dtype}" do
+
+                    expect(@m.send(meth)).to eq N.new(@size, @a.map { |e| e = Complex(e.real.send(meth), e.imag.send(meth)) }, dtype: dtype, stype: stype)
+
+                    expect(@m.send(meth).dtype).to eq :complex64  if dtype == :complex64
+                    expect(@m.send(meth).dtype).to eq :complex128 if dtype == :complex128
+                  end
+                end
+              end
+            end
+          end
+        end
+
+        context "#round for #{stype}" do
+          ALL_DTYPES.each do |dtype|
+            context dtype do
+              before :each do
+                @size = [2,2]
+                @mat  = NMatrix.new @size, [1.33334, 0.9998, 1.9999, -8.9999], 
+                  dtype: dtype, stype: stype
+                @ans  = @mat.to_a.flatten
+              end
+
+              it "rounds" do
+                expect(@mat.round).to eq(N.new(@size, @ans.map { |a| a.round}, 
+                  dtype: dtype, stype: stype))
+              end unless(/complex/ =~ dtype)
+
+              it "rounds with args" do
+                expect(@mat.round(2)).to eq(N.new(@size, @ans.map { |a| a.round(2)}, 
+                  dtype: dtype, stype: stype))
+              end unless(/complex/ =~ dtype)
+
+              it "rounds complex with args" do
+                puts @mat.round(2)
+                expect(@mat.round(2)).to be_within(0.0001).of(N.new [2,2], @ans.map {|a| 
+                  Complex(a.real.round(2), a.imag.round(2))},dtype: dtype, stype: stype)
+              end if(/complex/ =~ dtype)
+
+              it "rounds complex" do
+                expect(@mat.round).to eq(N.new [2,2], @ans.map {|a| 
+                  Complex(a.real.round, a.imag.round)},dtype: dtype, stype: stype)
+              end if(/complex/ =~ dtype)
+            end
+          end
+        end
+        
       end
     end
   end
 
-  [:float32, :float64, :complex64, :complex128, :rational32, :rational64, :rational128].each do |dtype|
+  NON_INTEGER_DTYPES.each do |dtype|
+    next if dtype == :object
     context dtype do
+      before do
+        @m = NMatrix.new(:dense, 3, [4,9,2,3,5,7,8,1,6], dtype)
+      end
+
       it "should correctly factorize a matrix" do
-        m = NMatrix.new(:dense, 3, [4,9,2,3,5,7,8,1,6], dtype)
-        a = m.factorize_lu
+        a = @m.factorize_lu
         expect(a[0,0]).to eq(8)
         expect(a[0,1]).to eq(1)
         expect(a[0,2]).to eq(6)
@@ -142,12 +219,29 @@ describe "math" do
         expect(a[1,2]).to eq(-1)
         expect(a[2,0]).to eq(0.375)
       end
+
+      it "also returns the permutation matrix" do
+        a, p = @m.factorize_lu perm_matrix: true
+
+        expect(a[0,0]).to eq(8)
+        expect(a[0,1]).to eq(1)
+        expect(a[0,2]).to eq(6)
+        expect(a[1,0]).to eq(0.5)
+        expect(a[1,1]).to eq(8.5)
+        expect(a[1,2]).to eq(-1)
+        expect(a[2,0]).to eq(0.375)
+
+        puts p
+        expect(p[1,0]).to eq(1)
+        expect(p[2,1]).to eq(1)
+        expect(p[0,2]).to eq(1)
+      end
     end
 
     context dtype do
-      it "should correctly invert a matrix in place" do
-        a = NMatrix.new(:dense, 3, [1,0,4,1,1,6,-3,0,-10], dtype)
-        b = NMatrix.new(:dense, 3, [-5,0,-2,-4,1,-1,3.quo(2),0,1.quo(2)], dtype)
+      it "should correctly invert a matrix in place (bang)" do
+        a = NMatrix.new(:dense, 3, [1,2,3,0,1,4,5,6,0], dtype)
+        b = NMatrix.new(:dense, 3, [-24,18,5,20,-15,-4,-5,4,1], dtype)
         begin
           a.invert!
         rescue NotImplementedError => e
@@ -157,15 +251,30 @@ describe "math" do
             pending e.to_s
           end
         end
-        expect(a).to eq(b)
+        expect(a.round).to eq(b)
       end
 
       unless NMatrix.has_clapack?
-        it "should correctly exact-invert a matrix" do
-          a = NMatrix.new(:dense, 3, [1,0,4,1,1,6,-3,0,-10], dtype)
-          b = NMatrix.new(:dense, 3, [-5,0,-2,-4,1,-1,3.quo(2),0,1.quo(2)], dtype)
-          a.invert.should == b
+        it "should correctly invert a matrix in place" do
+          a = NMatrix.new(:dense, 5, [1, 8,-9, 7, 5, 
+                                      0, 1, 0, 4, 4, 
+                                      0, 0, 1, 2, 5, 
+                                      0, 0, 0, 1,-5,
+                                      0, 0, 0, 0, 1 ], dtype)
+          b = NMatrix.new(:dense, 5, [1,-8, 9, 7, 17,
+                                      0, 1, 0,-4,-24,
+                                      0, 0, 1,-2,-15,
+                                      0, 0, 0, 1,  5,
+                                      0, 0, 0, 0,  1,], dtype)
+          expect(a.invert).to eq(b)
         end
+      end
+
+      it "should correctly invert a matrix out-of-place" do
+        a = NMatrix.new(:dense, 3, [1,2,3,0,1,4,5,6,0], dtype)
+        b = NMatrix.new(:dense, 3, [-24,18,5,20,-15,-4,-5,4,1], dtype)
+
+        expect(a.invert(3,3)).to eq(b)
       end
     end
   end
@@ -259,6 +368,229 @@ describe "math" do
         expect(r[3,0]).to eq(31)
 
         #r.dtype.should == :float64 unless left_dtype == :float32 && right_dtype == :float32
+      end
+    end
+  end
+
+  ALL_DTYPES.each do |dtype|
+    next if rational_dtype?(dtype) or integer_dtype?(dtype)
+    context "#cov dtype #{dtype}" do
+      before do 
+        @n = NMatrix.new( [5,3], [4.0,2.0,0.60,
+                                  4.2,2.1,0.59,
+                                  3.9,2.0,0.58,
+                                  4.3,2.1,0.62,
+                                  4.1,2.2,0.63], dtype: dtype)
+      end
+
+      it "calculates variance co-variance matrix (sample)" do
+        expect(@n.cov).to be_within(0.0001).of(NMatrix.new([3,3], 
+          [0.025  , 0.0075, 0.00175,
+           0.0075, 0.007 , 0.00135,
+           0.00175, 0.00135 , 0.00043 ], dtype: dtype)
+        )
+      end
+
+      it "calculates variance co-variance matrix (population)" do
+        expect(@n.cov(for_sample_data: false)).to be_within(0.0001).of(NMatrix.new([3,3], 
+                  [2.0000e-02, 6.0000e-03, 1.4000e-03,
+                   6.0000e-03, 5.6000e-03, 1.0800e-03,
+                   1.4000e-03, 1.0800e-03, 3.4400e-04], dtype: dtype)
+                )
+      end
+    end
+
+    context "#corr #{dtype}" do
+      it "calculates the correlation matrix" do
+        n = NMatrix.new([5,3], [4.0,2.0,0.60,
+                                4.2,2.1,0.59,
+                                3.9,2.0,0.58,
+                                4.3,2.1,0.62,
+                                4.1,2.2,0.63], dtype: dtype)
+        expect(n.corr).to be_within(0.001).of(NMatrix.new([3,3], 
+          [1.00000, 0.56695, 0.53374,
+           0.56695, 1.00000, 0.77813,
+           0.53374, 0.77813, 1.00000], dtype: dtype))
+      end unless dtype =~ /complex/
+    end
+
+    context "#symmetric? for #{dtype}" do
+      it "should return true for symmetric matrix" do 
+        n = NMatrix.new([3,3], [1.00000, 0.56695, 0.53374,
+                                0.56695, 1.00000, 0.77813,
+                                0.53374, 0.77813, 1.00000], dtype: dtype)
+        expect(n.symmetric?).to be_truthy
+      end
+    end
+
+    context "#hermitian? for #{dtype}" do
+      it "should return true for complex hermitian or non-complex symmetric matrix" do 
+        n = NMatrix.new([3,3], [1.00000, 0.56695, 0.53374,
+                                0.56695, 1.00000, 0.77813,
+                                0.53374, 0.77813, 1.00000], dtype: dtype) unless dtype =~ /complex/
+        n = NMatrix.new([3,3], [1.1, Complex(1.2,1.3), Complex(1.4,1.5),
+                                Complex(1.2,-1.3), 1.9, Complex(1.8,1.7),
+                                Complex(1.4,-1.5), Complex(1.8,-1.7), 1.3], dtype: dtype) if dtype =~ /complex/
+        expect(n.hermitian?).to be_truthy
+      end
+    end
+
+    context "#permute_columns for #{dtype}" do
+      it "check that #permute_columns works correctly by considering every premutation of a 3x3 matrix" do
+        n = NMatrix.new([3,3], [1,0,0,
+                                0,2,0,
+                                0,0,3], dtype: dtype)
+        expect(n.permute_columns([0,1,2], {convention: :intuitive})).to eq(NMatrix.new([3,3], [1,0,0,
+                                                                                              0,2,0,
+                                                                                              0,0,3], dtype: dtype))
+        expect(n.permute_columns([0,2,1], {convention: :intuitive})).to eq(NMatrix.new([3,3], [1,0,0,
+                                                                                              0,0,2,
+                                                                                              0,3,0], dtype: dtype))
+        expect(n.permute_columns([1,0,2], {convention: :intuitive})).to eq(NMatrix.new([3,3], [0,1,0,
+                                                                                              2,0,0,
+                                                                                              0,0,3], dtype: dtype))
+        expect(n.permute_columns([1,2,0], {convention: :intuitive})).to eq(NMatrix.new([3,3], [0,0,1,
+                                                                                              2,0,0,
+                                                                                              0,3,0], dtype: dtype))
+        expect(n.permute_columns([2,0,1], {convention: :intuitive})).to eq(NMatrix.new([3,3], [0,1,0,
+                                                                                              0,0,2,
+                                                                                              3,0,0], dtype: dtype))
+        expect(n.permute_columns([2,1,0], {convention: :intuitive})).to eq(NMatrix.new([3,3], [0,0,1,
+                                                                                              0,2,0,
+                                                                                              3,0,0], dtype: dtype))
+        expect(n.permute_columns([0,1,2], {convention: :lapack})).to eq(NMatrix.new([3,3], [1,0,0,
+                                                                                           0,2,0,
+                                                                                           0,0,3], dtype: dtype))
+        expect(n.permute_columns([0,2,2], {convention: :lapack})).to eq(NMatrix.new([3,3], [1,0,0,
+                                                                                           0,0,2,
+                                                                                           0,3,0], dtype: dtype))
+        expect(n.permute_columns([1,1,2], {convention: :lapack})).to eq(NMatrix.new([3,3], [0,1,0,
+                                                                                           2,0,0,
+                                                                                           0,0,3], dtype: dtype))
+        expect(n.permute_columns([1,2,2], {convention: :lapack})).to eq(NMatrix.new([3,3], [0,0,1,
+                                                                                           2,0,0,
+                                                                                           0,3,0], dtype: dtype))
+        expect(n.permute_columns([2,2,2], {convention: :lapack})).to eq(NMatrix.new([3,3], [0,1,0,
+                                                                                           0,0,2,
+                                                                                           3,0,0], dtype: dtype))
+        expect(n.permute_columns([2,1,2], {convention: :lapack})).to eq(NMatrix.new([3,3], [0,0,1,
+                                                                                           0,2,0,
+                                                                                           3,0,0], dtype: dtype))
+      end
+      it "additional tests for  #permute_columns with convention :intuitive" do
+        m = NMatrix.new([1,4], [0,1,2,3], dtype: dtype)
+        perm = [1,0,3,2]
+        expect(m.permute_columns(perm, {convention: :intuitive})).to eq(NMatrix.new([1,4], perm, dtype: dtype))
+
+        m = NMatrix.new([1,5], [0,1,2,3,4], dtype: dtype)
+        perm = [1,0,4,3,2]
+        expect(m.permute_columns(perm, {convention: :intuitive})).to eq(NMatrix.new([1,5], perm, dtype: dtype))
+
+        m = NMatrix.new([1,6], [0,1,2,3,4,5], dtype: dtype)
+        perm = [2,4,1,0,5,3]
+        expect(m.permute_columns(perm, {convention: :intuitive})).to eq(NMatrix.new([1,6], perm, dtype: dtype))
+
+        m = NMatrix.new([1,7], [0,1,2,3,4,5,6], dtype: dtype)
+        perm = [1,3,5,6,0,2,4]
+        expect(m.permute_columns(perm, {convention: :intuitive})).to eq(NMatrix.new([1,7], perm, dtype: dtype))
+
+        m = NMatrix.new([1,8], [0,1,2,3,4,5,6,7], dtype: dtype)
+        perm = [6,7,5,4,1,3,0,2]
+        expect(m.permute_columns(perm, {convention: :intuitive})).to eq(NMatrix.new([1,8], perm, dtype: dtype))
+      end
+    end
+  end
+
+  context "#solve" do
+    NON_INTEGER_DTYPES.each do |dtype|
+      next if dtype == :object # LU factorization doesnt work for :object yet
+      it "solves linear equation for dtype #{dtype}" do
+        a = NMatrix.new [2,2], [3,1,1,2], dtype: dtype
+        b = NMatrix.new [2,1], [9,8], dtype: dtype
+
+        expect(a.solve(b)).to eq(NMatrix.new [2,1], [2,3], dtype: dtype)
+      end
+
+      it "solves linear equation for #{dtype} (non-symmetric matrix)" do
+        a = NMatrix.new [3,3], [1,2,3,5,6,7,3,5,3], dtype: dtype
+        b = NMatrix.new [3,1], [2,3,4], dtype: dtype
+
+        expect(a.solve(b)).to be_within(0.01).of(NMatrix.new([3,1], [-1.437,1.62,0.062], dtype: dtype))
+      end unless [:rational32, :rational64, :rational128].include?(dtype)
+    end
+  end
+
+  context "#hessenberg" do
+    FLOAT_DTYPES.each do |dtype|
+      context dtype do
+        before do
+          @n = NMatrix.new [5,5], 
+            [0, 2, 0, 1, 1,
+             2, 2, 3, 2, 2,
+             4,-3, 0, 1, 3,
+             6, 1,-6,-5, 4,
+             5, 6, 4, 1, 5], dtype: dtype
+        end
+
+        it "transforms a matrix to Hessenberg form" do
+          expect(@n.hessenberg).to be_within(0.0001).of(NMatrix.new([5,5],    
+            [0.00000,-1.66667, 0.79432,-0.45191,-1.54501,
+            -9.00000, 2.95062,-6.89312, 3.22250,-0.19012,
+             0.00000,-8.21682,-0.57379, 5.26966,-1.69976,
+             0.00000, 0.00000,-3.74630,-0.80893, 3.99708,
+             0.00000, 0.00000, 0.00000, 0.04102, 0.43211], dtype: dtype))
+        end
+      end
+    end
+  end
+
+  ALL_DTYPES.each do |dtype|
+    [:dense, :yale].each do |stype|
+      answer_dtype = integer_dtype?(dtype) ? :int64 : dtype
+      next if dtype == :byte
+      
+      context "#pow #{dtype} #{stype}" do
+        before do 
+          @n = NMatrix.new [4,4], [0, 2, 0, 1,
+                                  2, 2, 3, 2,
+                                  4,-3, 0, 1,
+                                  6, 1,-6,-5], dtype: dtype, stype: stype
+        end
+
+        it "raises a square matrix to even power" do
+          expect(@n.pow(4)).to eq(NMatrix.new([4,4], [292, 28,-63, -42, 
+                                                     360, 96, 51, -14,
+                                                     448,-231,-24,-87,
+                                                   -1168, 595,234, 523], 
+                                                   dtype: answer_dtype, 
+                                                   stype: stype))
+        end
+
+        it "raises a square matrix to odd power" do
+          expect(@n.pow(9)).to eq(NMatrix.new([4,4],[-275128,  279917, 176127, 237451,
+                                                    -260104,  394759, 166893,  296081,
+                                                    -704824,  285700, 186411,  262002,
+                                                    3209256,-1070870,-918741,-1318584],
+                                                    dtype: answer_dtype, stype: stype))
+        end
+
+        it "raises a sqaure matrix to negative power" do
+          expect(@n.pow(-3)).to be_within(0.00001).of (NMatrix.new([4,4],
+            [1.0647e-02, 4.2239e-04,-6.2281e-05, 2.7680e-03,
+            -1.6415e-02, 2.1296e-02, 1.0718e-02, 4.8589e-03,   
+             8.6956e-03,-8.6569e-03, 2.8993e-02, 7.2015e-03,
+             5.0034e-02,-1.7500e-02,-3.6777e-02,-1.2128e-02], dtype: answer_dtype, 
+             stype: stype)) 
+        end unless stype =~ /yale/ or dtype =~ /(rational|object)/ or ALL_DTYPES.grep(/int/).include? dtype
+
+        it "raises a square matrix to zero" do
+          expect(@n.pow(0)).to eq(NMatrix.eye([4,4], dtype: answer_dtype, 
+            stype: stype))
+        end
+
+        it "raises a square matrix to one" do
+          expect(@n.pow(1)).to eq(@n)
+        end
       end
     end
   end

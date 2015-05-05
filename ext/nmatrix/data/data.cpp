@@ -30,6 +30,7 @@
  */
 
 #include <ruby.h>
+#include <stdexcept>
 
 /*
  * Project Includes
@@ -87,7 +88,7 @@ namespace nm {
     "exp", "log2", 
     "log10", "sqrt", "erf", 
     "erfc", "cbrt", "gamma",
-    "negate"
+    "negate", "floor", "ceil", "round"
   };
 
 } // end of namespace nm
@@ -192,7 +193,7 @@ void rubyval_to_cval(VALUE val, nm::dtype_t dtype, void* loc) {
 			break;
 
 		case COMPLEX128:
-			*reinterpret_cast<Complex128*>(loc)		= RubyObject(val).to<Complex64>();
+			*reinterpret_cast<Complex128*>(loc)		= RubyObject(val).to<Complex128>();
 			break;
 
 		case RATIONAL32:
@@ -262,7 +263,13 @@ nm::RubyObject rubyobj_from_cval(void* val, nm::dtype_t dtype) {
 			return RubyObject(*reinterpret_cast<Rational128*>(val));
 
 	  default:
-	    throw;
+	  	try {
+	  		throw std::logic_error("Cannot create ruby object");
+	  	}
+	  	catch (std::logic_error err) {
+	  		printf("%s\n", err.what());
+	  	}
+
 	    rb_raise(nm_eDataTypeError, "Conversion to RubyObject requested from unknown/invalid data type (did you try to convert from a VALUE?)");
 	}
 	return Qnil;
@@ -276,11 +283,11 @@ nm::RubyObject rubyobj_from_cval(void* val, nm::dtype_t dtype) {
  */
 void* rubyobj_to_cval(VALUE val, nm::dtype_t dtype) {
   size_t size =  DTYPE_SIZES[dtype];
-  NM_CONSERVATIVE(nm_register_value(val));
+  NM_CONSERVATIVE(nm_register_value(&val));
   void* ret_val = NM_ALLOC_N(char, size);
 
   rubyval_to_cval(val, dtype, ret_val);
-  NM_CONSERVATIVE(nm_unregister_value(val));
+  NM_CONSERVATIVE(nm_unregister_value(&val));
   return ret_val;
 }
 

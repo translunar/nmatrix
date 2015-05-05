@@ -71,7 +71,6 @@ def create_conf_h(file) #:nodoc:
 
     # FIXME: Find a better way to do this:
     hfile.puts "#define RUBY_2 1" if RUBY_VERSION >= '2.0'
-    hfile.puts "#define OLD_RB_SCAN_ARGS" if RUBY_VERSION < '1.9.3'
 
     for line in $defs
       line =~ /^-D(.*)/
@@ -86,7 +85,7 @@ end
 if RUBY_VERSION < '1.9'
   raise(NotImplementedError, "Sorry, you need at least Ruby 1.9!")
 else
-  $INSTALLFILES = [['nmatrix.h', '$(archdir)'], ['nmatrix.hpp', '$(archdir)'], ['nmatrix_config.h', '$(archdir)']]
+  $INSTALLFILES = [['nmatrix.h', '$(archdir)'], ['nmatrix.hpp', '$(archdir)'], ['nmatrix_config.h', '$(archdir)'], ['nm_memory.h', '$(archdir)']]
   if /cygwin|mingw/ =~ RUBY_PLATFORM
     $INSTALLFILES << ['libnmatrix.a', '$(archdir)']
   end
@@ -123,7 +122,7 @@ def find_newer_gplusplus #:nodoc:
   false
 end
 
-def gplusplus_version #:nodoc:
+def gplusplus_version
   cxxvar = proc { |n| `#{CONFIG['CXX']} -E -dM - </dev/null | grep #{n}`.chomp.split(' ')[2] }
   major = cxxvar.call('__GNUC__')
   minor = cxxvar.call('__GNUC_MINOR__')
@@ -209,8 +208,12 @@ else
 end
 
 
-have_func("clapack_dgetrf", ["cblas.h", "clapack.h"])
-have_func("clapack_dgetri", ["cblas.h", "clapack.h"])
+# Although have_func is supposed to take a list as its second argument, I find that it simply
+# applies a :to_s to the second arg and doesn't actually check each one. We may want to put
+# have_func calls inside an :each block which checks atlas/clapack.h, cblas.h, clapack.h, and
+# lastly lapack.h. On Ubuntu, it only works if I use atlas/clapack.h. --@mohawkjohn 8/20/14
+have_func("clapack_dgetrf", "atlas/clapack.h")
+have_func("clapack_dgetri", "atlas/clapack.h")
 have_func("dgesvd_", "clapack.h") # This may not do anything. dgesvd_ seems to be in LAPACK, not CLAPACK.
 
 have_func("cblas_dgemm", "cblas.h")

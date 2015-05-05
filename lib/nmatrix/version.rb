@@ -26,14 +26,14 @@ class NMatrix
   # Note that the format of the VERSION string is needed for NMatrix
   # native IO. If you change the format, please make sure that native
   # IO can still understand NMatrix::VERSION.
-  #VERSION = "0.1.0"
-  module VERSION
+  module VERSION #:nodoc:
     MAJOR = 0
     MINOR = 1
     TINY = 0
-    PRE = "rc3"
+    # PRE = "rc5"
 
-    STRING = [MAJOR, MINOR, TINY, PRE].compact.join(".")
+    STRING = [MAJOR, MINOR, TINY].compact.join(".")
+    #STRING = [MAJOR, MINOR, TINY, PRE].compact.join(".")
   end
 end
 

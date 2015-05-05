@@ -32,8 +32,9 @@
 extern "C" {
   void sgesvd_(char*, char*, int*, int*, float*, int*, float*, float*, int*, float*, int*, float*, int*, int*);
   void dgesvd_(char*, char*, int*, int*, double*, int*, double*, double*, int*, double*, int*, double*, int*, int*);
-  void cgesvd_(char*, char*, int*, int*, nm::Complex64*, int*, nm::Complex64*, nm::Complex64*, int*, nm::Complex64*, int*, nm::Complex64*, int*, float*, int*);
-  void zgesvd_(char*, char*, int*, int*, nm::Complex128*, int*, nm::Complex128*, nm::Complex128*, int*, nm::Complex128*, int*, nm::Complex128*, int*, double*, int*);
+  //the argument s is an array of real values and is returned as array of float/double
+  void cgesvd_(char*, char*, int*, int*, nm::Complex64*, int*, float* s, nm::Complex64*, int*, nm::Complex64*, int*, nm::Complex64*, int*, float*, int*);
+  void zgesvd_(char*, char*, int*, int*, nm::Complex128*, int*, double* s, nm::Complex128*, int*, nm::Complex128*, int*, nm::Complex128*, int*, double*, int*);
 }
 
 namespace nm {
@@ -62,14 +63,32 @@ namespace nm {
     template <>
     inline int gesvd(char jobu, char jobvt, int m, int n, nm::Complex64* a, int lda, nm::Complex64* s, nm::Complex64* u, int ldu, nm::Complex64* vt, int ldvt, nm::Complex64* work, int lwork, float* rwork) {
       int info;
-      cgesvd_(&jobu, &jobvt, &m, &n, a, &lda, s, u, &ldu, vt, &ldvt, work, &lwork, rwork, &info);
+      float* s_cast = (float*)s;
+      cgesvd_(&jobu, &jobvt, &m, &n, a, &lda, s_cast, u, &ldu, vt, &ldvt, work, &lwork, rwork, &info);
+      //s is returned as a array of float's, change it into a array of Complex64's
+      //there are at most min(m,n) non-zero singular values
+      int num_sv = std::min(m,n);
+      for (int i=0; i<2*num_sv; i++) {
+        int in = 2*num_sv - 1 - i;
+        if (in % 2 == 1) { s_cast[in] = 0.0; } //odd indices are imaginary parts, they are all zero
+        else { s_cast[in] = s_cast[in/2]; } //even indices are real parts, set appropriately
+      }
       return info;
     }
 
     template <>
     inline int gesvd(char jobu, char jobvt, int m, int n, nm::Complex128* a, int lda, nm::Complex128* s, nm::Complex128* u, int ldu, nm::Complex128* vt, int ldvt, nm::Complex128* work, int lwork, double* rwork) {
       int info;
-      zgesvd_(&jobu, &jobvt, &m, &n, a, &lda, s, u, &ldu, vt, &ldvt, work, &lwork, rwork, &info);
+      double* s_cast = (double*)s;
+      zgesvd_(&jobu, &jobvt, &m, &n, a, &lda, s_cast, u, &ldu, vt, &ldvt, work, &lwork, rwork, &info);
+      //s is returned as a array of double's, change it into a array of Complex128's
+      //there are at most min(m,n) non-zero singular values
+      int num_sv = std::min(m,n);
+      for (int i=0; i<2*num_sv; i++) {
+        int in = 2*num_sv - 1 - i;
+        if (in % 2 == 1) { s_cast[in] = 0.0; } //odd indices are imaginary parts, they are all zero
+        else { s_cast[in] = s_cast[in/2]; } //even indices are real parts, set appropriately
+      }
       return info;
     }
 

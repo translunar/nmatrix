@@ -2,7 +2,6 @@
 
 # A helper file for generating and maintaining template tables.
 
-
 DTYPES = [
           :uint8_t,
           :int8_t,

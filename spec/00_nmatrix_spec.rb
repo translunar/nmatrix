@@ -25,14 +25,9 @@
 # Basic tests for NMatrix. These should load first, as they're
 # essential to NMatrix operation.
 #
-
-require File.dirname(__FILE__) + "/spec_helper.rb"
+require 'spec_helper'
 
 describe NMatrix do
-  #after :each do
-  #  GC.start
-  #end
-
   it "creates a matrix with the new constructor" do
     n = NMatrix.new([2,2], [0,1,2,3], dtype: :int64)
     expect(n.shape).to eq([2,2])
@@ -396,6 +391,18 @@ describe 'NMatrix' do
     end
   end
 
+  context "#rank" do
+    it "should get the rank of a 2-dimensional matrix" do
+      n = NMatrix.seq([2,3])
+      expect(n.rank(0, 0)).to eq(N[[0,1,2]])
+    end
+
+    it "should raise an error when the rank is out of bounds" do
+      n = NMatrix.seq([2,3])
+      expect { n.rank(2, 0) }.to raise_error(RangeError)
+    end
+  end
+
   context "#reshape" do
     it "should change the shape of a matrix without the contents changing" do
       n = NMatrix.seq(4)+1
@@ -553,6 +560,148 @@ describe 'NMatrix' do
           end
         end
       end
+    end
+  end
+
+  context "#inject" do
+    it "should sum columns of yale matrix correctly" do
+      n = NMatrix.new([4, 3], stype: :yale, default: 0)
+      n[0,0] = 1
+      n[1,1] = 2
+      n[2,2] = 4
+      n[3,2] = 8
+      column_sums = []
+      n.cols.times do |i|
+        column_sums << n.col(i).inject(:+)
+      end
+      expect(column_sums).to eq([1, 2, 12])
+    end
+  end
+
+  context "#index" do
+    it "returns index of first occurence of an element for a vector" do
+      n = NMatrix.new([5], [0,22,22,11,11])
+
+      expect(n.index(22)).to eq([1])
+    end
+
+    it "returns index of first occurence of an element for 2-D matrix" do
+      n = NMatrix.new([3,3], [23,11,23,
+                              44, 2, 0,
+                              33, 0, 32])
+
+      expect(n.index(0)).to eq([1,2])
+    end
+
+    it "returns index of first occerence of an element for N-D matrix" do
+      n = NMatrix.new([3,3,3], [23,11,23, 44, 2, 0, 33, 0, 32,
+                                23,11,23, 44, 2, 0, 33, 0, 32,
+                                23,11,23, 44, 2, 0, 33, 0, 32])
+
+      expect(n.index(44)).to eq([0,1,0])
+    end
+  end
+
+  context "#diagonal" do
+    ALL_DTYPES.each do |dtype|
+      before do 
+        @square_matrix =  NMatrix.new([3,3], [
+          23,11,23,
+          44, 2, 0,
+          33, 0, 32
+          ], dtype: dtype
+        )
+
+        @rect_matrix = NMatrix.new([4,3], [
+          23,11,23,
+          44, 2, 0,
+          33, 0,32,
+          11,22,33
+          ], dtype: dtype
+        )
+      end
+
+      it "returns main diagonal for square matrix" do
+        expect(@square_matrix.diagonal).to eq(NMatrix.new [3], [23,2,32])
+      end
+
+      it "returns main diagonal for rectangular matrix" do
+        expect(@rect_matrix.diagonal).to eq(NMatrix.new [3], [23,2,32])
+      end
+
+      it "returns anti-diagonal for square matrix" do
+        expect(@square_matrix.diagonal(false)).to eq(NMatrix.new [3], [23,2,33])
+      end
+
+      it "returns anti-diagonal for rectangular matrix" do
+        expect(@square_matrix.diagonal(false)).to eq(NMatrix.new [3], [23,2,33])
+      end
+    end
+  end
+
+  context "#repeat" do
+    before do
+      @sample_matrix = NMatrix.new([2, 2], [1, 2, 3, 4])
+    end
+
+    it "checks count argument" do
+      expect{@sample_matrix.repeat(1, 0)}.to raise_error(ArgumentError)
+      expect{@sample_matrix.repeat(-2, 0)}.to raise_error(ArgumentError)
+    end
+
+    it "returns repeated matrix" do
+      expect(@sample_matrix.repeat(2, 0)).to eq(NMatrix.new([4, 2], [1, 2, 3, 4, 1, 2, 3, 4]))
+      expect(@sample_matrix.repeat(2, 1)).to eq(NMatrix.new([2, 4], [1, 2, 1, 2, 3, 4, 3, 4]))
+    end
+  end
+
+  context "#meshgrid" do
+    before do
+      @x, @y, @z = [1, 2, 3], NMatrix.new([2, 1], [4, 5]), [6, 7]
+      @two_dim = NMatrix.new([2, 2], [1, 2, 3, 4])
+      @two_dim_array = [[4], [5]]
+      @expected_result = [NMatrix.new([2, 3], [1, 2, 3, 1, 2, 3]), NMatrix.new([2, 3], [4, 4, 4, 5, 5, 5])]
+      @expected_for_ij = [NMatrix.new([3, 2], [1, 1, 2, 2, 3, 3]), NMatrix.new([3, 2], [4, 5, 4, 5, 4, 5])]
+      @expected_for_sparse = [NMatrix.new([1, 3], [1, 2, 3]), NMatrix.new([2, 1], [4, 5])]
+      @expected_for_sparse_ij = [NMatrix.new([3, 1], [1, 2, 3]), NMatrix.new([1, 2], [4, 5])]
+      @expected_3dim = [NMatrix.new([1, 3, 1], [1, 2, 3]).repeat(2, 0).repeat(2, 2),
+                        NMatrix.new([2, 1, 1], [4, 5]).repeat(3, 1).repeat(2, 2),
+                        NMatrix.new([1, 1, 2], [6, 7]).repeat(2, 0).repeat(3, 1)]
+      @expected_3dim_sparse_ij = [NMatrix.new([3, 1, 1], [1, 2, 3]),
+                                  NMatrix.new([1, 2, 1], [4, 5]),
+                                  NMatrix.new([1, 1, 2], [6, 7])]
+    end
+
+    it "checks arrays count" do
+      expect{NMatrix.meshgrid([@x])}.to raise_error(ArgumentError)
+      expect{NMatrix.meshgrid([])}.to raise_error(ArgumentError)
+    end
+
+    it "flattens input arrays before use" do
+      expect(NMatrix.meshgrid([@two_dim, @two_dim_array])).to eq(NMatrix.meshgrid([@two_dim.to_flat_array, @two_dim_array.flatten]))
+    end
+
+    it "returns new NMatrixes" do
+      expect(NMatrix.meshgrid([@x, @y])).to eq(@expected_result)
+    end
+
+    it "has option :sparse" do
+      expect(NMatrix.meshgrid([@x, @y], sparse: true)).to eq(@expected_for_sparse)
+    end
+
+    it "has option :indexing" do
+      expect(NMatrix.meshgrid([@x, @y], indexing: :ij)).to eq(@expected_for_ij)
+      expect(NMatrix.meshgrid([@x, @y], indexing: :xy)).to eq(@expected_result)
+      expect{NMatrix.meshgrid([@x, @y], indexing: :not_ij_not_xy)}.to raise_error(ArgumentError)
+    end
+
+    it "works well with both options set" do
+      expect(NMatrix.meshgrid([@x, @y], sparse: true, indexing: :ij)).to eq(@expected_for_sparse_ij)
+    end
+
+    it "is able to take more than two arrays as arguments and works well with options" do
+      expect(NMatrix.meshgrid([@x, @y, @z])).to eq(@expected_3dim)
+      expect(NMatrix.meshgrid([@x, @y, @z], sparse: true, indexing: :ij)).to eq(@expected_3dim_sparse_ij)
     end
   end
 end
