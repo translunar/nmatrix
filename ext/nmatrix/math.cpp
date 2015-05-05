@@ -117,6 +117,10 @@
 #include <limits>
 #include <cmath>
 
+#ifndef HAVE_CBLAS_H
+#include "math/cblas_enums.h"
+#endif
+
 #include "math/inc.h"
 #include "data/data.h"
 #include "math/gesdd.h"
@@ -1122,7 +1126,12 @@ static VALUE nm_cblas_trsm(VALUE self,
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
       nm::math::cblas_trsm<float>,
       nm::math::cblas_trsm<double>,
+#ifdef HAVE_CBLAS_H
       cblas_ctrsm, cblas_ztrsm, // call directly, same function signature!
+#else
+      nm::math::cblas_trsm<nm::Complex64>,
+      nm::math::cblas_trsm<nm::Complex128>,
+#endif
       nm::math::cblas_trsm<nm::Rational32>,
       nm::math::cblas_trsm<nm::Rational64>,
       nm::math::cblas_trsm<nm::Rational128>,
@@ -1161,7 +1170,12 @@ static VALUE nm_cblas_trmm(VALUE self,
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
       nm::math::cblas_trmm<float>,
       nm::math::cblas_trmm<double>,
+#ifdef HAVE_CBLAS_H
       cblas_ctrmm, cblas_ztrmm // call directly, same function signature!
+#else
+      nm::math::cblas_trmm<nm::Complex64>,
+      nm::math::cblas_trmm<nm::Complex128>
+#endif
       /*
       nm::math::cblas_trmm<nm::Rational32>,
       nm::math::cblas_trmm<nm::Rational64>,
@@ -1200,7 +1214,12 @@ static VALUE nm_cblas_syrk(VALUE self,
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
       nm::math::cblas_syrk<float>,
       nm::math::cblas_syrk<double>,
+#ifdef HAVE_CBLAS_H
       cblas_csyrk, cblas_zsyrk// call directly, same function signature!
+#else
+      nm::math::cblas_syrk<nm::Complex64>,
+      nm::math::cblas_syrk<nm::Complex128>
+#endif
       /*nm::math::cblas_trsm<nm::Rational32>,
       nm::math::cblas_trsm<nm::Rational64>,
       nm::math::cblas_trsm<nm::Rational128>,
@@ -1238,9 +1257,17 @@ static VALUE nm_cblas_herk(VALUE self,
   nm::dtype_t dtype = NM_DTYPE(a);
 
   if (dtype == nm::COMPLEX64) {
+#ifdef HAVE_CBLAS_H
     cblas_cherk(blas_order_sym(order), blas_uplo_sym(uplo), blas_transpose_sym(trans), FIX2INT(n), FIX2INT(k), NUM2DBL(alpha), NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), NUM2DBL(beta), NM_STORAGE_DENSE(c)->elements, FIX2INT(ldc));
+#else
+  rb_raise(rb_eNotImpError, "BLAS not linked");
+#endif
   } else if (dtype == nm::COMPLEX128) {
+#ifdef HAVE_CBLAS_H
     cblas_zherk(blas_order_sym(order), blas_uplo_sym(uplo), blas_transpose_sym(trans), FIX2INT(n), FIX2INT(k), NUM2DBL(alpha), NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), NUM2DBL(beta), NM_STORAGE_DENSE(c)->elements, FIX2INT(ldc));
+#else
+  rb_raise(rb_eNotImpError, "BLAS not linked");
+#endif
   } else
     rb_raise(rb_eNotImpError, "this matrix operation undefined for non-complex dtypes");
   return Qtrue;
