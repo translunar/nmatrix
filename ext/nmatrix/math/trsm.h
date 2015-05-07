@@ -343,7 +343,7 @@ inline void trsm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const
                  const int m, const int n, const float alpha, const float* a,
                  const int lda, float* b, const int ldb)
 {
-#ifdef HAVE_CBLAS_H
+#if (defined(HAVE_CBLAS_H) || defined(HAVE_ATLAS_CBLAS_H))
   cblas_strsm(order, side, uplo, trans_a, diag, m, n, alpha, a, lda, b, ldb);
 #else
   rb_raise(rb_eNotImpError, "BLAS not linked");
@@ -364,7 +364,7 @@ inline void trsm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const
        << (diag == CblasNonUnit ? "nonunit " : "unit ")
        << m << " " << n << " " << alpha << " a " << lda << " b " << ldb << endl;
 */
-#ifdef HAVE_CBLAS_H
+#if (defined(HAVE_CBLAS_H) || defined(HAVE_ATLAS_CBLAS_H))
   cblas_dtrsm(order, side, uplo, trans_a, diag, m, n, alpha, a, lda, b, ldb);
 #else
   rb_raise(rb_eNotImpError, "BLAS not linked");
@@ -378,7 +378,7 @@ inline void trsm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const
                  const int m, const int n, const Complex64 alpha, const Complex64* a,
                  const int lda, Complex64* b, const int ldb)
 {
-#ifdef HAVE_CBLAS_H
+#if (defined(HAVE_CBLAS_H) || defined(HAVE_ATLAS_CBLAS_H))
   cblas_ctrsm(order, side, uplo, trans_a, diag, m, n, (const void*)(&alpha), (const void*)(a), lda, (void*)(b), ldb);
 #else
   rb_raise(rb_eNotImpError, "BLAS not linked");
@@ -391,7 +391,7 @@ inline void trsm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const
                  const int m, const int n, const Complex128 alpha, const Complex128* a,
                  const int lda, Complex128* b, const int ldb)
 {
-#ifdef HAVE_CBLAS_H
+#if (defined(HAVE_CBLAS_H) || defined(HAVE_ATLAS_CBLAS_H))
   cblas_ztrsm(order, side, uplo, trans_a, diag, m, n, (const void*)(&alpha), (const void*)(a), lda, (void*)(b), ldb);
 #else
   rb_raise(rb_eNotImpError, "BLAS not linked");

@@ -108,7 +108,7 @@ inline void rot(const int N, DType* X, const int incX, DType* Y, const int incY,
   }
 }
 
-#ifdef HAVE_CBLAS_H
+#if (defined(HAVE_CBLAS_H) || defined(HAVE_ATLAS_CBLAS_H))
 template <>
 inline void rot(const int N, float* X, const int incX, float* Y, const int incY, const float c, const float s) {
   cblas_srot(N, X, incX, Y, incY, (float)c, (float)s);

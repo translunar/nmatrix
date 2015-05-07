@@ -30,7 +30,7 @@
 #ifndef GEMM_H
 # define GEMM_H
 
-#ifndef HAVE_CBLAS_H
+#if !(defined(HAVE_CBLAS_H) || defined(HAVE_ATLAS_CBLAS_H))
 #include "cblas_enums.h"
 #endif
 
@@ -246,7 +246,7 @@ inline void gemm(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA
 }
 
 
-#ifdef HAVE_CBLAS_H
+#if (defined(HAVE_CBLAS_H) || defined(HAVE_ATLAS_CBLAS_H))
 template <>
 inline void gemm(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_TRANSPOSE TransB, const int M, const int N, const int K,
           const float* alpha, const float* A, const int lda, const float* B, const int ldb, const float* beta, float* C, const int ldc) {

@@ -68,7 +68,7 @@
  * Standard Includes
  */
 
-#ifndef HAVE_CBLAS_H
+#if !(defined(HAVE_CBLAS_H) || defined(HAVE_ATLAS_CBLAS_H))
 #include "cblas_enums.h"
 #endif
 
@@ -150,7 +150,7 @@ inline void herk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const
 template <>
 inline void syrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE Trans, const int N,
                  const int K, const float* alpha, const float* A, const int lda, const float* beta, float* C, const int ldc) {
-#ifdef HAVE_CBLAS_H
+#if (defined(HAVE_CBLAS_H) || defined(HAVE_ATLAS_CBLAS_H))
   cblas_ssyrk(Order, Uplo, Trans, N, K, *alpha, A, lda, *beta, C, ldc);
 #else
   rb_raise(rb_eNotImpError, "BLAS not linked");
@@ -160,7 +160,7 @@ inline void syrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const
 template <>
 inline void syrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE Trans, const int N,
                  const int K, const double* alpha, const double* A, const int lda, const double* beta, double* C, const int ldc) {
-#ifdef HAVE_CBLAS_H
+#if (defined(HAVE_CBLAS_H) || defined(HAVE_ATLAS_CBLAS_H))
   cblas_dsyrk(Order, Uplo, Trans, N, K, *alpha, A, lda, *beta, C, ldc);
 #else
   rb_raise(rb_eNotImpError, "BLAS not linked");
@@ -170,7 +170,7 @@ inline void syrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const
 template <>
 inline void syrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE Trans, const int N,
                  const int K, const Complex64* alpha, const Complex64* A, const int lda, const Complex64* beta, Complex64* C, const int ldc) {
-#ifdef HAVE_CBLAS_H
+#if (defined(HAVE_CBLAS_H) || defined(HAVE_ATLAS_CBLAS_H))
   cblas_csyrk(Order, Uplo, Trans, N, K, alpha, A, lda, beta, C, ldc);
 #else
   rb_raise(rb_eNotImpError, "BLAS not linked");
@@ -180,7 +180,7 @@ inline void syrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const
 template <>
 inline void syrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE Trans, const int N,
                  const int K, const Complex128* alpha, const Complex128* A, const int lda, const Complex128* beta, Complex128* C, const int ldc) {
-#ifdef HAVE_CBLAS_H
+#if (defined(HAVE_CBLAS_H) || defined(HAVE_ATLAS_CBLAS_H))
   cblas_zsyrk(Order, Uplo, Trans, N, K, alpha, A, lda, beta, C, ldc);
 #else
   rb_raise(rb_eNotImpError, "BLAS not linked");
@@ -191,7 +191,7 @@ inline void syrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const
 template <>
 inline void herk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE Trans, const int N,
                  const int K, const Complex64* alpha, const Complex64* A, const int lda, const Complex64* beta, Complex64* C, const int ldc) {
-#ifdef HAVE_CBLAS_H
+#if (defined(HAVE_CBLAS_H) || defined(HAVE_ATLAS_CBLAS_H))
   cblas_cherk(Order, Uplo, Trans, N, K, alpha->r, A, lda, beta->r, C, ldc);
 #else
   rb_raise(rb_eNotImpError, "BLAS not linked");
@@ -201,7 +201,7 @@ inline void herk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const
 template <>
 inline void herk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE Trans, const int N,
                  const int K, const Complex128* alpha, const Complex128* A, const int lda, const Complex128* beta, Complex128* C, const int ldc) {
-#ifdef HAVE_CBLAS_H
+#if (defined(HAVE_CBLAS_H) || defined(HAVE_ATLAS_CBLAS_H))
   cblas_zherk(Order, Uplo, Trans, N, K, alpha->r, A, lda, beta->r, C, ldc);
 #else
   rb_raise(rb_eNotImpError, "BLAS not linked");
@@ -220,7 +220,7 @@ template <>
 inline void trmm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
                  const enum CBLAS_TRANSPOSE ta, const enum CBLAS_DIAG diag, const int m, const int n, const float* alpha,
                  const float* A, const int lda, float* B, const int ldb) {
-#ifdef HAVE_CBLAS_H
+#if (defined(HAVE_CBLAS_H) || defined(HAVE_ATLAS_CBLAS_H))
   cblas_strmm(order, side, uplo, ta, diag, m, n, *alpha, A, lda, B, ldb);
 #else
   rb_raise(rb_eNotImpError, "BLAS not linked");
@@ -231,7 +231,7 @@ template <>
 inline void trmm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
                  const enum CBLAS_TRANSPOSE ta, const enum CBLAS_DIAG diag, const int m, const int n, const double* alpha,
                  const double* A, const int lda, double* B, const int ldb) {
-#ifdef HAVE_CBLAS_H
+#if (defined(HAVE_CBLAS_H) || defined(HAVE_ATLAS_CBLAS_H))
   cblas_dtrmm(order, side, uplo, ta, diag, m, n, *alpha, A, lda, B, ldb);
 #else
   rb_raise(rb_eNotImpError, "BLAS not linked");
@@ -242,7 +242,7 @@ template <>
 inline void trmm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
                  const enum CBLAS_TRANSPOSE ta, const enum CBLAS_DIAG diag, const int m, const int n, const Complex64* alpha,
                  const Complex64* A, const int lda, Complex64* B, const int ldb) {
-#ifdef HAVE_CBLAS_H
+#if (defined(HAVE_CBLAS_H) || defined(HAVE_ATLAS_CBLAS_H))
   cblas_ctrmm(order, side, uplo, ta, diag, m, n, alpha, A, lda, B, ldb);
 #else
   rb_raise(rb_eNotImpError, "BLAS not linked");
@@ -253,7 +253,7 @@ template <>
 inline void trmm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
                  const enum CBLAS_TRANSPOSE ta, const enum CBLAS_DIAG diag, const int m, const int n, const Complex128* alpha,
                  const Complex128* A, const int lda, Complex128* B, const int ldb) {
-#ifdef HAVE_CBLAS_H
+#if (defined(HAVE_CBLAS_H) || defined(HAVE_ATLAS_CBLAS_H))
   cblas_ztrmm(order, side, uplo, ta, diag, m, n, alpha, A, lda, B, ldb);
 #else
   rb_raise(rb_eNotImpError, "BLAS not linked");
