@@ -213,7 +213,7 @@ static DENSE_STORAGE* nm_dense_storage_create_dummy(nm::dtype_t dtype, size_t* s
   memset(s->offset, 0, sizeof(size_t)*dim);
 
   s->stride     = stride(shape, dim);
-  s->count      = 1;
+  s->count      = 0;
   s->src        = s;
 
 	s->elements   = NULL;
@@ -237,13 +237,15 @@ DENSE_STORAGE* nm_dense_storage_create(nm::dtype_t dtype, size_t* shape, size_t 
 
   if (elements_length == count) {
     s->elements = elements;
-    
+    s->count = count;
+
     if (dtype == nm::RUBYOBJ)
       nm_unregister_values(reinterpret_cast<VALUE*>(elements), elements_length);
 
   } else {
 
     s->elements = NM_ALLOC_N(char, DTYPE_SIZES[dtype]*count);
+    s->count = count;
 
     if (dtype == nm::RUBYOBJ)
       nm_unregister_values(reinterpret_cast<VALUE*>(elements), elements_length);
