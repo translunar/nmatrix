@@ -25,22 +25,4 @@
 # This file loads the C extension for NMatrix and all the ruby files.
 #
 
-# For some reason nmatrix.so ends up in a different place during gem build.
-if File.exist?("lib/nmatrix/nmatrix.so") #|| File.exist?("lib/nmatrix/nmatrix.bundle")
-  # Development
-  require "nmatrix/nmatrix.so"
-else
-  # Gem
-  require "nmatrix.so"
-end
-
-require 'nmatrix/io/mat_reader'
-require 'nmatrix/io/mat5_reader'
-require 'nmatrix/io/market'
-require 'nmatrix/io/point_cloud'
-
 require 'nmatrix/nmatrix.rb'
-require 'nmatrix/version.rb'
-require 'nmatrix/blas.rb'
-require 'nmatrix/monkeys'
-require "nmatrix/shortcuts.rb"

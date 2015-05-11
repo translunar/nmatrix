@@ -28,6 +28,20 @@
 # inspect, pretty_print, element-wise operations).
 #++
 
+# For some reason nmatrix.so ends up in a different place during gem build.
+if File.exist?("lib/nmatrix/nmatrix.so") #|| File.exist?("lib/nmatrix/nmatrix.bundle")
+  # Development
+  require "nmatrix/nmatrix.so"
+else
+  # Gem
+  require "nmatrix.so"
+end
+
+require 'nmatrix/io/mat_reader'
+require 'nmatrix/io/mat5_reader'
+require 'nmatrix/io/market'
+require 'nmatrix/io/point_cloud'
+
 require_relative './lapack.rb'
 require_relative './yale_functions.rb'
 require_relative './monkeys'
@@ -1117,3 +1131,8 @@ end
 require_relative './shortcuts.rb'
 require_relative './math.rb'
 require_relative './enumerate.rb'
+
+require 'nmatrix/version.rb'
+require 'nmatrix/blas.rb'
+require 'nmatrix/monkeys'
+require "nmatrix/shortcuts.rb"
