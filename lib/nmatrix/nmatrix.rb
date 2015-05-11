@@ -37,10 +37,10 @@ else
   require "nmatrix.so"
 end
 
-require 'nmatrix/io/mat_reader'
-require 'nmatrix/io/mat5_reader'
-require 'nmatrix/io/market'
-require 'nmatrix/io/point_cloud'
+require_relative './io/mat_reader'
+require_relative './io/mat5_reader'
+require_relative './io/market'
+require_relative './io/point_cloud'
 
 require_relative './lapack.rb'
 require_relative './yale_functions.rb'
@@ -1132,7 +1132,5 @@ require_relative './shortcuts.rb'
 require_relative './math.rb'
 require_relative './enumerate.rb'
 
-require 'nmatrix/version.rb'
-require 'nmatrix/blas.rb'
-require 'nmatrix/monkeys'
-require "nmatrix/shortcuts.rb"
+require_relative './version.rb'
+require_relative './blas.rb'
