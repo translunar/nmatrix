@@ -23,7 +23,8 @@
 #
 # == nmatrix.rb
 #
-# This file contains those core functionalities which can be
+# This file loads the C extension for NMatrix and all the ruby
+# files and contains those core functionalities which can be
 # implemented efficiently (or much more easily) in Ruby (e.g.,
 # inspect, pretty_print, element-wise operations).
 #++

@@ -22,7 +22,7 @@
 #
 # == nmatrix.rb
 #
-# This file loads the C extension for NMatrix and all the ruby files.
+# This file is a stub that only loads the main NMatrix file.
 #
 
 require 'nmatrix/nmatrix.rb'
