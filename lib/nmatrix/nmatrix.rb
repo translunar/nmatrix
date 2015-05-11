@@ -23,10 +23,25 @@
 #
 # == nmatrix.rb
 #
-# This file contains those core functionalities which can be
+# This file loads the C extension for NMatrix and all the ruby
+# files and contains those core functionalities which can be
 # implemented efficiently (or much more easily) in Ruby (e.g.,
 # inspect, pretty_print, element-wise operations).
 #++
+
+# For some reason nmatrix.so ends up in a different place during gem build.
+if File.exist?("lib/nmatrix/nmatrix.so") #|| File.exist?("lib/nmatrix/nmatrix.bundle")
+  # Development
+  require "nmatrix/nmatrix.so"
+else
+  # Gem
+  require "nmatrix.so"
+end
+
+require_relative './io/mat_reader'
+require_relative './io/mat5_reader'
+require_relative './io/market'
+require_relative './io/point_cloud'
 
 require_relative './lapack.rb'
 require_relative './yale_functions.rb'
@@ -1117,3 +1132,6 @@ end
 require_relative './shortcuts.rb'
 require_relative './math.rb'
 require_relative './enumerate.rb'
+
+require_relative './version.rb'
+require_relative './blas.rb'
