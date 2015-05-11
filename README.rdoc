@@ -82,6 +82,16 @@ matrix, {read the guide in our wiki}[https://github.com/SciRuby/nmatrix/wiki/How
 
 Again, you can find the complete API documentation {on our website}[http://sciruby.com/nmatrix/docs/].
 
+== NArray Compatibility
+
+When NArray[http://masa16.github.io/narray/] is installed alongside NMatrix, <tt>require 'nmatrix'</tt>
+will inadvertently load NArray's +lib/nmatrix.rb+ file, usually accompanied by the following error:
+
+    uninitialized constant NArray (NameError)
+
+To make sure NMatrix is loaded properly in the presence of NArray, use <tt>require 'nmatrix/nmatrix'</tt>
+instead of <tt>require 'nmatrix'</tt> in your code.
+
 == Developers
 
 Read the instructions in +CONTRIBUTING.md+ if you want to help NMatrix.
