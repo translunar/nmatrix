@@ -179,6 +179,7 @@ inline bool gemv(const enum CBLAS_TRANSPOSE Trans, const int M, const int N, con
   return true;
 }  // end of GEMV
 
+#if (defined(HAVE_CBLAS_H) || defined(HAVE_ATLAS_CBLAS_H))
 template <>
 inline bool gemv(const enum CBLAS_TRANSPOSE Trans, const int M, const int N, const float* alpha, const float* A, const int lda,
           const float* X, const int incX, const float* beta, float* Y, const int incY) {
@@ -206,6 +207,7 @@ inline bool gemv(const enum CBLAS_TRANSPOSE Trans, const int M, const int N, con
   cblas_zgemv(CblasRowMajor, Trans, M, N, alpha, A, lda, X, incX, beta, Y, incY);
   return true;
 }
+#endif
 
 }} // end of namespace nm::math
 
