@@ -23,6 +23,13 @@ Rake::ExtensionTask.new do |ext|
     ext.source_pattern = "**/*.{c,cpp,h}"
 end
 
+Rake::ExtensionTask.new do |ext|
+    ext.name = 'nmatrix_atlas'
+    ext.ext_dir = 'ext/nmatrix_atlas'
+    ext.lib_dir = 'lib/'
+    ext.source_pattern = "**/*.{c,cpp,h}"
+end
+
 gemspec = eval(IO.read("nmatrix.gemspec"))
 
 Gem::PackageTask.new(gemspec).define

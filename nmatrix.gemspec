@@ -38,6 +38,7 @@ EOF
   gem.files         = `git ls-files`.split("\n")
   gem.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
   gem.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
+  #remember this
   gem.extensions = ['ext/nmatrix/extconf.rb']
   gem.require_paths = ["lib"]
 
