@@ -36,6 +36,7 @@ Thanks for trying out NMatrix! Happy coding!
 EOF
 
   gem.files         = `git ls-files -- lib | grep atlas`.split("\n")
+  gem.files         += `git ls-files -- ext | grep atlas`.split("\n")
   #gem.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
   #gem.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
   gem.extensions = ['ext/nmatrix_atlas/extconf.rb']
