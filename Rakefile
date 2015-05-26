@@ -4,7 +4,26 @@ require 'rubygems'
 require 'rubygems/package_task'
 require 'bundler'
 
-Bundler::GemHelper.install_tasks
+#install_tasks adds build, install, and release tasks, but doesn't work with multiple gemspecs
+#Bundler::GemHelper.install_tasks
+
+desc 'Build gem into the pkg directory'
+task :build do
+  FileUtils.rm_rf('pkg')
+  Dir['*.gemspec'].each do |gemspec|
+    system "gem build -V #{gemspec}"
+  end
+  FileUtils.mkdir_p('pkg')
+  FileUtils.mv(Dir['*.gem'], 'pkg')
+end
+
+#desc 'Tags version, pushes to remote, and pushes gem'
+#task :release => :build do
+#  sh 'git', 'tag', '-m', changelog, "v#{Qu::VERSION}"
+#  sh "git push origin master"
+#  sh "git push origin v#{Qu::VERSION}"
+#  sh "ls pkg/*.gem | xargs -n 1 gem push"
+#end
 
 begin
   Bundler.setup(:default, :development)
@@ -31,8 +50,12 @@ Rake::ExtensionTask.new do |ext|
 end
 
 gemspec = eval(IO.read("nmatrix.gemspec"))
-
 Gem::PackageTask.new(gemspec).define
+
+Dir['nmatrix-*.gemspec'].each do |gemspec_file|
+  gemspec = eval(IO.read(gemspec_file))
+  Gem::PackageTask.new(gemspec).define
+end
 
 require 'rspec/core/rake_task'
 require 'rspec/core'
