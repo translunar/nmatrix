@@ -275,6 +275,76 @@ class NMatrix
     alias :diag :diagonal
     alias :diagonals :diagonal
 
+    # Generate a block-diagonal NMatrix from the supplied 2D square matrices.
+    #
+    # * *Arguments*
+    #   - +*params+ -> An array that collects all arguments passed to the method. The method
+    #                  can receive any number of arguments. Optionally, the last entry of +params+ is 
+    #                  a hash of options from NMatrix#initialize. All other entries of +params+ are 
+    #                  the blocks of the desired block-diagonal matrix. Each such matrix block can be 
+    #                  supplied as a square 2D NMatrix object, or alternatively as an array of arrays 
+    #                  (with dimensions corresponding to a square matrix), or alternatively as a number.
+    # * *Returns*
+    #   - NMatrix of block-diagonal form filled with specified matrices
+    #     as the blocks along the diagonal.
+    #
+    # * *Example* 
+    #
+    #  a = NMatrix.new([2,2], [1,2,3,4])
+    #  b = NMatrix.new([1,1], [123], dtype: :float64)
+    #  c = Array.new(2) { [[10,10], [10,10]] }
+    #  d = Array[[1,2,3], [4,5,6], [7,8,9]]
+    #  m = NMatrix.block_diagonal(a, b, *c, d, 10.0, 11, dtype: :int64, stype: :yale)
+    #        => 
+    #        [
+    #          [1, 2,   0,  0,  0,  0,  0, 0, 0, 0,  0,  0]
+    #          [3, 4,   0,  0,  0,  0,  0, 0, 0, 0,  0,  0]
+    #          [0, 0, 123,  0,  0,  0,  0, 0, 0, 0,  0,  0]
+    #          [0, 0,   0, 10, 10,  0,  0, 0, 0, 0,  0,  0]
+    #          [0, 0,   0, 10, 10,  0,  0, 0, 0, 0,  0,  0]
+    #          [0, 0,   0,  0,  0, 10, 10, 0, 0, 0,  0,  0]
+    #          [0, 0,   0,  0,  0, 10, 10, 0, 0, 0,  0,  0]
+    #          [0, 0,   0,  0,  0,  0,  0, 1, 2, 3,  0,  0]
+    #          [0, 0,   0,  0,  0,  0,  0, 4, 5, 6,  0,  0]
+    #          [0, 0,   0,  0,  0,  0,  0, 7, 8, 9,  0,  0]
+    #          [0, 0,   0,  0,  0,  0,  0, 0, 0, 0, 10,  0]
+    #          [0, 0,   0,  0,  0,  0,  0, 0, 0, 0,  0, 11]
+    #        ]
+    #
+    def block_diagonal(*params)
+      options = params.last.is_a?(Hash) ? params.pop : {}
+
+      params.each_index do |i|
+        params[i] = params[i].to_nm if params[i].is_a?(Array) # Convert Array to NMatrix
+        params[i] = NMatrix.new([1,1], [params[i]]) if params[i].is_a?(Numeric) # Convert number to NMatrix
+      end
+
+      block_sizes = [] #holds the size of each matrix block
+      params.each do |b|
+        unless b.is_a?(NMatrix)
+          raise(ArgumentError, "Only NMatrix or appropriate Array objects or single numbers allowed")
+        end
+        raise(ArgumentError, "Only 2D matrices or 2D arrays allowed") unless b.shape.size == 2
+        raise(ArgumentError, "Only square-shaped blocks allowed") unless b.shape[0] == b.shape[1]
+        block_sizes << b.shape[0]
+      end
+
+      block_diag_mat = NMatrix.zeros(block_sizes.sum, options)
+      (0...params.length).each do |n|
+        # First determine the size and position of the n'th block in the block-diagonal matrix
+        block_size = block_sizes[n]
+        block_pos = block_sizes[0...n].sum
+        # populate the n'th block in the block-diagonal matrix
+        (0...block_size).each do |i|
+          (0...block_size).each do |j|
+            block_diag_mat[block_pos+i,block_pos+j] = params[n][i,j]
+          end
+        end
+      end
+
+      return block_diag_mat
+    end
+    alias :block_diag :block_diagonal
 
     #
     # call-seq:
