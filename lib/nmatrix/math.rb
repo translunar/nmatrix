@@ -555,6 +555,50 @@ class NMatrix
     product
   end
 
+  # Compute the Kronecker product of +self+ and other NMatrix
+  #
+  # === Arguments
+  #
+  #   * +mat+ - A 2D NMatrix object
+  #
+  # === Usage 
+  #  
+  #  a = NMatrix.new([2,2],[1,2,
+  #                         3,4])
+  #  b = NMatrix.new([2,3],[1,1,1,
+  #                         1,1,1], dtype: :float64)
+  #  a.kron_prod(b) # => [ [1.0, 1.0, 1.0, 2.0, 2.0, 2.0]
+  #                        [1.0, 1.0, 1.0, 2.0, 2.0, 2.0]
+  #                        [3.0, 3.0, 3.0, 4.0, 4.0, 4.0]
+  #                        [3.0, 3.0, 3.0, 4.0, 4.0, 4.0] ]
+  #    
+  def kron_prod(mat)
+    unless self.dimensions==2 and mat.dimensions==2
+      raise ShapeError, "Implemented for 2D NMatrix objects only."
+    end
+
+    # compute the shape [n,m] of the product matrix
+    n, m = self.shape[0]*mat.shape[0], self.shape[1]*mat.shape[1]
+    # compute the entries of the product matrix
+    kron_prod_array = []
+    if self.yale?
+      # +:yale+ requires to get the row by copy in order to apply +#transpose+ to it
+      self.each_row(getby=:copy) do |selfr|
+        mat.each_row do |matr|
+          kron_prod_array += (selfr.transpose.dot matr).to_flat_a
+        end
+      end
+    else
+      self.each_row do |selfr|
+        mat.each_row do |matr|
+          kron_prod_array += (selfr.transpose.dot matr).to_flat_a
+        end
+      end
+    end
+
+    NMatrix.new([n,m], kron_prod_array) 
+  end
+
   #
   # call-seq:
   #     conjugate_transpose -> NMatrix
