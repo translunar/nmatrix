@@ -3,16 +3,11 @@ $:.unshift lib unless $:.include?(lib)
 
 require 'nmatrix/version'
 
-#get files that are used by plugins rather than the main nmatrix gem
-plugin_files = Dir["nmatrix-*.gemspec"].map { |gemspec|
-  eval(File.read(gemspec)).files
-}.flatten.uniq
-
 Gem::Specification.new do |gem|
-  gem.name = "nmatrix"
+  gem.name = "nmatrix-atlas"
   gem.version = NMatrix::VERSION::STRING
-  gem.summary = "NMatrix is a linear algebra library for Ruby"
-  gem.description = "NMatrix is a linear algebra library for Ruby, written mostly in C and C++."
+  gem.summary = "ATLAS backend for nmatrix"
+  gem.description = "For using linear algebra fuctions provided by ATLAS"
   gem.homepage = 'http://sciruby.com'
   gem.authors = ['John Woods', 'Chris Wailes', 'Aleksey Timin']
   gem.email =  ['john.o.woods@gmail.com']
@@ -40,21 +35,22 @@ Thanks for trying out NMatrix! Happy coding!
 ***********************************************************
 EOF
 
-  gem.files         = `git ls-files`.split("\n") - plugin_files
-  gem.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
-  gem.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
-  gem.extensions = ['ext/nmatrix/extconf.rb']
+  gem.files         = `git ls-files -- lib | grep atlas`.split("\n")
+  #gem.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
+  #gem.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
+  gem.extensions = ['ext/nmatrix_atlas/extconf.rb']
   gem.require_paths = ["lib"]
 
   gem.required_ruby_version = '>= 1.9'
 
-  gem.add_dependency 'packable', '~> 1.3', '>= 1.3.5'
-  gem.add_development_dependency 'bundler', '~>1.6'
-  gem.add_development_dependency 'pry', '~>0.10'
-  gem.add_development_dependency 'rake', '~>10.3'
-  gem.add_development_dependency 'rake-compiler', '~>0.8'
-  gem.add_development_dependency 'rdoc', '~>4.0', '>=4.0.1'
-  gem.add_development_dependency 'rspec', '~>2.14'
-  gem.add_development_dependency 'rspec-longrun', '~>1.0'
+  #gem.add_dependency 'packable', '~> 1.3', '>= 1.3.5'
+  #gem.add_development_dependency 'bundler', '~>1.6'
+  #gem.add_development_dependency 'pry', '~>0.10'
+  #gem.add_development_dependency 'rake', '~>10.3'
+  #gem.add_development_dependency 'rake-compiler', '~>0.8'
+  #gem.add_development_dependency 'rdoc', '~>4.0', '>=4.0.1'
+  #gem.add_development_dependency 'rspec', '~>2.14'
+  #gem.add_development_dependency 'rspec-longrun', '~>1.0'
+  gem.add_dependency 'nmatrix', NMatrix::VERSION::STRING
 end
 
