@@ -17,13 +17,29 @@ task :build do
   FileUtils.mv(Dir['*.gem'], 'pkg')
 end
 
-#desc 'Tags version, pushes to remote, and pushes gem'
-#task :release => :build do
-#  sh 'git', 'tag', '-m', changelog, "v#{Qu::VERSION}"
-#  sh "git push origin master"
-#  sh "git push origin v#{Qu::VERSION}"
-#  sh "ls pkg/*.gem | xargs -n 1 gem push"
-#end
+desc "Build and install into system gems."
+task :install => :build do
+  Dir['pkg/*.gem'].each do |gem_file|
+    #system "gem install '#{gem_file}'"
+  end
+end
+
+desc 'Tags version, pushes to remote, and pushes gem'
+task :release => :build do
+  clean = sh_with_code("git diff --exit-code")[1] == 0
+  committed = sh_with_code("git diff-index --quiet --cached HEAD")[1] == 0
+  raise("There are files that need to be committed first.") unless clean && committed
+  require 'nmatix/version'
+  version = NMatrix::VERSION::STRING
+  version_tag = "v#{version}"
+  if !sh('git tag').split(/\n/).include?(version_tag)
+  end
+  
+  sh "git tag -a -m \"Version #{version}\" #{version_tag}"
+  sh "git push"
+  sh "git push --tags"
+  sh "ls pkg/*.gem | xargs -n 1 gem push"
+end
 
 begin
   Bundler.setup(:default, :development)
