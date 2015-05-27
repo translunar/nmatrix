@@ -10,43 +10,6 @@ plugins = []
 plugins = ENV["nmatrix_plugins"].split(",") if ENV["nmatrix_plugins"]
 #Add an option for building all plugins? Search for gemspecs to fill plugins array?
 
-#install_tasks adds build, install, and release tasks, but doesn't work with multiple gemspecs
-#Bundler::GemHelper.install_tasks
-desc 'Build gem into the pkg directory'
-task :build do
-  FileUtils.rm_rf('pkg')
-  system "gem build -V nmatrix.gemspec"
-  plugins.each do |plugin|
-    gemspec = "nmatrix-#{plugin}.gemspec"
-    raise "#{gemspec} file missing" unless File.exist?(gemspec)
-    system "gem build -V #{gemspec}"
-  end
-  FileUtils.mkdir_p('pkg')
-  FileUtils.mv(Dir['*.gem'], 'pkg')
-end
-
-desc "Build and install into system gems."
-task :install => :build do
-  Dir['pkg/*.gem'].each do |gem_file|
-    system "gem install '#{gem_file}'"
-  end
-end
-
-desc 'Tags version, pushes to remote, and pushes gem'
-task :release => :build do
-  clean = sh_with_code("git diff --exit-code")[1] == 0
-  committed = sh_with_code("git diff-index --quiet --cached HEAD")[1] == 0
-  raise("There are files that need to be committed first.") unless clean && committed
-  require 'nmatrix/version'
-  version = NMatrix::VERSION::STRING
-  version_tag = "v#{version}"
-  raise "Tag #{version_tag} already created." if sh('git tag').split(/\n/).include?(version_tag)
-  sh "git tag -a -m \"Version #{version}\" #{version_tag}"
-  sh "git push"
-  sh "git push --tags"
-  sh "ls pkg/*.gem | xargs -n 1 gem push"
-end
-
 begin
   Bundler.setup(:default, :development)
 rescue Bundler::BundlerError => e
