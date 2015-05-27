@@ -4,13 +4,21 @@ require 'rubygems'
 require 'rubygems/package_task'
 require 'bundler'
 
+#specify plugins to build on the command line like:
+#rake whatever nmatrix_plugins=atlas,lapack
+plugins = []
+plugins = ENV["nmatrix_plugins"].split(",") if ENV["nmatrix_plugins"]
+#Add an option for building all plugins? Search for gemspecs to fill plugins array?
+
 #install_tasks adds build, install, and release tasks, but doesn't work with multiple gemspecs
 #Bundler::GemHelper.install_tasks
-
 desc 'Build gem into the pkg directory'
 task :build do
   FileUtils.rm_rf('pkg')
-  Dir['*.gemspec'].each do |gemspec|
+  system "gem build -V nmatrix.gemspec"
+  plugins.each do |plugin|
+    gemspec = "nmatrix-#{plugin}.gemspec"
+    raise "#{gemspec} file missing" unless File.exist?(gemspec)
     system "gem build -V #{gemspec}"
   end
   FileUtils.mkdir_p('pkg')
@@ -20,7 +28,7 @@ end
 desc "Build and install into system gems."
 task :install => :build do
   Dir['pkg/*.gem'].each do |gem_file|
-    #system "gem install '#{gem_file}'"
+    system "gem install '#{gem_file}'"
   end
 end
 
@@ -29,12 +37,10 @@ task :release => :build do
   clean = sh_with_code("git diff --exit-code")[1] == 0
   committed = sh_with_code("git diff-index --quiet --cached HEAD")[1] == 0
   raise("There are files that need to be committed first.") unless clean && committed
-  require 'nmatix/version'
+  require 'nmatrix/version'
   version = NMatrix::VERSION::STRING
   version_tag = "v#{version}"
-  if !sh('git tag').split(/\n/).include?(version_tag)
-  end
-  
+  raise "Tag #{version_tag} already created." if sh('git tag').split(/\n/).include?(version_tag)
   sh "git tag -a -m \"Version #{version}\" #{version_tag}"
   sh "git push"
   sh "git push --tags"
@@ -58,17 +64,23 @@ Rake::ExtensionTask.new do |ext|
     ext.source_pattern = "**/*.{c,cpp,h}"
 end
 
-Rake::ExtensionTask.new do |ext|
-    ext.name = 'nmatrix_atlas'
-    ext.ext_dir = 'ext/nmatrix_atlas'
-    ext.lib_dir = 'lib/'
-    ext.source_pattern = "**/*.{c,cpp,h}"
+plugins.each do |plugin|
+  ext_name = "nmatrix_#{plugin}"
+  if File.exist?("ext/#{ext_name}/extconf.rb")
+    Rake::ExtensionTask.new do |ext|
+        ext.name = "#{ext_name}"
+        ext.ext_dir = "ext/#{ext_name}"
+        ext.lib_dir = 'lib/'
+        ext.source_pattern = "**/*.{c,cpp,h}"
+    end
+  end
 end
 
 gemspec = eval(IO.read("nmatrix.gemspec"))
 Gem::PackageTask.new(gemspec).define
 
-Dir['nmatrix-*.gemspec'].each do |gemspec_file|
+plugins.each do |plugin|
+  gemspec_file = "nmatrix-#{plugin}.gemspec"
   gemspec = eval(IO.read(gemspec_file))
   Gem::PackageTask.new(gemspec).define
 end
