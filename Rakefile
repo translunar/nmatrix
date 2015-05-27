@@ -10,6 +10,13 @@ plugins = []
 plugins = ENV["nmatrix_plugins"].split(",") if ENV["nmatrix_plugins"]
 #Add an option for building all plugins? Search for gemspecs to fill plugins array?
 
+desc "Build and install into system gems."
+task :install => :package do
+  Dir['pkg/*.gem'].each do |gem_file|
+    system "gem install '#{gem_file}'"
+  end
+end
+
 begin
   Bundler.setup(:default, :development)
 rescue Bundler::BundlerError => e
