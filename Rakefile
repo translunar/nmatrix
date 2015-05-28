@@ -11,7 +11,8 @@ require 'bundler'
 if ENV["nmatrix_plugins"] == "all"
   gemspecs = Dir["*.gemspec"]
 else
-  plugins = ENV["nmatrix_plugins"].split(",") || []
+  plugins = []
+  plugins = ENV["nmatrix_plugins"].split(",") if ENV["nmatrix_plugins"]
   gemspecs = ["nmatrix.gemspec"] #always include the main nmatrix gem
   plugins.each do |plugin|
     gemspecs << "nmatrix-#{plugin}.gemspec"
