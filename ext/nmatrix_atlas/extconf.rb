@@ -96,9 +96,10 @@ if /cygwin|mingw/ =~ RUBY_PLATFORM
 end
 
 $DEBUG = true
-$CFLAGS = ["-Wall -Werror=return-type",$CFLAGS].join(" ")
-$CXXFLAGS = ["-Wall -Werror=return-type",$CXXFLAGS].join(" ")
-$CPPFLAGS = ["-Wall -Werror=return-type",$CPPFLAGS].join(" ")
+#not the right way to add this include directory
+$CFLAGS = ["-Wall -Werror=return-type -I$(srcdir)/../nmatrix",$CFLAGS].join(" ")
+$CXXFLAGS = ["-Wall -Werror=return-type -I$(srcdir)/../nmatrix",$CXXFLAGS].join(" ")
+$CPPFLAGS = ["-Wall -Werror=return-type -I$(srcdir)/../nmatrix",$CPPFLAGS].join(" ")
 
 # When adding objects here, make sure their directories are included in CLEANOBJS down at the bottom of extconf.rb.
 basenames = %w{nmatrix_atlas}
