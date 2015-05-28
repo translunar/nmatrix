@@ -60,7 +60,12 @@ require 'rspec/core/rake_task'
 require 'rspec/core'
 require 'rspec/core/rake_task'
 RSpec::Core::RakeTask.new(:spec) do |spec|
-  spec.pattern = FileList['spec/**/*_spec.rb'].uniq
+  test_files = []
+  gemspecs.each do |gemspec|
+    test_files += gemspec.test_files
+  end
+  test_files.keep_if { |file| file =~ /_spec\.rb$/ }
+  spec.pattern = FileList.new(test_files)
 end
 
 
