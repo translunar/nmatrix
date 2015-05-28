@@ -42,7 +42,7 @@ require "rake/extensiontask"
 gemspecs.each do |gemspec|
   next unless gemspec.extensions
   gemspec.extensions.each do |extconf|
-    ext_name = extconf.match(/ext\/(.*)\/extconf.rb/)[1]
+    ext_name = extconf.match(/ext\/(.*)\/extconf\.rb/)[1]
     Rake::ExtensionTask.new do |ext|
       ext.name = ext_name
       ext.ext_dir = "ext/#{ext_name}"
