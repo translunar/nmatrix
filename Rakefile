@@ -6,13 +6,23 @@ require 'bundler'
 
 #specify plugins to build on the command line like:
 #rake whatever nmatrix_plugins=atlas,lapack
-plugins = []
-plugins = ENV["nmatrix_plugins"].split(",") if ENV["nmatrix_plugins"]
-#Add an option for building all plugins? Search for gemspecs to fill plugins array?
+#or
+#rake whatever nmatrix_plugins=all
+if ENV["nmatrix_plugins"] == "all"
+  gemspecs = Dir["*.gemspec"]
+else
+  plugins = ENV["nmatrix_plugins"].split(",") || []
+  gemspecs = ["nmatrix.gemspec"] #always include the main nmatrix gem
+  plugins.each do |plugin|
+    gemspecs << "nmatrix-#{plugin}.gemspec"
+  end
+end
+gemspecs.map! { |gemspec| eval(IO.read(gemspec)) }
 
 desc "Build and install into system gems."
 task :install => :package do
-  Dir['pkg/*.gem'].each do |gem_file|
+  gemspecs.each do |gemspec|
+    gem_file = "pkg/#{gemspec.name}-#{gemspec.version}.gem"
     system "gem install '#{gem_file}'"
   end
 end
@@ -27,31 +37,21 @@ end
 
 require 'rake'
 require "rake/extensiontask"
-Rake::ExtensionTask.new do |ext|
-    ext.name = 'nmatrix'
-    ext.ext_dir = 'ext/nmatrix'
-    ext.lib_dir = 'lib/'
-    ext.source_pattern = "**/*.{c,cpp,h}"
-end
 
-plugins.each do |plugin|
-  ext_name = "nmatrix_#{plugin}"
-  if File.exist?("ext/#{ext_name}/extconf.rb")
+gemspecs.each do |gemspec|
+  next unless gemspec.extensions
+  gemspec.extensions.each do |extconf|
+    ext_name = extconf.match(/ext\/(.*)\/extconf.rb/)[1]
     Rake::ExtensionTask.new do |ext|
-        ext.name = "#{ext_name}"
-        ext.ext_dir = "ext/#{ext_name}"
-        ext.lib_dir = 'lib/'
-        ext.source_pattern = "**/*.{c,cpp,h}"
+      ext.name = ext_name
+      ext.ext_dir = "ext/#{ext_name}"
+      ext.lib_dir = 'lib/'
+      ext.source_pattern = "**/*.{c,cpp,h}"
     end
   end
 end
 
-gemspec = eval(IO.read("nmatrix.gemspec"))
-Gem::PackageTask.new(gemspec).define
-
-plugins.each do |plugin|
-  gemspec_file = "nmatrix-#{plugin}.gemspec"
-  gemspec = eval(IO.read(gemspec_file))
+gemspecs.each do |gemspec|
   Gem::PackageTask.new(gemspec).define
 end
 
