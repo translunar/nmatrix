@@ -1,5 +1,7 @@
 #include <ruby.h>
 
+#include "nmatrix.h"
+
 VALUE cNMatrix;
 
 extern "C" {
@@ -11,8 +13,7 @@ static VALUE nm_test(VALUE self) {
 void Init_nmatrix_atlas() {
   cNMatrix = rb_define_class("NMatrix", rb_cObject);
 
-  //the cast should be to METHOD once we add the nmatrix headers
-  rb_define_method(cNMatrix, "test_c_ext_return_2", (VALUE (*)(...))nm_test, 0);
+  rb_define_method(cNMatrix, "test_c_ext_return_2", (METHOD)nm_test, 0);
 }
 
 }
