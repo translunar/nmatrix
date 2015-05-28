@@ -196,14 +196,21 @@ task :leakcheck => [ :compile ] do |task|
 end
 
 namespace :clean do
+  #the generated Makefile doesn't have a soclean target, should this be removed?
   task :so do |task|
-    tmp_path = "tmp/#{RUBY_PLATFORM}/nmatrix/#{RUBY_VERSION}"
-    chdir tmp_path do
-      if RUBY_PLATFORM =~ /mswin/
-        `nmake soclean`
-      else
-        mkcmd = ENV['MAKE'] || %w[gmake make].find { |c| system("#{c} -v >> /dev/null 2>&1") }
-        `#{mkcmd} soclean`
+    gemspecs.each do |gemspec|
+      next unless gemspec.extensions
+      gemspec.extensions.each do |extconf|
+        ext_name = extconf.match(/ext\/(.*)\/extconf\.rb/)[1]
+        tmp_path = "tmp/#{RUBY_PLATFORM}/#{ext_name}/#{RUBY_VERSION}"
+        chdir tmp_path do
+          if RUBY_PLATFORM =~ /mswin/
+            `nmake soclean`
+          else
+            mkcmd = ENV['MAKE'] || %w[gmake make].find { |c| system("#{c} -v >> /dev/null 2>&1") }
+            `#{mkcmd} soclean`
+          end
+        end
       end
     end
   end
@@ -239,10 +246,12 @@ task :check_manifest do |task|
 end
 
 require "rdoc/task"
+#separate out docs for plugins?
 RDoc::Task.new do |rdoc|
   rdoc.main = "README.rdoc"
   rdoc.rdoc_files.include(%w{README.rdoc History.txt LICENSE.txt CONTRIBUTING.md lib ext})
   rdoc.options << "--exclude=ext/nmatrix/extconf.rb"
+  rdoc.options << "--exclude=ext/nmatrix_atlas/extconf.rb"
   rdoc.options << "--exclude=ext/nmatrix/ttable_helper.rb"
   rdoc.options << "--exclude=lib/nmatrix/rspec.rb"
 end
