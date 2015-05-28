@@ -2,6 +2,8 @@
 
 VALUE cNMatrix;
 
+extern "C" {
+
 static VALUE nm_test(VALUE self) {
   return INT2NUM(2);
 }
@@ -9,5 +11,8 @@ static VALUE nm_test(VALUE self) {
 void Init_nmatrix_atlas() {
   cNMatrix = rb_define_class("NMatrix", rb_cObject);
 
-  rb_define_method(cNMatrix, "test_c_ext_return_2", nm_test, 0);
+  //the cast should be to METHOD once we add the nmatrix headers
+  rb_define_method(cNMatrix, "test_c_ext_return_2", (VALUE (*)(...))nm_test, 0);
+}
+
 }
