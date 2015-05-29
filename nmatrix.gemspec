@@ -45,10 +45,10 @@ Thanks for trying out NMatrix! Happy coding!
 EOF
 
   gem.files         = `git ls-files`.split("\n") - plugin_files
-  gem.files         += `git ls-files -- ext/nmatrix/*`.split("\n") #need to explicitly add this, since some of these files are included in plugin_files
+  gem.files         += `git ls-files -- ext/nmatrix`.split("\n") #need to explicitly add this, since some of these files are included in plugin_files
   gem.files.uniq!
-  gem.test_files    = `git ls-files -- spec/*`.split("\n") - plugin_test_files
-  gem.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
+  gem.test_files    = `git ls-files -- spec`.split("\n") - plugin_test_files
+  gem.executables   = `git ls-files -- bin`.split("\n").map{ |f| File.basename(f) }
   gem.extensions = ['ext/nmatrix/extconf.rb']
   gem.require_paths = ["lib"]
 

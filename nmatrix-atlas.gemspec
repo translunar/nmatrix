@@ -37,9 +37,9 @@ EOF
 
   #gem.files         = `git ls-files -- lib | grep atlas`.split("\n")
   gem.files         = ["lib/nmatrix/atlas.rb"]
-  gem.files         += `git ls-files -- ext/nmatrix_atlas/*`.split("\n")
-  gem.files         += `git ls-files -- ext/nmatrix/**/*.h`.split("\n") #need nmatrix header files to compile
-  gem.test_files    = `git ls-files -- spec/plugins/atlas/*`.split("\n")
+  gem.files         += `git ls-files -- ext/nmatrix_atlas`.split("\n")
+  gem.files         += `git ls-files -- ext/nmatrix | grep ".h$"`.split("\n") #need nmatrix header files to compile
+  gem.test_files    = `git ls-files -- spec/plugins/atlas`.split("\n")
   #gem.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
   gem.extensions = ['ext/nmatrix_atlas/extconf.rb']
   gem.require_paths = ["lib"]
