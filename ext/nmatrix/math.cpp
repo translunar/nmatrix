@@ -1295,10 +1295,11 @@ static VALUE nm_cblas_herk(VALUE self,
 static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lwork) {
   static int (*gesvd_table[nm::NUM_DTYPES])(char, char, int, int, void* a, int, void* s, void* u, int, void* vt, int, void* work, int, void* rwork) = {
     NULL, NULL, NULL, NULL, NULL, // no integer ops
-    nm::math::lapack_gesvd<float,float>,
+    /*nm::math::lapack_gesvd<float,float>,
     nm::math::lapack_gesvd<double,double>,
     nm::math::lapack_gesvd<nm::Complex64,float>,
-    nm::math::lapack_gesvd<nm::Complex128,double>,
+    nm::math::lapack_gesvd<nm::Complex128,double>,*/ 
+    NULL, NULL, NULL, NULL, //disable everything for now
     NULL, NULL, NULL, NULL // no rationals or Ruby objects
   };
 
@@ -1355,10 +1356,7 @@ static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE
 static VALUE nm_lapack_gesdd(VALUE self, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lwork) {
   static int (*gesdd_table[nm::NUM_DTYPES])(char, int, int, void* a, int, void* s, void* u, int, void* vt, int, void* work, int, int* iwork, void* rwork) = {
     NULL, NULL, NULL, NULL, NULL, // no integer ops
-    nm::math::lapack_gesdd<float,float>,
-    nm::math::lapack_gesdd<double,double>,
-    nm::math::lapack_gesdd<nm::Complex64,float>,
-    nm::math::lapack_gesdd<nm::Complex128,double>,
+    NULL, NULL, NULL, NULL, // no integer ops
     NULL, NULL, NULL, NULL // no rationals or Ruby objects
   };
 
@@ -1423,10 +1421,7 @@ static VALUE nm_lapack_gesdd(VALUE self, VALUE jobz, VALUE m, VALUE n, VALUE a, 
 static VALUE nm_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_right, VALUE n, VALUE a, VALUE lda, VALUE w, VALUE wi, VALUE vl, VALUE ldvl, VALUE vr, VALUE ldvr, VALUE lwork) {
   static int (*geev_table[nm::NUM_DTYPES])(char, char, int, void* a, int, void* w, void* wi, void* vl, int, void* vr, int, void* work, int, void* rwork) = {
     NULL, NULL, NULL, NULL, NULL, // no integer ops
-    nm::math::lapack_geev<float,float>,
-    nm::math::lapack_geev<double,double>,
-    nm::math::lapack_geev<nm::Complex64,float>,
-    nm::math::lapack_geev<nm::Complex128,double>,
+    NULL, NULL, NULL, NULL, // no integer ops
     NULL, NULL, NULL, NULL // no rationals or Ruby objects
   };
 
