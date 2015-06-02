@@ -594,4 +594,24 @@ describe "math" do
       end
     end
   end
+
+  ALL_DTYPES.each do |dtype|
+    [:dense, :yale].each do |stype|
+      context "#kron_prod #{dtype} #{stype}" do
+        before do 
+          @a = NMatrix.new([2,2], [1,2,
+                                   3,4], dtype: dtype, stype: stype)
+          @b = NMatrix.new([2,3], [1,1,1,
+                                   1,1,1], dtype: dtype, stype: stype)
+          @c = NMatrix.new([4,6], [1, 1, 1, 2, 2, 2,
+                                   1, 1, 1, 2, 2, 2,
+                                   3, 3, 3, 4, 4, 4,
+                                   3, 3, 3, 4, 4, 4], dtype: dtype, stype: stype) 
+        end
+        it "Compute the Kronecker product of two NMatrix" do
+          expect(@a.kron_prod(@b)).to eq(@c)
+        end
+      end
+    end
+  end
 end
