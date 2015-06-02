@@ -6,12 +6,30 @@
 #include "math/gesvd.h"
 #include "math/gesdd.h"
 #include "math/geev.h"
+#include "math/trsm_atlas.h"
 
 /*
  * Forward Declarations
  */
 
 extern "C" {
+#if defined HAVE_CLAPACK_H
+  #include <clapack.h>
+#elif defined HAVE_ATLAS_CLAPACK_H
+  #include <atlas/clapack.h>
+#endif
+
+  /* BLAS Level 3. */
+  static VALUE nm_cblas_trsm(VALUE self, VALUE order, VALUE side, VALUE uplo, VALUE trans_a, VALUE diag, VALUE m, VALUE n,
+                             VALUE vAlpha, VALUE a, VALUE lda, VALUE b, VALUE ldb);
+  static VALUE nm_cblas_trmm(VALUE self, VALUE order, VALUE side, VALUE uplo, VALUE trans_a, VALUE diag, VALUE m, VALUE n,
+                             VALUE alpha, VALUE a, VALUE lda, VALUE b, VALUE ldb);
+  static VALUE nm_cblas_herk(VALUE self, VALUE order, VALUE uplo, VALUE trans, VALUE n, VALUE k, VALUE alpha, VALUE a,
+                             VALUE lda, VALUE beta, VALUE c, VALUE ldc);
+  static VALUE nm_cblas_syrk(VALUE self, VALUE order, VALUE uplo, VALUE trans, VALUE n, VALUE k, VALUE alpha, VALUE a,
+                             VALUE lda, VALUE beta, VALUE c, VALUE ldc);
+
+  /* LAPACK. */
   static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lworkspace_size);
   static VALUE nm_lapack_gesdd(VALUE self, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lworkspace_size);
   static VALUE nm_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_right, VALUE n, VALUE a, VALUE lda, VALUE w, VALUE wi, VALUE vl, VALUE ldvl, VALUE vr, VALUE ldvr, VALUE lwork);
@@ -23,6 +41,51 @@ extern "C" {
 
 namespace nm { 
   namespace math {
+
+    /*
+     * Function signature conversion for calling CBLAS' trsm functions as directly as possible.
+     *
+     * For documentation: http://www.netlib.org/blas/dtrsm.f
+     */
+    template <typename DType>
+    inline static void cblas_trsm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
+                                   const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_DIAG diag,
+                                   const int m, const int n, const void* alpha, const void* a,
+                                   const int lda, void* b, const int ldb)
+    {
+      trsm<DType>(order, side, uplo, trans_a, diag, m, n, *reinterpret_cast<const DType*>(alpha),
+                  reinterpret_cast<const DType*>(a), lda, reinterpret_cast<DType*>(b), ldb);
+    }
+
+
+    /*
+     * Function signature conversion for calling CBLAS' trmm functions as directly as possible.
+     *
+     * For documentation: http://www.netlib.org/blas/dtrmm.f
+     */
+    template <typename DType>
+    inline static void cblas_trmm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
+                                  const enum CBLAS_TRANSPOSE ta, const enum CBLAS_DIAG diag, const int m, const int n, const void* alpha,
+                                  const void* A, const int lda, void* B, const int ldb)
+    {
+      trmm<DType>(order, side, uplo, ta, diag, m, n, reinterpret_cast<const DType*>(alpha),
+                  reinterpret_cast<const DType*>(A), lda, reinterpret_cast<DType*>(B), ldb);
+    }
+
+
+    /*
+     * Function signature conversion for calling CBLAS' syrk functions as directly as possible.
+     *
+     * For documentation: http://www.netlib.org/blas/dsyrk.f
+     */
+    template <typename DType>
+    inline static void cblas_syrk(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const enum CBLAS_TRANSPOSE trans,
+                                  const int n, const int k, const void* alpha,
+                                  const void* A, const int lda, const void* beta, void* C, const int ldc)
+    {
+      syrk<DType>(order, uplo, trans, n, k, reinterpret_cast<const DType*>(alpha),
+                  reinterpret_cast<const DType*>(A), lda, reinterpret_cast<const DType*>(beta), reinterpret_cast<DType*>(C), ldc);
+    }
 
     /*
      * Function signature conversion for calling CBLAS' gesvd functions as directly as possible.
@@ -51,6 +114,11 @@ extern "C" {
 
 void nm_math_init_something() {
 	cNMatrix_LAPACK = rb_define_module_under(cNMatrix, "LAPACK");
+
+	rb_define_singleton_method(cNMatrix_BLAS, "cblas_trsm", (METHOD)nm_cblas_trsm, 12);
+	rb_define_singleton_method(cNMatrix_BLAS, "cblas_trmm", (METHOD)nm_cblas_trmm, 12);
+	rb_define_singleton_method(cNMatrix_BLAS, "cblas_syrk", (METHOD)nm_cblas_syrk, 11);
+	rb_define_singleton_method(cNMatrix_BLAS, "cblas_herk", (METHOD)nm_cblas_herk, 11);
 
   /* Non-ATLAS regular LAPACK Functions called via Fortran interface */
   rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesvd", (METHOD)nm_lapack_gesvd, 12);
@@ -81,6 +149,145 @@ static inline char lapack_svd_job_sym(VALUE op) {
 static inline char lapack_evd_job_sym(VALUE op) {
   if (op == Qfalse || op == Qnil || rb_to_id(op) == rb_intern("n")) return 'N';
   else return 'V';
+}
+
+static VALUE nm_cblas_trsm(VALUE self,
+                           VALUE order,
+                           VALUE side, VALUE uplo,
+                           VALUE trans_a, VALUE diag,
+                           VALUE m, VALUE n,
+                           VALUE alpha,
+                           VALUE a, VALUE lda,
+                           VALUE b, VALUE ldb)
+{
+  static void (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const enum CBLAS_SIDE, const enum CBLAS_UPLO,
+                                        const enum CBLAS_TRANSPOSE, const enum CBLAS_DIAG,
+                                        const int m, const int n, const void* alpha, const void* a,
+                                        const int lda, void* b, const int ldb) = {
+      NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
+      nm::math::cblas_trsm<float>,
+      nm::math::cblas_trsm<double>,
+      cblas_ctrsm, cblas_ztrsm, // call directly, same function signature!
+      nm::math::cblas_trsm<nm::Rational32>,
+      nm::math::cblas_trsm<nm::Rational64>,
+      nm::math::cblas_trsm<nm::Rational128>,
+      nm::math::cblas_trsm<nm::RubyObject>
+  };
+
+  nm::dtype_t dtype = NM_DTYPE(a);
+
+  if (!ttable[dtype]) {
+    rb_raise(nm_eDataTypeError, "this matrix operation undefined for integer matrices");
+  } else {
+    void *pAlpha = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
+    rubyval_to_cval(alpha, dtype, pAlpha);
+
+    ttable[dtype](blas_order_sym(order), blas_side_sym(side), blas_uplo_sym(uplo), blas_transpose_sym(trans_a), blas_diag_sym(diag), FIX2INT(m), FIX2INT(n), pAlpha, NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), NM_STORAGE_DENSE(b)->elements, FIX2INT(ldb));
+  }
+
+  return Qtrue;
+}
+
+static VALUE nm_cblas_trmm(VALUE self,
+                           VALUE order,
+                           VALUE side, VALUE uplo,
+                           VALUE trans_a, VALUE diag,
+                           VALUE m, VALUE n,
+                           VALUE alpha,
+                           VALUE a, VALUE lda,
+                           VALUE b, VALUE ldb)
+{
+  static void (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER,
+                                        const enum CBLAS_SIDE, const enum CBLAS_UPLO,
+                                        const enum CBLAS_TRANSPOSE, const enum CBLAS_DIAG,
+                                        const int m, const int n, const void* alpha, const void* a,
+                                        const int lda, void* b, const int ldb) = {
+      NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
+      nm::math::cblas_trmm<float>,
+      nm::math::cblas_trmm<double>,
+      cblas_ctrmm, cblas_ztrmm, // call directly, same function signature!
+      NULL, NULL, NULL, NULL
+      /*
+      nm::math::cblas_trmm<nm::Rational32>,
+      nm::math::cblas_trmm<nm::Rational64>,
+      nm::math::cblas_trmm<nm::Rational128>,
+      nm::math::cblas_trmm<nm::RubyObject>*/
+  };
+
+  nm::dtype_t dtype = NM_DTYPE(a);
+
+  if (!ttable[dtype]) {
+    rb_raise(nm_eDataTypeError, "this matrix operation not yet defined for non-BLAS dtypes");
+  } else {
+    void *pAlpha = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
+    rubyval_to_cval(alpha, dtype, pAlpha);
+
+    ttable[dtype](blas_order_sym(order), blas_side_sym(side), blas_uplo_sym(uplo), blas_transpose_sym(trans_a), blas_diag_sym(diag), FIX2INT(m), FIX2INT(n), pAlpha, NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), NM_STORAGE_DENSE(b)->elements, FIX2INT(ldb));
+  }
+
+  return b;
+}
+
+static VALUE nm_cblas_syrk(VALUE self,
+                           VALUE order,
+                           VALUE uplo,
+                           VALUE trans,
+                           VALUE n, VALUE k,
+                           VALUE alpha,
+                           VALUE a, VALUE lda,
+                           VALUE beta,
+                           VALUE c, VALUE ldc)
+{
+  static void (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const enum CBLAS_UPLO, const enum CBLAS_TRANSPOSE,
+                                        const int n, const int k, const void* alpha, const void* a,
+                                        const int lda, const void* beta, void* c, const int ldc) = {
+      NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
+      nm::math::cblas_syrk<float>,
+      nm::math::cblas_syrk<double>,
+      cblas_csyrk, cblas_zsyrk, // call directly, same function signature!
+      NULL, NULL, NULL, NULL
+      /*nm::math::cblas_trsm<nm::Rational32>,
+      nm::math::cblas_trsm<nm::Rational64>,
+      nm::math::cblas_trsm<nm::Rational128>,
+      nm::math::cblas_trsm<nm::RubyObject>*/
+  };
+
+  nm::dtype_t dtype = NM_DTYPE(a);
+
+  if (!ttable[dtype]) {
+    rb_raise(nm_eDataTypeError, "this matrix operation undefined for integer matrices");
+  } else {
+    void *pAlpha = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]),
+         *pBeta = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
+    rubyval_to_cval(alpha, dtype, pAlpha);
+    rubyval_to_cval(beta, dtype, pBeta);
+
+    ttable[dtype](blas_order_sym(order), blas_uplo_sym(uplo), blas_transpose_sym(trans), FIX2INT(n), FIX2INT(k), pAlpha, NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), pBeta, NM_STORAGE_DENSE(c)->elements, FIX2INT(ldc));
+  }
+
+  return Qtrue;
+}
+
+static VALUE nm_cblas_herk(VALUE self,
+                           VALUE order,
+                           VALUE uplo,
+                           VALUE trans,
+                           VALUE n, VALUE k,
+                           VALUE alpha,
+                           VALUE a, VALUE lda,
+                           VALUE beta,
+                           VALUE c, VALUE ldc)
+{
+
+  nm::dtype_t dtype = NM_DTYPE(a);
+
+  if (dtype == nm::COMPLEX64) {
+    cblas_cherk(blas_order_sym(order), blas_uplo_sym(uplo), blas_transpose_sym(trans), FIX2INT(n), FIX2INT(k), NUM2DBL(alpha), NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), NUM2DBL(beta), NM_STORAGE_DENSE(c)->elements, FIX2INT(ldc));
+  } else if (dtype == nm::COMPLEX128) {
+    cblas_zherk(blas_order_sym(order), blas_uplo_sym(uplo), blas_transpose_sym(trans), FIX2INT(n), FIX2INT(k), NUM2DBL(alpha), NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), NUM2DBL(beta), NM_STORAGE_DENSE(c)->elements, FIX2INT(ldc));
+  } else
+    rb_raise(rb_eNotImpError, "this matrix operation undefined for non-complex dtypes");
+  return Qtrue;
 }
 
 /*

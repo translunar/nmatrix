@@ -55,9 +55,17 @@
  *
  */
 
-#ifndef TRSM_H
-#define TRSM_H
+#ifndef TRSM_ATLAS_H
+#define TRSM_ATLAS_H
 
+
+extern "C" {
+#if defined HAVE_CBLAS_H
+  #include <cblas.h>
+#elif defined HAVE_ATLAS_CBLAS_H
+  #include <atlas/cblas.h>
+#endif
+}
 
 namespace nm { namespace math {
 
@@ -328,5 +336,43 @@ inline void trsm(const enum CBLAS_ORDER order,
 
 }
 
+template <>
+inline void trsm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
+                 const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_DIAG diag,
+                 const int m, const int n, const float alpha, const float* a,
+                 const int lda, float* b, const int ldb)
+{
+  cblas_strsm(order, side, uplo, trans_a, diag, m, n, alpha, a, lda, b, ldb);
+}
+
+template <>
+inline void trsm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
+                 const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_DIAG diag,
+                 const int m, const int n, const double alpha, const double* a,
+                 const int lda, double* b, const int ldb)
+{
+  cblas_dtrsm(order, side, uplo, trans_a, diag, m, n, alpha, a, lda, b, ldb);
+}
+
+
+template <>
+inline void trsm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
+                 const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_DIAG diag,
+                 const int m, const int n, const Complex64 alpha, const Complex64* a,
+                 const int lda, Complex64* b, const int ldb)
+{
+  cblas_ctrsm(order, side, uplo, trans_a, diag, m, n, (const void*)(&alpha), (const void*)(a), lda, (void*)(b), ldb);
+}
+
+template <>
+inline void trsm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
+                 const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_DIAG diag,
+                 const int m, const int n, const Complex128 alpha, const Complex128* a,
+                 const int lda, Complex128* b, const int ldb)
+{
+  cblas_ztrsm(order, side, uplo, trans_a, diag, m, n, (const void*)(&alpha), (const void*)(a), lda, (void*)(b), ldb);
+}
+
+
 } }  // namespace nm::math
-#endif // TRSM_H
+#endif // TRSM_ATLAS_H

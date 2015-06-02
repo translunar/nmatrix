@@ -56,8 +56,8 @@
  *
  */
 
-#ifndef ASUM_H
-#define ASUM_H
+#ifndef ASUM_ATLAS_H
+#define ASUM_ATLAS_H
 
 
 namespace nm { namespace math {
@@ -87,25 +87,23 @@ inline ReturnDType asum(const int N, const DType* X, const int incX) {
 
 
 template <>
+inline float asum(const int N, const float* X, const int incX) {
+  return cblas_sasum(N, X, incX);
+}
+
+template <>
+inline double asum(const int N, const double* X, const int incX) {
+  return cblas_dasum(N, X, incX);
+}
+
+template <>
 inline float asum(const int N, const Complex64* X, const int incX) {
-  float sum = 0;
-  if ((N > 0) && (incX > 0)) {
-    for (int i = 0; i < N; ++i) {
-      sum += std::abs(X[i*incX].r) + std::abs(X[i*incX].i);
-    }
-  }
-  return sum;
+  return cblas_scasum(N, X, incX);
 }
 
 template <>
 inline double asum(const int N, const Complex128* X, const int incX) {
-  double sum = 0;
-  if ((N > 0) && (incX > 0)) {
-    for (int i = 0; i < N; ++i) {
-      sum += std::abs(X[i*incX].r) + std::abs(X[i*incX].i);
-    }
-  }
-  return sum;
+  return cblas_dzasum(N, X, incX);
 }
 
 
@@ -118,4 +116,4 @@ inline void cblas_asum(const int N, const void* X, const int incX, void* sum) {
 
 }} // end of namespace nm::math
 
-#endif // ASUM_H
+#endif // ASUM_ATLAS_H
