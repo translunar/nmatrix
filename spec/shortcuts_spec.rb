@@ -65,6 +65,34 @@ describe NMatrix do
     expect(m[3,3]).to eq(arr[3])
   end
 
+  ALL_DTYPES.each do |dtype|
+    [:dense, :yale, :list].each do |stype|
+      context "#block_diagonal #{dtype} #{stype}" do
+        it "block_diagonal() creates a block-diagonal NMatrix" do
+          a = NMatrix.new([2,2], [1,2,
+                                  3,4])
+          b = NMatrix.new([1,1], [123.0])
+          c = NMatrix.new([3,3], [1,2,3,
+                                  1,2,3,
+                                  1,2,3])
+          d = Array[ [1,1,1], [2,2,2], [3,3,3] ] 
+          e = 12
+          m = NMatrix.block_diagonal(a, b, c, d, e, dtype: dtype, stype: stype)
+          expect(m).to eq(NMatrix.new([10,10], [1, 2,   0, 0, 0, 0, 0, 0, 0,  0,
+                                                3, 4,   0, 0, 0, 0, 0, 0, 0,  0,
+                                                0, 0, 123, 0, 0, 0, 0, 0, 0,  0,
+                                                0, 0,   0, 1, 2, 3, 0, 0, 0,  0,
+                                                0, 0,   0, 1, 2, 3, 0, 0, 0,  0,
+                                                0, 0,   0, 1, 2, 3, 0, 0, 0,  0,
+                                                0, 0,   0, 0, 0, 0, 1, 1, 1,  0,
+                                                0, 0,   0, 0, 0, 0, 2, 2, 2,  0,
+                                                0, 0,   0, 0, 0, 0, 3, 3, 3,  0,
+                                                0, 0,   0, 0, 0, 0, 0, 0, 0, 12], dtype: dtype, stype: stype))
+        end
+      end
+    end
+  end
+
   context "::random" do
     it "creates a matrix of random numbers" do
       m = NMatrix.random(2)
