@@ -183,5 +183,256 @@ inline void trmm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const
   }
 }
 
+/*
+ * From ATLAS 3.8.0:
+ *
+ * Computes one of two LU factorizations based on the setting of the Order
+ * parameter, as follows:
+ * ----------------------------------------------------------------------------
+ *                       Order == CblasColMajor
+ * Column-major factorization of form
+ *   A = P * L * U
+ * where P is a row-permutation matrix, L is lower triangular with unit
+ * diagonal elements (lower trapazoidal if M > N), and U is upper triangular
+ * (upper trapazoidal if M < N).
+ *
+ * ----------------------------------------------------------------------------
+ *                       Order == CblasRowMajor
+ * Row-major factorization of form
+ *   A = P * L * U
+ * where P is a column-permutation matrix, L is lower triangular (lower
+ * trapazoidal if M > N), and U is upper triangular with unit diagonals (upper
+ * trapazoidal if M < N).
+ *
+ * ============================================================================
+ * Let IERR be the return value of the function:
+ *    If IERR == 0, successful exit.
+ *    If (IERR < 0) the -IERR argument had an illegal value
+ *    If (IERR > 0 && Order == CblasColMajor)
+ *       U(i-1,i-1) is exactly zero.  The factorization has been completed,
+ *       but the factor U is exactly singular, and division by zero will
+ *       occur if it is used to solve a system of equations.
+ *    If (IERR > 0 && Order == CblasRowMajor)
+ *       L(i-1,i-1) is exactly zero.  The factorization has been completed,
+ *       but the factor L is exactly singular, and division by zero will
+ *       occur if it is used to solve a system of equations.
+ */
+template <typename DType>
+inline int potrf(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, DType* A, const int lda) {
+#if defined HAVE_CLAPACK_H || defined HAVE_ATLAS_CLAPACK_H
+  rb_raise(rb_eNotImpError, "not yet implemented for non-BLAS dtypes");
+#else
+  rb_raise(rb_eNotImpError, "only CLAPACK version implemented thus far");
+#endif
+  return 0;
+}
+
+#if defined HAVE_CLAPACK_H || defined HAVE_ATLAS_CLAPACK_H
+template <>
+inline int potrf(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, float* A, const int lda) {
+  return clapack_spotrf(order, uplo, N, A, lda);
+}
+
+template <>
+inline int potrf(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, double* A, const int lda) {
+  return clapack_dpotrf(order, uplo, N, A, lda);
+}
+
+template <>
+inline int potrf(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex64* A, const int lda) {
+  return clapack_cpotrf(order, uplo, N, reinterpret_cast<void*>(A), lda);
+}
+
+template <>
+inline int potrf(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex128* A, const int lda) {
+  return clapack_zpotrf(order, uplo, N, reinterpret_cast<void*>(A), lda);
+}
+#endif
+
+template <bool is_complex, typename DType>
+inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, DType* A, const int lda) {
+
+  int Nleft, Nright;
+  const DType ONE = 1;
+  DType *G, *U0 = A, *U1;
+
+  if (N > 1) {
+    Nleft = N >> 1;
+    #ifdef NB
+      if (Nleft > NB) Nleft = ATL_MulByNB(ATL_DivByNB(Nleft));
+    #endif
+
+    Nright = N - Nleft;
+
+    // FIXME: There's a simpler way to write this next block, but I'm way too tired to work it out right now.
+    if (uplo == CblasUpper) {
+      if (order == CblasRowMajor) {
+        G = A + Nleft;
+        U1 = G + Nleft * lda;
+      } else {
+        G = A + Nleft * lda;
+        U1 = G + Nleft;
+      }
+    } else {
+      if (order == CblasRowMajor) {
+        G = A + Nleft * lda;
+        U1 = G + Nleft;
+      } else {
+        G = A + Nleft;
+        U1 = G + Nleft * lda;
+      }
+    }
+
+    lauum<is_complex, DType>(order, uplo, Nleft, U0, lda);
+
+    if (is_complex) {
+
+      nm::math::herk<DType>(order, uplo,
+                            uplo == CblasLower ? CblasConjTrans : CblasNoTrans,
+                            Nleft, Nright, &ONE, G, lda, &ONE, U0, lda);
+
+      nm::math::trmm<DType>(order, CblasLeft, uplo, CblasConjTrans, CblasNonUnit, Nright, Nleft, &ONE, U1, lda, G, lda);
+    } else {
+      nm::math::syrk<DType>(order, uplo,
+                            uplo == CblasLower ? CblasTrans : CblasNoTrans,
+                            Nleft, Nright, &ONE, G, lda, &ONE, U0, lda);
+
+      nm::math::trmm<DType>(order, CblasLeft, uplo, CblasTrans, CblasNonUnit, Nright, Nleft, &ONE, U1, lda, G, lda);
+    }
+    lauum<is_complex, DType>(order, uplo, Nright, U1, lda);
+
+  } else {
+    *A = *A * *A;
+  }
+}
+
+
+#if defined HAVE_CLAPACK_H || defined HAVE_ATLAS_CLAPACK_H
+template <bool is_complex>
+inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, float* A, const int lda) {
+  clapack_slauum(order, uplo, N, A, lda);
+}
+
+template <bool is_complex>
+inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, double* A, const int lda) {
+  clapack_dlauum(order, uplo, N, A, lda);
+}
+
+template <bool is_complex>
+inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex64* A, const int lda) {
+  clapack_clauum(order, uplo, N, A, lda);
+}
+
+template <bool is_complex>
+inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex128* A, const int lda) {
+  clapack_zlauum(order, uplo, N, A, lda);
+}
+#endif
+
+
+/*
+* Function signature conversion for calling LAPACK's lauum functions as directly as possible.
+*
+* For documentation: http://www.netlib.org/lapack/double/dlauum.f
+*
+* This function should normally go in math.cpp, but we need it to be available to nmatrix.cpp.
+*/
+template <bool is_complex, typename DType>
+inline int clapack_lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, void* a, const int lda) {
+  if (n < 0)              rb_raise(rb_eArgError, "n cannot be less than zero, is set to %d", n);
+  if (lda < n || lda < 1) rb_raise(rb_eArgError, "lda must be >= max(n,1); lda=%d, n=%d\n", lda, n);
+
+  if (uplo == CblasUpper) lauum<is_complex, DType>(order, uplo, n, reinterpret_cast<DType*>(a), lda);
+  else                    lauum<is_complex, DType>(order, uplo, n, reinterpret_cast<DType*>(a), lda);
+
+  return 0;
+}
+
+
+
+
+/*
+ * Macro for declaring LAPACK specializations of the getrf function.
+ *
+ * type is the DType; call is the specific function to call; cast_as is what the DType* should be
+ * cast to in order to pass it to LAPACK.
+ */
+#define LAPACK_GETRF(type, call, cast_as)                                     \
+template <>                                                                   \
+inline int getrf(const enum CBLAS_ORDER Order, const int M, const int N, type * A, const int lda, int* ipiv) { \
+  int info = call(Order, M, N, reinterpret_cast<cast_as *>(A), lda, ipiv);    \
+  if (!info) return info;                                                     \
+  else {                                                                      \
+    rb_raise(rb_eArgError, "getrf: problem with argument %d\n", info);        \
+    return info;                                                              \
+  }                                                                           \
+}
+
+/* Specialize for ATLAS types */
+/*LAPACK_GETRF(float,      clapack_sgetrf, float)
+LAPACK_GETRF(double,     clapack_dgetrf, double)
+LAPACK_GETRF(Complex64,  clapack_cgetrf, void)
+LAPACK_GETRF(Complex128, clapack_zgetrf, void)
+*/
+
+
+
+/*
+* Function signature conversion for calling LAPACK's potrf functions as directly as possible.
+*
+* For documentation: http://www.netlib.org/lapack/double/dpotrf.f
+*
+* This function should normally go in math.cpp, but we need it to be available to nmatrix.cpp.
+*/
+template <typename DType>
+inline int clapack_potrf(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, void* a, const int lda) {
+  return potrf<DType>(order, uplo, n, reinterpret_cast<DType*>(a), lda);
+}
+
+
+
+template <typename DType>
+inline int potri(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, DType* a, const int lda) {
+  rb_raise(rb_eNotImpError, "potri not yet implemented for non-BLAS dtypes");
+  return 0;
+}
+
+
+#if defined HAVE_CLAPACK_H || defined HAVE_ATLAS_CLAPACK_H
+template <>
+inline int potri(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, float* a, const int lda) {
+  return clapack_spotri(order, uplo, n, a, lda);
+}
+
+template <>
+inline int potri(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, double* a, const int lda) {
+  return clapack_dpotri(order, uplo, n, a, lda);
+}
+
+template <>
+inline int potri(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, Complex64* a, const int lda) {
+  return clapack_cpotri(order, uplo, n, reinterpret_cast<void*>(a), lda);
+}
+
+template <>
+inline int potri(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, Complex128* a, const int lda) {
+  return clapack_zpotri(order, uplo, n, reinterpret_cast<void*>(a), lda);
+}
+#endif
+
+
+/*
+ * Function signature conversion for calling LAPACK's potri functions as directly as possible.
+ *
+ * For documentation: http://www.netlib.org/lapack/double/dpotri.f
+ *
+ * This function should normally go in math.cpp, but we need it to be available to nmatrix.cpp.
+ */
+template <typename DType>
+inline int clapack_potri(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, void* a, const int lda) {
+  return potri<DType>(order, uplo, n, reinterpret_cast<DType*>(a), lda);
+}
+
+
 
 #endif // MATH_ATLAS_H

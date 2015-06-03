@@ -56,8 +56,8 @@
  *
  */
 
-#ifndef GETRI_H
-#define GETRI_H
+#ifndef GETRI_ATLAS_H
+#define GETRI_ATLAS_H
 
 
 namespace nm { namespace math {
@@ -67,6 +67,28 @@ inline int getri(const enum CBLAS_ORDER order, const int n, DType* a, const int 
   rb_raise(rb_eNotImpError, "getri not yet implemented for non-BLAS dtypes");
   return 0;
 }
+
+#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
+template <>
+inline int getri(const enum CBLAS_ORDER order, const int n, float* a, const int lda, const int* ipiv) {
+  return clapack_sgetri(order, n, a, lda, ipiv);
+}
+
+template <>
+inline int getri(const enum CBLAS_ORDER order, const int n, double* a, const int lda, const int* ipiv) {
+  return clapack_dgetri(order, n, a, lda, ipiv);
+}
+
+template <>
+inline int getri(const enum CBLAS_ORDER order, const int n, Complex64* a, const int lda, const int* ipiv) {
+  return clapack_cgetri(order, n, reinterpret_cast<void*>(a), lda, ipiv);
+}
+
+template <>
+inline int getri(const enum CBLAS_ORDER order, const int n, Complex128* a, const int lda, const int* ipiv) {
+  return clapack_zgetri(order, n, reinterpret_cast<void*>(a), lda, ipiv);
+}
+#endif
 
 /*
  * Function signature conversion for calling LAPACK's getri functions as directly as possible.
@@ -83,4 +105,4 @@ inline int clapack_getri(const enum CBLAS_ORDER order, const int n, void* a, con
 
 } } // end nm::math
 
-#endif // GETRI_H
+#endif // GETRI_ATLAS_H

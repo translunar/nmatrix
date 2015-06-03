@@ -533,37 +533,9 @@ inline void smmp_sort_columns(const size_t n, const IType* ia, IType* ja, DType*
  */
 template <typename DType>
 inline int potrf(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, DType* A, const int lda) {
-#if defined HAVE_CLAPACK_H || defined HAVE_ATLAS_CLAPACK_H
-  rb_raise(rb_eNotImpError, "not yet implemented for non-BLAS dtypes");
-#else
   rb_raise(rb_eNotImpError, "only CLAPACK version implemented thus far");
-#endif
   return 0;
 }
-
-#if defined HAVE_CLAPACK_H || defined HAVE_ATLAS_CLAPACK_H
-template <>
-inline int potrf(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, float* A, const int lda) {
-  return clapack_spotrf(order, uplo, N, A, lda);
-}
-
-template <>
-inline int potrf(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, double* A, const int lda) {
-  return clapack_dpotrf(order, uplo, N, A, lda);
-}
-
-template <>
-inline int potrf(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex64* A, const int lda) {
-  return clapack_cpotrf(order, uplo, N, reinterpret_cast<void*>(A), lda);
-}
-
-template <>
-inline int potrf(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex128* A, const int lda) {
-  return clapack_zpotrf(order, uplo, N, reinterpret_cast<void*>(A), lda);
-}
-#endif
-
-
 
 // Copies an upper row-major array from U, zeroing U; U is unit, so diagonal is not copied.
 //
@@ -930,29 +902,6 @@ inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, cons
 }
 
 
-#if defined HAVE_CLAPACK_H || defined HAVE_ATLAS_CLAPACK_H
-template <bool is_complex>
-inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, float* A, const int lda) {
-  clapack_slauum(order, uplo, N, A, lda);
-}
-
-template <bool is_complex>
-inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, double* A, const int lda) {
-  clapack_dlauum(order, uplo, N, A, lda);
-}
-
-template <bool is_complex>
-inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex64* A, const int lda) {
-  clapack_clauum(order, uplo, N, A, lda);
-}
-
-template <bool is_complex>
-inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex128* A, const int lda) {
-  clapack_zlauum(order, uplo, N, A, lda);
-}
-#endif
-
-
 /*
 * Function signature conversion for calling LAPACK's lauum functions as directly as possible.
 *
@@ -1019,30 +968,6 @@ inline int potri(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const
   rb_raise(rb_eNotImpError, "potri not yet implemented for non-BLAS dtypes");
   return 0;
 }
-
-
-#if defined HAVE_CLAPACK_H || defined HAVE_ATLAS_CLAPACK_H
-template <>
-inline int potri(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, float* a, const int lda) {
-  return clapack_spotri(order, uplo, n, a, lda);
-}
-
-template <>
-inline int potri(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, double* a, const int lda) {
-  return clapack_dpotri(order, uplo, n, a, lda);
-}
-
-template <>
-inline int potri(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, Complex64* a, const int lda) {
-  return clapack_cpotri(order, uplo, n, reinterpret_cast<void*>(a), lda);
-}
-
-template <>
-inline int potri(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, Complex128* a, const int lda) {
-  return clapack_zpotri(order, uplo, n, reinterpret_cast<void*>(a), lda);
-}
-#endif
-
 
 /*
  * Function signature conversion for calling LAPACK's potri functions as directly as possible.

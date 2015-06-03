@@ -25,6 +25,15 @@ extern "C" {
                              VALUE lda, VALUE beta, VALUE c, VALUE ldc);
 
   /* LAPACK. */
+  static VALUE nm_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda);
+  static VALUE nm_clapack_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
+  static VALUE nm_clapack_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE ipiv, VALUE b, VALUE ldb);
+  static VALUE nm_clapack_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE b, VALUE ldb);
+  static VALUE nm_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE lda, VALUE ipiv);
+  static VALUE nm_clapack_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
+  static VALUE nm_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1, VALUE k2, VALUE ipiv, VALUE incx);
+  static VALUE nm_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
+
   static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lworkspace_size);
   static VALUE nm_lapack_gesdd(VALUE self, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lworkspace_size);
   static VALUE nm_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_right, VALUE n, VALUE a, VALUE lda, VALUE w, VALUE wi, VALUE vl, VALUE ldvl, VALUE vr, VALUE ldvr, VALUE lwork);
@@ -111,15 +120,25 @@ void nm_math_init_something() {
   cNMatrix_BLAS = rb_define_module_under(cNMatrix, "BLAS");
   cNMatrix_LAPACK = rb_define_module_under(cNMatrix, "LAPACK");
 
-  rb_define_singleton_method(cNMatrix_BLAS, "cblas_trsm", (METHOD)nm_cblas_trsm, 12);
-  rb_define_singleton_method(cNMatrix_BLAS, "cblas_trmm", (METHOD)nm_cblas_trmm, 12);
-  rb_define_singleton_method(cNMatrix_BLAS, "cblas_syrk", (METHOD)nm_cblas_syrk, 11);
-  rb_define_singleton_method(cNMatrix_BLAS, "cblas_herk", (METHOD)nm_cblas_herk, 11);
+  /* ATLAS-CLAPACK Functions */
+  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getrf", (METHOD)nm_clapack_getrf, 5);
+  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_potrf", (METHOD)nm_clapack_potrf, 5);
+  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getrs", (METHOD)nm_clapack_getrs, 9);
+  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_potrs", (METHOD)nm_clapack_potrs, 8);
+  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getri", (METHOD)nm_clapack_getri, 5);
+  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_potri", (METHOD)nm_clapack_potri, 5);
+  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_laswp", (METHOD)nm_clapack_laswp, 7);
+  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_lauum", (METHOD)nm_clapack_lauum, 5);
 
   /* Non-ATLAS regular LAPACK Functions called via Fortran interface */
   rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesvd", (METHOD)nm_lapack_gesvd, 12);
   rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesdd", (METHOD)nm_lapack_gesdd, 11);
   rb_define_singleton_method(cNMatrix_LAPACK, "lapack_geev",  (METHOD)nm_lapack_geev,  12);
+
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_trsm", (METHOD)nm_cblas_trsm, 12);
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_trmm", (METHOD)nm_cblas_trmm, 12);
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_syrk", (METHOD)nm_cblas_syrk, 11);
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_herk", (METHOD)nm_cblas_herk, 11);
 
 }
 
@@ -496,5 +515,380 @@ static VALUE nm_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_right,
     return INT2FIX(info);
   }
 }
+
+static VALUE nm_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
+  static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const enum CBLAS_UPLO, const int n, void* a, const int lda) = {
+      /*nm::math::clapack_lauum<uint8_t, false>,
+      nm::math::clapack_lauum<int8_t, false>,
+      nm::math::clapack_lauum<int16_t, false>,
+      nm::math::clapack_lauum<uint32_t, false>,
+      nm::math::clapack_lauum<uint64_t, false>,*/
+      NULL, NULL, NULL, NULL, NULL,
+      nm::math::clapack_lauum<false, float>,
+      nm::math::clapack_lauum<false, double>,
+#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
+      clapack_clauum, clapack_zlauum, // call directly, same function signature!
+#else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
+      nm::math::clapack_lauum<true, nm::Complex64>,
+      nm::math::clapack_lauum<true, nm::Complex128>,
+#endif
+/*
+      nm::math::clapack_lauum<nm::Rational32, false>,
+      nm::math::clapack_lauum<nm::Rational64, false>,
+      nm::math::clapack_lauum<nm::Rational128, false>,
+      nm::math::clapack_lauum<nm::RubyObject, false>
+
+*/
+  };
+
+  if (!ttable[NM_DTYPE(a)]) {
+    rb_raise(rb_eNotImpError, "does not yet work for non-BLAS dtypes (needs herk, syrk, trmm)");
+  } else {
+    // Call either our version of lauum or the LAPACK version.
+    ttable[NM_DTYPE(a)](blas_order_sym(order), blas_uplo_sym(uplo), FIX2INT(n), NM_STORAGE_DENSE(a)->elements, FIX2INT(lda));
+  }
+
+  return a;
+}
+
+
+/* Call any of the clapack_xgetrf functions as directly as possible.
+ *
+ * The clapack_getrf functions (dgetrf, sgetrf, cgetrf, and zgetrf) compute an LU factorization of a general M-by-N
+ * matrix A using partial pivoting with row interchanges.
+ *
+ * The factorization has the form:
+ *    A = P * L * U
+ * where P is a permutation matrix, L is lower triangular with unit diagonal elements (lower trapezoidal if m > n),
+ * and U is upper triangular (upper trapezoidal if m < n).
+ *
+ * This is the right-looking level 3 BLAS version of the algorithm.
+ *
+ * == Arguments
+ * See: http://www.netlib.org/lapack/double/dgetrf.f
+ * (You don't need argument 5; this is the value returned by this function.)
+ *
+ * You probably don't want to call this function. Instead, why don't you try clapack_getrf, which is more flexible
+ * with its arguments?
+ *
+ * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
+ * handling, so you can easily crash Ruby!
+ *
+ * Returns an array giving the pivot indices (normally these are argument #5).
+ */
+static VALUE nm_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda) {
+  static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const int m, const int n, void* a, const int lda, int* ipiv) = {
+      NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
+      nm::math::clapack_getrf<float>,
+      nm::math::clapack_getrf<double>,
+#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
+      clapack_cgetrf, clapack_zgetrf, // call directly, same function signature!
+#else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
+      nm::math::clapack_getrf<nm::Complex64>,
+      nm::math::clapack_getrf<nm::Complex128>,
+#endif
+      nm::math::clapack_getrf<nm::Rational32>,
+      nm::math::clapack_getrf<nm::Rational64>,
+      nm::math::clapack_getrf<nm::Rational128>,
+      nm::math::clapack_getrf<nm::RubyObject>
+  };
+
+  int M = FIX2INT(m),
+      N = FIX2INT(n);
+
+  // Allocate the pivot index array, which is of size MIN(M, N).
+  size_t ipiv_size = std::min(M,N);
+  int* ipiv = NM_ALLOCA_N(int, ipiv_size);
+
+  if (!ttable[NM_DTYPE(a)]) {
+    rb_raise(nm_eDataTypeError, "this matrix operation undefined for integer matrices");
+  } else {
+    // Call either our version of getrf or the LAPACK version.
+    ttable[NM_DTYPE(a)](blas_order_sym(order), M, N, NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), ipiv);
+  }
+
+  // Result will be stored in a. We return ipiv as an array.
+  VALUE ipiv_array = rb_ary_new2(ipiv_size);
+  for (size_t i = 0; i < ipiv_size; ++i) {
+    rb_ary_store(ipiv_array, i, INT2FIX(ipiv[i]));
+  }
+
+  return ipiv_array;
+}
+
+
+/* Call any of the clapack_xpotrf functions as directly as possible.
+ *
+ * You probably don't want to call this function. Instead, why don't you try clapack_potrf, which is more flexible
+ * with its arguments?
+ *
+ * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
+ * handling, so you can easily crash Ruby!
+ *
+ * Returns an array giving the pivot indices (normally these are argument #5).
+ */
+static VALUE nm_clapack_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
+#if !defined(HAVE_CLAPACK_H) && !defined(HAVE_ATLAS_CLAPACK_H)
+  rb_raise(rb_eNotImpError, "potrf currently requires CLAPACK");
+#endif
+
+  static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const enum CBLAS_UPLO, const int n, void* a, const int lda) = {
+      NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
+      nm::math::clapack_potrf<float>,
+      nm::math::clapack_potrf<double>,
+#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
+      clapack_cpotrf, clapack_zpotrf, // call directly, same function signature!
+#else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
+      nm::math::clapack_potrf<nm::Complex64>,
+      nm::math::clapack_potrf<nm::Complex128>,
+#endif
+      NULL, NULL, NULL, NULL /*
+      nm::math::clapack_potrf<nm::Rational32>,
+      nm::math::clapack_potrf<nm::Rational64>,
+      nm::math::clapack_potrf<nm::Rational128>,
+      nm::math::clapack_potrf<nm::RubyObject> */
+  };
+
+  if (!ttable[NM_DTYPE(a)]) {
+    rb_raise(rb_eNotImpError, "this operation not yet implemented for non-BLAS dtypes");
+    // FIXME: Once BLAS dtypes are implemented, replace error above with the error below.
+    //rb_raise(nm_eDataTypeError, "this matrix operation undefined for integer matrices");
+  } else {
+    // Call either our version of potrf or the LAPACK version.
+    ttable[NM_DTYPE(a)](blas_order_sym(order), blas_uplo_sym(uplo), FIX2INT(n), NM_STORAGE_DENSE(a)->elements, FIX2INT(lda));
+  }
+
+  return a;
+}
+
+
+/*
+ * Call any of the clapack_xgetrs functions as directly as possible.
+ */
+static VALUE nm_clapack_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE ipiv, VALUE b, VALUE ldb) {
+  static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE Trans, const int N,
+                                       const int NRHS, const void* A, const int lda, const int* ipiv, void* B,
+                                       const int ldb) = {
+      NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
+      nm::math::clapack_getrs<float>,
+      nm::math::clapack_getrs<double>,
+#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
+      clapack_cgetrs, clapack_zgetrs, // call directly, same function signature!
+#else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
+      nm::math::clapack_getrs<nm::Complex64>,
+      nm::math::clapack_getrs<nm::Complex128>,
+#endif
+      nm::math::clapack_getrs<nm::Rational32>,
+      nm::math::clapack_getrs<nm::Rational64>,
+      nm::math::clapack_getrs<nm::Rational128>,
+      nm::math::clapack_getrs<nm::RubyObject>
+  };
+
+  // Allocate the C version of the pivot index array
+  int* ipiv_;
+  if (TYPE(ipiv) != T_ARRAY) {
+    rb_raise(rb_eArgError, "ipiv must be of type Array");
+  } else {
+    ipiv_ = NM_ALLOCA_N(int, RARRAY_LEN(ipiv));
+    for (int index = 0; index < RARRAY_LEN(ipiv); ++index) {
+      ipiv_[index] = FIX2INT( RARRAY_PTR(ipiv)[index] );
+    }
+  }
+
+  if (!ttable[NM_DTYPE(a)]) {
+    rb_raise(nm_eDataTypeError, "this matrix operation undefined for integer matrices");
+  } else {
+
+    // Call either our version of getrs or the LAPACK version.
+    ttable[NM_DTYPE(a)](blas_order_sym(order), blas_transpose_sym(trans), FIX2INT(n), FIX2INT(nrhs), NM_STORAGE_DENSE(a)->elements, FIX2INT(lda),
+                        ipiv_, NM_STORAGE_DENSE(b)->elements, FIX2INT(ldb));
+  }
+
+  // b is both returned and modified directly in the argument list.
+  return b;
+}
+
+
+/*
+ * Call any of the clapack_xpotrs functions as directly as possible.
+ */
+static VALUE nm_clapack_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE b, VALUE ldb) {
+  static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const int N,
+                                       const int NRHS, const void* A, const int lda, void* B, const int ldb) = {
+      NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
+      nm::math::clapack_potrs<float,false>,
+      nm::math::clapack_potrs<double,false>,
+#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
+      clapack_cpotrs, clapack_zpotrs, // call directly, same function signature!
+#else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
+      nm::math::clapack_potrs<nm::Complex64,true>,
+      nm::math::clapack_potrs<nm::Complex128,true>,
+#endif
+      nm::math::clapack_potrs<nm::Rational32,false>,
+      nm::math::clapack_potrs<nm::Rational64,false>,
+      nm::math::clapack_potrs<nm::Rational128,false>,
+      nm::math::clapack_potrs<nm::RubyObject,false>
+  };
+
+
+  if (!ttable[NM_DTYPE(a)]) {
+    rb_raise(nm_eDataTypeError, "this matrix operation undefined for integer matrices");
+  } else {
+
+    // Call either our version of potrs or the LAPACK version.
+    ttable[NM_DTYPE(a)](blas_order_sym(order), blas_uplo_sym(uplo), FIX2INT(n), FIX2INT(nrhs), NM_STORAGE_DENSE(a)->elements, FIX2INT(lda),
+                        NM_STORAGE_DENSE(b)->elements, FIX2INT(ldb));
+  }
+
+  // b is both returned and modified directly in the argument list.
+  return b;
+}
+
+/* Call any of the clapack_xgetri functions as directly as possible.
+ *
+ * You probably don't want to call this function. Instead, why don't you try clapack_getri, which is more flexible
+ * with its arguments?
+ *
+ * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
+ * handling, so you can easily crash Ruby!
+ *
+ * Returns an array giving the pivot indices (normally these are argument #5).
+ */
+static VALUE nm_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE lda, VALUE ipiv) {
+#if !defined (HAVE_CLAPACK_H) && !defined (HAVE_ATLAS_CLAPACK_H)
+  rb_raise(rb_eNotImpError, "getri currently requires CLAPACK");
+#endif
+
+  static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const int n, void* a, const int lda, const int* ipiv) = {
+      NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
+      nm::math::clapack_getri<float>,
+      nm::math::clapack_getri<double>,
+#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
+      clapack_cgetri, clapack_zgetri, // call directly, same function signature!
+#else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
+      nm::math::clapack_getri<nm::Complex64>,
+      nm::math::clapack_getri<nm::Complex128>,
+#endif
+      NULL, NULL, NULL, NULL /*
+      nm::math::clapack_getri<nm::Rational32>,
+      nm::math::clapack_getri<nm::Rational64>,
+      nm::math::clapack_getri<nm::Rational128>,
+      nm::math::clapack_getri<nm::RubyObject> */
+  };
+
+  // Allocate the C version of the pivot index array
+  int* ipiv_;
+  if (TYPE(ipiv) != T_ARRAY) {
+    rb_raise(rb_eArgError, "ipiv must be of type Array");
+  } else {
+    ipiv_ = NM_ALLOCA_N(int, RARRAY_LEN(ipiv));
+    for (int index = 0; index < RARRAY_LEN(ipiv); ++index) {
+      ipiv_[index] = FIX2INT( RARRAY_PTR(ipiv)[index] );
+    }
+  }
+
+  if (!ttable[NM_DTYPE(a)]) {
+    rb_raise(rb_eNotImpError, "this operation not yet implemented for non-BLAS dtypes");
+    // FIXME: Once non-BLAS dtypes are implemented, replace error above with the error below.
+    //rb_raise(nm_eDataTypeError, "this matrix operation undefined for integer matrices");
+  } else {
+    // Call either our version of getri or the LAPACK version.
+    ttable[NM_DTYPE(a)](blas_order_sym(order), FIX2INT(n), NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), ipiv_);
+  }
+
+  return a;
+}
+
+
+/* Call any of the clapack_xpotri functions as directly as possible.
+ *
+ * You probably don't want to call this function. Instead, why don't you try clapack_potri, which is more flexible
+ * with its arguments?
+ *
+ * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
+ * handling, so you can easily crash Ruby!
+ *
+ * Returns an array giving the pivot indices (normally these are argument #5).
+ */
+static VALUE nm_clapack_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
+#if !defined (HAVE_CLAPACK_H) && !defined (HAVE_ATLAS_CLAPACK_H)
+  rb_raise(rb_eNotImpError, "getri currently requires CLAPACK");
+#endif
+
+  static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const enum CBLAS_UPLO, const int n, void* a, const int lda) = {
+      NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
+      nm::math::clapack_potri<float>,
+      nm::math::clapack_potri<double>,
+#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
+      clapack_cpotri, clapack_zpotri, // call directly, same function signature!
+#else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
+      nm::math::clapack_potri<nm::Complex64>,
+      nm::math::clapack_potri<nm::Complex128>,
+#endif
+      NULL, NULL, NULL, NULL /*
+      nm::math::clapack_getri<nm::Rational32>,
+      nm::math::clapack_getri<nm::Rational64>,
+      nm::math::clapack_getri<nm::Rational128>,
+      nm::math::clapack_getri<nm::RubyObject> */
+  };
+
+  if (!ttable[NM_DTYPE(a)]) {
+    rb_raise(rb_eNotImpError, "this operation not yet implemented for non-BLAS dtypes");
+    // FIXME: Once BLAS dtypes are implemented, replace error above with the error below.
+    //rb_raise(nm_eDataTypeError, "this matrix operation undefined for integer matrices");
+  } else {
+    // Call either our version of getri or the LAPACK version.
+    ttable[NM_DTYPE(a)](blas_order_sym(order), blas_uplo_sym(uplo), FIX2INT(n), NM_STORAGE_DENSE(a)->elements, FIX2INT(lda));
+  }
+
+  return a;
+}
+
+
+/*
+ * Call any of the clapack_xlaswp functions as directly as possible.
+ *
+ * Note that LAPACK's xlaswp functions accept a column-order matrix, but NMatrix uses row-order. Thus, n should be the
+ * number of rows and lda should be the number of columns, no matter what it says in the documentation for dlaswp.f.
+ */
+static VALUE nm_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1, VALUE k2, VALUE ipiv, VALUE incx) {
+  static void (*ttable[nm::NUM_DTYPES])(const int n, void* a, const int lda, const int k1, const int k2, const int* ipiv, const int incx) = {
+      nm::math::clapack_laswp<uint8_t>,
+      nm::math::clapack_laswp<int8_t>,
+      nm::math::clapack_laswp<int16_t>,
+      nm::math::clapack_laswp<int32_t>,
+      nm::math::clapack_laswp<int64_t>,
+      nm::math::clapack_laswp<float>,
+      nm::math::clapack_laswp<double>,
+//#ifdef HAVE_CLAPACK_H // laswp doesn't actually exist in clapack.h!
+//      clapack_claswp, clapack_zlaswp, // call directly, same function signature!
+//#else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
+      nm::math::clapack_laswp<nm::Complex64>,
+      nm::math::clapack_laswp<nm::Complex128>,
+//#endif
+      nm::math::clapack_laswp<nm::Rational32>,
+      nm::math::clapack_laswp<nm::Rational64>,
+      nm::math::clapack_laswp<nm::Rational128>,
+      nm::math::clapack_laswp<nm::RubyObject>
+  };
+
+  // Allocate the C version of the pivot index array
+  int* ipiv_;
+  if (TYPE(ipiv) != T_ARRAY) {
+    rb_raise(rb_eArgError, "ipiv must be of type Array");
+  } else {
+    ipiv_ = NM_ALLOCA_N(int, RARRAY_LEN(ipiv));
+    for (int index = 0; index < RARRAY_LEN(ipiv); ++index) {
+      ipiv_[index] = FIX2INT( RARRAY_PTR(ipiv)[index] );
+    }
+  }
+
+  // Call either our version of laswp or the LAPACK version.
+  ttable[NM_DTYPE(a)](FIX2INT(n), NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), FIX2INT(k1), FIX2INT(k2), ipiv_, FIX2INT(incx));
+
+  // a is both returned and modified directly in the argument list.
+  return a;
+}
+
 
 }

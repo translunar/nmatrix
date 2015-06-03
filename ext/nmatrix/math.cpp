@@ -173,7 +173,6 @@ extern "C" {
                              VALUE lda, VALUE beta, VALUE c, VALUE ldc);
 
   /* LAPACK. */
-  static VALUE nm_has_clapack(VALUE self);
   static VALUE nm_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda);
   static VALUE nm_clapack_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
   static VALUE nm_clapack_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE ipiv, VALUE b, VALUE ldb);
@@ -565,8 +564,6 @@ extern "C" {
 
 void nm_math_init_blas() {
 	cNMatrix_LAPACK = rb_define_module_under(cNMatrix, "LAPACK");
-
-  rb_define_singleton_method(cNMatrix, "has_clapack?", (METHOD)nm_has_clapack, 0);
 
   /* ATLAS-CLAPACK Functions */
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getrf", (METHOD)nm_clapack_getrf, 5);
@@ -1280,12 +1277,8 @@ static VALUE nm_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALU
       NULL, NULL, NULL, NULL, NULL,
       nm::math::clapack_lauum<false, float>,
       nm::math::clapack_lauum<false, double>,
-#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
-      clapack_clauum, clapack_zlauum, // call directly, same function signature!
-#else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
       nm::math::clapack_lauum<true, nm::Complex64>,
       nm::math::clapack_lauum<true, nm::Complex128>,
-#endif
 /*
       nm::math::clapack_lauum<nm::Rational32, false>,
       nm::math::clapack_lauum<nm::Rational64, false>,
@@ -1335,12 +1328,8 @@ static VALUE nm_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
       nm::math::clapack_getrf<float>,
       nm::math::clapack_getrf<double>,
-#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
-      clapack_cgetrf, clapack_zgetrf, // call directly, same function signature!
-#else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
       nm::math::clapack_getrf<nm::Complex64>,
       nm::math::clapack_getrf<nm::Complex128>,
-#endif
       nm::math::clapack_getrf<nm::Rational32>,
       nm::math::clapack_getrf<nm::Rational64>,
       nm::math::clapack_getrf<nm::Rational128>,
@@ -1382,36 +1371,7 @@ static VALUE nm_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a
  * Returns an array giving the pivot indices (normally these are argument #5).
  */
 static VALUE nm_clapack_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
-#if !defined(HAVE_CLAPACK_H) && !defined(HAVE_ATLAS_CLAPACK_H)
   rb_raise(rb_eNotImpError, "potrf currently requires CLAPACK");
-#endif
-
-  static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const enum CBLAS_UPLO, const int n, void* a, const int lda) = {
-      NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
-      nm::math::clapack_potrf<float>,
-      nm::math::clapack_potrf<double>,
-#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
-      clapack_cpotrf, clapack_zpotrf, // call directly, same function signature!
-#else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
-      nm::math::clapack_potrf<nm::Complex64>,
-      nm::math::clapack_potrf<nm::Complex128>,
-#endif
-      NULL, NULL, NULL, NULL /*
-      nm::math::clapack_potrf<nm::Rational32>,
-      nm::math::clapack_potrf<nm::Rational64>,
-      nm::math::clapack_potrf<nm::Rational128>,
-      nm::math::clapack_potrf<nm::RubyObject> */
-  };
-
-  if (!ttable[NM_DTYPE(a)]) {
-    rb_raise(rb_eNotImpError, "this operation not yet implemented for non-BLAS dtypes");
-    // FIXME: Once BLAS dtypes are implemented, replace error above with the error below.
-    //rb_raise(nm_eDataTypeError, "this matrix operation undefined for integer matrices");
-  } else {
-    // Call either our version of potrf or the LAPACK version.
-    ttable[NM_DTYPE(a)](blas_order_sym(order), blas_uplo_sym(uplo), FIX2INT(n), NM_STORAGE_DENSE(a)->elements, FIX2INT(lda));
-  }
-
   return a;
 }
 
@@ -1426,12 +1386,8 @@ static VALUE nm_clapack_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VAL
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
       nm::math::clapack_getrs<float>,
       nm::math::clapack_getrs<double>,
-#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
-      clapack_cgetrs, clapack_zgetrs, // call directly, same function signature!
-#else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
       nm::math::clapack_getrs<nm::Complex64>,
       nm::math::clapack_getrs<nm::Complex128>,
-#endif
       nm::math::clapack_getrs<nm::Rational32>,
       nm::math::clapack_getrs<nm::Rational64>,
       nm::math::clapack_getrs<nm::Rational128>,
@@ -1472,12 +1428,8 @@ static VALUE nm_clapack_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALU
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
       nm::math::clapack_potrs<float,false>,
       nm::math::clapack_potrs<double,false>,
-#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
-      clapack_cpotrs, clapack_zpotrs, // call directly, same function signature!
-#else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
       nm::math::clapack_potrs<nm::Complex64,true>,
       nm::math::clapack_potrs<nm::Complex128,true>,
-#endif
       nm::math::clapack_potrs<nm::Rational32,false>,
       nm::math::clapack_potrs<nm::Rational64,false>,
       nm::math::clapack_potrs<nm::Rational128,false>,
@@ -1498,20 +1450,6 @@ static VALUE nm_clapack_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALU
   return b;
 }
 
-
-/*
- * Simple way to check from within Ruby code if clapack functions are available, without
- * having to wait around for an exception to be thrown.
- */
-static VALUE nm_has_clapack(VALUE self) {
-#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
-  return Qtrue;
-#else
-  return Qfalse;
-#endif
-}
-
-
 /* Call any of the clapack_xgetri functions as directly as possible.
  *
  * You probably don't want to call this function. Instead, why don't you try clapack_getri, which is more flexible
@@ -1523,47 +1461,7 @@ static VALUE nm_has_clapack(VALUE self) {
  * Returns an array giving the pivot indices (normally these are argument #5).
  */
 static VALUE nm_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE lda, VALUE ipiv) {
-#if !defined (HAVE_CLAPACK_H) && !defined (HAVE_ATLAS_CLAPACK_H)
   rb_raise(rb_eNotImpError, "getri currently requires CLAPACK");
-#endif
-
-  static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const int n, void* a, const int lda, const int* ipiv) = {
-      NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
-      nm::math::clapack_getri<float>,
-      nm::math::clapack_getri<double>,
-#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
-      clapack_cgetri, clapack_zgetri, // call directly, same function signature!
-#else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
-      nm::math::clapack_getri<nm::Complex64>,
-      nm::math::clapack_getri<nm::Complex128>,
-#endif
-      NULL, NULL, NULL, NULL /*
-      nm::math::clapack_getri<nm::Rational32>,
-      nm::math::clapack_getri<nm::Rational64>,
-      nm::math::clapack_getri<nm::Rational128>,
-      nm::math::clapack_getri<nm::RubyObject> */
-  };
-
-  // Allocate the C version of the pivot index array
-  int* ipiv_;
-  if (TYPE(ipiv) != T_ARRAY) {
-    rb_raise(rb_eArgError, "ipiv must be of type Array");
-  } else {
-    ipiv_ = NM_ALLOCA_N(int, RARRAY_LEN(ipiv));
-    for (int index = 0; index < RARRAY_LEN(ipiv); ++index) {
-      ipiv_[index] = FIX2INT( RARRAY_PTR(ipiv)[index] );
-    }
-  }
-
-  if (!ttable[NM_DTYPE(a)]) {
-    rb_raise(rb_eNotImpError, "this operation not yet implemented for non-BLAS dtypes");
-    // FIXME: Once non-BLAS dtypes are implemented, replace error above with the error below.
-    //rb_raise(nm_eDataTypeError, "this matrix operation undefined for integer matrices");
-  } else {
-    // Call either our version of getri or the LAPACK version.
-    ttable[NM_DTYPE(a)](blas_order_sym(order), FIX2INT(n), NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), ipiv_);
-  }
-
   return a;
 }
 
@@ -1579,36 +1477,7 @@ static VALUE nm_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE l
  * Returns an array giving the pivot indices (normally these are argument #5).
  */
 static VALUE nm_clapack_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
-#if !defined (HAVE_CLAPACK_H) && !defined (HAVE_ATLAS_CLAPACK_H)
   rb_raise(rb_eNotImpError, "getri currently requires CLAPACK");
-#endif
-
-  static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const enum CBLAS_UPLO, const int n, void* a, const int lda) = {
-      NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
-      nm::math::clapack_potri<float>,
-      nm::math::clapack_potri<double>,
-#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
-      clapack_cpotri, clapack_zpotri, // call directly, same function signature!
-#else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
-      nm::math::clapack_potri<nm::Complex64>,
-      nm::math::clapack_potri<nm::Complex128>,
-#endif
-      NULL, NULL, NULL, NULL /*
-      nm::math::clapack_getri<nm::Rational32>,
-      nm::math::clapack_getri<nm::Rational64>,
-      nm::math::clapack_getri<nm::Rational128>,
-      nm::math::clapack_getri<nm::RubyObject> */
-  };
-
-  if (!ttable[NM_DTYPE(a)]) {
-    rb_raise(rb_eNotImpError, "this operation not yet implemented for non-BLAS dtypes");
-    // FIXME: Once BLAS dtypes are implemented, replace error above with the error below.
-    //rb_raise(nm_eDataTypeError, "this matrix operation undefined for integer matrices");
-  } else {
-    // Call either our version of getri or the LAPACK version.
-    ttable[NM_DTYPE(a)](blas_order_sym(order), blas_uplo_sym(uplo), FIX2INT(n), NM_STORAGE_DENSE(a)->elements, FIX2INT(lda));
-  }
-
   return a;
 }
 
@@ -1628,12 +1497,8 @@ static VALUE nm_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1,
       nm::math::clapack_laswp<int64_t>,
       nm::math::clapack_laswp<float>,
       nm::math::clapack_laswp<double>,
-//#ifdef HAVE_CLAPACK_H // laswp doesn't actually exist in clapack.h!
-//      clapack_claswp, clapack_zlaswp, // call directly, same function signature!
-//#else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
       nm::math::clapack_laswp<nm::Complex64>,
       nm::math::clapack_laswp<nm::Complex128>,
-//#endif
       nm::math::clapack_laswp<nm::Rational32>,
       nm::math::clapack_laswp<nm::Rational64>,
       nm::math::clapack_laswp<nm::Rational128>,
