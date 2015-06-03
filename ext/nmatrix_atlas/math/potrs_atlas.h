@@ -56,8 +56,16 @@
  *
  */
 
-#ifndef POTRS_H
-#define POTRS_H
+#ifndef POTRS_ATLAS_H
+#define POTRS_ATLAS_H
+
+extern "C" {
+#if defined HAVE_CBLAS_H
+  #include <cblas.h>
+#elif defined HAVE_ATLAS_CBLAS_H
+  #include <atlas/cblas.h>
+#endif
+}
 
 namespace nm { namespace math {
 
@@ -101,6 +109,8 @@ int potrs(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const int N,
   return 0;
 }
 
+//Does this call ATLAS?
+
 
 /*
 * Function signature conversion for calling LAPACK's potrs functions as directly as possible.
@@ -118,4 +128,4 @@ inline int clapack_potrs(const enum CBLAS_ORDER order, const enum CBLAS_UPLO upl
 
 } } // end nm::math
 
-#endif // POTRS_H
+#endif // POTRS_ATLAS_H

@@ -21,9 +21,9 @@
 //
 // * https://github.com/SciRuby/sciruby/wiki/Contributor-Agreement
 //
-// == nrm2.h
+// == rotg.h
 //
-// CBLAS nrm2 function
+// BLAS rotg function in native C++.
 //
 
 /*
@@ -56,104 +56,61 @@
  *
  */
 
-#ifndef NRM2_H
-# define NRM2_H
-
+#ifndef ROTG_ATLAS_H
+# define ROTG_ATLAS_H
 
 namespace nm { namespace math {
 
-/*
- * Level 1 BLAS routine which returns the 2-norm of an n-vector x.
- #
- * Based on input types, these are the valid return types:
- *    int -> int
- *    float -> float or double
- *    double -> double
- *    complex64 -> float or double
- *    complex128 -> double
- *    rational -> rational
- */
-template <typename ReturnDType, typename DType>
-ReturnDType nrm2(const int N, const DType* X, const int incX) {
-  const DType ONE = 1, ZERO = 0;
-  typename LongDType<DType>::type scale = 0, ssq = 1, absxi, temp;
+/* Givens plane rotation. From ATLAS 3.8.4. */
+// FIXME: Not working properly for Ruby objects.
+template <typename DType>
+inline void rotg(DType* a, DType* b, DType* c, DType* s) {
+  DType aa    = std::abs(*a), ab = std::abs(*b);
+  DType roe   = aa > ab ? *a : *b;
+  DType scal  = aa + ab;
 
-
-  if ((N < 1) || (incX < 1))    return ZERO;
-  else if (N == 1)              return std::abs(X[0]);
-
-  for (int i = 0; i < N; ++i) {
-    absxi = std::abs(X[i*incX]);
-    if (scale < absxi) {
-      temp  = scale / absxi;
-      scale = absxi;
-      ssq   = ONE + ssq * (temp * temp);
-    } else {
-      temp = absxi / scale;
-      ssq += temp * temp;
-    }
-  }
-
-  return scale * std::sqrt( ssq );
-}
-
-
-template <typename FloatDType>
-static inline void nrm2_complex_helper(const FloatDType& xr, const FloatDType& xi, double& scale, double& ssq) {
-  double absx = std::abs(xr);
-  if (scale < absx) {
-    double temp  = scale / absx;
-    scale = absx;
-    ssq   = 1.0 + ssq * (temp * temp);
+  if (scal == 0) {
+    *c =  1;
+    *s = *a = *b = 0;
   } else {
-    double temp = absx / scale;
-    ssq += temp * temp;
-  }
-
-  absx = std::abs(xi);
-  if (scale < absx) {
-    double temp  = scale / absx;
-    scale = absx;
-    ssq   = 1.0 + ssq * (temp * temp);
-  } else {
-    double temp = absx / scale;
-    ssq += temp * temp;
+    DType t0  = aa / scal, t1 = ab / scal;
+    DType r   = scal * std::sqrt(t0 * t0 + t1 * t1);
+    if (roe < 0) r = -r;
+    *c = *a / r;
+    *s = *b / r;
+    DType z   = (*c != 0) ? (1 / *c) : DType(1);
+    *a = r;
+    *b = z;
   }
 }
 
 template <>
-float nrm2(const int N, const Complex64* X, const int incX) {
-  double scale = 0, ssq = 1, temp;
-
-  if ((N < 1) || (incX < 1))    return 0.0;
-
-  for (int i = 0; i < N; ++i) {
-    nrm2_complex_helper<float>(X[i*incX].r, X[i*incX].i, scale, temp);
-  }
-
-  return scale * std::sqrt( ssq );
+inline void rotg(float* a, float* b, float* c, float* s) {
+  cblas_srotg(a, b, c, s);
 }
 
 template <>
-double nrm2(const int N, const Complex128* X, const int incX) {
-  double scale = 0, ssq = 1, temp;
-
-  if ((N < 1) || (incX < 1))    return 0.0;
-
-  for (int i = 0; i < N; ++i) {
-    nrm2_complex_helper<double>(X[i*incX].r, X[i*incX].i, scale, temp);
-  }
-
-  return scale * std::sqrt( ssq );
+inline void rotg(double* a, double* b, double* c, double* s) {
+  cblas_drotg(a, b, c, s);
 }
 
-template <typename ReturnDType, typename DType>
-inline void cblas_nrm2(const int N, const void* X, const int incX, void* result) {
-  *reinterpret_cast<ReturnDType*>( result ) = nrm2<ReturnDType, DType>( N, reinterpret_cast<const DType*>(X), incX );
+template <>
+inline void rotg(Complex64* a, Complex64* b, Complex64* c, Complex64* s) {
+  cblas_crotg(reinterpret_cast<void*>(a), reinterpret_cast<void*>(b), reinterpret_cast<void*>(c), reinterpret_cast<void*>(s));
+}
+
+template <>
+inline void rotg(Complex128* a, Complex128* b, Complex128* c, Complex128* s) {
+  cblas_zrotg(reinterpret_cast<void*>(a), reinterpret_cast<void*>(b), reinterpret_cast<void*>(c), reinterpret_cast<void*>(s));
 }
 
 
+template <typename DType>
+inline void cblas_rotg(void* a, void* b, void* c, void* s) {
+  rotg<DType>(reinterpret_cast<DType*>(a), reinterpret_cast<DType*>(b), reinterpret_cast<DType*>(c), reinterpret_cast<DType*>(s));
+}
 
-}} // end of namespace nm::math
 
-#endif // NRM2_H
+} } //nm::math
+
+#endif // ROTG_ATLAS_H

@@ -26,8 +26,8 @@
 // BLAS scal function.
 //
 
-#ifndef SCAL_H
-#define SCAL_H
+#ifndef SCAL_ATLAS_H
+#define SCAL_ATLAS_H
 
 namespace nm { namespace math {
 
@@ -56,6 +56,26 @@ inline void scal(const int n, const DType scalar, DType* x, const int incx) {
   for (int i = 0; incx < 0 ? i > n*incx : i < n*incx; i += incx) {
     x[i] = scalar * x[i];
   }
+}
+
+template <>
+inline void scal(const int n, const float scalar, float* x, const int incx) {
+  cblas_sscal(n, scalar, x, incx);
+}
+
+template <>
+inline void scal(const int n, const double scalar, double* x, const int incx) {
+  cblas_dscal(n, scalar, x, incx);
+}
+
+template <>
+inline void scal(const int n, const Complex64 scalar, Complex64* x, const int incx) {
+  cblas_cscal(n, (const void*)(&scalar), (void*)(x), incx);
+}
+
+template <>
+inline void scal(const int n, const Complex128 scalar, Complex128* x, const int incx) {
+  cblas_zscal(n, (const void*)(&scalar), (void*)(x), incx);
 }
 
 /*

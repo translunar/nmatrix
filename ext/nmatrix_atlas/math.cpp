@@ -3,6 +3,7 @@
  * Project Includes
  */
 
+#include "math/inc.h"
 #include "math/gesvd.h"
 #include "math/gesdd.h"
 #include "math/geev.h"
@@ -13,12 +14,6 @@
  */
 
 extern "C" {
-#if defined HAVE_CLAPACK_H
-  #include <clapack.h>
-#elif defined HAVE_ATLAS_CLAPACK_H
-  #include <atlas/clapack.h>
-#endif
-
   /* BLAS Level 3. */
   static VALUE nm_cblas_trsm(VALUE self, VALUE order, VALUE side, VALUE uplo, VALUE trans_a, VALUE diag, VALUE m, VALUE n,
                              VALUE vAlpha, VALUE a, VALUE lda, VALUE b, VALUE ldb);
@@ -113,12 +108,13 @@ extern "C" {
 ///////////////////
 
 void nm_math_init_something() {
-	cNMatrix_LAPACK = rb_define_module_under(cNMatrix, "LAPACK");
+  cNMatrix_BLAS = rb_define_module_under(cNMatrix, "BLAS");
+  cNMatrix_LAPACK = rb_define_module_under(cNMatrix, "LAPACK");
 
-	rb_define_singleton_method(cNMatrix_BLAS, "cblas_trsm", (METHOD)nm_cblas_trsm, 12);
-	rb_define_singleton_method(cNMatrix_BLAS, "cblas_trmm", (METHOD)nm_cblas_trmm, 12);
-	rb_define_singleton_method(cNMatrix_BLAS, "cblas_syrk", (METHOD)nm_cblas_syrk, 11);
-	rb_define_singleton_method(cNMatrix_BLAS, "cblas_herk", (METHOD)nm_cblas_herk, 11);
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_trsm", (METHOD)nm_cblas_trsm, 12);
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_trmm", (METHOD)nm_cblas_trmm, 12);
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_syrk", (METHOD)nm_cblas_syrk, 11);
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_herk", (METHOD)nm_cblas_herk, 11);
 
   /* Non-ATLAS regular LAPACK Functions called via Fortran interface */
   rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesvd", (METHOD)nm_lapack_gesvd, 12);

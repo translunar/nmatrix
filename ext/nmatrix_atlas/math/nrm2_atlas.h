@@ -56,8 +56,8 @@
  *
  */
 
-#ifndef NRM2_H
-# define NRM2_H
+#ifndef NRM2_ATLAS_H
+# define NRM2_ATLAS_H
 
 
 namespace nm { namespace math {
@@ -98,53 +98,24 @@ ReturnDType nrm2(const int N, const DType* X, const int incX) {
 }
 
 
-template <typename FloatDType>
-static inline void nrm2_complex_helper(const FloatDType& xr, const FloatDType& xi, double& scale, double& ssq) {
-  double absx = std::abs(xr);
-  if (scale < absx) {
-    double temp  = scale / absx;
-    scale = absx;
-    ssq   = 1.0 + ssq * (temp * temp);
-  } else {
-    double temp = absx / scale;
-    ssq += temp * temp;
-  }
-
-  absx = std::abs(xi);
-  if (scale < absx) {
-    double temp  = scale / absx;
-    scale = absx;
-    ssq   = 1.0 + ssq * (temp * temp);
-  } else {
-    double temp = absx / scale;
-    ssq += temp * temp;
-  }
+template <>
+inline float nrm2(const int N, const float* X, const int incX) {
+  return cblas_snrm2(N, X, incX);
 }
 
 template <>
-float nrm2(const int N, const Complex64* X, const int incX) {
-  double scale = 0, ssq = 1, temp;
-
-  if ((N < 1) || (incX < 1))    return 0.0;
-
-  for (int i = 0; i < N; ++i) {
-    nrm2_complex_helper<float>(X[i*incX].r, X[i*incX].i, scale, temp);
-  }
-
-  return scale * std::sqrt( ssq );
+inline double nrm2(const int N, const double* X, const int incX) {
+  return cblas_dnrm2(N, X, incX);
 }
 
 template <>
-double nrm2(const int N, const Complex128* X, const int incX) {
-  double scale = 0, ssq = 1, temp;
+inline float nrm2(const int N, const Complex64* X, const int incX) {
+  return cblas_scnrm2(N, X, incX);
+}
 
-  if ((N < 1) || (incX < 1))    return 0.0;
-
-  for (int i = 0; i < N; ++i) {
-    nrm2_complex_helper<double>(X[i*incX].r, X[i*incX].i, scale, temp);
-  }
-
-  return scale * std::sqrt( ssq );
+template <>
+inline double nrm2(const int N, const Complex128* X, const int incX) {
+  return cblas_dznrm2(N, X, incX);
 }
 
 template <typename ReturnDType, typename DType>
@@ -156,4 +127,4 @@ inline void cblas_nrm2(const int N, const void* X, const int incX, void* result)
 
 }} // end of namespace nm::math
 
-#endif // NRM2_H
+#endif // NRM2_ATLAS_H

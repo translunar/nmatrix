@@ -119,7 +119,6 @@
 
 #include "math/cblas_enums.h"
 
-#include "math/inc.h"
 #include "data/data.h"
 #include "math/swap.h"
 #include "math/imax.h"

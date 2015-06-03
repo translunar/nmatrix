@@ -26,8 +26,8 @@
 // BLAS level 1 function imax.
 //
 
-#ifndef IMAX_H
-#define IMAX_H
+#ifndef IMAX_ATLAS_H
+#define IMAX_ATLAS_H
 
 namespace nm { namespace math {
 
@@ -69,6 +69,26 @@ inline int imax(const int n, const DType *x, const int incx) {
   return imax;
 }
 
+template<>
+inline int imax(const int n, const float* x, const int incx) {
+  return cblas_isamax(n, x, incx);
+}
+
+template<>
+inline int imax(const int n, const double* x, const int incx) {
+  return cblas_idamax(n, x, incx);
+}
+
+template<>
+inline int imax(const int n, const Complex64* x, const int incx) {
+  return cblas_icamax(n, x, incx);
+}
+
+template <>
+inline int imax(const int n, const Complex128* x, const int incx) {
+  return cblas_izamax(n, x, incx);
+}
+
 template<typename DType>
 inline int cblas_imax(const int n, const void* x, const int incx) {
   return imax<DType>(n, reinterpret_cast<const DType*>(x), incx);
@@ -76,4 +96,4 @@ inline int cblas_imax(const int n, const void* x, const int incx) {
 
 }} // end of namespace nm::math
 
-#endif /* IMAX_H */
+#endif /* IMAX_ATLAS_H */
