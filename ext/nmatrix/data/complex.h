@@ -165,6 +165,19 @@ class Complex {
 	}
 
 	template <typename OtherType>
+	inline Complex<Type> operator/=(const Complex<OtherType>& other) {
+		Type new_r, new_i;
+		Type denom = other.i * other.i + other.r * other.r;
+
+		new_r = (this->r * other.r + this->i * other.i) / denom;
+		new_i = (this->i * other.r - this->r * other.i) / denom;
+
+		this->r = new_r;
+		this->i = new_i;
+		return *this;
+	}
+
+	template <typename OtherType>
 	inline bool operator<(const Complex<OtherType>& other) const {
 		return (this->r < other.r) || ((this->r <= other.r) && (this->i < other.i));
 	}
