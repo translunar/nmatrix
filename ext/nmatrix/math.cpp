@@ -173,6 +173,7 @@ extern "C" {
                              VALUE lda, VALUE beta, VALUE c, VALUE ldc);
 
   /* LAPACK. */
+  static VALUE nm_has_clapack(VALUE self);
   static VALUE nm_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda);
   static VALUE nm_clapack_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
   static VALUE nm_clapack_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE ipiv, VALUE b, VALUE ldb);
@@ -564,6 +565,8 @@ extern "C" {
 
 void nm_math_init_blas() {
 	cNMatrix_LAPACK = rb_define_module_under(cNMatrix, "LAPACK");
+
+  rb_define_singleton_method(cNMatrix, "has_clapack?", (METHOD)nm_has_clapack, 0);
 
   /* ATLAS-CLAPACK Functions */
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getrf", (METHOD)nm_clapack_getrf, 5);
@@ -1448,6 +1451,14 @@ static VALUE nm_clapack_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALU
 
   // b is both returned and modified directly in the argument list.
   return b;
+}
+
+/*
+ * Simple way to check from within Ruby code if clapack functions are available, without
+ * having to wait around for an exception to be thrown.
+ */
+static VALUE nm_has_clapack(VALUE self) {
+  return Qfalse;
 }
 
 /* Call any of the clapack_xgetri functions as directly as possible.
