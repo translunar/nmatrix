@@ -1488,7 +1488,7 @@ static VALUE nm_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE l
  * Returns an array giving the pivot indices (normally these are argument #5).
  */
 static VALUE nm_clapack_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
-  rb_raise(rb_eNotImpError, "getri currently requires CLAPACK");
+  rb_raise(rb_eNotImpError, "potri currently requires CLAPACK");
   return a;
 }
 
