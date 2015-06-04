@@ -152,8 +152,13 @@ describe NMatrix::BLAS do
       end
 
       it "exposes asum for single element" do
-        x = NMatrix.new([1], [-1], dtype: :float64)
-        expect(x.asum).to eq(1.0)
+        if [:complex64,:complex128].include?(dtype)
+          x = NMatrix.new([1], [Complex(-3,2)], dtype: dtype)
+          expect(x.asum).to eq(5.0)
+        else
+          x = NMatrix.new([1], [-1], dtype: dtype)
+          expect(x.asum).to eq(1.0)
+        end
       end
 
       it "exposes nrm2" do

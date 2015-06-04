@@ -791,7 +791,10 @@ class NMatrix
   #
   # Return the sum of the contents of the vector. This is the BLAS asum routine.
   def asum incx=1, n=nil
-    return self[0].abs if self.shape == [1]
+    if self.shape == [1]
+      return self[0].abs unless self.complex_dtype?
+      return self[0].real.abs + self[0].imag.abs
+    end
     return method_missing(:asum, incx, n) unless vector?
     NMatrix::BLAS::asum(self, incx, self.size / incx)
   end
