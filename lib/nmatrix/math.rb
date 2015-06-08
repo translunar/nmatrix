@@ -455,7 +455,11 @@ class NMatrix
     # the factorized matrix.
     pivot = copy.getrf!
 
-    prod = pivot.size % 2 == 1 ? -1 : 1 # odd permutations => negative
+    num_perm = 0 #number of permutations
+    pivot.each_with_index do |swap, i|
+      num_perm += 1 if swap != i
+    end
+    prod = num_perm % 2 == 1 ? -1 : 1 # odd permutations => negative
     [shape[0],shape[1]].min.times do |i|
       prod *= copy[i,i]
     end
