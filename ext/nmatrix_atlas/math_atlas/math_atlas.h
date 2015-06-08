@@ -180,9 +180,6 @@ inline void trmm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const
   cblas_ztrmm(order, side, uplo, ta, diag, m, n, alpha, A, lda, B, ldb);
 }
 
-  }
-}
-
 /*
  * From ATLAS 3.8.0:
  *
@@ -434,5 +431,6 @@ inline int clapack_potri(const enum CBLAS_ORDER order, const enum CBLAS_UPLO upl
 }
 
 
+}} // end namespace nm::math
 
 #endif // MATH_ATLAS_H

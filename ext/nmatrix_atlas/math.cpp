@@ -3,11 +3,34 @@
  * Project Includes
  */
 
-#include "math/inc.h"
-#include "math/gesvd.h"
-#include "math/gesdd.h"
-#include "math/geev.h"
-#include "math/trsm_atlas.h"
+#include "data/data.h"
+
+#include "math_atlas/inc.h"
+
+//BLAS
+#include "math_atlas/asum_atlas.h"
+#include "math_atlas/trsm_atlas.h"
+#include "math/long_dtype.h" //this should really be in gemv.h, gemm.h
+#include "math_atlas/gemv_atlas.h"
+#include "math_atlas/gemm_atlas.h"
+#include "math_atlas/imax_atlas.h"
+#include "math_atlas/nrm2_atlas.h"
+#include "math_atlas/rot_atlas.h"
+#include "math_atlas/rotg_atlas.h"
+#include "math_atlas/scal_atlas.h"
+
+//LAPACK
+#include "math/laswp.h"
+#include "math/getrf.h"
+#include "math_atlas/getri_atlas.h"
+#include "math_atlas/getrs_atlas.h"
+#include "math_atlas/potrs_atlas.h"
+
+#include "math_atlas/gesvd.h"
+#include "math_atlas/gesdd.h"
+#include "math_atlas/geev.h"
+
+#include "math_atlas/math_atlas.h"
 
 /*
  * Forward Declarations
@@ -116,30 +139,44 @@ extern "C" {
 // Ruby Bindings //
 ///////////////////
 
-void nm_math_init_something() {
+void nm_math_init_atlas() {
   cNMatrix_BLAS = rb_define_module_under(cNMatrix, "BLAS");
   cNMatrix_LAPACK = rb_define_module_under(cNMatrix, "LAPACK");
 
   /* ATLAS-CLAPACK Functions */
-  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getrf", (METHOD)nm_clapack_getrf, 5);
-  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_potrf", (METHOD)nm_clapack_potrf, 5);
-  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getrs", (METHOD)nm_clapack_getrs, 9);
-  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_potrs", (METHOD)nm_clapack_potrs, 8);
-  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getri", (METHOD)nm_clapack_getri, 5);
-  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_potri", (METHOD)nm_clapack_potri, 5);
-  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_laswp", (METHOD)nm_clapack_laswp, 7);
-  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_lauum", (METHOD)nm_clapack_lauum, 5);
+//  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getrf", (METHOD)nm_clapack_getrf, 5);
+//  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_potrf", (METHOD)nm_clapack_potrf, 5);
+//  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getrs", (METHOD)nm_clapack_getrs, 9);
+//  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_potrs", (METHOD)nm_clapack_potrs, 8);
+  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getri_test", (METHOD)nm_clapack_getri, 5);
+//  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_potri", (METHOD)nm_clapack_potri, 5);
+//  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_laswp", (METHOD)nm_clapack_laswp, 7);
+//  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_lauum", (METHOD)nm_clapack_lauum, 5);
+//
+//  /* Non-ATLAS regular LAPACK Functions called via Fortran interface */
+//  rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesvd", (METHOD)nm_lapack_gesvd, 12);
+//  rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesdd", (METHOD)nm_lapack_gesdd, 11);
+//  rb_define_singleton_method(cNMatrix_LAPACK, "lapack_geev",  (METHOD)nm_lapack_geev,  12);
+//
+//  rb_define_singleton_method(cNMatrix_BLAS, "cblas_trsm", (METHOD)nm_cblas_trsm, 12);
+//  rb_define_singleton_method(cNMatrix_BLAS, "cblas_trmm", (METHOD)nm_cblas_trmm, 12);
+//  rb_define_singleton_method(cNMatrix_BLAS, "cblas_syrk", (METHOD)nm_cblas_syrk, 11);
+//  rb_define_singleton_method(cNMatrix_BLAS, "cblas_herk", (METHOD)nm_cblas_herk, 11);
 
-  /* Non-ATLAS regular LAPACK Functions called via Fortran interface */
-  rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesvd", (METHOD)nm_lapack_gesvd, 12);
-  rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesdd", (METHOD)nm_lapack_gesdd, 11);
-  rb_define_singleton_method(cNMatrix_LAPACK, "lapack_geev",  (METHOD)nm_lapack_geev,  12);
+}
 
-  rb_define_singleton_method(cNMatrix_BLAS, "cblas_trsm", (METHOD)nm_cblas_trsm, 12);
-  rb_define_singleton_method(cNMatrix_BLAS, "cblas_trmm", (METHOD)nm_cblas_trmm, 12);
-  rb_define_singleton_method(cNMatrix_BLAS, "cblas_syrk", (METHOD)nm_cblas_syrk, 11);
-  rb_define_singleton_method(cNMatrix_BLAS, "cblas_herk", (METHOD)nm_cblas_herk, 11);
-
+/* Interprets cblas argument which could be any of false/:no_transpose, :transpose, or :complex_conjugate,
+ * into an enum recognized by cblas.
+ *
+ * Called by nm_cblas_gemm -- basically inline.
+ *
+ */
+static inline enum CBLAS_TRANSPOSE blas_transpose_sym(VALUE op) {
+  if (op == Qfalse || rb_to_id(op) == nm_rb_no_transpose) return CblasNoTrans;
+  else if (rb_to_id(op) == nm_rb_transpose) return CblasTrans;
+  else if (rb_to_id(op) == nm_rb_complex_conjugate) return CblasConjTrans;
+  else rb_raise(rb_eArgError, "Expected false, :transpose, or :complex_conjugate");
+  return CblasNoTrans;
 }
 
 /*
@@ -164,6 +201,53 @@ static inline char lapack_svd_job_sym(VALUE op) {
 static inline char lapack_evd_job_sym(VALUE op) {
   if (op == Qfalse || op == Qnil || rb_to_id(op) == rb_intern("n")) return 'N';
   else return 'V';
+}
+
+/*
+ * Interprets cblas argument which could be :upper or :lower
+ *
+ * Called by nm_cblas_trsm -- basically inline
+ */
+static inline enum CBLAS_UPLO blas_uplo_sym(VALUE op) {
+  ID op_id = rb_to_id(op);
+  if (op_id == nm_rb_upper) return CblasUpper;
+  if (op_id == nm_rb_lower) return CblasLower;
+  rb_raise(rb_eArgError, "Expected :upper or :lower for uplo argument");
+  return CblasUpper;
+}
+
+/*
+ * Interprets cblas argument which could be :row or :col
+ */
+static inline enum CBLAS_ORDER blas_order_sym(VALUE op) {
+  if (rb_to_id(op) == rb_intern("row") || rb_to_id(op) == rb_intern("row_major")) return CblasRowMajor;
+  else if (rb_to_id(op) == rb_intern("col") || rb_to_id(op) == rb_intern("col_major") ||
+           rb_to_id(op) == rb_intern("column") || rb_to_id(op) == rb_intern("column_major")) return CblasColMajor;
+  rb_raise(rb_eArgError, "Expected :row or :col for order argument");
+  return CblasRowMajor;
+}
+
+/*
+ * Interprets cblas argument which could be :unit (true) or :nonunit (false or anything other than true/:unit)
+ *
+ * Called by nm_cblas_trsm -- basically inline
+ */
+static inline enum CBLAS_DIAG blas_diag_sym(VALUE op) {
+  if (rb_to_id(op) == nm_rb_unit || op == Qtrue) return CblasUnit;
+  return CblasNonUnit;
+}
+
+/*
+ * Interprets cblas argument which could be :left or :right
+ *
+ * Called by nm_cblas_trsm -- basically inline
+ */
+static inline enum CBLAS_SIDE blas_side_sym(VALUE op) {
+  ID op_id = rb_to_id(op);
+  if (op_id == nm_rb_left)  return CblasLeft;
+  if (op_id == nm_rb_right) return CblasRight;
+  rb_raise(rb_eArgError, "Expected :left or :right for side argument");
+  return CblasLeft;
 }
 
 static VALUE nm_cblas_trsm(VALUE self,

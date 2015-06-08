@@ -102,7 +102,7 @@ $CXXFLAGS = ["-Wall -Werror=return-type -I$(srcdir)/../nmatrix",$CXXFLAGS].join(
 $CPPFLAGS = ["-Wall -Werror=return-type -I$(srcdir)/../nmatrix",$CPPFLAGS].join(" ")
 
 # When adding objects here, make sure their directories are included in CLEANOBJS down at the bottom of extconf.rb.
-basenames = %w{nmatrix_atlas}
+basenames = %w{nmatrix_atlas math}
 $objs = basenames.map { |b| "#{b}.o"   }
 $srcs = basenames.map { |b| "#{b}.cpp" }
 
