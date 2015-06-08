@@ -223,6 +223,12 @@ namespace nm {
       }
     }
 
+    //we can't do det_exact on byte, because it will want to return a byte (unsigned), but determinants can be negative, even if all elements of the matrix are positive
+    template <>
+    void det_exact<uint8_t>(const int M, const void* A_elements, const int lda, void* result_arg) {
+      rb_raise(nm_eDataTypeError, "cannot call det_exact on unsigned type");
+    }
+
     /*
      * Solve a system of linear equations using forward-substution followed by 
      * back substution from the LU factorization of the matrix of co-efficients.

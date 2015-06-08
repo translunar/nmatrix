@@ -455,7 +455,11 @@ class NMatrix
     # the factorized matrix.
     pivot = copy.getrf!
 
-    prod = pivot.size % 2 == 1 ? -1 : 1 # odd permutations => negative
+    num_perm = 0 #number of permutations
+    pivot.each_with_index do |swap, i|
+      num_perm += 1 if swap != i
+    end
+    prod = num_perm % 2 == 1 ? -1 : 1 # odd permutations => negative
     [shape[0],shape[1]].min.times do |i|
       prod *= copy[i,i]
     end
@@ -791,7 +795,10 @@ class NMatrix
   #
   # Return the sum of the contents of the vector. This is the BLAS asum routine.
   def asum incx=1, n=nil
-    return self[0].abs if self.shape == [1]
+    if self.shape == [1]
+      return self[0].abs unless self.complex_dtype?
+      return self[0].real.abs + self[0].imag.abs
+    end
     return method_missing(:asum, incx, n) unless vector?
     NMatrix::BLAS::asum(self, incx, self.size / incx)
   end
