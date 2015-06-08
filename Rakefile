@@ -58,16 +58,21 @@ end
 
 require 'rspec/core/rake_task'
 require 'rspec/core'
-require 'rspec/core/rake_task'
-RSpec::Core::RakeTask.new(:spec) do |spec|
-  test_files = []
+namespace :spec do
+  spec_tasks = []
   gemspecs.each do |gemspec|
-    test_files += gemspec.test_files
+    test_files = gemspec.test_files
+    test_files.keep_if { |file| file =~ /_spec\.rb$/ }
+    next if test_files.empty?
+    spec_tasks << gemspec
+    RSpec::Core::RakeTask.new(gemspec) do |spec|
+      spec.pattern = FileList.new(test_files)
+    end
   end
-  test_files.keep_if { |file| file =~ /_spec\.rb$/ }
-  spec.pattern = FileList.new(test_files)
+  task :all => spec_tasks
 end
 
+task :spec => "spec:all"
 
 BASEDIR = Pathname( __FILE__ ).dirname.relative_path_from( Pathname.pwd )
 SPECDIR = BASEDIR + 'spec'

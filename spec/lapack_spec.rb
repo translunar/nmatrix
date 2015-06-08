@@ -373,6 +373,7 @@ describe NMatrix::LAPACK do
       end
 
       it "exposes geev" do
+        pending("temporarily disable WL 2015-06-08")
         pending("needs rational implementation") if dtype.to_s =~ /rational/
         ary = %w|-1.01 0.86 -4.60 3.31 -4.81
                      3.98 0.53 -7.04 5.29 3.55
