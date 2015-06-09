@@ -59,6 +59,11 @@ end
 require 'rspec/core/rake_task'
 require 'rspec/core'
 namespace :spec do
+  #We need a separate rake task for each plugin, rather than one big task that
+  #runs all of the specs. This is because there's no way to tell rspec
+  #to run the specs in a certain order with (say) "nmatrix/atlas" require'd
+  #for some of the specs, but not for others, without splitting them up like
+  #this.
   spec_tasks = []
   gemspecs.each do |gemspec|
     test_files = gemspec.test_files

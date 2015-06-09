@@ -27,7 +27,11 @@
 
 require 'spec_helper'
 
-describe NMatrix::LAPACK do
+require 'lapack_shared'
+
+describe "NMatrix::LAPACK internal implementation" do
+  include_examples "LAPACK shared"
+
   # where integer math is allowed
   [:byte, :int8, :int16, :int32, :int64, :rational32, :rational64, :rational128, :float32, :float64, :complex64, :complex128].each do |dtype|
     context dtype do
@@ -124,20 +128,6 @@ describe NMatrix::LAPACK do
         expect(b[0]).to eq(5)
         expect(b[1]).to eq(-15.quo(2))
         expect(b[2]).to eq(-13)
-      end
-
-      it "exposes clapack_getri" do
-        a = NMatrix.new(:dense, 3, [1,0,4,1,1,6,-3,0,-10], dtype)
-        ipiv = NMatrix::LAPACK::clapack_getrf(:row, 3, 3, a, 3) # get pivot from getrf, use for getri
-
-        begin
-          NMatrix::LAPACK::clapack_getri(:row, 3, a, 3, ipiv)
-
-          b = NMatrix.new(:dense, 3, [-5,0,-2,-4,1,-1,1.5,0,0.5], dtype)
-          expect(a).to eq(b)
-        rescue NotImplementedError => e
-          pending e.to_s
-        end
       end
 
      it "exposes lapack_gesvd" do
