@@ -73,32 +73,6 @@ describe "NMatrix::LAPACK internal implementation" do
         expect(NMatrix::LAPACK::clapack_gesv(:row,a.shape[0],b.shape[1],a,a.shape[0],b,b.shape[0])).to be_within(err).of(NMatrix[[-1.quo(2)], [0], [1.quo(2)]].cast(dtype: dtype))
       end
 
-
-      it "exposes clapack_getrf" do
-        a = NMatrix.new(3, [4,9,2,3,5,7,8,1,6], dtype: dtype)
-        NMatrix::LAPACK::clapack_getrf(:row, 3, 3, a, 3)
-
-        # delta varies for different dtypes
-        err = case dtype
-                when :float32, :complex64
-                  1e-6
-                when :float64, :complex128
-                  1e-15
-                else
-                  1e-64 # FIXME: should be 0, but be_within(0) does not work.
-              end
-
-        expect(a[0,0]).to eq(9) # 8
-        expect(a[0,1]).to be_within(err).of(2.quo(9)) # 1
-        expect(a[0,2]).to be_within(err).of(4.quo(9)) # 6
-        expect(a[1,0]).to eq(5) # 1.quo(2)
-        expect(a[1,1]).to be_within(err).of(53.quo(9)) # 17.quo(2)
-        expect(a[1,2]).to be_within(err).of(7.quo(53)) # -1
-        expect(a[2,0]).to eq(1) # 3.quo(8)
-        expect(a[2,1]).to be_within(err).of(52.quo(9))
-        expect(a[2,2]).to be_within(err).of(360.quo(53))
-      end
-
       it "exposes clapack_potrf" do
         # first do upper
         begin
