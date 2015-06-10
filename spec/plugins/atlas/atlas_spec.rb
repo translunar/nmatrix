@@ -1,6 +1,7 @@
 require 'spec_helper'
 require 'lapack_shared'
 require "./lib/nmatrix/atlas"
+require 'math_shared'
 
 describe "NMatrix::LAPACK implementation from nmatrix-atlas plugin" do
   it "returns 3" do
@@ -13,4 +14,5 @@ describe "NMatrix::LAPACK implementation from nmatrix-atlas plugin" do
   end
 
   include_examples "LAPACK shared"
+  include_examples "math shared"
 end
