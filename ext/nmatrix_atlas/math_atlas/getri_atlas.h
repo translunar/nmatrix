@@ -60,7 +60,7 @@
 #define GETRI_ATLAS_H
 
 
-namespace nm { namespace math {
+namespace nm { namespace math { namespace atlas {
 
 template <typename DType>
 inline int getri(const enum CBLAS_ORDER order, const int n, DType* a, const int lda, const int* ipiv) {
@@ -103,6 +103,6 @@ inline int clapack_getri(const enum CBLAS_ORDER order, const int n, void* a, con
 }
 
 
-} } // end nm::math
+} } } // end nm::math::atlas
 
 #endif // GETRI_ATLAS_H
