@@ -133,7 +133,6 @@
 #include "math/asum.h"
 #include "math/nrm2.h"
 #include "math/getrf.h"
-#include "math/getri.h"
 #include "math/getrs.h"
 #include "math/potrs.h"
 #include "math/rot.h"
