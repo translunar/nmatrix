@@ -21,7 +21,7 @@
 
 //LAPACK
 #include "math/laswp.h"
-#include "math/getrf.h"
+#include "math_atlas/getrf_atlas.h"
 #include "math_atlas/getri_atlas.h"
 #include "math_atlas/getrs_atlas.h"
 #include "math_atlas/potrs_atlas.h"
@@ -48,7 +48,7 @@ extern "C" {
                              VALUE lda, VALUE beta, VALUE c, VALUE ldc);
 
   /* LAPACK. */
-  static VALUE nm_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda);
+  static VALUE nm_atlas_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda);
   static VALUE nm_clapack_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
   static VALUE nm_clapack_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE ipiv, VALUE b, VALUE ldb);
   static VALUE nm_clapack_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE b, VALUE ldb);
@@ -142,7 +142,7 @@ extern "C" {
 void nm_math_init_atlas() {
 
   /* ATLAS-CLAPACK Functions */
-//  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getrf", (METHOD)nm_clapack_getrf, 5);
+  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getrf", (METHOD)nm_atlas_clapack_getrf, 5);
 //  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_potrf", (METHOD)nm_clapack_potrf, 5);
 //  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getrs", (METHOD)nm_clapack_getrs, 9);
 //  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_potrs", (METHOD)nm_clapack_potrs, 8);
@@ -658,21 +658,21 @@ static VALUE nm_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALU
  *
  * Returns an array giving the pivot indices (normally these are argument #5).
  */
-static VALUE nm_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda) {
+static VALUE nm_atlas_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda) {
   static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const int m, const int n, void* a, const int lda, int* ipiv) = {
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
-      nm::math::clapack_getrf<float>,
-      nm::math::clapack_getrf<double>,
+      nm::math::atlas::clapack_getrf<float>,
+      nm::math::atlas::clapack_getrf<double>,
 #if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
       clapack_cgetrf, clapack_zgetrf, // call directly, same function signature!
 #else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
-      nm::math::clapack_getrf<nm::Complex64>,
-      nm::math::clapack_getrf<nm::Complex128>,
+      nm::math::atlas::clapack_getrf<nm::Complex64>,
+      nm::math::atlas::clapack_getrf<nm::Complex128>,
 #endif
-      nm::math::clapack_getrf<nm::Rational32>,
-      nm::math::clapack_getrf<nm::Rational64>,
-      nm::math::clapack_getrf<nm::Rational128>,
-      nm::math::clapack_getrf<nm::RubyObject>
+      nm::math::atlas::clapack_getrf<nm::Rational32>,
+      nm::math::atlas::clapack_getrf<nm::Rational64>,
+      nm::math::atlas::clapack_getrf<nm::Rational128>,
+      nm::math::atlas::clapack_getrf<nm::RubyObject>
   };
 
   int M = FIX2INT(m),
