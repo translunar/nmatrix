@@ -138,6 +138,7 @@
 #include "math/rot.h"
 #include "math/rotg.h"
 #include "math/math.h"
+#include "math/util.h"
 #include "storage/dense/dense.h"
 
 #include "nmatrix.h"
@@ -606,22 +607,6 @@ void nm_math_init_blas() {
 	rb_define_singleton_method(cNMatrix_BLAS, "cblas_herk", (METHOD)nm_cblas_herk, 11);
 }
 
-
-
-/* Interprets cblas argument which could be any of false/:no_transpose, :transpose, or :complex_conjugate,
- * into an enum recognized by cblas.
- *
- * Called by nm_cblas_gemm -- basically inline.
- *
- */
-static inline enum CBLAS_TRANSPOSE blas_transpose_sym(VALUE op) {
-  if (op == Qfalse || rb_to_id(op) == nm_rb_no_transpose) return CblasNoTrans;
-  else if (rb_to_id(op) == nm_rb_transpose) return CblasTrans;
-  else if (rb_to_id(op) == nm_rb_complex_conjugate) return CblasConjTrans;
-  else rb_raise(rb_eArgError, "Expected false, :transpose, or :complex_conjugate");
-  return CblasNoTrans;
-}
-
 /*
  * call-seq:
  *     NMatrix::BLAS.cblas_scal(n, alpha, vector, inc) -> NMatrix
@@ -651,55 +636,6 @@ static VALUE nm_cblas_scal(VALUE self, VALUE n, VALUE alpha, VALUE vector, VALUE
 
   return vector;
 }
-
-/*
- * Interprets cblas argument which could be :left or :right
- *
- * Called by nm_cblas_trsm -- basically inline
- */
-static inline enum CBLAS_SIDE blas_side_sym(VALUE op) {
-  ID op_id = rb_to_id(op);
-  if (op_id == nm_rb_left)  return CblasLeft;
-  if (op_id == nm_rb_right) return CblasRight;
-  rb_raise(rb_eArgError, "Expected :left or :right for side argument");
-  return CblasLeft;
-}
-
-/*
- * Interprets cblas argument which could be :upper or :lower
- *
- * Called by nm_cblas_trsm -- basically inline
- */
-static inline enum CBLAS_UPLO blas_uplo_sym(VALUE op) {
-  ID op_id = rb_to_id(op);
-  if (op_id == nm_rb_upper) return CblasUpper;
-  if (op_id == nm_rb_lower) return CblasLower;
-  rb_raise(rb_eArgError, "Expected :upper or :lower for uplo argument");
-  return CblasUpper;
-}
-
-
-/*
- * Interprets cblas argument which could be :unit (true) or :nonunit (false or anything other than true/:unit)
- *
- * Called by nm_cblas_trsm -- basically inline
- */
-static inline enum CBLAS_DIAG blas_diag_sym(VALUE op) {
-  if (rb_to_id(op) == nm_rb_unit || op == Qtrue) return CblasUnit;
-  return CblasNonUnit;
-}
-
-/*
- * Interprets cblas argument which could be :row or :col
- */
-static inline enum CBLAS_ORDER blas_order_sym(VALUE op) {
-  if (rb_to_id(op) == rb_intern("row") || rb_to_id(op) == rb_intern("row_major")) return CblasRowMajor;
-  else if (rb_to_id(op) == rb_intern("col") || rb_to_id(op) == rb_intern("col_major") ||
-           rb_to_id(op) == rb_intern("column") || rb_to_id(op) == rb_intern("column_major")) return CblasColMajor;
-  rb_raise(rb_eArgError, "Expected :row or :col for order argument");
-  return CblasRowMajor;
-}
-
 
 /*
  * Call any of the cblas_xrotg functions as directly as possible.
