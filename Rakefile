@@ -4,10 +4,12 @@ require 'rubygems'
 require 'rubygems/package_task'
 require 'bundler'
 
-#specify plugins to build on the command line like:
+#Specify plugins to build on the command line like:
 #rake whatever nmatrix_plugins=atlas,lapack
 #or
 #rake whatever nmatrix_plugins=all
+#If you want to build *only* plugins and not the core nmatrix gem:
+#rake whatever nmatrix_plugins=all nmatrix_core=false
 if ENV["nmatrix_plugins"] == "all"
   gemspecs = Dir["*.gemspec"]
 else
@@ -17,6 +19,9 @@ else
   plugins.each do |plugin|
     gemspecs << "nmatrix-#{plugin}.gemspec"
   end
+end
+if ENV["nmatrix_core"] == "false"
+  gemspecs -= ["nmatrix.gemspec"]
 end
 gemspecs.map! { |gemspec| eval(IO.read(gemspec)) }
 
