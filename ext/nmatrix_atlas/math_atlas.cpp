@@ -40,6 +40,8 @@
 
 extern "C" {
   /* BLAS Level 3. */
+  static VALUE nm_atlas_cblas_gemm(VALUE self, VALUE order, VALUE trans_a, VALUE trans_b, VALUE m, VALUE n, VALUE k, VALUE vAlpha,
+                             VALUE a, VALUE lda, VALUE b, VALUE ldb, VALUE vBeta, VALUE c, VALUE ldc);
   static VALUE nm_cblas_trsm(VALUE self, VALUE order, VALUE side, VALUE uplo, VALUE trans_a, VALUE diag, VALUE m, VALUE n,
                              VALUE vAlpha, VALUE a, VALUE lda, VALUE b, VALUE ldb);
   static VALUE nm_cblas_trmm(VALUE self, VALUE order, VALUE side, VALUE uplo, VALUE trans_a, VALUE diag, VALUE m, VALUE n,
@@ -70,6 +72,29 @@ extern "C" {
 
 namespace nm { 
   namespace math {
+  namespace atlas {
+
+    /*
+     * Function signature conversion for calling CBLAS' gemm functions as directly as possible.
+     *
+     * For documentation: http://www.netlib.org/blas/dgemm.f
+     */
+    template <typename DType>
+    inline static void cblas_gemm(const enum CBLAS_ORDER order,
+                                  const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
+                                  int m, int n, int k,
+                                  void* alpha,
+                                  void* a, int lda,
+                                  void* b, int ldb,
+                                  void* beta,
+                                  void* c, int ldc)
+    {
+      gemm<DType>(order, trans_a, trans_b, m, n, k, reinterpret_cast<DType*>(alpha),
+                  reinterpret_cast<DType*>(a), lda,
+                  reinterpret_cast<DType*>(b), ldb, reinterpret_cast<DType*>(beta),
+                  reinterpret_cast<DType*>(c), ldc);
+    }
+  } //eventually everything should go into nm::math::atlas, but for now just gemm
 
     /*
      * Function signature conversion for calling CBLAS' trsm functions as directly as possible.
@@ -158,12 +183,59 @@ void nm_math_init_atlas() {
 //  rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesdd", (METHOD)nm_lapack_gesdd, 11);
 //  rb_define_singleton_method(cNMatrix_LAPACK, "lapack_geev",  (METHOD)nm_lapack_geev,  12);
 //
+	rb_define_singleton_method(cNMatrix_BLAS, "cblas_gemm", (METHOD)nm_atlas_cblas_gemm, 14);
 //  rb_define_singleton_method(cNMatrix_BLAS, "cblas_trsm", (METHOD)nm_cblas_trsm, 12);
 //  rb_define_singleton_method(cNMatrix_BLAS, "cblas_trmm", (METHOD)nm_cblas_trmm, 12);
 //  rb_define_singleton_method(cNMatrix_BLAS, "cblas_syrk", (METHOD)nm_cblas_syrk, 11);
 //  rb_define_singleton_method(cNMatrix_BLAS, "cblas_herk", (METHOD)nm_cblas_herk, 11);
 
 }
+
+/* Call any of the cblas_xgemm functions as directly as possible.
+ *
+ * The cblas_xgemm functions (dgemm, sgemm, cgemm, and zgemm) define the following operation:
+ *
+ *    C = alpha*op(A)*op(B) + beta*C
+ *
+ * where op(X) is one of <tt>op(X) = X</tt>, <tt>op(X) = X**T</tt>, or the complex conjugate of X.
+ *
+ * Note that this will only work for dense matrices that are of types :float32, :float64, :complex64, and :complex128.
+ * Other types are not implemented in BLAS, and while they exist in NMatrix, this method is intended only to
+ * expose the ultra-optimized ATLAS versions.
+ *
+ * == Arguments
+ * See: http://www.netlib.org/blas/dgemm.f
+ *
+ * You probably don't want to call this function. Instead, why don't you try gemm, which is more flexible
+ * with its arguments?
+ *
+ * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
+ * handling, so you can easily crash Ruby!
+ */
+static VALUE nm_atlas_cblas_gemm(VALUE self,
+                           VALUE order,
+                           VALUE trans_a, VALUE trans_b,
+                           VALUE m, VALUE n, VALUE k,
+                           VALUE alpha,
+                           VALUE a, VALUE lda,
+                           VALUE b, VALUE ldb,
+                           VALUE beta,
+                           VALUE c, VALUE ldc)
+{
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::atlas::cblas_gemm, void, const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b, int m, int n, int k, void* alpha, void* a, int lda, void* b, int ldb, void* beta, void* c, int ldc);
+
+  nm::dtype_t dtype = NM_DTYPE(a);
+
+  void *pAlpha = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]),
+       *pBeta  = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
+  rubyval_to_cval(alpha, dtype, pAlpha);
+  rubyval_to_cval(beta, dtype, pBeta);
+
+  ttable[dtype](blas_order_sym(order), blas_transpose_sym(trans_a), blas_transpose_sym(trans_b), FIX2INT(m), FIX2INT(n), FIX2INT(k), pAlpha, NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), NM_STORAGE_DENSE(b)->elements, FIX2INT(ldb), pBeta, NM_STORAGE_DENSE(c)->elements, FIX2INT(ldc));
+
+  return c;
+}
+
 
 static VALUE nm_cblas_trsm(VALUE self,
                            VALUE order,
