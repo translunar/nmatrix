@@ -25,20 +25,20 @@ if ENV["nmatrix_core"] == "false"
 end
 gemspecs.map! { |gemspec| eval(IO.read(gemspec)) }
 
-desc "Build and install into system gems."
-task :install => :package do
-  gemspecs.each do |gemspec|
-    gem_file = "pkg/#{gemspec.name}-#{gemspec.version}.gem"
-    system "gem install '#{gem_file}'"
-  end
-end
-
 begin
   Bundler.setup(:default, :development)
 rescue Bundler::BundlerError => e
   $stderr.puts e.message
   $stderr.puts "Run `bundle install` to install missing gems"
   exit e.status_code
+end
+
+desc "Build and install into system gems."
+task :install => :package do
+  gemspecs.each do |gemspec|
+    gem_file = "pkg/#{gemspec.name}-#{gemspec.version}.gem"
+    system "gem install '#{gem_file}'"
+  end
 end
 
 require 'rake'
