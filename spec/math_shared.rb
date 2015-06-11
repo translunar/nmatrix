@@ -1,6 +1,64 @@
 #Shared specs for methods that make use of LAPACK/BLAS when it is available
 
 RSpec.shared_examples "math shared" do
+  # TODO: Get it working with ROBJ too
+  [:byte,:int8,:int16,:int32,:int64,:float32,:float64,:rational64,:rational128].each do |left_dtype|
+    [:byte,:int8,:int16,:int32,:int64,:float32,:float64,:rational64,:rational128].each do |right_dtype|
+
+      # Won't work if they're both 1-byte, due to overflow.
+      next if [:byte,:int8].include?(left_dtype) && [:byte,:int8].include?(right_dtype)
+
+      # For now, don't bother testing int-int mult.
+      #next if [:int8,:int16,:int32,:int64].include?(left_dtype) && [:int8,:int16,:int32,:int64].include?(right_dtype)
+      it "dense handles #{left_dtype.to_s} dot #{right_dtype.to_s} matrix multiplication" do
+        #STDERR.puts "dtype=#{dtype.to_s}"
+        #STDERR.puts "2"
+
+        nary = if left_dtype.to_s =~ /complex/
+                 COMPLEX_MATRIX43A_ARRAY
+               elsif left_dtype.to_s =~ /rational/
+                 RATIONAL_MATRIX43A_ARRAY
+               else
+                 MATRIX43A_ARRAY
+               end
+
+        mary = if right_dtype.to_s =~ /complex/
+                 COMPLEX_MATRIX32A_ARRAY
+               elsif right_dtype.to_s =~ /rational/
+                 RATIONAL_MATRIX32A_ARRAY
+               else
+                 MATRIX32A_ARRAY
+               end
+
+        n = NMatrix.new([4,3], nary, dtype: left_dtype, stype: :dense)
+        m = NMatrix.new([3,2], mary, dtype: right_dtype, stype: :dense)
+
+        expect(m.shape[0]).to eq(3)
+        expect(m.shape[1]).to eq(2)
+        expect(m.dim).to eq(2)
+
+        expect(n.shape[0]).to eq(4)
+        expect(n.shape[1]).to eq(3)
+        expect(n.dim).to eq(2)
+
+        expect(n.shape[1]).to eq(m.shape[0])
+
+        r = n.dot m
+
+        expect(r[0,0]).to eq(273.0)
+        expect(r[0,1]).to eq(455.0)
+        expect(r[1,0]).to eq(243.0)
+        expect(r[1,1]).to eq(235.0)
+        expect(r[2,0]).to eq(244.0)
+        expect(r[2,1]).to eq(205.0)
+        expect(r[3,0]).to eq(102.0)
+        expect(r[3,1]).to eq(160.0)
+
+        #r.dtype.should == :float64 unless left_dtype == :float32 && right_dtype == :float32
+      end
+    end
+  end
+
   NON_INTEGER_DTYPES.each do |dtype|
     next if dtype == :object
     context dtype do

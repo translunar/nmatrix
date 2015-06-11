@@ -26,6 +26,7 @@
 #
 
 require 'spec_helper'
+require 'blas_shared'
 
 describe NMatrix::BLAS do
   [:byte, :int8, :int16, :int32, :int64,
@@ -127,19 +128,6 @@ describe NMatrix::BLAS do
         expect(s).to be_within(1e-6).of(4.quo(5))
       end
 
-      # Note: this exposes gemm, not cblas_gemm (which is the unfriendly CBLAS no-error-checking version)
-      it "exposes gemm" do
-        n = NMatrix.new([4,3], [14.0,9.0,3.0, 2.0,11.0,15.0, 0.0,12.0,17.0, 5.0,2.0,3.0], dtype: dtype)
-        m = NMatrix.new([3,2], [12.0,25.0, 9.0,10.0, 8.0,5.0], dtype: dtype)
-
-        #c = NMatrix.new([4,2], dtype)
-        r = NMatrix::BLAS.gemm(n, m) #, c)
-        #c.should equal(r) # check that both are same memory address
-
-        expect(r).to eq(NMatrix.new([4,2], [273,455,243,235,244,205,102,160], dtype: dtype))
-      end
-
-
       it "exposes gemv" do
         a = NMatrix.new([4,3], [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0], dtype: :float64)
         x = NMatrix.new([3,1], [2.0, 1.0, 0.0], dtype: :float64)
@@ -169,4 +157,6 @@ describe NMatrix::BLAS do
 
     end
   end
+
+  include_examples "BLAS shared"
 end
