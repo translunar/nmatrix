@@ -63,7 +63,7 @@ extern "C" {
 
   static VALUE nm_atlas_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lworkspace_size);
   static VALUE nm_atlas_lapack_gesdd(VALUE self, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lworkspace_size);
-  static VALUE nm_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_right, VALUE n, VALUE a, VALUE lda, VALUE w, VALUE wi, VALUE vl, VALUE ldvl, VALUE vr, VALUE ldvr, VALUE lwork);
+  static VALUE nm_atlas_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_right, VALUE n, VALUE a, VALUE lda, VALUE w, VALUE wi, VALUE vl, VALUE ldvl, VALUE vr, VALUE ldvr, VALUE lwork);
 }
 
 ////////////////////
@@ -182,8 +182,8 @@ void nm_math_init_atlas() {
 //  /* Non-ATLAS regular LAPACK Functions called via Fortran interface */
   rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesvd", (METHOD)nm_atlas_lapack_gesvd, 12);
   rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesdd", (METHOD)nm_atlas_lapack_gesdd, 11);
-//  rb_define_singleton_method(cNMatrix_LAPACK, "lapack_geev",  (METHOD)nm_lapack_geev,  12);
-//
+  rb_define_singleton_method(cNMatrix_LAPACK, "lapack_geev",  (METHOD)nm_atlas_lapack_geev,  12);
+
 	rb_define_singleton_method(cNMatrix_BLAS, "cblas_gemm", (METHOD)nm_atlas_cblas_gemm, 14);
 //  rb_define_singleton_method(cNMatrix_BLAS, "cblas_trsm", (METHOD)nm_cblas_trsm, 12);
 //  rb_define_singleton_method(cNMatrix_BLAS, "cblas_trmm", (METHOD)nm_cblas_trmm, 12);
@@ -523,13 +523,13 @@ static VALUE nm_atlas_lapack_gesdd(VALUE self, VALUE jobz, VALUE m, VALUE n, VAL
  * The computed eigenvectors are normalized to have Euclidean norm
  * equal to 1 and largest component real.
  */
-static VALUE nm_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_right, VALUE n, VALUE a, VALUE lda, VALUE w, VALUE wi, VALUE vl, VALUE ldvl, VALUE vr, VALUE ldvr, VALUE lwork) {
+static VALUE nm_atlas_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_right, VALUE n, VALUE a, VALUE lda, VALUE w, VALUE wi, VALUE vl, VALUE ldvl, VALUE vr, VALUE ldvr, VALUE lwork) {
   static int (*geev_table[nm::NUM_DTYPES])(char, char, int, void* a, int, void* w, void* wi, void* vl, int, void* vr, int, void* work, int, void* rwork) = {
     NULL, NULL, NULL, NULL, NULL, // no integer ops
-    nm::math::lapack_geev<float,float>,
-    nm::math::lapack_geev<double,double>,
-    nm::math::lapack_geev<nm::Complex64,float>,
-    nm::math::lapack_geev<nm::Complex128,double>,
+    nm::math::atlas::lapack_geev<float,float>,
+    nm::math::atlas::lapack_geev<double,double>,
+    nm::math::atlas::lapack_geev<nm::Complex64,float>,
+    nm::math::atlas::lapack_geev<nm::Complex128,double>,
     NULL, NULL, NULL, NULL // no rationals or Ruby objects
   };
 

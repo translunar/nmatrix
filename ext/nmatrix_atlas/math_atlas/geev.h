@@ -36,7 +36,7 @@ extern "C" {
   void zgeev_(char* jobvl, char* jobvr, int* n, nm::Complex128* a, int* lda, nm::Complex128* w,      nm::Complex128* vl, int* ldvl, nm::Complex128* vr, int* ldvr, nm::Complex128* work, int* lwork, double* rwork, int* info);
 }
 
-namespace nm { namespace math {
+namespace nm { namespace math { namespace atlas {
 
 template <typename DType, typename CType>                         // wr
 inline int geev(char jobvl, char jobvr, int n, DType* a, int lda, DType* w, DType* wi, DType* vl, int ldvl, DType* vr, int ldvr, DType* work, int lwork, CType* rwork) {
@@ -77,6 +77,6 @@ inline int lapack_geev(char jobvl, char jobvr, int n, void* a, int lda, void* w,
   return geev<DType,CType>(jobvl, jobvr, n, reinterpret_cast<DType*>(a), lda, reinterpret_cast<DType*>(w), reinterpret_cast<DType*>(wi), reinterpret_cast<DType*>(vl), ldvl, reinterpret_cast<DType*>(vr), ldvr, reinterpret_cast<DType*>(work), lwork, reinterpret_cast<CType*>(rwork));
 }
 
-}} // end nm::math
+}}} // end nm::math::atlas
 
 #endif // GEEV_H
