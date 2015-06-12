@@ -40,6 +40,7 @@ extern "C" {
 
 namespace nm {
   namespace math {
+  namespace atlas {
 
     template <typename DType, typename CType>
     inline int gesdd(char jobz, int m, int n, DType* a, int lda, DType* s, DType* u, int ldu, DType* vt, int ldvt, DType* work, int lwork, int* iwork, CType* rwork) {
@@ -93,6 +94,7 @@ namespace nm {
       return info;
     }
 
+  } // end of namespace atlas
   } // end of namespace math
 } // end of namespace nm
 

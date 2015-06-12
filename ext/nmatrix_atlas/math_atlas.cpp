@@ -61,8 +61,8 @@ extern "C" {
   static VALUE nm_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1, VALUE k2, VALUE ipiv, VALUE incx);
   static VALUE nm_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
 
-  static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lworkspace_size);
-  static VALUE nm_lapack_gesdd(VALUE self, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lworkspace_size);
+  static VALUE nm_atlas_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lworkspace_size);
+  static VALUE nm_atlas_lapack_gesdd(VALUE self, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lworkspace_size);
   static VALUE nm_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_right, VALUE n, VALUE a, VALUE lda, VALUE w, VALUE wi, VALUE vl, VALUE ldvl, VALUE vr, VALUE ldvr, VALUE lwork);
 }
 
@@ -94,7 +94,24 @@ namespace nm {
                   reinterpret_cast<DType*>(b), ldb, reinterpret_cast<DType*>(beta),
                   reinterpret_cast<DType*>(c), ldc);
     }
-  } //eventually everything should go into nm::math::atlas, but for now just gemm
+
+    /*
+     * Function signature conversion for calling CBLAS' gesvd functions as directly as possible.
+     */
+    template <typename DType, typename CType>
+    inline static int lapack_gesvd(char jobu, char jobvt, int m, int n, void* a, int lda, void* s, void* u, int ldu, void* vt, int ldvt, void* work, int lwork, void* rwork) {
+      return gesvd<DType,CType>(jobu, jobvt, m, n, reinterpret_cast<DType*>(a), lda, reinterpret_cast<DType*>(s), reinterpret_cast<DType*>(u), ldu, reinterpret_cast<DType*>(vt), ldvt, reinterpret_cast<DType*>(work), lwork, reinterpret_cast<CType*>(rwork));
+    }
+
+    /*
+     * Function signature conversion for calling CBLAS' gesdd functions as directly as possible.
+     */
+    template <typename DType, typename CType>
+    inline static int lapack_gesdd(char jobz, int m, int n, void* a, int lda, void* s, void* u, int ldu, void* vt, int ldvt, void* work, int lwork, int* iwork, void* rwork) {
+      return gesdd<DType,CType>(jobz, m, n, reinterpret_cast<DType*>(a), lda, reinterpret_cast<DType*>(s), reinterpret_cast<DType*>(u), ldu, reinterpret_cast<DType*>(vt), ldvt, reinterpret_cast<DType*>(work), lwork, iwork, reinterpret_cast<CType*>(rwork));
+    }
+
+  } //eventually everything should go into nm::math::atlas, but for now only some stuff works
 
     /*
      * Function signature conversion for calling CBLAS' trsm functions as directly as possible.
@@ -141,22 +158,6 @@ namespace nm {
                   reinterpret_cast<const DType*>(A), lda, reinterpret_cast<const DType*>(beta), reinterpret_cast<DType*>(C), ldc);
     }
 
-    /*
-     * Function signature conversion for calling CBLAS' gesvd functions as directly as possible.
-     */
-    template <typename DType, typename CType>
-    inline static int lapack_gesvd(char jobu, char jobvt, int m, int n, void* a, int lda, void* s, void* u, int ldu, void* vt, int ldvt, void* work, int lwork, void* rwork) {
-      return gesvd<DType,CType>(jobu, jobvt, m, n, reinterpret_cast<DType*>(a), lda, reinterpret_cast<DType*>(s), reinterpret_cast<DType*>(u), ldu, reinterpret_cast<DType*>(vt), ldvt, reinterpret_cast<DType*>(work), lwork, reinterpret_cast<CType*>(rwork));
-    }
-
-    /*
-     * Function signature conversion for calling CBLAS' gesdd functions as directly as possible.
-     */
-    template <typename DType, typename CType>
-    inline static int lapack_gesdd(char jobz, int m, int n, void* a, int lda, void* s, void* u, int ldu, void* vt, int ldvt, void* work, int lwork, int* iwork, void* rwork) {
-      return gesdd<DType,CType>(jobz, m, n, reinterpret_cast<DType*>(a), lda, reinterpret_cast<DType*>(s), reinterpret_cast<DType*>(u), ldu, reinterpret_cast<DType*>(vt), ldvt, reinterpret_cast<DType*>(work), lwork, iwork, reinterpret_cast<CType*>(rwork));
-    }
-
   }
 }
 
@@ -179,8 +180,8 @@ void nm_math_init_atlas() {
 //  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_lauum", (METHOD)nm_clapack_lauum, 5);
 //
 //  /* Non-ATLAS regular LAPACK Functions called via Fortran interface */
-//  rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesvd", (METHOD)nm_lapack_gesvd, 12);
-//  rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesdd", (METHOD)nm_lapack_gesdd, 11);
+  rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesvd", (METHOD)nm_atlas_lapack_gesvd, 12);
+  rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesdd", (METHOD)nm_atlas_lapack_gesdd, 11);
 //  rb_define_singleton_method(cNMatrix_LAPACK, "lapack_geev",  (METHOD)nm_lapack_geev,  12);
 //
 	rb_define_singleton_method(cNMatrix_BLAS, "cblas_gemm", (METHOD)nm_atlas_cblas_gemm, 14);
@@ -395,13 +396,13 @@ static VALUE nm_cblas_herk(VALUE self,
  * Note that the routine returns V**T, not V.
  */
 
-static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lwork) {
+static VALUE nm_atlas_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lwork) {
   static int (*gesvd_table[nm::NUM_DTYPES])(char, char, int, int, void* a, int, void* s, void* u, int, void* vt, int, void* work, int, void* rwork) = {
     NULL, NULL, NULL, NULL, NULL, // no integer ops
-    nm::math::lapack_gesvd<float,float>,
-    nm::math::lapack_gesvd<double,double>,
-    nm::math::lapack_gesvd<nm::Complex64,float>,
-    nm::math::lapack_gesvd<nm::Complex128,double>,
+    nm::math::atlas::lapack_gesvd<float,float>,
+    nm::math::atlas::lapack_gesvd<double,double>,
+    nm::math::atlas::lapack_gesvd<nm::Complex64,float>,
+    nm::math::atlas::lapack_gesvd<nm::Complex128,double>,
     NULL, NULL, NULL, NULL // no rationals or Ruby objects
   };
 
@@ -455,13 +456,13 @@ static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE
  *
  * Note that the routine returns V**T, not V.
  */
-static VALUE nm_lapack_gesdd(VALUE self, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lwork) {
+static VALUE nm_atlas_lapack_gesdd(VALUE self, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lwork) {
   static int (*gesdd_table[nm::NUM_DTYPES])(char, int, int, void* a, int, void* s, void* u, int, void* vt, int, void* work, int, int* iwork, void* rwork) = {
     NULL, NULL, NULL, NULL, NULL, // no integer ops
-    nm::math::lapack_gesdd<float,float>,
-    nm::math::lapack_gesdd<double,double>,
-    nm::math::lapack_gesdd<nm::Complex64,float>,
-    nm::math::lapack_gesdd<nm::Complex128,double>,
+    nm::math::atlas::lapack_gesdd<float,float>,
+    nm::math::atlas::lapack_gesdd<double,double>,
+    nm::math::atlas::lapack_gesdd<nm::Complex64,float>,
+    nm::math::atlas::lapack_gesdd<nm::Complex128,double>,
     NULL, NULL, NULL, NULL // no rationals or Ruby objects
   };
 
