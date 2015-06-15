@@ -58,8 +58,8 @@ extern "C" {
   static VALUE nm_atlas_clapack_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE b, VALUE ldb);
   static VALUE nm_atlas_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE lda, VALUE ipiv);
   static VALUE nm_atlas_clapack_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
-  static VALUE nm_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1, VALUE k2, VALUE ipiv, VALUE incx);
-  static VALUE nm_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
+  static VALUE nm_atlas_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1, VALUE k2, VALUE ipiv, VALUE incx);
+  static VALUE nm_atlas_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
 
   static VALUE nm_atlas_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lworkspace_size);
   static VALUE nm_atlas_lapack_gesdd(VALUE self, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lworkspace_size);
@@ -176,8 +176,8 @@ void nm_math_init_atlas() {
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_potrs", (METHOD)nm_atlas_clapack_potrs, 8);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getri", (METHOD)nm_atlas_clapack_getri, 5);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_potri", (METHOD)nm_atlas_clapack_potri, 5);
-//  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_laswp", (METHOD)nm_clapack_laswp, 7);
-//  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_lauum", (METHOD)nm_clapack_lauum, 5);
+  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_laswp", (METHOD)nm_atlas_clapack_laswp, 7);
+  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_lauum", (METHOD)nm_atlas_clapack_lauum, 5);
 //
 //  /* Non-ATLAS regular LAPACK Functions called via Fortran interface */
   rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesvd", (METHOD)nm_atlas_lapack_gesvd, 12);
@@ -588,7 +588,7 @@ static VALUE nm_atlas_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_
   }
 }
 
-static VALUE nm_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
+static VALUE nm_atlas_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
   static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const enum CBLAS_UPLO, const int n, void* a, const int lda) = {
       /*nm::math::clapack_lauum<uint8_t, false>,
       nm::math::clapack_lauum<int8_t, false>,
@@ -596,13 +596,13 @@ static VALUE nm_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALU
       nm::math::clapack_lauum<uint32_t, false>,
       nm::math::clapack_lauum<uint64_t, false>,*/
       NULL, NULL, NULL, NULL, NULL,
-      nm::math::clapack_lauum<false, float>,
-      nm::math::clapack_lauum<false, double>,
+      nm::math::atlas::clapack_lauum<false, float>,
+      nm::math::atlas::clapack_lauum<false, double>,
 #if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
       clapack_clauum, clapack_zlauum, // call directly, same function signature!
 #else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
-      nm::math::clapack_lauum<true, nm::Complex64>,
-      nm::math::clapack_lauum<true, nm::Complex128>,
+      nm::math::atlas::clapack_lauum<true, nm::Complex64>,
+      nm::math::atlas::clapack_lauum<true, nm::Complex128>,
 #endif
 /*
       nm::math::clapack_lauum<nm::Rational32, false>,
@@ -919,7 +919,10 @@ static VALUE nm_atlas_clapack_potri(VALUE self, VALUE order, VALUE uplo, VALUE n
  * Note that LAPACK's xlaswp functions accept a column-order matrix, but NMatrix uses row-order. Thus, n should be the
  * number of rows and lda should be the number of columns, no matter what it says in the documentation for dlaswp.f.
  */
-static VALUE nm_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1, VALUE k2, VALUE ipiv, VALUE incx) {
+static VALUE nm_atlas_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1, VALUE k2, VALUE ipiv, VALUE incx) {
+  //We have actually never used the ATLAS version of laswp. For the time being
+  //I will leave it like that and just always call the internal implementation.
+  //I don't know if there is a good reason for this or not.
   static void (*ttable[nm::NUM_DTYPES])(const int n, void* a, const int lda, const int k1, const int k2, const int* ipiv, const int incx) = {
       nm::math::clapack_laswp<uint8_t>,
       nm::math::clapack_laswp<int8_t>,

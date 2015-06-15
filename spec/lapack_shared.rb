@@ -2,6 +2,34 @@
 #of these LAPACK functions.
 
 RSpec.shared_examples "LAPACK shared" do
+  # where integer math is allowed
+  [:byte, :int8, :int16, :int32, :int64, :rational32, :rational64, :rational128, :float32, :float64, :complex64, :complex128].each do |dtype|
+    context dtype do
+      # This spec seems a little weird. It looks like laswp ignores the last
+      # element of piv, though maybe I misunderstand smth. It would make
+      # more sense if piv were [2,1,3,3]
+      it "exposes clapack laswp" do
+        a = NMatrix.new(:dense, [3,4], [1,2,3,4,5,6,7,8,9,10,11,12], dtype)
+        NMatrix::LAPACK::clapack_laswp(3, a, 4, 0, 3, [2,1,3,0], 1)
+        b = NMatrix.new(:dense, [3,4], [3,2,4,1,7,6,8,5,11,10,12,9], dtype)
+        expect(a).to eq(b)
+      end
+
+      # This spec is OK, because the default behavior for permute_columns
+      # is :intuitive, which is different from :lapack (default laswp behavior)
+      it "exposes NMatrix#permute_columns and #permute_columns! (user-friendly laswp)" do
+        a = NMatrix.new(:dense, [3,4], [1,2,3,4,5,6,7,8,9,10,11,12], dtype)
+        b = NMatrix.new(:dense, [3,4], [3,2,4,1,7,6,8,5,11,10,12,9], dtype)
+        piv = [2,1,3,0]
+        r = a.permute_columns(piv)
+        expect(r).not_to eq(a)
+        expect(r).to eq(b)
+        a.permute_columns!(piv)
+        expect(a).to eq(b)
+      end
+    end
+  end
+
   [:rational32, :rational64, :rational128, :float32, :float64, :complex64, :complex128].each do |dtype|
     context dtype do
       # spec OK, but tricky. It's the upper matrix that has unit diagonals and the permutation is done in columns not rows. See the code details. This is normal for CLAPACK with row-major matrices, but not for plain LAPACK.

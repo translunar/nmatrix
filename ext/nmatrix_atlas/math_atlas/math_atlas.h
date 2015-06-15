@@ -238,80 +238,28 @@ inline int potrf(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const
 
 template <bool is_complex, typename DType>
 inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, DType* A, const int lda) {
-
-  int Nleft, Nright;
-  const DType ONE = 1;
-  DType *G, *U0 = A, *U1;
-
-  if (N > 1) {
-    Nleft = N >> 1;
-    #ifdef NB
-      if (Nleft > NB) Nleft = ATL_MulByNB(ATL_DivByNB(Nleft));
-    #endif
-
-    Nright = N - Nleft;
-
-    // FIXME: There's a simpler way to write this next block, but I'm way too tired to work it out right now.
-    if (uplo == CblasUpper) {
-      if (order == CblasRowMajor) {
-        G = A + Nleft;
-        U1 = G + Nleft * lda;
-      } else {
-        G = A + Nleft * lda;
-        U1 = G + Nleft;
-      }
-    } else {
-      if (order == CblasRowMajor) {
-        G = A + Nleft * lda;
-        U1 = G + Nleft;
-      } else {
-        G = A + Nleft;
-        U1 = G + Nleft * lda;
-      }
-    }
-
-    lauum<is_complex, DType>(order, uplo, Nleft, U0, lda);
-
-    if (is_complex) {
-
-      nm::math::herk<DType>(order, uplo,
-                            uplo == CblasLower ? CblasConjTrans : CblasNoTrans,
-                            Nleft, Nright, &ONE, G, lda, &ONE, U0, lda);
-
-      nm::math::trmm<DType>(order, CblasLeft, uplo, CblasConjTrans, CblasNonUnit, Nright, Nleft, &ONE, U1, lda, G, lda);
-    } else {
-      nm::math::syrk<DType>(order, uplo,
-                            uplo == CblasLower ? CblasTrans : CblasNoTrans,
-                            Nleft, Nright, &ONE, G, lda, &ONE, U0, lda);
-
-      nm::math::trmm<DType>(order, CblasLeft, uplo, CblasTrans, CblasNonUnit, Nright, Nleft, &ONE, U1, lda, G, lda);
-    }
-    lauum<is_complex, DType>(order, uplo, Nright, U1, lda);
-
-  } else {
-    *A = *A * *A;
-  }
+  nm::math::lauum<is_complex,DType>(order, uplo, N, A, lda);
 }
 
 
 #if defined HAVE_CLAPACK_H || defined HAVE_ATLAS_CLAPACK_H
-template <bool is_complex>
-inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, float* A, const int lda) {
+template <>
+inline void lauum<false,float>(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, float* A, const int lda) {
   clapack_slauum(order, uplo, N, A, lda);
 }
 
-template <bool is_complex>
-inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, double* A, const int lda) {
+template <>
+inline void lauum<false,double>(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, double* A, const int lda) {
   clapack_dlauum(order, uplo, N, A, lda);
 }
 
-template <bool is_complex>
-inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex64* A, const int lda) {
+template <>
+inline void lauum<true,Complex64>(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex64* A, const int lda) {
   clapack_clauum(order, uplo, N, A, lda);
 }
 
-template <bool is_complex>
-inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex128* A, const int lda) {
+template <>
+inline void lauum<true,Complex128>(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex128* A, const int lda) {
   clapack_zlauum(order, uplo, N, A, lda);
 }
 #endif
