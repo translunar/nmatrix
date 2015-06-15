@@ -21,6 +21,7 @@ describe "NMatrix::LAPACK implementation from nmatrix-atlas plugin" do
   #gesvd, gesdd, geev don't have to be shared
   [:float32, :float64, :complex64, :complex128].each do |dtype|
     context dtype do
+      #gesvd, gesdd specs OK
       it "exposes lapack_gesvd" do
         if [:float32, :float64].include? dtype
           # http://software.intel.com/sites/products/documentation/doclib/mkl_sa/11/mkl_lapack_examples/dgesvd_ex.c.htm
@@ -253,6 +254,7 @@ describe "NMatrix::LAPACK implementation from nmatrix-atlas plugin" do
         expect(vt.dot(vt.conjugate_transpose)).to be_within(err).of(NMatrix.eye(vt.shape,dtype: dtype))
       end
 
+      #this spec is obviously confused
       it "exposes geev" do
         ary = %w|-1.01 0.86 -4.60 3.31 -4.81
                      3.98 0.53 -7.04 5.29 3.55

@@ -55,9 +55,9 @@ extern "C" {
   static VALUE nm_atlas_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda);
   static VALUE nm_atlas_clapack_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
   static VALUE nm_atlas_clapack_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE ipiv, VALUE b, VALUE ldb);
-  static VALUE nm_clapack_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE b, VALUE ldb);
+  static VALUE nm_atlas_clapack_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE b, VALUE ldb);
   static VALUE nm_atlas_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE lda, VALUE ipiv);
-  static VALUE nm_clapack_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
+  static VALUE nm_atlas_clapack_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
   static VALUE nm_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1, VALUE k2, VALUE ipiv, VALUE incx);
   static VALUE nm_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
 
@@ -173,9 +173,9 @@ void nm_math_init_atlas() {
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getrf", (METHOD)nm_atlas_clapack_getrf, 5);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_potrf", (METHOD)nm_atlas_clapack_potrf, 5);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getrs", (METHOD)nm_atlas_clapack_getrs, 9);
-//  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_potrs", (METHOD)nm_clapack_potrs, 8);
+  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_potrs", (METHOD)nm_atlas_clapack_potrs, 8);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getri", (METHOD)nm_atlas_clapack_getri, 5);
-//  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_potri", (METHOD)nm_clapack_potri, 5);
+  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_potri", (METHOD)nm_atlas_clapack_potri, 5);
 //  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_laswp", (METHOD)nm_clapack_laswp, 7);
 //  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_lauum", (METHOD)nm_clapack_lauum, 5);
 //
@@ -784,22 +784,22 @@ static VALUE nm_atlas_clapack_getrs(VALUE self, VALUE order, VALUE trans, VALUE 
 /*
  * Call any of the clapack_xpotrs functions as directly as possible.
  */
-static VALUE nm_clapack_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE b, VALUE ldb) {
+static VALUE nm_atlas_clapack_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE b, VALUE ldb) {
   static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const int N,
                                        const int NRHS, const void* A, const int lda, void* B, const int ldb) = {
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
-      nm::math::clapack_potrs<float,false>,
-      nm::math::clapack_potrs<double,false>,
+      nm::math::atlas::clapack_potrs<float,false>,
+      nm::math::atlas::clapack_potrs<double,false>,
 #if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
       clapack_cpotrs, clapack_zpotrs, // call directly, same function signature!
 #else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
-      nm::math::clapack_potrs<nm::Complex64,true>,
-      nm::math::clapack_potrs<nm::Complex128,true>,
+      nm::math::atlas::clapack_potrs<nm::Complex64,true>,
+      nm::math::atlas::clapack_potrs<nm::Complex128,true>,
 #endif
-      nm::math::clapack_potrs<nm::Rational32,false>,
-      nm::math::clapack_potrs<nm::Rational64,false>,
-      nm::math::clapack_potrs<nm::Rational128,false>,
-      nm::math::clapack_potrs<nm::RubyObject,false>
+      nm::math::atlas::clapack_potrs<nm::Rational32,false>,
+      nm::math::atlas::clapack_potrs<nm::Rational64,false>,
+      nm::math::atlas::clapack_potrs<nm::Rational128,false>,
+      nm::math::atlas::clapack_potrs<nm::RubyObject,false>
   };
 
 
@@ -882,26 +882,22 @@ static VALUE nm_atlas_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, V
  *
  * Returns an array giving the pivot indices (normally these are argument #5).
  */
-static VALUE nm_clapack_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
+static VALUE nm_atlas_clapack_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
 #if !defined (HAVE_CLAPACK_H) && !defined (HAVE_ATLAS_CLAPACK_H)
   rb_raise(rb_eNotImpError, "getri currently requires CLAPACK");
 #endif
 
   static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const enum CBLAS_UPLO, const int n, void* a, const int lda) = {
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
-      nm::math::clapack_potri<float>,
-      nm::math::clapack_potri<double>,
+      nm::math::atlas::clapack_potri<float>,
+      nm::math::atlas::clapack_potri<double>,
 #if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
       clapack_cpotri, clapack_zpotri, // call directly, same function signature!
 #else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
-      nm::math::clapack_potri<nm::Complex64>,
-      nm::math::clapack_potri<nm::Complex128>,
+      nm::math::atlas::clapack_potri<nm::Complex64>,
+      nm::math::atlas::clapack_potri<nm::Complex128>,
 #endif
-      NULL, NULL, NULL, NULL /*
-      nm::math::clapack_getri<nm::Rational32>,
-      nm::math::clapack_getri<nm::Rational64>,
-      nm::math::clapack_getri<nm::Rational128>,
-      nm::math::clapack_getri<nm::RubyObject> */
+      NULL, NULL, NULL, NULL
   };
 
   if (!ttable[NM_DTYPE(a)]) {

@@ -59,15 +59,9 @@
 #ifndef POTRS_ATLAS_H
 #define POTRS_ATLAS_H
 
-extern "C" {
-#if defined HAVE_CBLAS_H
-  #include <cblas.h>
-#elif defined HAVE_ATLAS_CBLAS_H
-  #include <atlas/cblas.h>
-#endif
-}
+#include "math/potrs.h"
 
-namespace nm { namespace math {
+namespace nm { namespace math { namespace atlas {
 
 /*
  * Solves a system of linear equations A*X = B with a symmetric positive definite matrix A using the Cholesky factorization computed by POTRF.
@@ -75,42 +69,42 @@ namespace nm { namespace math {
  * From ATLAS 3.8.0.
  */
 template <typename DType, bool is_complex>
-int potrs(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const int N, const int NRHS, const DType* A,
+inline int potrs(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const int N, const int NRHS, const DType* A,
            const int lda, DType* B, const int ldb)
 {
-  // enum CBLAS_DIAG Lunit, Uunit; // These aren't used. Not sure why they're declared in ATLAS' src.
-
-  CBLAS_TRANSPOSE MyTrans = is_complex ? CblasConjTrans : CblasTrans;
-
-  if (!N || !NRHS) return 0;
-
-  const DType ONE = 1;
-
-  if (Order == CblasColMajor) {
-    if (Uplo == CblasUpper) {
-      nm::math::trsm<DType>(Order, CblasLeft, CblasUpper, MyTrans, CblasNonUnit, N, NRHS, ONE, A, lda, B, ldb);
-      nm::math::trsm<DType>(Order, CblasLeft, CblasUpper, CblasNoTrans, CblasNonUnit, N, NRHS, ONE, A, lda, B, ldb);
-    } else {
-      nm::math::trsm<DType>(Order, CblasLeft, CblasLower, CblasNoTrans, CblasNonUnit, N, NRHS, ONE, A, lda, B, ldb);
-      nm::math::trsm<DType>(Order, CblasLeft, CblasLower, MyTrans, CblasNonUnit, N, NRHS, ONE, A, lda, B, ldb);
-    }
-  } else {
-    // There's some kind of scaling operation that normally happens here in ATLAS. Not sure what it does, so we'll only
-    // worry if something breaks. It probably has to do with their non-templated code and doesn't apply to us.
-
-    if (Uplo == CblasUpper) {
-      nm::math::trsm<DType>(Order, CblasRight, CblasUpper, CblasNoTrans, CblasNonUnit, NRHS, N, ONE, A, lda, B, ldb);
-      nm::math::trsm<DType>(Order, CblasRight, CblasUpper, MyTrans, CblasNonUnit, NRHS, N, ONE, A, lda, B, ldb);
-    } else {
-      nm::math::trsm<DType>(Order, CblasRight, CblasLower, MyTrans, CblasNonUnit, NRHS, N, ONE, A, lda, B, ldb);
-      nm::math::trsm<DType>(Order, CblasRight, CblasLower, CblasNoTrans, CblasNonUnit, NRHS, N, ONE, A, lda, B, ldb);
-    }
-  }
-  return 0;
+  //call the internal implementation if not overridden below
+  return nm::math::potrs<DType, is_complex>(Order, Uplo, N, NRHS, A, lda, B, ldb);
 }
 
-//Does this call ATLAS?
+#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
+template <>
+inline int potrs<float,false> (const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const int N, const int NRHS, const float* A,
+           const int lda, float* B, const int ldb)
+{
+  return clapack_spotrs(Order, Uplo, N, NRHS, A, lda, B, ldb);
+}
 
+template <>
+inline int potrs<double,false>(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const int N, const int NRHS, const double* A,
+           const int lda, double* B, const int ldb)
+{
+  return clapack_dpotrs(Order, Uplo, N, NRHS, A, lda, B, ldb);
+}
+
+template <>
+inline int potrs<Complex64,true>(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const int N, const int NRHS, const Complex64* A,
+           const int lda, Complex64* B, const int ldb)
+{
+  return clapack_cpotrs(Order, Uplo, N, NRHS, reinterpret_cast<const void*>(A), lda, reinterpret_cast<void *>(B), ldb);
+}
+
+template <>
+inline int potrs<Complex128,true>(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const int N, const int NRHS, const Complex128* A,
+           const int lda, Complex128* B, const int ldb)
+{
+  return clapack_zpotrs(Order, Uplo, N, NRHS, reinterpret_cast<const void*>(A), lda, reinterpret_cast<void *>(B), ldb);
+}
+#endif
 
 /*
 * Function signature conversion for calling LAPACK's potrs functions as directly as possible.
@@ -126,6 +120,6 @@ inline int clapack_potrs(const enum CBLAS_ORDER order, const enum CBLAS_UPLO upl
 }
 
 
-} } // end nm::math
+} } } // end nm::math::atlas
 
 #endif // POTRS_ATLAS_H
