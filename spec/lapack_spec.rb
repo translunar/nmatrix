@@ -72,19 +72,6 @@ describe "NMatrix::LAPACK internal implementation" do
               end
         expect(NMatrix::LAPACK::clapack_gesv(:row,a.shape[0],b.shape[1],a,a.shape[0],b,b.shape[0])).to be_within(err).of(NMatrix[[-1.quo(2)], [0], [1.quo(2)]].cast(dtype: dtype))
       end
-
-      # Together, these calls are basically xGESV from LAPACK: http://www.netlib.org/lapack/double/dgesv.f
-      it "exposes clapack_getrs" do
-        a     = NMatrix.new(3, [-2,4,-3,3,-2,1,0,-4,3], dtype: dtype)
-        ipiv  = NMatrix::LAPACK::clapack_getrf(:row, 3, 3, a, 3)
-        b     = NMatrix.new([3,1], [-1, 17, -9], dtype: dtype)
-
-        NMatrix::LAPACK::clapack_getrs(:row, false, 3, 1, a, 3, ipiv, b, 3)
-
-        expect(b[0]).to eq(5)
-        expect(b[1]).to eq(-15.quo(2))
-        expect(b[2]).to eq(-13)
-      end
     end
   end
 end

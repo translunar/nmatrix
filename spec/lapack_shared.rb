@@ -30,6 +30,20 @@ RSpec.shared_examples "LAPACK shared" do
         expect(a[2,2]).to be_within(err).of(360.quo(53))
       end
 
+      # Together, these calls are basically xGESV from LAPACK: http://www.netlib.org/lapack/double/dgesv.f
+      # Spec OK
+      it "exposes clapack_getrs" do
+        a     = NMatrix.new(3, [-2,4,-3,3,-2,1,0,-4,3], dtype: dtype)
+        ipiv  = NMatrix::LAPACK::clapack_getrf(:row, 3, 3, a, 3)
+        b     = NMatrix.new([3,1], [-1, 17, -9], dtype: dtype)
+
+        NMatrix::LAPACK::clapack_getrs(:row, false, 3, 1, a, 3, ipiv, b, 3)
+
+        expect(b[0]).to eq(5)
+        expect(b[1]).to eq(-15.quo(2))
+        expect(b[2]).to eq(-13)
+      end
+
       #spec OK, but getri is only implemented by the atlas plugin, so maybe this one doesn't have to be shared
       it "exposes clapack_getri" do
         a = NMatrix.new(:dense, 3, [1,0,4,1,1,6,-3,0,-10], dtype)
@@ -50,6 +64,8 @@ RSpec.shared_examples "LAPACK shared" do
       # But this may not be technically wrong, since potrf just examines the
       # upper/lower half (as requested) of the matrix and assumes it is symmetric.
       # I haven't actually checked that this spec is right.
+      # Also, we don't have an internal implementation of this, so maybe it doesn't
+      # have to be shared
       it "exposes clapack_potrf" do
         # first do upper
         begin

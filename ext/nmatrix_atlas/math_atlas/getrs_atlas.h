@@ -59,16 +59,11 @@
 #ifndef GETRS_ATLAS_H
 #define GETRS_ATLAS_H
 
-extern "C" {
-#if defined HAVE_CBLAS_H
-  #include <cblas.h>
-#elif defined HAVE_ATLAS_CBLAS_H
-  #include <atlas/cblas.h>
-#endif
-}
+#include "math_atlas/inc.h"
 
-namespace nm { namespace math {
+#include "math/getrs.h"
 
+namespace nm { namespace math { namespace atlas {
 
 /*
  * Solves a system of linear equations A*X = B with a general NxN matrix A using the LU factorization computed by GETRF.
@@ -76,41 +71,42 @@ namespace nm { namespace math {
  * From ATLAS 3.8.0.
  */
 template <typename DType>
-int getrs(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE Trans, const int N, const int NRHS, const DType* A,
+inline int getrs(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE Trans, const int N, const int NRHS, const DType* A,
            const int lda, const int* ipiv, DType* B, const int ldb)
 {
-  // enum CBLAS_DIAG Lunit, Uunit; // These aren't used. Not sure why they're declared in ATLAS' src.
-
-  if (!N || !NRHS) return 0;
-
-  const DType ONE = 1;
-
-  if (Order == CblasColMajor) {
-    if (Trans == CblasNoTrans) {
-      nm::math::laswp<DType>(NRHS, B, ldb, 0, N, ipiv, 1);
-      nm::math::trsm<DType>(Order, CblasLeft, CblasLower, CblasNoTrans, CblasUnit, N, NRHS, ONE, A, lda, B, ldb);
-      nm::math::trsm<DType>(Order, CblasLeft, CblasUpper, CblasNoTrans, CblasNonUnit, N, NRHS, ONE, A, lda, B, ldb);
-    } else {
-      nm::math::trsm<DType>(Order, CblasLeft, CblasUpper, Trans, CblasNonUnit, N, NRHS, ONE, A, lda, B, ldb);
-      nm::math::trsm<DType>(Order, CblasLeft, CblasLower, Trans, CblasUnit, N, NRHS, ONE, A, lda, B, ldb);
-      nm::math::laswp<DType>(NRHS, B, ldb, 0, N, ipiv, -1);
-    }
-  } else {
-    if (Trans == CblasNoTrans) {
-      nm::math::trsm<DType>(Order, CblasRight, CblasLower, CblasTrans, CblasNonUnit, NRHS, N, ONE, A, lda, B, ldb);
-      nm::math::trsm<DType>(Order, CblasRight, CblasUpper, CblasTrans, CblasUnit, NRHS, N, ONE, A, lda, B, ldb);
-      nm::math::laswp<DType>(NRHS, B, ldb, 0, N, ipiv, -1);
-    } else {
-      nm::math::laswp<DType>(NRHS, B, ldb, 0, N, ipiv, 1);
-      nm::math::trsm<DType>(Order, CblasRight, CblasUpper, CblasNoTrans, CblasUnit, NRHS, N, ONE, A, lda, B, ldb);
-      nm::math::trsm<DType>(Order, CblasRight, CblasLower, CblasNoTrans, CblasNonUnit, NRHS, N, ONE, A, lda, B, ldb);
-    }
-  }
-  return 0;
+  //use internal implementation unless overridden below
+  return nm::math::getrs<DType>(Order, Trans, N, NRHS, A, lda, ipiv, B, ldb);
 }
 
-//Does this one even have call ATLAS functions?
+#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
+template <>
+inline int getrs(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE Trans, const int N, const int NRHS, const float* A,
+           const int lda, const int* ipiv, float* B, const int ldb)
+{
+  return clapack_sgetrs(Order, Trans, N, NRHS, A, lda, ipiv, B, ldb);
+}
 
+template <>
+inline int getrs(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE Trans, const int N, const int NRHS, const double* A,
+           const int lda, const int* ipiv, double* B, const int ldb)
+{
+  return clapack_dgetrs(Order, Trans, N, NRHS, A, lda, ipiv, B, ldb);
+}
+
+template <>
+inline int getrs(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE Trans, const int N, const int NRHS, const Complex64* A,
+           const int lda, const int* ipiv, Complex64* B, const int ldb)
+{
+  return clapack_cgetrs(Order, Trans, N, NRHS, reinterpret_cast<const void*>(A), lda, ipiv, reinterpret_cast<void*>(B), ldb);
+}
+
+template <>
+inline int getrs(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE Trans, const int N, const int NRHS, const Complex128* A,
+           const int lda, const int* ipiv, Complex128* B, const int ldb)
+{
+  return clapack_zgetrs(Order, Trans, N, NRHS, reinterpret_cast<const void*>(A), lda, ipiv, reinterpret_cast<void*>(B), ldb);
+}
+#endif
 
 /*
 * Function signature conversion for calling LAPACK's getrs functions as directly as possible.
@@ -126,6 +122,6 @@ inline int clapack_getrs(const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOS
 }
 
 
-} } // end nm::math
+} } } // end nm::math::atlas
 
 #endif // GETRS_ATLAS_H
