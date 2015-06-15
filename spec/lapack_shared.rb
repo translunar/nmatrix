@@ -44,6 +44,29 @@ RSpec.shared_examples "LAPACK shared" do
           pending e.to_s
         end
       end
+
+      # this spec is kind of weird. potrf is supposed to decompose a symmetric
+      # positive-definite matrix. The matrix tested below isn't symmetric.
+      # But this may not be technically wrong, since potrf just examines the
+      # upper/lower half (as requested) of the matrix and assumes it is symmetric.
+      # I haven't actually checked that this spec is right.
+      it "exposes clapack_potrf" do
+        # first do upper
+        begin
+          a = NMatrix.new(:dense, 3, [25,15,-5, 0,18,0, 0,0,11], dtype)
+          NMatrix::LAPACK::clapack_potrf(:row, :upper, 3, a, 3)
+          b = NMatrix.new(:dense, 3, [5,3,-1, 0,3,1, 0,0,3], dtype)
+          expect(a).to eq(b)
+        rescue NotImplementedError => e
+          pending e.to_s
+        end
+
+        # then do lower
+        a = NMatrix.new(:dense, 3, [25,0,0, 15,18,0,-5,0,11], dtype)
+        NMatrix::LAPACK::clapack_potrf(:row, :lower, 3, a, 3)
+        b = NMatrix.new(:dense, 3, [5,0,0, 3,3,0, -1,1,3], dtype)
+        expect(a).to eq(b)
+      end
     end
   end
 end

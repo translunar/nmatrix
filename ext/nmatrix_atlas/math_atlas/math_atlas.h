@@ -68,22 +68,12 @@
  * Standard Includes
  */
 
-extern "C" { // These need to be in an extern "C" block or you'll get all kinds of undefined symbol errors.
-#if defined HAVE_CBLAS_H
-  #include <cblas.h>
-#elif defined HAVE_ATLAS_CBLAS_H
-  #include <atlas/cblas.h>
-#endif
-
-#if defined HAVE_CLAPACK_H
-  #include <clapack.h>
-#elif defined HAVE_ATLAS_CLAPACK_H
-  #include <atlas/clapack.h>
-#endif
-}
+#include "math_atlas/inc.h"
+#include "math/math.h"
 
 namespace nm {
   namespace math {
+    namespace atlas {
 
 /*
  * Types
@@ -431,6 +421,6 @@ inline int clapack_potri(const enum CBLAS_ORDER order, const enum CBLAS_UPLO upl
 }
 
 
-}} // end namespace nm::math
+}}} // end namespace nm::math::atlas
 
 #endif // MATH_ATLAS_H
