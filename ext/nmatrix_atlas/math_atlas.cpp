@@ -44,11 +44,11 @@ extern "C" {
                              VALUE a, VALUE lda, VALUE b, VALUE ldb, VALUE vBeta, VALUE c, VALUE ldc);
   static VALUE nm_atlas_cblas_trsm(VALUE self, VALUE order, VALUE side, VALUE uplo, VALUE trans_a, VALUE diag, VALUE m, VALUE n,
                              VALUE vAlpha, VALUE a, VALUE lda, VALUE b, VALUE ldb);
-  static VALUE nm_cblas_trmm(VALUE self, VALUE order, VALUE side, VALUE uplo, VALUE trans_a, VALUE diag, VALUE m, VALUE n,
+  static VALUE nm_atlas_cblas_trmm(VALUE self, VALUE order, VALUE side, VALUE uplo, VALUE trans_a, VALUE diag, VALUE m, VALUE n,
                              VALUE alpha, VALUE a, VALUE lda, VALUE b, VALUE ldb);
-  static VALUE nm_cblas_herk(VALUE self, VALUE order, VALUE uplo, VALUE trans, VALUE n, VALUE k, VALUE alpha, VALUE a,
+  static VALUE nm_atlas_cblas_herk(VALUE self, VALUE order, VALUE uplo, VALUE trans, VALUE n, VALUE k, VALUE alpha, VALUE a,
                              VALUE lda, VALUE beta, VALUE c, VALUE ldc);
-  static VALUE nm_cblas_syrk(VALUE self, VALUE order, VALUE uplo, VALUE trans, VALUE n, VALUE k, VALUE alpha, VALUE a,
+  static VALUE nm_atlas_cblas_syrk(VALUE self, VALUE order, VALUE uplo, VALUE trans, VALUE n, VALUE k, VALUE alpha, VALUE a,
                              VALUE lda, VALUE beta, VALUE c, VALUE ldc);
 
   /* LAPACK. */
@@ -126,9 +126,6 @@ namespace nm {
                   reinterpret_cast<const DType*>(a), lda, reinterpret_cast<DType*>(b), ldb);
     }
 
-  } //eventually everything should go into nm::math::atlas, but for now only some stuff works
-
-
     /*
      * Function signature conversion for calling CBLAS' trmm functions as directly as possible.
      *
@@ -142,7 +139,6 @@ namespace nm {
       trmm<DType>(order, side, uplo, ta, diag, m, n, reinterpret_cast<const DType*>(alpha),
                   reinterpret_cast<const DType*>(A), lda, reinterpret_cast<DType*>(B), ldb);
     }
-
 
     /*
      * Function signature conversion for calling CBLAS' syrk functions as directly as possible.
@@ -158,6 +154,7 @@ namespace nm {
                   reinterpret_cast<const DType*>(A), lda, reinterpret_cast<const DType*>(beta), reinterpret_cast<DType*>(C), ldc);
     }
 
+  }
   }
 }
 
@@ -186,9 +183,9 @@ void nm_math_init_atlas() {
 
 	rb_define_singleton_method(cNMatrix_BLAS, "cblas_gemm", (METHOD)nm_atlas_cblas_gemm, 14);
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_trsm", (METHOD)nm_atlas_cblas_trsm, 12);
-//  rb_define_singleton_method(cNMatrix_BLAS, "cblas_trmm", (METHOD)nm_cblas_trmm, 12);
-//  rb_define_singleton_method(cNMatrix_BLAS, "cblas_syrk", (METHOD)nm_cblas_syrk, 11);
-//  rb_define_singleton_method(cNMatrix_BLAS, "cblas_herk", (METHOD)nm_cblas_herk, 11);
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_trmm", (METHOD)nm_atlas_cblas_trmm, 12);
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_syrk", (METHOD)nm_atlas_cblas_syrk, 11);
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_herk", (METHOD)nm_atlas_cblas_herk, 11);
 
 }
 
@@ -275,7 +272,7 @@ static VALUE nm_atlas_cblas_trsm(VALUE self,
   return Qtrue;
 }
 
-static VALUE nm_cblas_trmm(VALUE self,
+static VALUE nm_atlas_cblas_trmm(VALUE self,
                            VALUE order,
                            VALUE side, VALUE uplo,
                            VALUE trans_a, VALUE diag,
@@ -290,15 +287,10 @@ static VALUE nm_cblas_trmm(VALUE self,
                                         const int m, const int n, const void* alpha, const void* a,
                                         const int lda, void* b, const int ldb) = {
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
-      nm::math::cblas_trmm<float>,
-      nm::math::cblas_trmm<double>,
+      nm::math::atlas::cblas_trmm<float>,
+      nm::math::atlas::cblas_trmm<double>,
       cblas_ctrmm, cblas_ztrmm, // call directly, same function signature!
       NULL, NULL, NULL, NULL
-      /*
-      nm::math::cblas_trmm<nm::Rational32>,
-      nm::math::cblas_trmm<nm::Rational64>,
-      nm::math::cblas_trmm<nm::Rational128>,
-      nm::math::cblas_trmm<nm::RubyObject>*/
   };
 
   nm::dtype_t dtype = NM_DTYPE(a);
@@ -315,7 +307,7 @@ static VALUE nm_cblas_trmm(VALUE self,
   return b;
 }
 
-static VALUE nm_cblas_syrk(VALUE self,
+static VALUE nm_atlas_cblas_syrk(VALUE self,
                            VALUE order,
                            VALUE uplo,
                            VALUE trans,
@@ -329,8 +321,8 @@ static VALUE nm_cblas_syrk(VALUE self,
                                         const int n, const int k, const void* alpha, const void* a,
                                         const int lda, const void* beta, void* c, const int ldc) = {
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
-      nm::math::cblas_syrk<float>,
-      nm::math::cblas_syrk<double>,
+      nm::math::atlas::cblas_syrk<float>,
+      nm::math::atlas::cblas_syrk<double>,
       cblas_csyrk, cblas_zsyrk, // call directly, same function signature!
       NULL, NULL, NULL, NULL
   };
@@ -351,7 +343,7 @@ static VALUE nm_cblas_syrk(VALUE self,
   return Qtrue;
 }
 
-static VALUE nm_cblas_herk(VALUE self,
+static VALUE nm_atlas_cblas_herk(VALUE self,
                            VALUE order,
                            VALUE uplo,
                            VALUE trans,

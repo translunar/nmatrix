@@ -122,89 +122,21 @@ namespace nm {
 template <typename DType>
 inline void syrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE Trans, const int N,
                  const int K, const DType* alpha, const DType* A, const int lda, const DType* beta, DType* C, const int ldc) {
-  rb_raise(rb_eNotImpError, "syrk not yet implemented for non-BLAS dtypes");
+  rb_raise(rb_eNotImpError, "syrk not available without external BLAS library");
 }
 
 template <typename DType>
 inline void herk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE Trans, const int N,
                  const int K, const DType* alpha, const DType* A, const int lda, const DType* beta, DType* C, const int ldc) {
-  rb_raise(rb_eNotImpError, "herk not yet implemented for non-BLAS dtypes");
+  rb_raise(rb_eNotImpError, "herk not available without external BLAS library");
 }
-
-template <>
-inline void syrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE Trans, const int N,
-                 const int K, const float* alpha, const float* A, const int lda, const float* beta, float* C, const int ldc) {
-  rb_raise(rb_eNotImpError, "BLAS not linked");
-}
-
-template <>
-inline void syrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE Trans, const int N,
-                 const int K, const double* alpha, const double* A, const int lda, const double* beta, double* C, const int ldc) {
-  rb_raise(rb_eNotImpError, "BLAS not linked");
-}
-
-template <>
-inline void syrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE Trans, const int N,
-                 const int K, const Complex64* alpha, const Complex64* A, const int lda, const Complex64* beta, Complex64* C, const int ldc) {
-  rb_raise(rb_eNotImpError, "BLAS not linked");
-}
-
-template <>
-inline void syrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE Trans, const int N,
-                 const int K, const Complex128* alpha, const Complex128* A, const int lda, const Complex128* beta, Complex128* C, const int ldc) {
-  rb_raise(rb_eNotImpError, "BLAS not linked");
-}
-
-
-template <>
-inline void herk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE Trans, const int N,
-                 const int K, const Complex64* alpha, const Complex64* A, const int lda, const Complex64* beta, Complex64* C, const int ldc) {
-  rb_raise(rb_eNotImpError, "BLAS not linked");
-}
-
-template <>
-inline void herk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE Trans, const int N,
-                 const int K, const Complex128* alpha, const Complex128* A, const int lda, const Complex128* beta, Complex128* C, const int ldc) {
-  rb_raise(rb_eNotImpError, "BLAS not linked");
-}
-
 
 template <typename DType>
 inline void trmm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
                  const enum CBLAS_TRANSPOSE ta, const enum CBLAS_DIAG diag, const int m, const int n, const DType* alpha,
                  const DType* A, const int lda, DType* B, const int ldb) {
-  rb_raise(rb_eNotImpError, "trmm not yet implemented for non-BLAS dtypes");
+  rb_raise(rb_eNotImpError, "trmm not available without external BLAS library");
 }
-
-template <>
-inline void trmm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
-                 const enum CBLAS_TRANSPOSE ta, const enum CBLAS_DIAG diag, const int m, const int n, const float* alpha,
-                 const float* A, const int lda, float* B, const int ldb) {
-  rb_raise(rb_eNotImpError, "BLAS not linked");
-}
-
-template <>
-inline void trmm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
-                 const enum CBLAS_TRANSPOSE ta, const enum CBLAS_DIAG diag, const int m, const int n, const double* alpha,
-                 const double* A, const int lda, double* B, const int ldb) {
-  rb_raise(rb_eNotImpError, "BLAS not linked");
-}
-
-template <>
-inline void trmm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
-                 const enum CBLAS_TRANSPOSE ta, const enum CBLAS_DIAG diag, const int m, const int n, const Complex64* alpha,
-                 const Complex64* A, const int lda, Complex64* B, const int ldb) {
-  rb_raise(rb_eNotImpError, "BLAS not linked");
-}
-
-template <>
-inline void trmm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
-                 const enum CBLAS_TRANSPOSE ta, const enum CBLAS_DIAG diag, const int m, const int n, const Complex128* alpha,
-                 const Complex128* A, const int lda, Complex128* B, const int ldb) {
-  rb_raise(rb_eNotImpError, "BLAS not linked");
-}
-
-
 
 // Yale: numeric matrix multiply c=a*b
 template <typename DType>

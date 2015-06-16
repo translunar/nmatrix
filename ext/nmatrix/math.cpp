@@ -527,39 +527,6 @@ namespace nm {
                   reinterpret_cast<const DType*>(a), lda, reinterpret_cast<DType*>(b), ldb);
     }
 
-
-    /*
-     * Function signature conversion for calling CBLAS' trmm functions as directly as possible.
-     *
-     * For documentation: http://www.netlib.org/blas/dtrmm.f
-     */
-    template <typename DType>
-    inline static void cblas_trmm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
-                                  const enum CBLAS_TRANSPOSE ta, const enum CBLAS_DIAG diag, const int m, const int n, const void* alpha,
-                                  const void* A, const int lda, void* B, const int ldb)
-    {
-      trmm<DType>(order, side, uplo, ta, diag, m, n, reinterpret_cast<const DType*>(alpha),
-                  reinterpret_cast<const DType*>(A), lda, reinterpret_cast<DType*>(B), ldb);
-    }
-
-
-    /*
-     * Function signature conversion for calling CBLAS' syrk functions as directly as possible.
-     *
-     * For documentation: http://www.netlib.org/blas/dsyrk.f
-     */
-    template <typename DType>
-    inline static void cblas_syrk(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const enum CBLAS_TRANSPOSE trans,
-                                  const int n, const int k, const void* alpha,
-                                  const void* A, const int lda, const void* beta, void* C, const int ldc)
-    {
-      syrk<DType>(order, uplo, trans, n, k, reinterpret_cast<const DType*>(alpha),
-                  reinterpret_cast<const DType*>(A), lda, reinterpret_cast<const DType*>(beta), reinterpret_cast<DType*>(C), ldc);
-    }
-
-
-
-
   }
 } // end of namespace nm::math
 
@@ -1048,36 +1015,9 @@ static VALUE nm_cblas_trmm(VALUE self,
                            VALUE a, VALUE lda,
                            VALUE b, VALUE ldb)
 {
-  static void (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER,
-                                        const enum CBLAS_SIDE, const enum CBLAS_UPLO,
-                                        const enum CBLAS_TRANSPOSE, const enum CBLAS_DIAG,
-                                        const int m, const int n, const void* alpha, const void* a,
-                                        const int lda, void* b, const int ldb) = {
-      NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
-      nm::math::cblas_trmm<float>,
-      nm::math::cblas_trmm<double>,
-      nm::math::cblas_trmm<nm::Complex64>,
-      nm::math::cblas_trmm<nm::Complex128>,
-      NULL, NULL, NULL, NULL
-      /*
-      nm::math::cblas_trmm<nm::Rational32>,
-      nm::math::cblas_trmm<nm::Rational64>,
-      nm::math::cblas_trmm<nm::Rational128>,
-      nm::math::cblas_trmm<nm::RubyObject>*/
-  };
-
-  nm::dtype_t dtype = NM_DTYPE(a);
-
-  if (!ttable[dtype]) {
-    rb_raise(nm_eDataTypeError, "this matrix operation not yet defined for non-BLAS dtypes");
-  } else {
-    void *pAlpha = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
-    rubyval_to_cval(alpha, dtype, pAlpha);
-
-    ttable[dtype](blas_order_sym(order), blas_side_sym(side), blas_uplo_sym(uplo), blas_transpose_sym(trans_a), blas_diag_sym(diag), FIX2INT(m), FIX2INT(n), pAlpha, NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), NM_STORAGE_DENSE(b)->elements, FIX2INT(ldb));
-  }
-
-  return b;
+  //remove function totally?
+  rb_raise(rb_eNotImpError, "BLAS not linked");
+  return Qtrue;
 }
 
 
@@ -1091,34 +1031,8 @@ static VALUE nm_cblas_syrk(VALUE self,
                            VALUE beta,
                            VALUE c, VALUE ldc)
 {
-  static void (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const enum CBLAS_UPLO, const enum CBLAS_TRANSPOSE,
-                                        const int n, const int k, const void* alpha, const void* a,
-                                        const int lda, const void* beta, void* c, const int ldc) = {
-      NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
-      nm::math::cblas_syrk<float>,
-      nm::math::cblas_syrk<double>,
-      nm::math::cblas_syrk<nm::Complex64>,
-      nm::math::cblas_syrk<nm::Complex128>,
-      NULL, NULL, NULL, NULL
-      /*nm::math::cblas_syrk<nm::Rational32>,
-      nm::math::cblas_syrk<nm::Rational64>,
-      nm::math::cblas_syrk<nm::Rational128>,
-      nm::math::cblas_syrk<nm::RubyObject>*/
-  };
-
-  nm::dtype_t dtype = NM_DTYPE(a);
-
-  if (!ttable[dtype]) {
-    rb_raise(nm_eDataTypeError, "this matrix operation undefined for integer matrices");
-  } else {
-    void *pAlpha = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]),
-         *pBeta = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
-    rubyval_to_cval(alpha, dtype, pAlpha);
-    rubyval_to_cval(beta, dtype, pBeta);
-
-    ttable[dtype](blas_order_sym(order), blas_uplo_sym(uplo), blas_transpose_sym(trans), FIX2INT(n), FIX2INT(k), pAlpha, NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), pBeta, NM_STORAGE_DENSE(c)->elements, FIX2INT(ldc));
-  }
-
+  //remove function totally?
+  rb_raise(rb_eNotImpError, "BLAS not linked");
   return Qtrue;
 }
 
