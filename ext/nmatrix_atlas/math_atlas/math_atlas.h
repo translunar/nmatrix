@@ -319,7 +319,7 @@ inline int clapack_potri(const enum CBLAS_ORDER order, const enum CBLAS_UPLO upl
 
 
 template <bool is_complex, typename DType>
-void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, DType* A, const int lda) {
+inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, DType* A, const int lda) {
   //we used to have an internal implementation of lauum, but it was broken
   //so I just removed it entirely
 #if defined HAVE_CLAPACK_H || defined HAVE_ATLAS_CLAPACK_H
