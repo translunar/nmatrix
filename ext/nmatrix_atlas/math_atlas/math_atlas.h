@@ -234,56 +234,6 @@ inline int potrf(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const
 }
 #endif
 
-template <bool is_complex, typename DType>
-inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, DType* A, const int lda) {
-  //call internal implementation if CLAPACK unavailable
-  nm::math::lauum<is_complex,DType>(order, uplo, N, A, lda);
-}
-
-
-#if defined HAVE_CLAPACK_H || defined HAVE_ATLAS_CLAPACK_H
-template <>
-inline void lauum<false,float>(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, float* A, const int lda) {
-  clapack_slauum(order, uplo, N, A, lda);
-}
-
-template <>
-inline void lauum<false,double>(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, double* A, const int lda) {
-  clapack_dlauum(order, uplo, N, A, lda);
-}
-
-template <>
-inline void lauum<true,Complex64>(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex64* A, const int lda) {
-  clapack_clauum(order, uplo, N, A, lda);
-}
-
-template <>
-inline void lauum<true,Complex128>(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex128* A, const int lda) {
-  clapack_zlauum(order, uplo, N, A, lda);
-}
-#endif
-
-
-/*
-* Function signature conversion for calling LAPACK's lauum functions as directly as possible.
-*
-* For documentation: http://www.netlib.org/lapack/double/dlauum.f
-*
-* This function should normally go in math.cpp, but we need it to be available to nmatrix.cpp.
-*/
-template <bool is_complex, typename DType>
-inline int clapack_lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, void* a, const int lda) {
-  if (n < 0)              rb_raise(rb_eArgError, "n cannot be less than zero, is set to %d", n);
-  if (lda < n || lda < 1) rb_raise(rb_eArgError, "lda must be >= max(n,1); lda=%d, n=%d\n", lda, n);
-
-  if (uplo == CblasUpper) lauum<is_complex, DType>(order, uplo, n, reinterpret_cast<DType*>(a), lda);
-  else                    lauum<is_complex, DType>(order, uplo, n, reinterpret_cast<DType*>(a), lda);
-
-  return 0;
-}
-
-
-
 
 /*
  * Macro for declaring LAPACK specializations of the getrf function.
@@ -365,6 +315,57 @@ inline int potri(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const
 template <typename DType>
 inline int clapack_potri(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, void* a, const int lda) {
   return potri<DType>(order, uplo, n, reinterpret_cast<DType*>(a), lda);
+}
+
+
+template <bool is_complex, typename DType>
+void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, DType* A, const int lda) {
+  //we used to have an internal implementation of lauum, but it was broken
+  //so I just removed it entirely
+#if defined HAVE_CLAPACK_H || defined HAVE_ATLAS_CLAPACK_H
+  rb_raise(rb_eNotImpError, "not yet implemented for non-BLAS dtypes");
+#else
+  rb_raise(rb_eNotImpError, "only CLAPACK version implemented thus far");
+#endif
+}
+
+#if defined HAVE_CLAPACK_H || defined HAVE_ATLAS_CLAPACK_H
+template <>
+inline void lauum<false,float>(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, float* A, const int lda) {
+  clapack_slauum(order, uplo, N, A, lda);
+}
+
+template <>
+inline void lauum<false,double>(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, double* A, const int lda) {
+  clapack_dlauum(order, uplo, N, A, lda);
+}
+
+template <>
+inline void lauum<true,Complex64>(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex64* A, const int lda) {
+  clapack_clauum(order, uplo, N, A, lda);
+}
+
+template <>
+inline void lauum<true,Complex128>(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex128* A, const int lda) {
+  clapack_zlauum(order, uplo, N, A, lda);
+}
+#endif
+
+/*
+* Function signature conversion for calling LAPACK's lauum functions as directly as possible.
+*
+* For documentation: http://www.netlib.org/lapack/double/dlauum.f
+*
+* This function should normally go in math.cpp, but we need it to be available to nmatrix.cpp.
+*/
+template <bool is_complex, typename DType>
+inline int clapack_lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, void* a, const int lda) {
+  if (n < 0)              rb_raise(rb_eArgError, "n cannot be less than zero, is set to %d", n);
+  if (lda < n || lda < 1) rb_raise(rb_eArgError, "lda must be >= max(n,1); lda=%d, n=%d\n", lda, n);
+
+  lauum<is_complex, DType>(order, uplo, n, static_cast<DType*>(a), lda);
+
+  return 0;
 }
 
 

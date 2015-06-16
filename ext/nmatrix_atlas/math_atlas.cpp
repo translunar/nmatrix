@@ -9,6 +9,8 @@
 
 #include "math/util.h"
 
+#include "math_atlas/math_atlas.h"
+
 //BLAS
 #include "math_atlas/asum_atlas.h"
 #include "math_atlas/trsm_atlas.h"
@@ -32,7 +34,6 @@
 #include "math_atlas/gesdd.h"
 #include "math_atlas/geev.h"
 
-#include "math_atlas/math_atlas.h"
 
 /*
  * Forward Declarations
@@ -578,11 +579,6 @@ static VALUE nm_atlas_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_
 
 static VALUE nm_atlas_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
   static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const enum CBLAS_UPLO, const int n, void* a, const int lda) = {
-      /*nm::math::clapack_lauum<uint8_t, false>,
-      nm::math::clapack_lauum<int8_t, false>,
-      nm::math::clapack_lauum<int16_t, false>,
-      nm::math::clapack_lauum<uint32_t, false>,
-      nm::math::clapack_lauum<uint64_t, false>,*/
       NULL, NULL, NULL, NULL, NULL,
       nm::math::atlas::clapack_lauum<false, float>,
       nm::math::atlas::clapack_lauum<false, double>,
@@ -592,13 +588,6 @@ static VALUE nm_atlas_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n
       nm::math::atlas::clapack_lauum<true, nm::Complex64>,
       nm::math::atlas::clapack_lauum<true, nm::Complex128>,
 #endif
-/*
-      nm::math::clapack_lauum<nm::Rational32, false>,
-      nm::math::clapack_lauum<nm::Rational64, false>,
-      nm::math::clapack_lauum<nm::Rational128, false>,
-      nm::math::clapack_lauum<nm::RubyObject, false>
-
-*/
   };
 
   if (!ttable[NM_DTYPE(a)]) {

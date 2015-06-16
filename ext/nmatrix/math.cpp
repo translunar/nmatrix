@@ -1127,34 +1127,9 @@ static VALUE nm_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_right,
 
 
 static VALUE nm_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
-  static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const enum CBLAS_UPLO, const int n, void* a, const int lda) = {
-      /*nm::math::clapack_lauum<uint8_t, false>,
-      nm::math::clapack_lauum<int8_t, false>,
-      nm::math::clapack_lauum<int16_t, false>,
-      nm::math::clapack_lauum<uint32_t, false>,
-      nm::math::clapack_lauum<uint64_t, false>,*/
-      NULL, NULL, NULL, NULL, NULL,
-      nm::math::clapack_lauum<false, float>,
-      nm::math::clapack_lauum<false, double>,
-      nm::math::clapack_lauum<true, nm::Complex64>,
-      nm::math::clapack_lauum<true, nm::Complex128>,
-/*
-      nm::math::clapack_lauum<nm::Rational32, false>,
-      nm::math::clapack_lauum<nm::Rational64, false>,
-      nm::math::clapack_lauum<nm::Rational128, false>,
-      nm::math::clapack_lauum<nm::RubyObject, false>
-
-*/
-  };
-
-  if (!ttable[NM_DTYPE(a)]) {
-    rb_raise(rb_eNotImpError, "does not yet work for non-BLAS dtypes (needs herk, syrk, trmm)");
-  } else {
-    // Call either our version of lauum or the LAPACK version.
-    ttable[NM_DTYPE(a)](blas_order_sym(order), blas_uplo_sym(uplo), FIX2INT(n), NM_STORAGE_DENSE(a)->elements, FIX2INT(lda));
-  }
-
-  return a;
+  //should I remove this entirely?
+  rb_raise(rb_eNotImpError, "not implemented without external libraries");
+  return Qfalse;
 }
 
 
