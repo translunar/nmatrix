@@ -238,6 +238,7 @@ inline int potrf(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const
 
 template <bool is_complex, typename DType>
 inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, DType* A, const int lda) {
+  //call internal implementation if CLAPACK unavailable
   nm::math::lauum<is_complex,DType>(order, uplo, N, A, lda);
 }
 

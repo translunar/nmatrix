@@ -42,7 +42,7 @@ extern "C" {
   /* BLAS Level 3. */
   static VALUE nm_atlas_cblas_gemm(VALUE self, VALUE order, VALUE trans_a, VALUE trans_b, VALUE m, VALUE n, VALUE k, VALUE vAlpha,
                              VALUE a, VALUE lda, VALUE b, VALUE ldb, VALUE vBeta, VALUE c, VALUE ldc);
-  static VALUE nm_cblas_trsm(VALUE self, VALUE order, VALUE side, VALUE uplo, VALUE trans_a, VALUE diag, VALUE m, VALUE n,
+  static VALUE nm_atlas_cblas_trsm(VALUE self, VALUE order, VALUE side, VALUE uplo, VALUE trans_a, VALUE diag, VALUE m, VALUE n,
                              VALUE vAlpha, VALUE a, VALUE lda, VALUE b, VALUE ldb);
   static VALUE nm_cblas_trmm(VALUE self, VALUE order, VALUE side, VALUE uplo, VALUE trans_a, VALUE diag, VALUE m, VALUE n,
                              VALUE alpha, VALUE a, VALUE lda, VALUE b, VALUE ldb);
@@ -111,8 +111,6 @@ namespace nm {
       return gesdd<DType,CType>(jobz, m, n, reinterpret_cast<DType*>(a), lda, reinterpret_cast<DType*>(s), reinterpret_cast<DType*>(u), ldu, reinterpret_cast<DType*>(vt), ldvt, reinterpret_cast<DType*>(work), lwork, iwork, reinterpret_cast<CType*>(rwork));
     }
 
-  } //eventually everything should go into nm::math::atlas, but for now only some stuff works
-
     /*
      * Function signature conversion for calling CBLAS' trsm functions as directly as possible.
      *
@@ -127,6 +125,8 @@ namespace nm {
       trsm<DType>(order, side, uplo, trans_a, diag, m, n, *reinterpret_cast<const DType*>(alpha),
                   reinterpret_cast<const DType*>(a), lda, reinterpret_cast<DType*>(b), ldb);
     }
+
+  } //eventually everything should go into nm::math::atlas, but for now only some stuff works
 
 
     /*
@@ -185,7 +185,7 @@ void nm_math_init_atlas() {
   rb_define_singleton_method(cNMatrix_LAPACK, "lapack_geev",  (METHOD)nm_atlas_lapack_geev,  12);
 
 	rb_define_singleton_method(cNMatrix_BLAS, "cblas_gemm", (METHOD)nm_atlas_cblas_gemm, 14);
-//  rb_define_singleton_method(cNMatrix_BLAS, "cblas_trsm", (METHOD)nm_cblas_trsm, 12);
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_trsm", (METHOD)nm_atlas_cblas_trsm, 12);
 //  rb_define_singleton_method(cNMatrix_BLAS, "cblas_trmm", (METHOD)nm_cblas_trmm, 12);
 //  rb_define_singleton_method(cNMatrix_BLAS, "cblas_syrk", (METHOD)nm_cblas_syrk, 11);
 //  rb_define_singleton_method(cNMatrix_BLAS, "cblas_herk", (METHOD)nm_cblas_herk, 11);
@@ -238,7 +238,7 @@ static VALUE nm_atlas_cblas_gemm(VALUE self,
 }
 
 
-static VALUE nm_cblas_trsm(VALUE self,
+static VALUE nm_atlas_cblas_trsm(VALUE self,
                            VALUE order,
                            VALUE side, VALUE uplo,
                            VALUE trans_a, VALUE diag,
@@ -252,13 +252,13 @@ static VALUE nm_cblas_trsm(VALUE self,
                                         const int m, const int n, const void* alpha, const void* a,
                                         const int lda, void* b, const int ldb) = {
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
-      nm::math::cblas_trsm<float>,
-      nm::math::cblas_trsm<double>,
+      nm::math::atlas::cblas_trsm<float>,
+      nm::math::atlas::cblas_trsm<double>,
       cblas_ctrsm, cblas_ztrsm, // call directly, same function signature!
-      nm::math::cblas_trsm<nm::Rational32>,
-      nm::math::cblas_trsm<nm::Rational64>,
-      nm::math::cblas_trsm<nm::Rational128>,
-      nm::math::cblas_trsm<nm::RubyObject>
+      nm::math::atlas::cblas_trsm<nm::Rational32>,
+      nm::math::atlas::cblas_trsm<nm::Rational64>,
+      nm::math::atlas::cblas_trsm<nm::Rational128>,
+      nm::math::atlas::cblas_trsm<nm::RubyObject>
   };
 
   nm::dtype_t dtype = NM_DTYPE(a);
@@ -333,10 +333,6 @@ static VALUE nm_cblas_syrk(VALUE self,
       nm::math::cblas_syrk<double>,
       cblas_csyrk, cblas_zsyrk, // call directly, same function signature!
       NULL, NULL, NULL, NULL
-      /*nm::math::cblas_trsm<nm::Rational32>,
-      nm::math::cblas_trsm<nm::Rational64>,
-      nm::math::cblas_trsm<nm::Rational128>,
-      nm::math::cblas_trsm<nm::RubyObject>*/
   };
 
   nm::dtype_t dtype = NM_DTYPE(a);

@@ -2,6 +2,33 @@
 #as well as the one provided by ATLAS
 
 RSpec.shared_examples "BLAS shared" do
+  [:rational32, :rational64, :rational128, :float32, :float64, :complex64, :complex128].each do |dtype|
+    context dtype do
+      # This is not the same as "exposes cblas trsm", which would be for a version defined in blas.rb (which
+      # would greatly simplify the calling of cblas_trsm in terms of arguments, and which would be accessible
+      # as NMatrix::BLAS::trsm)
+      # I haven't checked this spec -WL
+      it "exposes unfriendly cblas_trsm" do
+        a     = NMatrix.new(3, [4,-1.quo(2), -3.quo(4), -2, 2, -1.quo(4), -4, -2, -1.quo(2)], dtype: dtype)
+        b     = NMatrix.new([3,1], [-1, 17, -9], dtype: dtype)
+        NMatrix::BLAS::cblas_trsm(:row, :right, :lower, :transpose, :nonunit, 1, 3, 1.0, a, 3, b, 3)
+
+        # These test results all come from actually running a matrix through BLAS. We use them to ensure that NMatrix's
+        # version of these functions (for rationals) give similar results.
+
+        expect(b[0]).to eq(-1.quo(4))
+        expect(b[1]).to eq(33.quo(4))
+        expect(b[2]).to eq(-13)
+
+        NMatrix::BLAS::cblas_trsm(:row, :right, :upper, :transpose, :unit, 1, 3, 1.0, a, 3, b, 3)
+
+        expect(b[0]).to eq(-15.quo(2))
+        expect(b[1]).to eq(5)
+        expect(b[2]).to eq(-13)
+      end
+    end
+  end
+
   [:float32, :float64, :complex64, :complex128, :object].each do |dtype|
     context dtype do
       # Note: this exposes gemm, not cblas_gemm (which is the unfriendly CBLAS no-error-checking version)
