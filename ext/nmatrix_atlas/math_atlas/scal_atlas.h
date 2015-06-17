@@ -29,33 +29,14 @@
 #ifndef SCAL_ATLAS_H
 #define SCAL_ATLAS_H
 
-namespace nm { namespace math {
+#include "math/scal.h"
 
-/*  Purpose */
-/*  ======= */
-
-/*     DSCAL scales a vector by a constant. */
-/*     uses unrolled loops for increment equal to one. */
-
-/*  Further Details */
-/*  =============== */
-
-/*     jack dongarra, linpack, 3/11/78. */
-/*     modified 3/93 to return if incx .le. 0. */
-/*     modified 12/3/93, array(1) declarations changed to array(*) */
-
-/*  ===================================================================== */
+namespace nm { namespace math { namespace atlas {
 
 template <typename DType>
 inline void scal(const int n, const DType scalar, DType* x, const int incx) {
-
-  if (n <= 0 || incx <= 0) {
-    return;
-  }
-
-  for (int i = 0; incx < 0 ? i > n*incx : i < n*incx; i += incx) {
-    x[i] = scalar * x[i];
-  }
+  //call internal implementation if no specialization below
+  nm::math::scal(n, scalar, x, incx);
 }
 
 template <>
@@ -70,12 +51,12 @@ inline void scal(const int n, const double scalar, double* x, const int incx) {
 
 template <>
 inline void scal(const int n, const Complex64 scalar, Complex64* x, const int incx) {
-  cblas_cscal(n, (const void*)(&scalar), (void*)(x), incx);
+  cblas_cscal(n, &scalar, x, incx);
 }
 
 template <>
 inline void scal(const int n, const Complex128 scalar, Complex128* x, const int incx) {
-  cblas_zscal(n, (const void*)(&scalar), (void*)(x), incx);
+  cblas_zscal(n, &scalar, x, incx);
 }
 
 /*
@@ -83,9 +64,9 @@ inline void scal(const int n, const Complex128 scalar, Complex128* x, const int 
  */
 template <typename DType>
 inline void cblas_scal(const int n, const void* scalar, void* x, const int incx) {
-  scal<DType>(n, *reinterpret_cast<const DType*>(scalar), reinterpret_cast<DType*>(x), incx);
+  scal<DType>(n, *static_cast<const DType*>(scalar), static_cast<DType*>(x), incx);
 }
 
-}} // end of nm::math
+}}} // end of nm::math::atlas
 
 #endif

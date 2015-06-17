@@ -59,29 +59,14 @@
 #ifndef ROTG_ATLAS_H
 # define ROTG_ATLAS_H
 
-namespace nm { namespace math {
+#include "math/rotg.h"
 
-/* Givens plane rotation. From ATLAS 3.8.4. */
-// FIXME: Not working properly for Ruby objects.
+namespace nm { namespace math { namespace atlas {
+
 template <typename DType>
 inline void rotg(DType* a, DType* b, DType* c, DType* s) {
-  DType aa    = std::abs(*a), ab = std::abs(*b);
-  DType roe   = aa > ab ? *a : *b;
-  DType scal  = aa + ab;
-
-  if (scal == 0) {
-    *c =  1;
-    *s = *a = *b = 0;
-  } else {
-    DType t0  = aa / scal, t1 = ab / scal;
-    DType r   = scal * std::sqrt(t0 * t0 + t1 * t1);
-    if (roe < 0) r = -r;
-    *c = *a / r;
-    *s = *b / r;
-    DType z   = (*c != 0) ? (1 / *c) : DType(1);
-    *a = r;
-    *b = z;
-  }
+  //call internal implementation if no specialization below
+  nm::math::rotg(a, b, c, s);
 }
 
 template <>
@@ -96,21 +81,21 @@ inline void rotg(double* a, double* b, double* c, double* s) {
 
 template <>
 inline void rotg(Complex64* a, Complex64* b, Complex64* c, Complex64* s) {
-  cblas_crotg(reinterpret_cast<void*>(a), reinterpret_cast<void*>(b), reinterpret_cast<void*>(c), reinterpret_cast<void*>(s));
+  cblas_crotg(a, b, c, s);
 }
 
 template <>
 inline void rotg(Complex128* a, Complex128* b, Complex128* c, Complex128* s) {
-  cblas_zrotg(reinterpret_cast<void*>(a), reinterpret_cast<void*>(b), reinterpret_cast<void*>(c), reinterpret_cast<void*>(s));
+  cblas_zrotg(a, b, c, s);
 }
 
 
 template <typename DType>
 inline void cblas_rotg(void* a, void* b, void* c, void* s) {
-  rotg<DType>(reinterpret_cast<DType*>(a), reinterpret_cast<DType*>(b), reinterpret_cast<DType*>(c), reinterpret_cast<DType*>(s));
+  rotg<DType>(static_cast<DType*>(a), static_cast<DType*>(b), static_cast<DType*>(c), static_cast<DType*>(s));
 }
 
 
-} } //nm::math
+}}} //nm::math::atlas
 
 #endif // ROTG_ATLAS_H

@@ -59,8 +59,9 @@
 #ifndef NRM2_ATLAS_H
 # define NRM2_ATLAS_H
 
+#include "math/nrm2.h"
 
-namespace nm { namespace math {
+namespace nm { namespace math { namespace atlas {
 
 /*
  * Level 1 BLAS routine which returns the 2-norm of an n-vector x.
@@ -74,27 +75,9 @@ namespace nm { namespace math {
  *    rational -> rational
  */
 template <typename ReturnDType, typename DType>
-ReturnDType nrm2(const int N, const DType* X, const int incX) {
-  const DType ONE = 1, ZERO = 0;
-  typename LongDType<DType>::type scale = 0, ssq = 1, absxi, temp;
-
-
-  if ((N < 1) || (incX < 1))    return ZERO;
-  else if (N == 1)              return std::abs(X[0]);
-
-  for (int i = 0; i < N; ++i) {
-    absxi = std::abs(X[i*incX]);
-    if (scale < absxi) {
-      temp  = scale / absxi;
-      scale = absxi;
-      ssq   = ONE + ssq * (temp * temp);
-    } else {
-      temp = absxi / scale;
-      ssq += temp * temp;
-    }
-  }
-
-  return scale * std::sqrt( ssq );
+inline ReturnDType nrm2(const int N, const DType* X, const int incX) {
+  //call internal implementation if no specialization below
+  return nm::math::nrm2<ReturnDType,DType>(N, X, incX);
 }
 
 
@@ -120,11 +103,11 @@ inline double nrm2(const int N, const Complex128* X, const int incX) {
 
 template <typename ReturnDType, typename DType>
 inline void cblas_nrm2(const int N, const void* X, const int incX, void* result) {
-  *reinterpret_cast<ReturnDType*>( result ) = nrm2<ReturnDType, DType>( N, reinterpret_cast<const DType*>(X), incX );
+  *static_cast<ReturnDType*>( result ) = nrm2<ReturnDType, DType>( N, static_cast<const DType*>(X), incX );
 }
 
 
 
-}} // end of namespace nm::math
+}}} // end of namespace nm::math
 
 #endif // NRM2_ATLAS_H

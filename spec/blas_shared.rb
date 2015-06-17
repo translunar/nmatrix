@@ -2,6 +2,119 @@
 #as well as the one provided by ATLAS
 
 RSpec.shared_examples "BLAS shared" do
+  [:byte, :int8, :int16, :int32, :int64,
+   :float32, :float64, :complex64, :complex128,
+   :rational32, :rational64, :rational128,
+   :object
+  ].each do |dtype|
+    context dtype do
+      it "exposes cblas_scal" do
+        x = NMatrix.new([3, 1], [1, 2, 3], dtype: dtype)
+        NMatrix::BLAS.cblas_scal(3, 2, x, 1)
+        expect(x).to eq(NMatrix.new([3, 1], [2, 4, 6], dtype: dtype))
+      end
+
+      it "exposes cblas_imax" do
+        u = NMatrix.new([3,1], [1, 4, 3], dtype: dtype)
+        index = NMatrix::BLAS.cblas_imax(3, u, 1)
+        expect(index).to eq(1)
+      end
+    end
+  end
+
+  #Doesn't test anything for rationals?
+  [:rational32,:rational64,:rational128].each do |dtype|
+    context dtype do
+      it "exposes cblas rot"
+    end
+
+    context dtype do
+      it "exposes cblas rotg"
+    end
+  end
+
+  #should have a separate test for complex
+  [:float32, :float64, :complex64, :complex128, :object].each do |dtype|
+    context dtype do
+
+      it "exposes cblas rot" do
+        x = NMatrix.new([5,1], [1,2,3,4,5], dtype: dtype)
+        y = NMatrix.new([5,1], [-5,-4,-3,-2,-1], dtype: dtype)
+        x, y = NMatrix::BLAS::rot(x, y, 1.quo(2), Math.sqrt(3).quo(2), -1)
+
+        expect(x).to be_within(1e-4).of(
+                   NMatrix.new([5,1], [-0.3660254037844386, -0.7320508075688772, -1.098076211353316, -1.4641016151377544, -1.8301270189221928], dtype: dtype)
+                 )
+
+        expect(y).to be_within(1e-4).of(
+                   NMatrix.new([5,1], [-6.830127018922193, -5.464101615137754, -4.098076211353316, -2.732050807568877, -1.3660254037844386], dtype: dtype)
+                 )
+      end
+
+    end
+  end
+
+  [:float32, :float64, :complex64, :complex128, :object].each do |dtype|
+    context dtype do
+
+      it "exposes cblas rotg" do
+        pending("broken for :object") if dtype == :object
+
+        ab = NMatrix.new([2,1], [6,-8], dtype: dtype)
+        begin
+          c,s = NMatrix::BLAS::rotg(ab)
+        rescue NotImplementedError => e
+          pending e.to_s
+        end
+
+        if [:float32, :float64].include?(dtype)
+          expect(ab[0]).to be_within(1e-6).of(-10)
+          expect(ab[1]).to be_within(1e-6).of(-5.quo(3))
+          expect(c).to be_within(1e-6).of(-3.quo(5))
+        else
+          pending "need correct test cases"
+          expect(ab[0]).to be_within(1e-6).of(10)
+          expect(ab[1]).to be_within(1e-6).of(5.quo(3))
+          expect(c).to be_within(1e-6).of(3.quo(5))
+        end
+        expect(s).to be_within(1e-6).of(4.quo(5))
+      end
+
+      it "exposes asum" do
+        pending("broken for :object") if dtype == :object
+
+        x = NMatrix.new([4,1], [-1,2,3,4], dtype: dtype)
+        expect(NMatrix::BLAS.asum(x)).to eq(10)
+      end
+
+      it "exposes asum for single element" do
+        if [:complex64,:complex128].include?(dtype)
+          x = NMatrix.new([1], [Complex(-3,2)], dtype: dtype)
+          expect(x.asum).to eq(5.0)
+        else
+          x = NMatrix.new([1], [-1], dtype: dtype)
+          expect(x.asum).to eq(1.0)
+        end
+      end
+
+      it "exposes nrm2" do
+        pending("broken for :object") if dtype == :object
+        pending("Temporarily disable because the internal implementation of nrm2 is broken -WL 2015-05-17") if dtype == :complex64 || dtype == :complex128
+
+        x = NMatrix.new([4,1], [2,-4,3,5], dtype: dtype)
+        err = case dtype
+                when :float32, :complex64
+                  1e-6
+                when :float64, :complex128
+                  1e-14
+                else
+                  1e-14
+              end
+        expect(NMatrix::BLAS.nrm2(x, 1, 3)).to be_within(err).of(5.385164807134504)
+      end
+
+    end
+  end
   [:float32, :float64, :complex64, :complex128, :object].each do |dtype|
     #this spec doesn't check check anything
     context dtype do

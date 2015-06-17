@@ -59,8 +59,9 @@
 #ifndef ASUM_ATLAS_H
 #define ASUM_ATLAS_H
 
+#include "math/asum.h"
 
-namespace nm { namespace math {
+namespace nm { namespace math { namespace atlas {
 
 /*
  * Level 1 BLAS routine which sums the absolute values of a vector's contents. If the vector consists of complex values,
@@ -76,13 +77,8 @@ namespace nm { namespace math {
  */
 template <typename ReturnDType, typename DType>
 inline ReturnDType asum(const int N, const DType* X, const int incX) {
-  ReturnDType sum = 0;
-  if ((N > 0) && (incX > 0)) {
-    for (int i = 0; i < N; ++i) {
-      sum += std::abs(X[i*incX]);
-    }
-  }
-  return sum;
+  //call internal implementation if not overridden below
+  return nm::math::asum<ReturnDType,DType>(N,X,incX);
 }
 
 
@@ -109,11 +105,11 @@ inline double asum(const int N, const Complex128* X, const int incX) {
 
 template <typename ReturnDType, typename DType>
 inline void cblas_asum(const int N, const void* X, const int incX, void* sum) {
-  *reinterpret_cast<ReturnDType*>( sum ) = asum<ReturnDType, DType>( N, reinterpret_cast<const DType*>(X), incX );
+  *static_cast<ReturnDType*>( sum ) = asum<ReturnDType, DType>( N, static_cast<const DType*>(X), incX );
 }
 
 
 
-}} // end of namespace nm::math
+}}} // end of namespace nm::math::atlas
 
 #endif // ASUM_ATLAS_H

@@ -59,53 +59,14 @@
 #ifndef ROT_ATLAS_H
 # define ROT_ATLAS_H
 
-namespace nm { namespace math {
+#include "math/rot.h"
 
-// FIXME: This is not working properly for rational numbers. Do we need some kind of symbolic
-// type to handle square roots?
+namespace nm { namespace math { namespace atlas {
 
-
-// TODO: Test this to see if it works properly on complex. ATLAS has a separate algorithm for complex, which looks like
-// TODO: it may actually be the same one.
-//
-// This function is called ATL_rot in ATLAS 3.8.4.
-template <typename DType>
-inline void rot_helper(const int N, DType* X, const int incX, DType* Y, const int incY, const DType c, const DType s) {
-  if (c != 1 || s != 0) {
-    if (incX == 1 && incY == 1) {
-      for (int i = 0; i != N; ++i) {
-        DType tmp = X[i] * c + Y[i] * s;
-        Y[i]      = Y[i] * c - X[i] * s;
-        X[i]      = tmp;
-      }
-    } else {
-      for (int i = N; i > 0; --i, Y += incY, X += incX) {
-        DType tmp = *X * c + *Y * s;
-        *Y  = *Y * c - *X * s;
-        *X  = tmp;
-      }
-    }
-  }
-}
-
-
-/* Applies a plane rotation. From ATLAS 3.8.4. */
 template <typename DType, typename CSDType>
 inline void rot(const int N, DType* X, const int incX, DType* Y, const int incY, const CSDType c, const CSDType s) {
-  int incx = incX, incy = incY;
-  DType *x = X, *y = Y;
-
-  if (N > 0) {
-    if (incX < 0) {
-      if (incY < 0) { incx = -incx; incy = -incy; }
-      else x += -incX * (N-1);
-    } else if (incY < 0) {
-      incy = -incy;
-      incx = -incx;
-      x += (N-1) * incX;
-    }
-    rot_helper<DType>(N, x, incx, y, incy, c, s);
-  }
+  //call internal implementation if no specialization below
+  nm::math::rot<DType,CSDType>(N, X, incX, Y, incY, c, s);
 }
 
 template <>
@@ -130,11 +91,11 @@ inline void rot(const int N, Complex128* X, const int incX, Complex128* Y, const
 
 template <typename DType, typename CSDType>
 inline void cblas_rot(const int N, void* X, const int incX, void* Y, const int incY, const void* c, const void* s) {
-  rot<DType,CSDType>(N, reinterpret_cast<DType*>(X), incX, reinterpret_cast<DType*>(Y), incY,
-                       *reinterpret_cast<const CSDType*>(c), *reinterpret_cast<const CSDType*>(s));
+  rot<DType,CSDType>(N, static_cast<DType*>(X), incX, static_cast<DType*>(Y), incY,
+                       *static_cast<const CSDType*>(c), *static_cast<const CSDType*>(s));
 }
 
 
-} } //nm::math
+}}} //nm::math::atlas
 
 #endif // ROT_ATLAS_H

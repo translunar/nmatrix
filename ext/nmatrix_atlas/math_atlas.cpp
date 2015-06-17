@@ -215,23 +215,319 @@ void nm_math_init_atlas() {
   rb_define_singleton_method(cNMatrix_LAPACK, "lapack_geev",  (METHOD)nm_atlas_lapack_geev,  12);
 
   //BLAS Level 1
-//  rb_define_singleton_method(cNMatrix_BLAS, "cblas_scal", (METHOD)nm_atlas_cblas_scal, 4);
-//  rb_define_singleton_method(cNMatrix_BLAS, "cblas_nrm2", (METHOD)nm_atlas_cblas_nrm2, 3);
-//  rb_define_singleton_method(cNMatrix_BLAS, "cblas_asum", (METHOD)nm_atlas_cblas_asum, 3);
-//  rb_define_singleton_method(cNMatrix_BLAS, "cblas_rot",  (METHOD)nm_atlas_cblas_rot,  7);
-//  rb_define_singleton_method(cNMatrix_BLAS, "cblas_rotg", (METHOD)nm_atlas_cblas_rotg, 1);
-//  rb_define_singleton_method(cNMatrix_BLAS, "cblas_imax", (METHOD)nm_atlas_cblas_imax, 3);
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_scal", (METHOD)nm_atlas_cblas_scal, 4);
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_nrm2", (METHOD)nm_atlas_cblas_nrm2, 3);
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_asum", (METHOD)nm_atlas_cblas_asum, 3);
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_rot",  (METHOD)nm_atlas_cblas_rot,  7);
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_rotg", (METHOD)nm_atlas_cblas_rotg, 1);
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_imax", (METHOD)nm_atlas_cblas_imax, 3);
 
   //BLAS Level 2
-	rb_define_singleton_method(cNMatrix_BLAS, "cblas_gemv", (METHOD)nm_atlas_cblas_gemv, 11);
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_gemv", (METHOD)nm_atlas_cblas_gemv, 11);
 
   //BLAS Level 3
-	rb_define_singleton_method(cNMatrix_BLAS, "cblas_gemm", (METHOD)nm_atlas_cblas_gemm, 14);
+  rb_define_singleton_method(cNMatrix_BLAS, "cblas_gemm", (METHOD)nm_atlas_cblas_gemm, 14);
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_trsm", (METHOD)nm_atlas_cblas_trsm, 12);
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_trmm", (METHOD)nm_atlas_cblas_trmm, 12);
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_syrk", (METHOD)nm_atlas_cblas_syrk, 11);
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_herk", (METHOD)nm_atlas_cblas_herk, 11);
 
+}
+
+/*
+ * call-seq:
+ *     NMatrix::BLAS.cblas_scal(n, alpha, vector, inc) -> NMatrix
+ *
+ * BLAS level 1 function +scal+. Works with all dtypes.
+ *
+ * Scale +vector+ in-place by +alpha+ and also return it. The operation is as
+ * follows:
+ *  x <- alpha * x
+ *
+ * - +n+ -> Number of elements of +vector+.
+ * - +alpha+ -> Scalar value used in the operation.
+ * - +vector+ -> NMatrix of shape [n,1] or [1,n]. Modified in-place.
+ * - +inc+ -> Increment used in the scaling function. Should generally be 1.
+ */
+static VALUE nm_atlas_cblas_scal(VALUE self, VALUE n, VALUE alpha, VALUE vector, VALUE incx) {
+  nm::dtype_t dtype = NM_DTYPE(vector);
+
+  void* scalar = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
+  rubyval_to_cval(alpha, dtype, scalar);
+
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::atlas::cblas_scal, void, const int n,
+      const void* scalar, void* x, const int incx);
+
+  ttable[dtype](FIX2INT(n), scalar, NM_STORAGE_DENSE(vector)->elements,
+      FIX2INT(incx));
+
+  return vector;
+}
+
+/*
+ * Call any of the cblas_xrotg functions as directly as possible.
+ *
+ * xROTG computes the elements of a Givens plane rotation matrix such that:
+ *
+ *  |  c s |   | a |   | r |
+ *  | -s c | * | b | = | 0 |
+ *
+ * where r = +- sqrt( a**2 + b**2 ) and c**2 + s**2 = 1.
+ *
+ * The Givens plane rotation can be used to introduce zero elements into a matrix selectively.
+ *
+ * This function differs from most of the other raw BLAS accessors. Instead of
+ * providing a, b, c, s as arguments, you should only provide a and b (the
+ * inputs), and you should provide them as the first two elements of any dense
+ * NMatrix type.
+ *
+ * The outputs [c,s] will be returned in a Ruby Array at the end; the input
+ * NMatrix will also be modified in-place.
+ *
+ * If you provide rationals, be aware that there's a high probability of an
+ * error, since rotg includes a square root -- and most rationals' square roots
+ * are irrational. You're better off converting to Float first.
+ *
+ * This function, like the other cblas_ functions, does minimal type-checking.
+ */
+static VALUE nm_atlas_cblas_rotg(VALUE self, VALUE ab) {
+  static void (*ttable[nm::NUM_DTYPES])(void* a, void* b, void* c, void* s) = {
+      NULL, NULL, NULL, NULL, NULL, // can't represent c and s as integers, so no point in having integer operations.
+      nm::math::atlas::cblas_rotg<float>,
+      nm::math::atlas::cblas_rotg<double>,
+      nm::math::atlas::cblas_rotg<nm::Complex64>,
+      nm::math::atlas::cblas_rotg<nm::Complex128>,
+      NULL, NULL, NULL, // no rationals
+      NULL //nm::math::atlas::cblas_rotg<nm::RubyObject>
+  };
+
+  nm::dtype_t dtype = NM_DTYPE(ab);
+
+  if (!ttable[dtype]) {
+    rb_raise(nm_eDataTypeError, "this operation undefined for integer and rational vectors");
+    return Qnil;
+
+  } else {
+    NM_CONSERVATIVE(nm_register_value(&self));
+    NM_CONSERVATIVE(nm_register_value(&ab));
+    void *pC = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]),
+         *pS = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
+
+    // extract A and B from the NVector (first two elements)
+    void* pA = NM_STORAGE_DENSE(ab)->elements;
+    void* pB = (char*)(NM_STORAGE_DENSE(ab)->elements) + DTYPE_SIZES[dtype];
+    // c and s are output
+
+    ttable[dtype](pA, pB, pC, pS);
+
+    VALUE result = rb_ary_new2(2);
+
+    if (dtype == nm::RUBYOBJ) {
+      rb_ary_store(result, 0, *reinterpret_cast<VALUE*>(pC));
+      rb_ary_store(result, 1, *reinterpret_cast<VALUE*>(pS));
+    } else {
+      rb_ary_store(result, 0, rubyobj_from_cval(pC, dtype).rval);
+      rb_ary_store(result, 1, rubyobj_from_cval(pS, dtype).rval);
+    }
+    NM_CONSERVATIVE(nm_unregister_value(&ab));
+    NM_CONSERVATIVE(nm_unregister_value(&self));
+    return result;
+  }
+}
+
+
+/*
+ * Call any of the cblas_xrot functions as directly as possible.
+ *
+ * xROT is a BLAS level 1 routine (taking two vectors) which applies a plane rotation.
+ *
+ * It's tough to find documentation on xROT. Here are what we think the arguments are for:
+ *  * n     :: number of elements to consider in x and y
+ *  * x     :: a vector (expects an NVector)
+ *  * incx  :: stride of x
+ *  * y     :: a vector (expects an NVector)
+ *  * incy  :: stride of y
+ *  * c     :: cosine of the angle of rotation
+ *  * s     :: sine of the angle of rotation
+ *
+ * Note that c and s will be the same dtype as x and y, except when x and y are complex. If x and y are complex, c and s
+ * will be float for Complex64 or double for Complex128.
+ *
+ * You probably don't want to call this function. Instead, why don't you try rot, which is more flexible
+ * with its arguments?
+ *
+ * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
+ * handling, so you can easily crash Ruby!
+ */
+static VALUE nm_atlas_cblas_rot(VALUE self, VALUE n, VALUE x, VALUE incx, VALUE y, VALUE incy, VALUE c, VALUE s) {
+  static void (*ttable[nm::NUM_DTYPES])(const int N, void*, const int, void*, const int, const void*, const void*) = {
+      NULL, NULL, NULL, NULL, NULL, // can't represent c and s as integers, so no point in having integer operations.
+      nm::math::atlas::cblas_rot<float,float>,
+      nm::math::atlas::cblas_rot<double,double>,
+      nm::math::atlas::cblas_rot<nm::Complex64,float>,
+      nm::math::atlas::cblas_rot<nm::Complex128,double>,
+      nm::math::atlas::cblas_rot<nm::Rational32,nm::Rational32>,
+      nm::math::atlas::cblas_rot<nm::Rational64,nm::Rational64>,
+      nm::math::atlas::cblas_rot<nm::Rational128,nm::Rational128>,
+      nm::math::atlas::cblas_rot<nm::RubyObject,nm::RubyObject>
+  };
+
+  nm::dtype_t dtype = NM_DTYPE(x);
+
+
+  if (!ttable[dtype]) {
+    rb_raise(nm_eDataTypeError, "this operation undefined for integer vectors");
+    return Qfalse;
+  } else {
+    void *pC, *pS;
+
+    // We need to ensure the cosine and sine arguments are the correct dtype -- which may differ from the actual dtype.
+    if (dtype == nm::COMPLEX64) {
+      pC = NM_ALLOCA_N(float,1);
+      pS = NM_ALLOCA_N(float,1);
+      rubyval_to_cval(c, nm::FLOAT32, pC);
+      rubyval_to_cval(s, nm::FLOAT32, pS);
+    } else if (dtype == nm::COMPLEX128) {
+      pC = NM_ALLOCA_N(double,1);
+      pS = NM_ALLOCA_N(double,1);
+      rubyval_to_cval(c, nm::FLOAT64, pC);
+      rubyval_to_cval(s, nm::FLOAT64, pS);
+    } else {
+      pC = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
+      pS = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
+      rubyval_to_cval(c, dtype, pC);
+      rubyval_to_cval(s, dtype, pS);
+    }
+
+
+    ttable[dtype](FIX2INT(n), NM_STORAGE_DENSE(x)->elements, FIX2INT(incx), NM_STORAGE_DENSE(y)->elements, FIX2INT(incy), pC, pS);
+
+    return Qtrue;
+  }
+}
+
+
+/*
+ * Call any of the cblas_xnrm2 functions as directly as possible.
+ *
+ * xNRM2 is a BLAS level 1 routine which calculates the 2-norm of an n-vector x.
+ *
+ * Arguments:
+ *  * n     :: length of x, must be at least 0
+ *  * x     :: pointer to first entry of input vector
+ *  * incx  :: stride of x, must be POSITIVE (ATLAS says non-zero, but 3.8.4 code only allows positive)
+ *
+ * You probably don't want to call this function. Instead, why don't you try nrm2, which is more flexible
+ * with its arguments?
+ *
+ * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
+ * handling, so you can easily crash Ruby!
+ */
+static VALUE nm_atlas_cblas_nrm2(VALUE self, VALUE n, VALUE x, VALUE incx) {
+
+  static void (*ttable[nm::NUM_DTYPES])(const int N, const void* X, const int incX, void* sum) = {
+      NULL, NULL, NULL, NULL, NULL, // no help for integers
+      nm::math::atlas::cblas_nrm2<float32_t,float32_t>,
+      nm::math::atlas::cblas_nrm2<float64_t,float64_t>,
+      nm::math::atlas::cblas_nrm2<float32_t,nm::Complex64>,
+      nm::math::atlas::cblas_nrm2<float64_t,nm::Complex128>,
+      NULL, NULL, NULL,
+      nm::math::atlas::cblas_nrm2<nm::RubyObject,nm::RubyObject>
+  };
+
+  nm::dtype_t dtype  = NM_DTYPE(x);
+
+  if (!ttable[dtype]) {
+    rb_raise(nm_eDataTypeError, "this operation undefined for integer and rational vectors");
+    return Qnil;
+
+  } else {
+    // Determine the return dtype and allocate it
+    nm::dtype_t rdtype = dtype;
+    if      (dtype == nm::COMPLEX64)  rdtype = nm::FLOAT32;
+    else if (dtype == nm::COMPLEX128) rdtype = nm::FLOAT64;
+
+    void *Result = NM_ALLOCA_N(char, DTYPE_SIZES[rdtype]);
+
+    ttable[dtype](FIX2INT(n), NM_STORAGE_DENSE(x)->elements, FIX2INT(incx), Result);
+
+    return rubyobj_from_cval(Result, rdtype).rval;
+  }
+}
+
+
+
+/*
+ * Call any of the cblas_xasum functions as directly as possible.
+ *
+ * xASUM is a BLAS level 1 routine which calculates the sum of absolute values of the entries
+ * of a vector x.
+ *
+ * Arguments:
+ *  * n     :: length of x, must be at least 0
+ *  * x     :: pointer to first entry of input vector
+ *  * incx  :: stride of x, must be POSITIVE (ATLAS says non-zero, but 3.8.4 code only allows positive)
+ *
+ * You probably don't want to call this function. Instead, why don't you try asum, which is more flexible
+ * with its arguments?
+ *
+ * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
+ * handling, so you can easily crash Ruby!
+ */
+static VALUE nm_atlas_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx) {
+
+  static void (*ttable[nm::NUM_DTYPES])(const int N, const void* X, const int incX, void* sum) = {
+      nm::math::atlas::cblas_asum<uint8_t,uint8_t>,
+      nm::math::atlas::cblas_asum<int8_t,int8_t>,
+      nm::math::atlas::cblas_asum<int16_t,int16_t>,
+      nm::math::atlas::cblas_asum<int32_t,int32_t>,
+      nm::math::atlas::cblas_asum<int64_t,int64_t>,
+      nm::math::atlas::cblas_asum<float32_t,float32_t>,
+      nm::math::atlas::cblas_asum<float64_t,float64_t>,
+      nm::math::atlas::cblas_asum<float32_t,nm::Complex64>,
+      nm::math::atlas::cblas_asum<float64_t,nm::Complex128>,
+      nm::math::atlas::cblas_asum<nm::Rational32,nm::Rational32>,
+      nm::math::atlas::cblas_asum<nm::Rational64,nm::Rational64>,
+      nm::math::atlas::cblas_asum<nm::Rational128,nm::Rational128>,
+      nm::math::atlas::cblas_asum<nm::RubyObject,nm::RubyObject>
+  };
+
+  nm::dtype_t dtype  = NM_DTYPE(x);
+
+  // Determine the return dtype and allocate it
+  nm::dtype_t rdtype = dtype;
+  if      (dtype == nm::COMPLEX64)  rdtype = nm::FLOAT32;
+  else if (dtype == nm::COMPLEX128) rdtype = nm::FLOAT64;
+
+  void *Result = NM_ALLOCA_N(char, DTYPE_SIZES[rdtype]);
+
+  ttable[dtype](FIX2INT(n), NM_STORAGE_DENSE(x)->elements, FIX2INT(incx), Result);
+
+  return rubyobj_from_cval(Result, rdtype).rval;
+}
+
+/*
+ * call-seq:
+ *    NMatrix::BLAS.cblas_imax(n, vector, inc) -> Fixnum
+ *
+ * BLAS level 1 routine.
+ *
+ * Return the index of the largest element of +vector+.
+ *
+ * - +n+ -> Vector's size. Generally, you can use NMatrix#rows or NMatrix#cols.
+ * - +vector+ -> A NMatrix of shape [n,1] or [1,n] with any dtype.
+ * - +inc+ -> It's the increment used when searching. Use 1 except if you know
+ *   what you're doing.
+ */
+static VALUE nm_atlas_cblas_imax(VALUE self, VALUE n, VALUE x, VALUE incx) {
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::atlas::cblas_imax, int, const int n, const void* x, const int incx);
+
+  nm::dtype_t dtype = NM_DTYPE(x);
+
+  int index = ttable[dtype](FIX2INT(n), NM_STORAGE_DENSE(x)->elements, FIX2INT(incx));
+
+  // Convert to Ruby's Int value.
+  return INT2FIX(index);
 }
 
 /* Call any of the cblas_xgemv functions as directly as possible.
@@ -777,11 +1073,7 @@ static VALUE nm_atlas_clapack_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n
       nm::math::atlas::clapack_potrf<nm::Complex64>,
       nm::math::atlas::clapack_potrf<nm::Complex128>,
 #endif
-      NULL, NULL, NULL, NULL /*
-      nm::math::clapack_potrf<nm::Rational32>,
-      nm::math::clapack_potrf<nm::Rational64>,
-      nm::math::clapack_potrf<nm::Rational128>,
-      nm::math::clapack_potrf<nm::RubyObject> */
+      NULL, NULL, NULL, NULL
   };
 
   if (!ttable[NM_DTYPE(a)]) {
@@ -904,11 +1196,7 @@ static VALUE nm_atlas_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, V
       nm::math::atlas::clapack_getri<nm::Complex64>,
       nm::math::atlas::clapack_getri<nm::Complex128>,
 #endif
-      NULL, NULL, NULL, NULL /*
-      nm::math::clapack_getri<nm::Rational32>,
-      nm::math::clapack_getri<nm::Rational64>,
-      nm::math::clapack_getri<nm::Rational128>,
-      nm::math::clapack_getri<nm::RubyObject> */
+      NULL, NULL, NULL, NULL
   };
 
   // Allocate the C version of the pivot index array
@@ -986,6 +1274,7 @@ static VALUE nm_atlas_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VAL
   //We have actually never used the ATLAS version of laswp. For the time being
   //I will leave it like that and just always call the internal implementation.
   //I don't know if there is a good reason for this or not.
+  //Maybe because our internal version swaps columns instead of rows.
   static void (*ttable[nm::NUM_DTYPES])(const int n, void* a, const int lda, const int k1, const int k2, const int* ipiv, const int incx) = {
       nm::math::clapack_laswp<uint8_t>,
       nm::math::clapack_laswp<int8_t>,
@@ -994,12 +1283,8 @@ static VALUE nm_atlas_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VAL
       nm::math::clapack_laswp<int64_t>,
       nm::math::clapack_laswp<float>,
       nm::math::clapack_laswp<double>,
-//#ifdef HAVE_CLAPACK_H // laswp doesn't actually exist in clapack.h!
-//      clapack_claswp, clapack_zlaswp, // call directly, same function signature!
-//#else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
       nm::math::clapack_laswp<nm::Complex64>,
       nm::math::clapack_laswp<nm::Complex128>,
-//#endif
       nm::math::clapack_laswp<nm::Rational32>,
       nm::math::clapack_laswp<nm::Rational64>,
       nm::math::clapack_laswp<nm::Rational128>,

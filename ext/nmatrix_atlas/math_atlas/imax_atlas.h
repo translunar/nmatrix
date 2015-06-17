@@ -29,44 +29,14 @@
 #ifndef IMAX_ATLAS_H
 #define IMAX_ATLAS_H
 
-namespace nm { namespace math {
+#include "math/imax.h"
+
+namespace nm { namespace math { namespace atlas {
 
 template<typename DType>
 inline int imax(const int n, const DType *x, const int incx) {
-
-  if (n < 1 || incx <= 0) {
-    return -1;
-  }
-  if (n == 1) {
-    return 0;
-  }
-
-  DType dmax;
-  int imax = 0;
-
-  if (incx == 1) { // if incrementing by 1
-
-    dmax = abs(x[0]);
-
-    for (int i = 1; i < n; ++i) {
-      if (std::abs(x[i]) > dmax) {
-        imax = i;
-        dmax = std::abs(x[i]);
-      }
-    }
-
-  } else { // if incrementing by more than 1
-
-    dmax = std::abs(x[0]);
-
-    for (int i = 1, ix = incx; i < n; ++i, ix += incx) {
-      if (std::abs(x[ix]) > dmax) {
-        imax = i;
-        dmax = std::abs(x[ix]);
-      }
-    }
-  }
-  return imax;
+  //call internal implementation if no specialization below
+  return nm::math::imax(n, x, incx);
 }
 
 template<>
@@ -91,9 +61,9 @@ inline int imax(const int n, const Complex128* x, const int incx) {
 
 template<typename DType>
 inline int cblas_imax(const int n, const void* x, const int incx) {
-  return imax<DType>(n, reinterpret_cast<const DType*>(x), incx);
+  return imax<DType>(n, static_cast<const DType*>(x), incx);
 }
 
-}} // end of namespace nm::math
+}}} // end of namespace nm::math::atlas
 
 #endif /* IMAX_ATLAS_H */
