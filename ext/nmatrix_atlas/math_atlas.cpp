@@ -40,6 +40,18 @@
  */
 
 extern "C" {
+  /* BLAS Level 1. */
+  static VALUE nm_atlas_cblas_scal(VALUE self, VALUE n, VALUE scale, VALUE vector, VALUE incx);
+  static VALUE nm_atlas_cblas_nrm2(VALUE self, VALUE n, VALUE x, VALUE incx);
+  static VALUE nm_atlas_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx);
+  static VALUE nm_atlas_cblas_rot(VALUE self, VALUE n, VALUE x, VALUE incx, VALUE y, VALUE incy, VALUE c, VALUE s);
+  static VALUE nm_atlas_cblas_rotg(VALUE self, VALUE ab);
+  static VALUE nm_atlas_cblas_imax(VALUE self, VALUE n, VALUE x, VALUE incx);
+
+  /* BLAS Level 2. */
+  static VALUE nm_atlas_cblas_gemv(VALUE self, VALUE trans_a, VALUE m, VALUE n, VALUE vAlpha, VALUE a, VALUE lda,
+                             VALUE x, VALUE incx, VALUE vBeta, VALUE y, VALUE incy);
+
   /* BLAS Level 3. */
   static VALUE nm_atlas_cblas_gemm(VALUE self, VALUE order, VALUE trans_a, VALUE trans_b, VALUE m, VALUE n, VALUE k, VALUE vAlpha,
                              VALUE a, VALUE lda, VALUE b, VALUE ldb, VALUE vBeta, VALUE c, VALUE ldc);
@@ -74,6 +86,26 @@ extern "C" {
 namespace nm { 
   namespace math {
   namespace atlas {
+    /*
+     * Function signature conversion for calling CBLAS's gemv functions as directly as possible.
+     *
+     * For documentation: http://www.netlib.org/lapack/double/dgetrf.f
+     */
+    template <typename DType>
+    inline static bool cblas_gemv(const enum CBLAS_TRANSPOSE trans,
+                                  const int m, const int n,
+                                  const void* alpha,
+                                  const void* a, const int lda,
+                                  const void* x, const int incx,
+                                  const void* beta,
+                                  void* y, const int incy)
+    {
+      return gemv<DType>(trans,
+                         m, n, reinterpret_cast<const DType*>(alpha),
+                         reinterpret_cast<const DType*>(a), lda,
+                         reinterpret_cast<const DType*>(x), incx, reinterpret_cast<const DType*>(beta),
+                         reinterpret_cast<DType*>(y), incy);
+    }
 
     /*
      * Function signature conversion for calling CBLAS' gemm functions as directly as possible.
@@ -176,18 +208,72 @@ void nm_math_init_atlas() {
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_potri", (METHOD)nm_atlas_clapack_potri, 5);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_laswp", (METHOD)nm_atlas_clapack_laswp, 7);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_lauum", (METHOD)nm_atlas_clapack_lauum, 5);
-//
-//  /* Non-ATLAS regular LAPACK Functions called via Fortran interface */
+
+  /* Non-ATLAS regular LAPACK Functions called via Fortran interface */
   rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesvd", (METHOD)nm_atlas_lapack_gesvd, 12);
   rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesdd", (METHOD)nm_atlas_lapack_gesdd, 11);
   rb_define_singleton_method(cNMatrix_LAPACK, "lapack_geev",  (METHOD)nm_atlas_lapack_geev,  12);
 
+  //BLAS Level 1
+//  rb_define_singleton_method(cNMatrix_BLAS, "cblas_scal", (METHOD)nm_atlas_cblas_scal, 4);
+//  rb_define_singleton_method(cNMatrix_BLAS, "cblas_nrm2", (METHOD)nm_atlas_cblas_nrm2, 3);
+//  rb_define_singleton_method(cNMatrix_BLAS, "cblas_asum", (METHOD)nm_atlas_cblas_asum, 3);
+//  rb_define_singleton_method(cNMatrix_BLAS, "cblas_rot",  (METHOD)nm_atlas_cblas_rot,  7);
+//  rb_define_singleton_method(cNMatrix_BLAS, "cblas_rotg", (METHOD)nm_atlas_cblas_rotg, 1);
+//  rb_define_singleton_method(cNMatrix_BLAS, "cblas_imax", (METHOD)nm_atlas_cblas_imax, 3);
+
+  //BLAS Level 2
+	rb_define_singleton_method(cNMatrix_BLAS, "cblas_gemv", (METHOD)nm_atlas_cblas_gemv, 11);
+
+  //BLAS Level 3
 	rb_define_singleton_method(cNMatrix_BLAS, "cblas_gemm", (METHOD)nm_atlas_cblas_gemm, 14);
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_trsm", (METHOD)nm_atlas_cblas_trsm, 12);
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_trmm", (METHOD)nm_atlas_cblas_trmm, 12);
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_syrk", (METHOD)nm_atlas_cblas_syrk, 11);
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_herk", (METHOD)nm_atlas_cblas_herk, 11);
 
+}
+
+/* Call any of the cblas_xgemv functions as directly as possible.
+ *
+ * The cblas_xgemv functions (dgemv, sgemv, cgemv, and zgemv) define the following operation:
+ *
+ *    y = alpha*op(A)*x + beta*y
+ *
+ * where op(A) is one of <tt>op(A) = A</tt>, <tt>op(A) = A**T</tt>, or the complex conjugate of A.
+ *
+ * Note that this will only work for dense matrices that are of types :float32, :float64, :complex64, and :complex128.
+ * Other types are not implemented in BLAS, and while they exist in NMatrix, this method is intended only to
+ * expose the ultra-optimized ATLAS versions.
+ *
+ * == Arguments
+ * See: http://www.netlib.org/blas/dgemm.f
+ *
+ * You probably don't want to call this function. Instead, why don't you try cblas_gemv, which is more flexible
+ * with its arguments?
+ *
+ * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
+ * handling, so you can easily crash Ruby!
+ */
+static VALUE nm_atlas_cblas_gemv(VALUE self,
+                           VALUE trans_a,
+                           VALUE m, VALUE n,
+                           VALUE alpha,
+                           VALUE a, VALUE lda,
+                           VALUE x, VALUE incx,
+                           VALUE beta,
+                           VALUE y, VALUE incy)
+{
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::atlas::cblas_gemv, bool, const enum CBLAS_TRANSPOSE, const int, const int, const void*, const void*, const int, const void*, const int, const void*, void*, const int)
+
+  nm::dtype_t dtype = NM_DTYPE(a);
+
+  void *pAlpha = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]),
+       *pBeta  = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
+  rubyval_to_cval(alpha, dtype, pAlpha);
+  rubyval_to_cval(beta, dtype, pBeta);
+
+  return ttable[dtype](blas_transpose_sym(trans_a), FIX2INT(m), FIX2INT(n), pAlpha, NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), NM_STORAGE_DENSE(x)->elements, FIX2INT(incx), pBeta, NM_STORAGE_DENSE(y)->elements, FIX2INT(incy)) ? Qtrue : Qfalse;
 }
 
 /* Call any of the cblas_xgemm functions as directly as possible.

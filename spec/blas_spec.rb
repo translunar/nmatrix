@@ -102,13 +102,6 @@ describe NMatrix::BLAS do
         expect(s).to be_within(1e-6).of(4.quo(5))
       end
 
-      it "exposes gemv" do
-        a = NMatrix.new([4,3], [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0], dtype: :float64)
-        x = NMatrix.new([3,1], [2.0, 1.0, 0.0], dtype: :float64)
-
-        NMatrix::BLAS.gemv(a, x)
-      end
-
       it "exposes asum" do
         x = NMatrix.new([4,1], [1,2,3,4], dtype: :float64)
         expect(NMatrix::BLAS.asum(x)).to eq(10.0)

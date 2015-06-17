@@ -2,6 +2,18 @@
 #as well as the one provided by ATLAS
 
 RSpec.shared_examples "BLAS shared" do
+  [:float32, :float64, :complex64, :complex128, :object].each do |dtype|
+    #this spec doesn't check check anything
+    context dtype do
+      it "exposes gemv" do
+        a = NMatrix.new([4,3], [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0], dtype: :float64)
+        x = NMatrix.new([3,1], [2.0, 1.0, 0.0], dtype: :float64)
+
+        NMatrix::BLAS.gemv(a, x)
+      end
+    end
+  end
+
   [:rational32, :rational64, :rational128, :float32, :float64, :complex64, :complex128].each do |dtype|
     context dtype do
       # This is not the same as "exposes cblas trsm", which would be for a version defined in blas.rb (which
