@@ -137,20 +137,19 @@ module NMatrix::BLAS
       raise(ArgumentError, 'Expected nil or dense NMatrix as third argument.') unless y.nil? or (y.is_a?(NMatrix) and y.stype == :dense)
       raise(ArgumentError, 'NMatrix dtype mismatch.')													 unless a.dtype == x.dtype and (y ? a.dtype == y.dtype : true)
 
-      m ||= transpose_a ? a.shape[1] : a.shape[0]
-      n ||= transpose_a ? a.shape[0] : a.shape[1]
+      m ||= transpose_a == :transpose ? a.shape[1] : a.shape[0]
+      n ||= transpose_a == :transpose ? a.shape[0] : a.shape[1]
+      raise(ArgumentError, "dimensions don't match") unless x.shape[0] == n && x.shape[1] == 1
+
+      if y
+        raise(ArgumentError, "dimensions don't match") unless y.shape[0] == m && y.shape[1] == 1
+      else
+        y = NMatrix.new([m,1], dtype: a.dtype)
+      end
 
       lda		||= a.shape[1]
       incx	||= 1
       incy	||= 1
-
-      # NM_COMPLEX64 and NM_COMPLEX128 both require complex alpha and beta.
-      if a.dtype == :complex64 or a.dtype == :complex128
-        alpha = Complex(1.0, 0.0) if alpha == 1.0
-        beta  = Complex(0.0, 0.0) if beta  == 0.0
-      end
-
-      y ||= NMatrix.new([m, n], dtype: a.dtype)
 
       ::NMatrix::BLAS.cblas_gemv(transpose_a, m, n, alpha, a, lda, x, incx, beta, y, incy)
 
