@@ -137,4 +137,42 @@ RSpec.shared_examples "math shared" do
       end
     end
   end
+
+  #determinant calculation (sometimes) uses getrf, so it goes here
+  context "determinants" do
+    ALL_DTYPES.each do |dtype|
+      next if dtype == :object
+      context dtype do
+        before do
+          @a = NMatrix.new([2,2], [1,2,
+                                   3,4], dtype: dtype)
+          @b = NMatrix.new([3,3], [1,2,3,
+                                   5,0,1,
+                                   4,1,3], dtype: dtype)
+          @c = NMatrix.new([4,4], [1, 0, 1, 1,
+                                   1, 2, 3, 1,
+                                   3, 3, 3, 1,
+                                   1, 2, 3, 4], dtype: dtype)
+          @err = case dtype
+                  when :float32, :complex64
+                    1e-6
+                  when :float64, :complex128
+                    1e-14 #this was originally 1e-15, this seemed to work when using ATLAS, but not with internal implementation? Look into this?
+                  else
+                    1e-64 # FIXME: should be 0, but be_within(0) does not work.
+                end
+        end
+        it "computes the determinant of 2x2 matrix" do
+          expect(@a.det).to be_within(@err).of(-2)
+        end
+        it "computes the determinant of 3x3 matrix" do
+          expect(@b.det).to be_within(@err).of(-8)
+        end
+        it "computes the determinant of 4x4 matrix" do
+          expect(@c.det).to be_within(@err).of(-18)
+        end
+      end
+    end
+  end
+
 end

@@ -481,7 +481,7 @@ describe "math" do
     end
   end
 
-  context "determinants" do
+  context "exact determinants" do
     ALL_DTYPES.each do |dtype|
       next if dtype == :object
       context dtype do
@@ -491,10 +491,6 @@ describe "math" do
           @b = NMatrix.new([3,3], [1,2,3,
                                    5,0,1,
                                    4,1,3], dtype: dtype)
-          @c = NMatrix.new([4,4], [1, 0, 1, 1,
-                                   1, 2, 3, 1,
-                                   3, 3, 3, 1,
-                                   1, 2, 3, 4], dtype: dtype)
           @err = case dtype
                   when :float32, :complex64
                     1e-6
@@ -503,15 +499,6 @@ describe "math" do
                   else
                     1e-64 # FIXME: should be 0, but be_within(0) does not work.
                 end
-        end
-        it "computes the determinant of 2x2 matrix" do
-          expect(@a.det).to be_within(@err).of(-2)
-        end
-        it "computes the determinant of 3x3 matrix" do
-          expect(@b.det).to be_within(@err).of(-8)
-        end
-        it "computes the determinant of 4x4 matrix" do
-          expect(@c.det).to be_within(@err).of(-18)
         end
         it "computes the exact determinant of 2x2 matrix" do
           if dtype == :byte
