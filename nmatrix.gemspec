@@ -5,11 +5,9 @@ require 'nmatrix/version'
 
 #get files that are used by plugins rather than the main nmatrix gem
 plugin_files = []
-plugin_test_files = []
 Dir["nmatrix-*.gemspec"].each do |gemspec_file|
   gemspec = eval(File.read(gemspec_file))
   plugin_files += gemspec.files
-  plugin_test_files += gemspec.test_files
 end
 
 Gem::Specification.new do |gem|
@@ -47,7 +45,8 @@ EOF
   gem.files         = `git ls-files`.split("\n") - plugin_files
   gem.files         += `git ls-files -- ext/nmatrix`.split("\n") #need to explicitly add this, since some of these files are included in plugin_files
   gem.files.uniq!
-  gem.test_files    = `git ls-files -- spec`.split("\n") - plugin_test_files
+  gem.test_files    = `git ls-files -- spec`.split("\n")
+  gem.test_files    -= `git ls-files -- spec/plugins`.split("\n")
   gem.executables   = `git ls-files -- bin`.split("\n").map{ |f| File.basename(f) }
   gem.extensions = ['ext/nmatrix/extconf.rb']
   gem.require_paths = ["lib"]
