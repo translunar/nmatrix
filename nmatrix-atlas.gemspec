@@ -35,7 +35,6 @@ Thanks for trying out NMatrix! Happy coding!
 ***********************************************************
 EOF
 
-  #gem.files         = `git ls-files -- lib | grep atlas`.split("\n")
   gem.files         = ["lib/nmatrix/atlas.rb"]
   gem.files         += `git ls-files -- ext/nmatrix_atlas`.split("\n")
   gem.files         += `git ls-files -- ext/nmatrix | grep ".h$"`.split("\n") #need nmatrix header files to compile
