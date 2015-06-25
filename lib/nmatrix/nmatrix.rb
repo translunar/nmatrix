@@ -43,7 +43,7 @@ require_relative './io/mat5_reader'
 require_relative './io/market'
 require_relative './io/point_cloud'
 
-require_relative './lapack.rb'
+require_relative './fake_lapack.rb'
 require_relative './yale_functions.rb'
 require_relative './monkeys'
 
