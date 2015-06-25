@@ -97,13 +97,13 @@ end
 
 $DEBUG = true
 #not the right way to add this include directory
-$CFLAGS = ["-Wall -Werror=return-type -I$(srcdir)/../nmatrix",$CFLAGS].join(" ")
-$CXXFLAGS = ["-Wall -Werror=return-type -I$(srcdir)/../nmatrix",$CXXFLAGS].join(" ")
-$CPPFLAGS = ["-Wall -Werror=return-type -I$(srcdir)/../nmatrix",$CPPFLAGS].join(" ")
+$CFLAGS = ["-Wall -Werror=return-type -I$(srcdir)/../nmatrix -I$(srcdir)/lapacke/include",$CFLAGS].join(" ")
+$CXXFLAGS = ["-Wall -Werror=return-type -I$(srcdir)/../nmatrix -I$(srcdir)/lapacke/include",$CXXFLAGS].join(" ")
+$CPPFLAGS = ["-Wall -Werror=return-type -I$(srcdir)/../nmatrix -I$(srcdir)/lapacke/include",$CPPFLAGS].join(" ")
 
 # When adding objects here, make sure their directories are included in CLEANOBJS down at the bottom of extconf.rb.
 # Why not just autogenerate this list from all .c/.cpp files in directory?
-basenames = %w{nmatrix_lapack math_lapack}
+basenames = %w{nmatrix_lapack math_lapack lapacke}
 $objs = basenames.map { |b| "#{b}.o"   }
 $srcs = basenames.map { |b| "#{b}.cpp" }
 
@@ -240,8 +240,8 @@ CONFIG['warnflags'].gsub!('-Wshorten-64-to-32', '') # doesn't work except in Mac
 CONFIG['warnflags'].gsub!('-Wdeclaration-after-statement', '')
 CONFIG['warnflags'].gsub!('-Wimplicit-function-declaration', '')
 
-create_conf_h("nmatrix_atlas_config.h")
-create_makefile("nmatrix_atlas")
+create_conf_h("nmatrix_lapack_config.h")
+create_makefile("nmatrix_lapack")
 
 # to clean up object files in subdirectories:
 open('Makefile', 'a') do |f|

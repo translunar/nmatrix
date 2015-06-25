@@ -34,6 +34,18 @@
 #ifndef _LAPACKE_H_
 #define _LAPACKE_H_
 
+//NMatrix specific stuff
+//figure out a better way to do this--define these in Makefile?
+
+#include "data/data.h"
+#define LAPACK_COMPLEX_CUSTOM
+#define lapack_complex_float nm::Complex64
+#define lapack_complex_double nm::Complex128
+
+#define ADD_
+
+//end NMatrix modifications
+
 /*
 *  Turn on HAVE_LAPACK_CONFIG_H to redefine C-LAPACK datatypes
 */
