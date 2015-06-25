@@ -9,6 +9,7 @@ Dir["nmatrix-*.gemspec"].each do |gemspec_file|
   gemspec = eval(File.read(gemspec_file))
   plugin_files += gemspec.files
 end
+plugin_lib_files = plugin_files.select { |file| file.match(/^lib\//) }
 
 Gem::Specification.new do |gem|
   gem.name = "nmatrix"
@@ -42,12 +43,11 @@ Thanks for trying out NMatrix! Happy coding!
 ***********************************************************
 EOF
 
-  gem.files         = `git ls-files`.split("\n") - plugin_files
-  gem.files         += `git ls-files -- ext/nmatrix`.split("\n") #need to explicitly add this, since some of these files are included in plugin_files
-  gem.files.uniq!
+  gem.files         = `git ls-files -- ext/nmatrix`.split("\n")
+  gem.files         += `git ls-files -- lib`.split("\n")
+  gem.files         -= plugin_lib_files
   gem.test_files    = `git ls-files -- spec`.split("\n")
   gem.test_files    -= `git ls-files -- spec/plugins`.split("\n")
-  gem.executables   = `git ls-files -- bin`.split("\n").map{ |f| File.basename(f) }
   gem.extensions = ['ext/nmatrix/extconf.rb']
   gem.require_paths = ["lib"]
 
