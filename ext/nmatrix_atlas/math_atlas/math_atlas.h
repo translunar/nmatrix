@@ -318,7 +318,7 @@ inline int clapack_potri(const enum CBLAS_ORDER order, const enum CBLAS_UPLO upl
 }
 
 
-template <bool is_complex, typename DType>
+template <typename DType>
 inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, DType* A, const int lda) {
   //we used to have an internal implementation of lauum, but it was broken
   //so I just removed it entirely
@@ -331,22 +331,22 @@ inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, cons
 
 #if defined HAVE_CLAPACK_H || defined HAVE_ATLAS_CLAPACK_H
 template <>
-inline void lauum<false,float>(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, float* A, const int lda) {
+inline void lauum<float>(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, float* A, const int lda) {
   clapack_slauum(order, uplo, N, A, lda);
 }
 
 template <>
-inline void lauum<false,double>(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, double* A, const int lda) {
+inline void lauum<double>(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, double* A, const int lda) {
   clapack_dlauum(order, uplo, N, A, lda);
 }
 
 template <>
-inline void lauum<true,Complex64>(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex64* A, const int lda) {
+inline void lauum<Complex64>(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex64* A, const int lda) {
   clapack_clauum(order, uplo, N, A, lda);
 }
 
 template <>
-inline void lauum<true,Complex128>(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex128* A, const int lda) {
+inline void lauum<Complex128>(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex128* A, const int lda) {
   clapack_zlauum(order, uplo, N, A, lda);
 }
 #endif
@@ -358,12 +358,12 @@ inline void lauum<true,Complex128>(const enum CBLAS_ORDER order, const enum CBLA
 *
 * This function should normally go in math.cpp, but we need it to be available to nmatrix.cpp.
 */
-template <bool is_complex, typename DType>
+template <typename DType>
 inline int clapack_lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, void* a, const int lda) {
   if (n < 0)              rb_raise(rb_eArgError, "n cannot be less than zero, is set to %d", n);
   if (lda < n || lda < 1) rb_raise(rb_eArgError, "lda must be >= max(n,1); lda=%d, n=%d\n", lda, n);
 
-  lauum<is_complex, DType>(order, uplo, n, static_cast<DType*>(a), lda);
+  lauum<DType>(order, uplo, n, static_cast<DType*>(a), lda);
 
   return 0;
 }
