@@ -1494,27 +1494,16 @@ static VALUE nm_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_right,
 
 static VALUE nm_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
   static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const enum CBLAS_UPLO, const int n, void* a, const int lda) = {
-      /*nm::math::clapack_lauum<uint8_t, false>,
-      nm::math::clapack_lauum<int8_t, false>,
-      nm::math::clapack_lauum<int16_t, false>,
-      nm::math::clapack_lauum<uint32_t, false>,
-      nm::math::clapack_lauum<uint64_t, false>,*/
       NULL, NULL, NULL, NULL, NULL,
-      nm::math::clapack_lauum<false, float>,
-      nm::math::clapack_lauum<false, double>,
+      nm::math::clapack_lauum<float>,
+      nm::math::clapack_lauum<double>,
 #if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
       clapack_clauum, clapack_zlauum, // call directly, same function signature!
 #else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
-      nm::math::clapack_lauum<true, nm::Complex64>,
-      nm::math::clapack_lauum<true, nm::Complex128>,
+      nm::math::clapack_lauum<nm::Complex64>,
+      nm::math::clapack_lauum<nm::Complex128>,
 #endif
-/*
-      nm::math::clapack_lauum<nm::Rational32, false>,
-      nm::math::clapack_lauum<nm::Rational64, false>,
-      nm::math::clapack_lauum<nm::Rational128, false>,
-      nm::math::clapack_lauum<nm::RubyObject, false>
-
-*/
+      NULL, NULL, NULL, NULL
   };
 
   if (!ttable[NM_DTYPE(a)]) {

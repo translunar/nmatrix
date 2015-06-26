@@ -928,81 +928,33 @@ int getri(const int N, DType* A, const int lda, const int* ipiv, DType* wrk, con
 
 
 
-template <bool is_complex, typename DType>
+template <typename DType>
 inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, DType* A, const int lda) {
-
-  int Nleft, Nright;
-  const DType ONE = 1;
-  DType *G, *U0 = A, *U1;
-
-  if (N > 1) {
-    Nleft = N >> 1;
-    #ifdef NB
-      if (Nleft > NB) Nleft = ATL_MulByNB(ATL_DivByNB(Nleft));
-    #endif
-
-    Nright = N - Nleft;
-
-    // FIXME: There's a simpler way to write this next block, but I'm way too tired to work it out right now.
-    if (uplo == CblasUpper) {
-      if (order == CblasRowMajor) {
-        G = A + Nleft;
-        U1 = G + Nleft * lda;
-      } else {
-        G = A + Nleft * lda;
-        U1 = G + Nleft;
-      }
-    } else {
-      if (order == CblasRowMajor) {
-        G = A + Nleft * lda;
-        U1 = G + Nleft;
-      } else {
-        G = A + Nleft;
-        U1 = G + Nleft * lda;
-      }
-    }
-
-    lauum<is_complex, DType>(order, uplo, Nleft, U0, lda);
-
-    if (is_complex) {
-
-      nm::math::herk<DType>(order, uplo,
-                            uplo == CblasLower ? CblasConjTrans : CblasNoTrans,
-                            Nleft, Nright, &ONE, G, lda, &ONE, U0, lda);
-
-      nm::math::trmm<DType>(order, CblasLeft, uplo, CblasConjTrans, CblasNonUnit, Nright, Nleft, &ONE, U1, lda, G, lda);
-    } else {
-      nm::math::syrk<DType>(order, uplo,
-                            uplo == CblasLower ? CblasTrans : CblasNoTrans,
-                            Nleft, Nright, &ONE, G, lda, &ONE, U0, lda);
-
-      nm::math::trmm<DType>(order, CblasLeft, uplo, CblasTrans, CblasNonUnit, Nright, Nleft, &ONE, U1, lda, G, lda);
-    }
-    lauum<is_complex, DType>(order, uplo, Nright, U1, lda);
-
-  } else {
-    *A = *A * *A;
-  }
+#if defined HAVE_CLAPACK_H || defined HAVE_ATLAS_CLAPACK_H
+  rb_raise(rb_eNotImpError, "not yet implemented for non-BLAS dtypes");
+#else
+  rb_raise(rb_eNotImpError, "only CLAPACK version implemented thus far");
+#endif
 }
 
 
 #if defined HAVE_CLAPACK_H || defined HAVE_ATLAS_CLAPACK_H
-template <bool is_complex>
+template <>
 inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, float* A, const int lda) {
   clapack_slauum(order, uplo, N, A, lda);
 }
 
-template <bool is_complex>
+template <>
 inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, double* A, const int lda) {
   clapack_dlauum(order, uplo, N, A, lda);
 }
 
-template <bool is_complex>
+template <>
 inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex64* A, const int lda) {
   clapack_clauum(order, uplo, N, A, lda);
 }
 
-template <bool is_complex>
+template <>
 inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex128* A, const int lda) {
   clapack_zlauum(order, uplo, N, A, lda);
 }
@@ -1016,13 +968,12 @@ inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, cons
 *
 * This function should normally go in math.cpp, but we need it to be available to nmatrix.cpp.
 */
-template <bool is_complex, typename DType>
+template <typename DType>
 inline int clapack_lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, void* a, const int lda) {
   if (n < 0)              rb_raise(rb_eArgError, "n cannot be less than zero, is set to %d", n);
   if (lda < n || lda < 1) rb_raise(rb_eArgError, "lda must be >= max(n,1); lda=%d, n=%d\n", lda, n);
 
-  if (uplo == CblasUpper) lauum<is_complex, DType>(order, uplo, n, reinterpret_cast<DType*>(a), lda);
-  else                    lauum<is_complex, DType>(order, uplo, n, reinterpret_cast<DType*>(a), lda);
+  lauum<DType>(order, uplo, n, static_cast<DType*>(a), lda);
 
   return 0;
 }

@@ -426,4 +426,17 @@ describe NMatrix::LAPACK do
       end
     end
   end
+  [:float32, :float64, :complex64, :complex128].each do |dtype|
+    context dtype do
+      #This spec should include separate tests for complex types and also tests for :lower
+      #lauum is supposed to calculate the upper/lower part of U*U^T or L^T*L for triangular matrices
+      it "exposes clapack_lauum" do
+        a = NMatrix.new([3,3],[1,2,3, 0,4,5, 0,0,10], dtype: dtype)
+        NMatrix::LAPACK.clapack_lauum(:row, :upper, 3, a, 3)
+        b = NMatrix.new([3,3],[14,23,30, 0,41,50, 0,0,100], dtype: dtype)
+
+        expect(a).to eq(b)
+      end
+    end
+  end
 end
