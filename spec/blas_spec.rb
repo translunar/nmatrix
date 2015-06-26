@@ -140,10 +140,10 @@ describe NMatrix::BLAS do
 
 
       it "exposes gemv" do
-        a = NMatrix.new([4,3], [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0], dtype: :float64)
-        x = NMatrix.new([3,1], [2.0, 1.0, 0.0], dtype: :float64)
-
-        NMatrix::BLAS.gemv(a, x)
+        a = NMatrix.new([4,3], [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0], dtype: dtype)
+        x = NMatrix.new([3,1], [2.0, 1.0, 0.0], dtype: dtype)
+        y = NMatrix::BLAS.gemv(a, x)
+        expect(y).to eq(NMatrix.new([4,1],[4.0,13.0,22.0,31.0],dtype: dtype))
       end
 
       it "exposes asum" do
