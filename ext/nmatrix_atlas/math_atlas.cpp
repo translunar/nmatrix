@@ -962,13 +962,13 @@ static VALUE nm_atlas_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_
 static VALUE nm_atlas_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
   static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const enum CBLAS_UPLO, const int n, void* a, const int lda) = {
       NULL, NULL, NULL, NULL, NULL,
-      nm::math::atlas::clapack_lauum<false, float>,
-      nm::math::atlas::clapack_lauum<false, double>,
+      nm::math::atlas::clapack_lauum<float>,
+      nm::math::atlas::clapack_lauum<double>,
 #if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
       clapack_clauum, clapack_zlauum, // call directly, same function signature!
 #else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
-      nm::math::atlas::clapack_lauum<true, nm::Complex64>,
-      nm::math::atlas::clapack_lauum<true, nm::Complex128>,
+      nm::math::atlas::clapack_lauum<nm::Complex64>,
+      nm::math::atlas::clapack_lauum<nm::Complex128>,
 #endif
   };
 
