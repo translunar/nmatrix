@@ -115,17 +115,6 @@ RSpec.shared_examples "BLAS shared" do
 
     end
   end
-  [:float32, :float64, :complex64, :complex128, :object].each do |dtype|
-    #this spec doesn't check check anything
-    context dtype do
-      it "exposes gemv" do
-        a = NMatrix.new([4,3], [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0], dtype: :float64)
-        x = NMatrix.new([3,1], [2.0, 1.0, 0.0], dtype: :float64)
-
-        NMatrix::BLAS.gemv(a, x)
-      end
-    end
-  end
 
   [:rational32, :rational64, :rational128, :float32, :float64, :complex64, :complex128].each do |dtype|
     context dtype do
@@ -166,6 +155,13 @@ RSpec.shared_examples "BLAS shared" do
         #c.should equal(r) # check that both are same memory address
 
         expect(r).to eq(NMatrix.new([4,2], [273,455,243,235,244,205,102,160], dtype: dtype))
+      end
+
+      it "exposes gemv" do
+        a = NMatrix.new([4,3], [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0], dtype: dtype)
+        x = NMatrix.new([3,1], [2.0, 1.0, 0.0], dtype: dtype)
+        y = NMatrix::BLAS.gemv(a, x)
+        expect(y).to eq(NMatrix.new([4,1],[4.0,13.0,22.0,31.0],dtype: dtype))
       end
     end
   end
