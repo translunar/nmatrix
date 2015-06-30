@@ -59,6 +59,13 @@
 #ifndef GETRF_H
 #define GETRF_H
 
+#include "math/laswp.h"
+#include "math/math.h"
+#include "math/trsm.h"
+#include "math/gemm.h"
+#include "math/imax.h"
+#include "math/scal.h"
+
 namespace nm { namespace math {
 
 /* Numeric inverse -- usually just 1 / f, but a little more complicated for complex. */
