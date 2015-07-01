@@ -159,72 +159,20 @@ end
 
 # add smmp in to get generic transp; remove smmp2 to eliminate funcptr transp
 
-# The next line allows the user to supply --with-atlas-dir=/usr/local/atlas,
-# --with-atlas-lib or --with-atlas-include and tell the compiler where to look
-# for ATLAS. The same for all the others
-#
-#dir_config("clapack", ["/usr/local/atlas/include"], [])
-#
-#
-
-# Is g++ having trouble finding your header files?
-# Try this:
-#   export C_INCLUDE_PATH=/usr/local/atlas/include
-#   export CPLUS_INCLUDE_PATH=/usr/local/atlas/include
-# (substituting in the path of your cblas.h and clapack.h for the path I used). -- JW 8/27/12
-
-idefaults = {lapack: ["/usr/include/atlas"],
-             cblas: ["/usr/local/atlas/include", "/usr/include/atlas"],
-             atlas: ["/usr/local/atlas/include", "/usr/include/atlas"]}
 
 # For some reason, if we try to look for /usr/lib64/atlas on a Mac OS X Mavericks system, and the directory does not
 # exist, it will give a linker error -- even if the lib dir is already correctly included with -L. So we need to check
 # that Dir.exists?(d) for each.
-ldefaults = {lapack: ["/usr/local/lib", "/usr/local/atlas/lib", "/usr/lib64/atlas"].delete_if { |d| !Dir.exists?(d) },
-             cblas: ["/usr/local/lib", "/usr/local/atlas/lib", "/usr/lib64/atlas"].delete_if { |d| !Dir.exists?(d) },
-             atlas: ["/usr/local/lib", "/usr/local/atlas/lib", "/usr/lib", "/usr/lib64/atlas"].delete_if { |d| !Dir.exists?(d) }}
-
-if have_library("clapack") # Usually only applies for Mac OS X
-  $libs += " -lclapack "
-end
+ldefaults = {lapack: ["/usr/local/lib"].delete_if { |d| !Dir.exists?(d) } }
 
 unless have_library("lapack")
   dir_config("lapack", idefaults[:lapack], ldefaults[:lapack])
 end
 
-unless have_library("cblas")
-  dir_config("cblas", idefaults[:cblas], ldefaults[:cblas])
-end
 
-unless have_library("atlas")
-  dir_config("atlas", idefaults[:atlas], ldefaults[:atlas])
-end
-
-# If BLAS and LAPACK headers are in an atlas directory, prefer those. Otherwise,
-# we try our luck with the default location.
-if have_header("atlas/cblas.h")
-  have_header("atlas/clapack.h")
-else
-  have_header("cblas.h")
-  have_header("clapack.h")
-end
-
-
-# Although have_func is supposed to take a list as its second argument, I find that it simply
-# applies a :to_s to the second arg and doesn't actually check each one. We may want to put
-# have_func calls inside an :each block which checks atlas/clapack.h, cblas.h, clapack.h, and
-# lastly lapack.h. On Ubuntu, it only works if I use atlas/clapack.h. --@mohawkjohn 8/20/14
-have_func("clapack_dgetrf", "atlas/clapack.h")
-have_func("clapack_dgetri", "atlas/clapack.h")
-have_func("dgesvd_", "clapack.h") # This may not do anything. dgesvd_ seems to be in LAPACK, not CLAPACK.
-
-have_func("cblas_dgemm", "cblas.h")
 
 #have_func("rb_scan_args", "ruby.h")
 
-#find_library("lapack", "clapack_dgetrf")
-#find_library("cblas", "cblas_dgemm")
-#find_library("atlas", "ATL_dgemmNN")
 # Order matters here: ATLAS has to go after LAPACK: http://mail.scipy.org/pipermail/scipy-user/2007-January/010717.html
 $libs += " -llapack "
 #$libs += " -lprofiler "
