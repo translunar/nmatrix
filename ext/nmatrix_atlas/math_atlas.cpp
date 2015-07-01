@@ -14,7 +14,6 @@
 //BLAS
 #include "math_atlas/asum_atlas.h"
 #include "math_atlas/trsm_atlas.h"
-#include "math/long_dtype.h" //this should really be in gemv.h, gemm.h
 #include "math_atlas/gemv_atlas.h"
 #include "math_atlas/gemm_atlas.h"
 #include "math_atlas/imax_atlas.h"
