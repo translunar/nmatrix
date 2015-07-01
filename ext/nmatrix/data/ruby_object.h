@@ -45,7 +45,7 @@
 /*
  * Macros
  */
-#define NM_RUBYVAL_IS_NUMERIC(val)                (FIXNUM_P(val) or (TYPE(val) == T_FLOAT) or (TYPE(val) == T_COMPLEX) or (TYPE(val) == T_RATIONAL))
+#define NM_RUBYVAL_IS_NUMERIC(val)                (FIXNUM_P(val) or (TYPE(val) == T_FLOAT) or (TYPE(val) == T_COMPLEX))
 #define NMATRIX_CHECK_TYPE(val) \
 	if (TYPE(val) != T_DATA || (RDATA(val)->dfree != (RUBY_DATA_FUNC)nm_delete && RDATA(val)->dfree != (RUBY_DATA_FUNC)nm_delete_ref)) \
 		rb_raise(rb_eTypeError, "Expected NMatrix on left-hand side of operation.");
@@ -75,12 +75,6 @@ class RubyObject {
 	 */
 	template <typename FloatType, typename = typename std::enable_if<std::is_floating_point<FloatType>::value>::type>
 	inline RubyObject(const Complex<FloatType>& other) : rval(rb_complex_new(rb_float_new(other.r), rb_float_new(other.i))) {}
-	
-	/*
-	 * Rational number constructor.
-	 */
-	template <typename IntType, typename = typename std::enable_if<std::is_integral<IntType>::value>::type>
-	inline RubyObject(const Rational<IntType>& other) : rval(rb_rational_new(INT2FIX(other.n), INT2FIX(other.d))) {}
 	
 	/*
 	 * Integer constructor.
@@ -122,10 +116,6 @@ class RubyObject {
   inline operator uint64_t() const { RETURN_OBJ2NUM(NUM2ULONG)      }
   inline operator double()   const { RETURN_OBJ2NUM(NUM2DBL)        }
   inline operator float()  const { RETURN_OBJ2NUM(NUM2DBL)          }
-
-  inline operator Rational32() const { return this->to<Rational32>();   }
-  inline operator Rational64() const { return this->to<Rational64>();   }
-  inline operator Rational128() const { return this->to<Rational128>(); }
 
   inline operator Complex64() const { return this->to<Complex64>(); }
   inline operator Complex128() const { return this->to<Complex128>(); }
@@ -256,20 +246,6 @@ class RubyObject {
 	}
 */
 	//////////////////////////////
-	// RUBY-RATIONAL OPERATIONS //
-	//////////////////////////////
-
-	template <typename IntType, typename = typename std::enable_if<std::is_integral<IntType>::value>::type>
-	inline bool operator==(const Rational<IntType>& other) const {
-		return *this == RubyObject(other);
-	}
-
-  template <typename IntType, typename = typename std::enable_if<std::is_integral<IntType>::value>::type>
-	inline bool operator!=(const Rational<IntType>& other) const {
-		return *this != RubyObject(other);
-	}
-
-	//////////////////////////////
 	// RUBY-COMPLEX OPERATIONS //
 	//////////////////////////////
 
@@ -304,7 +280,7 @@ class RubyObject {
 	 */
 	template <typename ComplexType>
 	inline typename std::enable_if<made_from_same_template<ComplexType, Complex64>::value, ComplexType>::type to(void) const {
-		if (FIXNUM_P(this->rval) or TYPE(this->rval) == T_FLOAT or TYPE(this->rval) == T_RATIONAL) {
+		if (FIXNUM_P(this->rval) or TYPE(this->rval) == T_FLOAT) {
 			return ComplexType(NUM2DBL(this->rval));
 			
 		} else if (TYPE(this->rval) == T_COMPLEX) {
@@ -314,25 +290,8 @@ class RubyObject {
 			rb_raise(rb_eTypeError, "Invalid conversion to Complex type.");
 		}
 	}
-	
-	/*
-	 * Convert a Ruby object to a rational number.
-	 */
-	template <typename RationalType>
-	inline typename std::enable_if<made_from_same_template<RationalType, Rational32>::value, RationalType>::type to(void) const {
-		if (FIXNUM_P(this->rval) or TYPE(this->rval) == T_FLOAT or TYPE(this->rval) == T_COMPLEX) {
-			return RationalType(NUM2INT(this->rval));
-			
-		} else if (TYPE(this->rval) == T_RATIONAL) {
-			return RationalType(NUM2INT(rb_funcall(this->rval, nm_rb_numer, 0)), NUM2INT(rb_funcall(this->rval, nm_rb_denom, 0)));
-			
-		} else {
-			rb_raise(rb_eTypeError, "Invalid conversion to Rational type.");
-		}
-	}
-
 };
-
+	
 // Negative operator
 inline RubyObject operator-(const RubyObject& rhs) {
   return RubyObject(rb_funcall(rhs.rval, nm_rb_negate, 0));
@@ -411,47 +370,6 @@ inline bool operator<(const Complex<FloatType>& left, const RubyObject& right) {
 template <typename FloatType, typename = typename std::enable_if<std::is_floating_point<FloatType>::value>::type>
 inline bool operator>(const Complex<FloatType>& left, const RubyObject& right) {
 	return RubyObject(left) > right;
-}
-
-
-
-//////////////////////////////
-// RATIONAL-RUBY OPERATIONS //
-//////////////////////////////
-
-template <typename IntType, typename = typename std::enable_if<std::is_integral<IntType>::value>::type>
-inline bool operator==(const Rational<IntType>& left, const RubyObject& right) {
-	return RubyObject(left) == right;
-}
-
-template <typename IntType, typename = typename std::enable_if<std::is_integral<IntType>::value>::type>
-inline bool operator!=(const Rational<IntType>& left, const RubyObject& right) {
-	return RubyObject(left) != right;
-}
-
-template <typename IntType, typename = typename std::enable_if<std::is_integral<IntType>::value>::type>
-inline bool operator>=(const Rational<IntType>& left, const RubyObject& right) {
-	return RubyObject(left) >= right;
-}
-
-template <typename IntType, typename = typename std::enable_if<std::is_integral<IntType>::value>::type>
-inline bool operator<=(const Rational<IntType>& left, const RubyObject& right) {
-	return RubyObject(left) <= right;
-}
-
-template <typename IntType, typename = typename std::enable_if<std::is_integral<IntType>::value>::type>
-inline bool operator<(const Rational<IntType>& left, const RubyObject& right) {
-	return RubyObject(left) < right;
-}
-
-template <typename IntType, typename = typename std::enable_if<std::is_integral<IntType>::value>::type>
-inline bool operator>(const Rational<IntType>& left, const RubyObject& right) {
-	return RubyObject(left) > right;
-}
-
-inline std::ostream& operator<<(std::ostream& out, const RubyObject& rhs) {
-  out << "RUBYOBJECT" << std::flush; // FIXME: Try calling inspect or something on the Ruby object if we really need to debug it.
-  return out;
 }
 
 } // end of namespace nm

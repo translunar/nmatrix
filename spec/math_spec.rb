@@ -34,7 +34,7 @@ describe "math" do
     [:dense,:list,:yale].each do |stype|
       context stype do
 
-        [:int64,:float64,:rational128].each do |dtype|
+        [:int64,:float64].each do |dtype|
           context dtype do
             before :each do
               @size = [2,2]
@@ -143,7 +143,7 @@ describe "math" do
                       expect(@m.send(meth).integer_dtype?).to eq true
                     end
                   end
-                elsif dtype.to_s.match(/float/) or dtype.to_s.match(/rational/) 
+                elsif dtype.to_s.match(/float/)
                   it "should return dtype int64 for #{dtype}" do
 
                     expect(@m.send(meth)).to eq N.new(@size, @a.map { |e| e.send(meth) }, dtype: dtype, stype: stype)
@@ -245,11 +245,7 @@ describe "math" do
         begin
           a.invert!
         rescue NotImplementedError => e
-          if dtype.to_s =~ /rational/
-            pending "getri needs rational implementation"
-          else
-            pending e.to_s
-          end
+          pending e.to_s
         end
         expect(a.round).to eq(b)
       end
@@ -280,8 +276,8 @@ describe "math" do
   end
 
   # TODO: Get it working with ROBJ too
-  [:byte,:int8,:int16,:int32,:int64,:float32,:float64,:rational64,:rational128].each do |left_dtype|
-    [:byte,:int8,:int16,:int32,:int64,:float32,:float64,:rational64,:rational128].each do |right_dtype|
+  [:byte,:int8,:int16,:int32,:int64,:float32,:float64].each do |left_dtype|
+    [:byte,:int8,:int16,:int32,:int64,:float32,:float64].each do |right_dtype|
 
       # Won't work if they're both 1-byte, due to overflow.
       next if [:byte,:int8].include?(left_dtype) && [:byte,:int8].include?(right_dtype)
@@ -294,16 +290,12 @@ describe "math" do
 
         nary = if left_dtype.to_s =~ /complex/
                  COMPLEX_MATRIX43A_ARRAY
-               elsif left_dtype.to_s =~ /rational/
-                 RATIONAL_MATRIX43A_ARRAY
                else
                  MATRIX43A_ARRAY
                end
 
         mary = if right_dtype.to_s =~ /complex/
                  COMPLEX_MATRIX32A_ARRAY
-               elsif right_dtype.to_s =~ /rational/
-                 RATIONAL_MATRIX32A_ARRAY
                else
                  MATRIX32A_ARRAY
                end
@@ -337,8 +329,8 @@ describe "math" do
     end
   end
 
-  [:byte,:int8,:int16,:int32,:int64,:float32,:float64,:rational64,:rational128].each do |left_dtype|
-    [:byte,:int8,:int16,:int32,:int64,:float32,:float64,:rational64,:rational128].each do |right_dtype|
+  [:byte,:int8,:int16,:int32,:int64,:float32,:float64].each do |left_dtype|
+    [:byte,:int8,:int16,:int32,:int64,:float32,:float64].each do |right_dtype|
 
       # Won't work if they're both 1-byte, due to overflow.
       next if [:byte,:int8].include?(left_dtype) && [:byte,:int8].include?(right_dtype)
@@ -373,7 +365,7 @@ describe "math" do
   end
 
   ALL_DTYPES.each do |dtype|
-    next if rational_dtype?(dtype) or integer_dtype?(dtype)
+    next if integer_dtype?(dtype)
     context "#cov dtype #{dtype}" do
       before do 
         @n = NMatrix.new( [5,3], [4.0,2.0,0.60,
@@ -516,7 +508,7 @@ describe "math" do
         b = NMatrix.new [3,1], [2,3,4], dtype: dtype
 
         expect(a.solve(b)).to be_within(0.01).of(NMatrix.new([3,1], [-1.437,1.62,0.062], dtype: dtype))
-      end unless [:rational32, :rational64, :rational128].include?(dtype)
+      end
     end
   end
 
@@ -581,7 +573,7 @@ describe "math" do
              8.6956e-03,-8.6569e-03, 2.8993e-02, 7.2015e-03,
              5.0034e-02,-1.7500e-02,-3.6777e-02,-1.2128e-02], dtype: answer_dtype, 
              stype: stype)) 
-        end unless stype =~ /yale/ or dtype =~ /(rational|object)/ or ALL_DTYPES.grep(/int/).include? dtype
+        end unless stype =~ /yale/ or dtype == :object or ALL_DTYPES.grep(/int/).include? dtype
 
         it "raises a square matrix to zero" do
           expect(@n.pow(0)).to eq(NMatrix.eye([4,4], dtype: answer_dtype, 

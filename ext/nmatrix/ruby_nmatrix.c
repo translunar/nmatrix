@@ -690,8 +690,8 @@ void nm_unregister_nmatrix(NMATRIX* nmatrix) {
  *     dtype -> Symbol
  *
  * Get the data type (dtype) of a matrix, e.g., :byte, :int8, :int16, :int32,
- * :int64, :float32, :float64, :complex64, :complex128, :rational32,
- * :rational64, :rational128, or :object (the last is a Ruby object).
+ * :int64, :float32, :float64, :complex64, :complex128,
+ * or :object (the last is a Ruby object).
  */
 static VALUE nm_dtype(VALUE self) {
   ID dtype = rb_intern(DTYPE_NAMES[NM_DTYPE(self)]);
@@ -1340,7 +1340,7 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
  * default.
  *
  * The data type, or dtype, can be one of: :byte, :int8, :int16, :int32, :int64, :float32, :float64, :complex64,
- * :complex128, :rational128, or :object. The constructor will attempt to guess it from the initial value/array/default
+ * :complex128, or :object. The constructor will attempt to guess it from the initial value/array/default
  * provided, if any. Otherwise, the default is :object, which stores any type of Ruby object.
  *
  * In addition to the above, there is a legacy constructor from the alpha version. To use that version, you must be
@@ -2548,20 +2548,6 @@ nm::dtype_t nm_dtype_min_fixnum(int64_t v) {
 }
 
 /*
- * Helper for nm_dtype_min(), handling rationals.
- */
-nm::dtype_t nm_dtype_min_rational(VALUE vv) {
-  NM_CONSERVATIVE(nm_register_value(&vv));
-  nm::Rational128* v = NM_ALLOCA_N(nm::Rational128, 1);
-  rubyval_to_cval(vv, nm::RATIONAL128, v);
-  NM_CONSERVATIVE(nm_unregister_value(&vv));
-  int64_t i = std::max(std::abs(v->n), v->d);
-  if (i <= SHRT_MAX) return nm::INT16;
-  else if (i <= INT_MAX) return nm::INT32;
-  else return nm::INT64;
-}
-
-/*
  * Return the minimum dtype required to store a given value.
  *
  * This is kind of arbitrary. For Float, it always returns :float32 for example, since in some cases neither :float64
@@ -2583,8 +2569,6 @@ nm::dtype_t nm_dtype_min(VALUE v) {
     return nm::FLOAT32;
   case T_COMPLEX:
     return nm::COMPLEX64;
-  case T_RATIONAL:
-    return nm_dtype_min_rational(v);
   case T_STRING:
     return RSTRING_LEN(v) == 1 ? nm::BYTE : nm::RUBYOBJ;
   case T_TRUE:
@@ -2614,23 +2598,15 @@ nm::dtype_t nm_dtype_guess(VALUE v) {
   case T_FIXNUM:
     return nm::INT64;
 
-  case T_RATIONAL:
-    return nm::RATIONAL128;
-
 #else
 # if SIZEOF_INT == 4
   case T_FIXNUM:
     return nm::INT32;
 
-  case T_RATIONAL:
-    return nm::RATIONAL64;
-
 #else
   case T_FIXNUM:
     return nm::INT16;
 
-  case T_RATIONAL:
-    return nm::RATIONAL32;
 # endif
 #endif
 

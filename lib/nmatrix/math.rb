@@ -78,7 +78,7 @@ class NMatrix
       self
     else
       if self.integer_dtype?
-        __inverse__(self.cast(dtype: :rational128), true)
+        __inverse__(self.cast(dtype: :float64), true)
       else
         dtype = self.dtype
         __inverse__(self, true)
@@ -102,14 +102,14 @@ class NMatrix
       if NMatrix.has_clapack?
         begin
           self.cast(:dense, self.dtype).invert! # call CLAPACK version
-        rescue NotImplementedError # probably a rational matrix
+        rescue NotImplementedError
           inverse = self.clone
           __inverse__(inverse, false)
         end
       elsif self.integer_dtype? # FIXME: This check is probably too slow.
-        rational_self = self.cast(dtype: :rational128)
-        inverse       = rational_self.clone
-        rational_self.__inverse__(inverse, false)
+        casted = self.cast(dtype: :float64)
+        inverse       = casted.clone
+        casted.__inverse__(inverse, false)
       else
         inverse       = self.clone
         __inverse__(inverse, false)
@@ -117,7 +117,7 @@ class NMatrix
     else
       inverse = self.clone_structure
       if self.integer_dtype?
-        __inverse_exact__(inverse.cast(dtype: :rational128), lda, ldb)
+        __inverse_exact__(inverse.cast(dtype: :float64), lda, ldb)
       else
         __inverse_exact__(inverse, lda, ldb)
       end
@@ -433,10 +433,8 @@ class NMatrix
   #
   # This function is guaranteed to return the same type of data in the matrix
   # upon which it is called.
-  # In other words, if you call it on a rational matrix, you'll get a rational
-  # number back.
   #
-  # Integer matrices are converted to rational matrices for the purposes of
+  # Integer matrices are converted to floating point matrices for the purposes of
   # performing the calculation, as xGETRF can't work on integer matrices.
   #
   # * *Returns* :
@@ -448,7 +446,7 @@ class NMatrix
     raise(NotImplementedError, "determinant can be calculated only for 2D matrices") unless self.dim == 2
 
     # Cast to a dtype for which getrf is implemented
-    new_dtype = [:byte,:int8,:int16,:int32,:int64].include?(self.dtype) ? :rational128 : self.dtype
+    new_dtype = [:byte,:int8,:int16,:int32,:int64].include?(self.dtype) ? :float64 : self.dtype
     copy = self.cast(:dense, new_dtype)
 
     # Need to know the number of permutations. We'll add up the diagonals of
@@ -465,7 +463,7 @@ class NMatrix
     end
 
     # Convert back to an integer if necessary
-    new_dtype != self.dtype ? prod.to_i : prod
+    new_dtype != self.dtype ? prod.round : prod #prevent rounding errors
   end
 
   #
@@ -500,7 +498,7 @@ class NMatrix
   # 
   # * http://stattrek.com/matrix-algebra/covariance-matrix.aspx
   def cov(opts={})
-    raise TypeError, "Only works for non-integer/non-rational dtypes" if integer_dtype? or rational_dtype?
+    raise TypeError, "Only works for non-integer dtypes" if integer_dtype?
      opts = {
       for_sample_data: true
     }.merge(opts)
@@ -923,7 +921,7 @@ protected
   def dtype_for_floor_or_ceil
     if self.integer_dtype? or [:complex64, :complex128, :object].include?(self.dtype)
       return_dtype = dtype
-    elsif [:float32, :float64, :rational32,:rational64, :rational128].include?(self.dtype)
+    elsif [:float32, :float64].include?(self.dtype)
       return_dtype = :int64
     end
 

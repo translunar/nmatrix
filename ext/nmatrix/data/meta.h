@@ -44,9 +44,6 @@ namespace nm {
   template <> struct ctype_to_dtype_enum<double>  { static const nm::dtype_t value_type = nm::FLOAT64; };
   template <> struct ctype_to_dtype_enum<Complex64>   { static const nm::dtype_t value_type = nm::COMPLEX64; };
   template <> struct ctype_to_dtype_enum<Complex128>  { static const nm::dtype_t value_type = nm::COMPLEX128; };
-  template <> struct ctype_to_dtype_enum<Rational32>   { static const nm::dtype_t value_type = nm::RATIONAL32; };
-  template <> struct ctype_to_dtype_enum<Rational64>  { static const nm::dtype_t value_type = nm::RATIONAL64; };
-  template <> struct ctype_to_dtype_enum<Rational128>  { static const nm::dtype_t value_type = nm::RATIONAL128; };
   template <> struct ctype_to_dtype_enum<RubyObject>  { static const nm::dtype_t value_type = nm::RUBYOBJ; };
 
 
@@ -60,9 +57,6 @@ namespace nm {
   template <> struct dtype_enum_T<nm::FLOAT64> { typedef double type; };
   template <> struct dtype_enum_T<nm::COMPLEX64> { typedef nm::Complex64 type; };
   template <> struct dtype_enum_T<nm::COMPLEX128> { typedef nm::Complex128 type; };
-  template <> struct dtype_enum_T<nm::RATIONAL32> { typedef nm::Rational32 type; };
-  template <> struct dtype_enum_T<nm::RATIONAL64> { typedef nm::Rational64 type; };
-  template <> struct dtype_enum_T<nm::RATIONAL128> { typedef nm::Rational128 type; };
   template <> struct dtype_enum_T<nm::RUBYOBJ> { typedef nm::RubyObject type; };
 
 } // end namespace nm
