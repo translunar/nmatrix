@@ -1,3 +1,5 @@
+# This file is for functions shared by nmatrix-atlas and nmatrix-lapack gems.
+
 class NMatrix
   def NMatrix.register_lapack_extension(name)
     if (defined? @@lapack_extension)

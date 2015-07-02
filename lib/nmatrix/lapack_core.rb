@@ -25,6 +25,8 @@
 #
 # This file contains friendlier interfaces to LAPACK functions
 # implemented in C.
+# This file is only for functions available with the core nmatrix gem
+# (no external libraries needed).
 #
 # Note: most of these functions are borrowed from ATLAS, which is available under a BSD-
 # style license.
