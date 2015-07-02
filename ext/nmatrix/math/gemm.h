@@ -31,7 +31,7 @@
 # define GEMM_H
 
 #include "cblas_enums.h"
-
+#include "math/long_dtype.h"
 
 namespace nm { namespace math {
 /*

@@ -127,7 +127,6 @@
 #include "math/getf2.h"
 #include "math/laswp.h"
 #include "math/trsm.h"
-#include "math/long_dtype.h" // for gemm.h
 #include "math/gemm.h"
 #include "math/gemv.h"
 #include "math/asum.h"

@@ -30,6 +30,7 @@
 #ifndef GEMV_H
 # define GEMV_H
 
+#include "math/long_dtype.h"
 
 namespace nm { namespace math {
 
