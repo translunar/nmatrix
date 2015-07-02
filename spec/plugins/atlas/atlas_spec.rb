@@ -1,7 +1,5 @@
 require 'spec_helper'
-require 'lapack_shared'
 require "./lib/nmatrix/atlas"
-require 'blas_shared'
 
 describe "NMatrix::LAPACK implementation from nmatrix-atlas plugin" do
   it "returns 3" do
@@ -12,11 +10,6 @@ describe "NMatrix::LAPACK implementation from nmatrix-atlas plugin" do
     n = NMatrix.new([2,2], [0,1,2,3], dtype: :int64)
     expect(n.test_c_ext_return_2).to eq(2)
   end
-
-  #the nmatrix-atlas spec now runs all the normal nmatrix spec in addition to
-  #the ones here, so we don't need to include these again
-  #include_examples "LAPACK shared"
-  #include_examples "BLAS shared"
 
   [:float32, :float64, :complex64, :complex128].each do |dtype|
     context dtype do
