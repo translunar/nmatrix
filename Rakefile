@@ -74,8 +74,8 @@ namespace :spec do
     test_files = gemspec.test_files
     test_files.keep_if { |file| file =~ /_spec\.rb$/ }
     next if test_files.empty?
-    spec_tasks << gemspec
-    RSpec::Core::RakeTask.new(gemspec) do |spec|
+    spec_tasks << gemspec.name
+    RSpec::Core::RakeTask.new(gemspec.name) do |spec|
       spec.pattern = FileList.new(test_files)
     end
   end
