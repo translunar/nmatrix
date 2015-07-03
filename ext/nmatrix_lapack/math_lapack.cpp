@@ -63,9 +63,9 @@ void nm_math_init_lapack() {
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_gemm", (METHOD)nm_lapack_cblas_gemm, 14);
 
   /* LAPACK Functions */
-  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getrf", (METHOD)nm_lapack_clapack_getrf, 5);
+  //rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getrf", (METHOD)nm_lapack_clapack_getrf, 5);
   //rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getrs", (METHOD)nm_lapack_clapack_getrs, 9);
-  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getri", (METHOD)nm_lapack_clapack_getri, 5);
+  //rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getri", (METHOD)nm_lapack_clapack_getri, 5);
 }
 
 /* Call any of the cblas_xgemm functions as directly as possible.
