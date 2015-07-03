@@ -12,15 +12,7 @@
 #include "math_atlas/math_atlas.h"
 
 //BLAS
-#include "math_atlas/asum_atlas.h"
-#include "math_atlas/trsm_atlas.h"
-#include "math_atlas/gemv_atlas.h"
-#include "math_atlas/gemm_atlas.h"
-#include "math_atlas/imax_atlas.h"
-#include "math_atlas/nrm2_atlas.h"
-#include "math_atlas/rot_atlas.h"
-#include "math_atlas/rotg_atlas.h"
-#include "math_atlas/scal_atlas.h"
+#include "math_atlas/cblas_templates.h"
 
 //LAPACK
 #include "math/laswp.h"
