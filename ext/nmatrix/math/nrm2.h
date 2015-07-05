@@ -59,6 +59,8 @@
 #ifndef NRM2_H
 # define NRM2_H
 
+#include "math/long_dtype.h"
+
 
 namespace nm { namespace math {
 

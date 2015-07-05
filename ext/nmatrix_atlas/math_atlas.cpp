@@ -12,15 +12,7 @@
 #include "math_atlas/math_atlas.h"
 
 //BLAS
-#include "math_atlas/asum_atlas.h"
-#include "math_atlas/trsm_atlas.h"
-#include "math_atlas/gemv_atlas.h"
-#include "math_atlas/gemm_atlas.h"
-#include "math_atlas/imax_atlas.h"
-#include "math_atlas/nrm2_atlas.h"
-#include "math_atlas/rot_atlas.h"
-#include "math_atlas/rotg_atlas.h"
-#include "math_atlas/scal_atlas.h"
+#include "math_atlas/cblas_templates.h"
 
 //LAPACK
 #include "math/laswp.h"
@@ -85,47 +77,6 @@ extern "C" {
 namespace nm { 
   namespace math {
   namespace atlas {
-    /*
-     * Function signature conversion for calling CBLAS's gemv functions as directly as possible.
-     *
-     * For documentation: http://www.netlib.org/lapack/double/dgetrf.f
-     */
-    template <typename DType>
-    inline static bool cblas_gemv(const enum CBLAS_TRANSPOSE trans,
-                                  const int m, const int n,
-                                  const void* alpha,
-                                  const void* a, const int lda,
-                                  const void* x, const int incx,
-                                  const void* beta,
-                                  void* y, const int incy)
-    {
-      return gemv<DType>(trans,
-                         m, n, reinterpret_cast<const DType*>(alpha),
-                         reinterpret_cast<const DType*>(a), lda,
-                         reinterpret_cast<const DType*>(x), incx, reinterpret_cast<const DType*>(beta),
-                         reinterpret_cast<DType*>(y), incy);
-    }
-
-    /*
-     * Function signature conversion for calling CBLAS' gemm functions as directly as possible.
-     *
-     * For documentation: http://www.netlib.org/blas/dgemm.f
-     */
-    template <typename DType>
-    inline static void cblas_gemm(const enum CBLAS_ORDER order,
-                                  const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
-                                  int m, int n, int k,
-                                  void* alpha,
-                                  void* a, int lda,
-                                  void* b, int ldb,
-                                  void* beta,
-                                  void* c, int ldc)
-    {
-      gemm<DType>(order, trans_a, trans_b, m, n, k, reinterpret_cast<DType*>(alpha),
-                  reinterpret_cast<DType*>(a), lda,
-                  reinterpret_cast<DType*>(b), ldb, reinterpret_cast<DType*>(beta),
-                  reinterpret_cast<DType*>(c), ldc);
-    }
 
     /*
      * Function signature conversion for calling CBLAS' gesvd functions as directly as possible.
@@ -143,48 +94,6 @@ namespace nm {
       return gesdd<DType,CType>(jobz, m, n, reinterpret_cast<DType*>(a), lda, reinterpret_cast<DType*>(s), reinterpret_cast<DType*>(u), ldu, reinterpret_cast<DType*>(vt), ldvt, reinterpret_cast<DType*>(work), lwork, iwork, reinterpret_cast<CType*>(rwork));
     }
 
-    /*
-     * Function signature conversion for calling CBLAS' trsm functions as directly as possible.
-     *
-     * For documentation: http://www.netlib.org/blas/dtrsm.f
-     */
-    template <typename DType>
-    inline static void cblas_trsm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
-                                   const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_DIAG diag,
-                                   const int m, const int n, const void* alpha, const void* a,
-                                   const int lda, void* b, const int ldb)
-    {
-      trsm<DType>(order, side, uplo, trans_a, diag, m, n, *reinterpret_cast<const DType*>(alpha),
-                  reinterpret_cast<const DType*>(a), lda, reinterpret_cast<DType*>(b), ldb);
-    }
-
-    /*
-     * Function signature conversion for calling CBLAS' trmm functions as directly as possible.
-     *
-     * For documentation: http://www.netlib.org/blas/dtrmm.f
-     */
-    template <typename DType>
-    inline static void cblas_trmm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
-                                  const enum CBLAS_TRANSPOSE ta, const enum CBLAS_DIAG diag, const int m, const int n, const void* alpha,
-                                  const void* A, const int lda, void* B, const int ldb)
-    {
-      trmm<DType>(order, side, uplo, ta, diag, m, n, reinterpret_cast<const DType*>(alpha),
-                  reinterpret_cast<const DType*>(A), lda, reinterpret_cast<DType*>(B), ldb);
-    }
-
-    /*
-     * Function signature conversion for calling CBLAS' syrk functions as directly as possible.
-     *
-     * For documentation: http://www.netlib.org/blas/dsyrk.f
-     */
-    template <typename DType>
-    inline static void cblas_syrk(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const enum CBLAS_TRANSPOSE trans,
-                                  const int n, const int k, const void* alpha,
-                                  const void* A, const int lda, const void* beta, void* C, const int ldc)
-    {
-      syrk<DType>(order, uplo, trans, n, k, reinterpret_cast<const DType*>(alpha),
-                  reinterpret_cast<const DType*>(A), lda, reinterpret_cast<const DType*>(beta), reinterpret_cast<DType*>(C), ldc);
-    }
 
   }
   }
