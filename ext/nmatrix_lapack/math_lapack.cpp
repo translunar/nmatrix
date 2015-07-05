@@ -5,7 +5,11 @@
 #include "math/cblas_enums.h"
 #include "math/util.h"
 
-#include "math_lapack/gemm_lapack.h"
+
+extern "C" {
+#include "math_lapack/cblas_local.h"
+}
+#include "math_lapack/cblas_templates.h"
 
 #include "math_lapack/getri_lapack.h"
 #include "math_lapack/getrf_lapack.h"
@@ -24,33 +28,6 @@ extern "C" {
   //static VALUE nm_lapack_clapack_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE ipiv, VALUE b, VALUE ldb);
   static VALUE nm_lapack_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE lda, VALUE ipiv);
 }
-
-namespace nm { 
-  namespace math {
-  namespace lapack {
-    /*
-     * Function signature conversion for calling CBLAS' gemm functions as directly as possible.
-     *
-     * For documentation: http://www.netlib.org/blas/dgemm.f
-     */
-    template <typename DType>
-    inline static void cblas_gemm(const enum CBLAS_ORDER order,
-                                  const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
-                                  int m, int n, int k,
-                                  void* alpha,
-                                  void* a, int lda,
-                                  void* b, int ldb,
-                                  void* beta,
-                                  void* c, int ldc)
-    {
-      gemm<DType>(order, trans_a, trans_b, m, n, k, static_cast<DType*>(alpha),
-                  static_cast<DType*>(a), lda,
-                  static_cast<DType*>(b), ldb, static_cast<DType*>(beta),
-                  static_cast<DType*>(c), ldc);
-    }
-
-}}} //end nm::math::lapack
-
 
 extern "C" {
 
