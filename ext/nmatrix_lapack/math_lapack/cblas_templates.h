@@ -15,6 +15,9 @@
 //For now this is just an exact copy of the file in nmatrix_atlas/math_atlas, except
 //in a different namespace.
 //In the future, this code will be shared and we won't need this copy.
+//Altough what about differences in CBLAS rot/rotg?
+//I could just omit them from the shared code and add whatever's appropriate
+//in the specific location.
 
 namespace nm { namespace math { namespace lapack {
 //Below are the BLAS functions for which we have internal implementations.
@@ -45,7 +48,11 @@ inline void rotg(double* a, double* b, double* c, double* s) {
   cblas_drotg(a, b, c, s);
 }
 
-template <>
+//The complex versions or rot and rotg are not part of the standard CBLAS,
+//only in ATLAS (and Intel) CBLAS.
+//One option would be to call the fortran versions of these functions, which do exist.
+//The other option is to let the internal implmentation take care of it (as currently).
+/*template <>
 inline void rotg(Complex64* a, Complex64* b, Complex64* c, Complex64* s) {
   cblas_crotg(a, b, c, s);
 }
@@ -54,7 +61,7 @@ template <>
 inline void rotg(Complex128* a, Complex128* b, Complex128* c, Complex128* s) {
   cblas_zrotg(a, b, c, s);
 }
-
+*/
 
 template <typename DType>
 inline void cblas_rotg(void* a, void* b, void* c, void* s) {
@@ -77,7 +84,7 @@ inline void rot(const int N, double* X, const int incX, double* Y, const int inc
   cblas_drot(N, X, incX, Y, incY, c, s);
 }
 
-template <>
+/*template <>
 inline void rot(const int N, Complex64* X, const int incX, Complex64* Y, const int incY, const float c, const float s) {
   cblas_csrot(N, X, incX, Y, incY, c, s);
 }
@@ -85,7 +92,7 @@ inline void rot(const int N, Complex64* X, const int incX, Complex64* Y, const i
 template <>
 inline void rot(const int N, Complex128* X, const int incX, Complex128* Y, const int incY, const double c, const double s) {
   cblas_zdrot(N, X, incX, Y, incY, c, s);
-}
+}*/
 
 template <typename DType, typename CSDType>
 inline void cblas_rot(const int N, void* X, const int incX, void* Y, const int incY, const void* c, const void* s) {
