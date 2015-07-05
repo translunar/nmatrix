@@ -21,10 +21,9 @@ namespace nm { namespace math { namespace atlas {
 //types in the non-specialized form of the template nm::math::atlas::whatever().
 //The specialized forms call the appropriate cblas functions.
 
-//For the Level 1 BLAS functions, we also define the cblas_whatever() template
+//For all functions besides herk, we also define the cblas_whatever() template
 //functions below, which just cast
-//their arguments to the appropriate types. For the Level 2 and 3 BLAS functions
-//these functions are defined in math_atlas.cpp for some reason.
+//their arguments to the appropriate types.
 
 //rotg
 template <typename DType>
@@ -273,6 +272,22 @@ inline bool gemv(const enum CBLAS_TRANSPOSE Trans, const int M, const int N, con
   return true;
 }
 
+template <typename DType>
+inline static bool cblas_gemv(const enum CBLAS_TRANSPOSE trans,
+                              const int m, const int n,
+                              const void* alpha,
+                              const void* a, const int lda,
+                              const void* x, const int incx,
+                              const void* beta,
+                              void* y, const int incy)
+{
+  return gemv<DType>(trans,
+                     m, n, static_cast<const DType*>(alpha),
+                     static_cast<const DType*>(a), lda,
+                     static_cast<const DType*>(x), incx, static_cast<const DType*>(beta),
+                     static_cast<DType*>(y), incy);
+}
+
 //gemm
 template <typename DType>
 inline void gemm(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_TRANSPOSE TransB, const int M, const int N, const int K,
@@ -303,6 +318,22 @@ template <>
 inline void gemm(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA, const enum CBLAS_TRANSPOSE TransB, const int M, const int N, const int K,
           const Complex128* alpha, const Complex128* A, const int lda, const Complex128* B, const int ldb, const Complex128* beta, Complex128* C, const int ldc) {
   cblas_zgemm(Order, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C, ldc);
+}
+
+template <typename DType>
+inline static void cblas_gemm(const enum CBLAS_ORDER order,
+                              const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b,
+                              int m, int n, int k,
+                              void* alpha,
+                              void* a, int lda,
+                              void* b, int ldb,
+                              void* beta,
+                              void* c, int ldc)
+{
+  gemm<DType>(order, trans_a, trans_b, m, n, k, static_cast<DType*>(alpha),
+              static_cast<DType*>(a), lda,
+              static_cast<DType*>(b), ldb, static_cast<DType*>(beta),
+              static_cast<DType*>(c), ldc);
 }
 
 //trsm
@@ -353,8 +384,18 @@ inline void trsm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const
   cblas_ztrsm(order, side, uplo, trans_a, diag, m, n, &alpha, a, lda, b, ldb);
 }
 
+template <typename DType>
+inline static void cblas_trsm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
+                               const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_DIAG diag,
+                               const int m, const int n, const void* alpha, const void* a,
+                               const int lda, void* b, const int ldb)
+{
+  trsm<DType>(order, side, uplo, trans_a, diag, m, n, *static_cast<const DType*>(alpha),
+              static_cast<const DType*>(a), lda, static_cast<DType*>(b), ldb);
+}
+
 //Below are BLAS functions that we don't have an internal implementation for.
-//In this case the non-specialized form just raises and error.
+//In this case the non-specialized form just raises an error.
 
 //syrk
 template <typename DType>
@@ -385,6 +426,15 @@ template <>
 inline void syrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE Trans, const int N,
                  const int K, const Complex128* alpha, const Complex128* A, const int lda, const Complex128* beta, Complex128* C, const int ldc) {
   cblas_zsyrk(Order, Uplo, Trans, N, K, alpha, A, lda, beta, C, ldc);
+}
+
+template <typename DType>
+inline static void cblas_syrk(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const enum CBLAS_TRANSPOSE trans,
+                              const int n, const int k, const void* alpha,
+                              const void* A, const int lda, const void* beta, void* C, const int ldc)
+{
+  syrk<DType>(order, uplo, trans, n, k, static_cast<const DType*>(alpha),
+              static_cast<const DType*>(A), lda, static_cast<const DType*>(beta), static_cast<DType*>(C), ldc);
 }
 
 //herk
@@ -440,6 +490,15 @@ inline void trmm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const
                  const enum CBLAS_TRANSPOSE ta, const enum CBLAS_DIAG diag, const int m, const int n, const Complex128* alpha,
                  const Complex128* A, const int lda, Complex128* B, const int ldb) {
   cblas_ztrmm(order, side, uplo, ta, diag, m, n, alpha, A, lda, B, ldb);
+}
+
+template <typename DType>
+inline static void cblas_trmm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
+                              const enum CBLAS_TRANSPOSE ta, const enum CBLAS_DIAG diag, const int m, const int n, const void* alpha,
+                              const void* A, const int lda, void* B, const int ldb)
+{
+  trmm<DType>(order, side, uplo, ta, diag, m, n, static_cast<const DType*>(alpha),
+              static_cast<const DType*>(A), lda, static_cast<DType*>(B), ldb);
 }
 
 }}} //nm::math::atlas
