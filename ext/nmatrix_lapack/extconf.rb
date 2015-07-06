@@ -175,7 +175,9 @@ end
 
 # Order matters here: ATLAS has to go after LAPACK: http://mail.scipy.org/pipermail/scipy-user/2007-January/010717.html
 $libs += " -llapack "
-#$libs += " -lprofiler "
+#To use the Intel MKL, comment out the line above, and also comment out the bit above with have_library and dir_config for lapack.
+#Then add something like the line below (for exactly what linker flags to use see https://software.intel.com/en-us/articles/intel-mkl-link-line-advisor ):
+#$libs += " -L${MKLROOT}/lib/intel64 -lmkl_intel_lp64 -lmkl_core -lmkl_sequential "
 
 
 # For release, these next two should both be changed to -O3.
