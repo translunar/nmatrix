@@ -2,13 +2,10 @@
 
 #include "lapacke.h"
 
-#include "math/cblas_enums.h"
+#include "math_lapack/cblas_local.h"
+
 #include "math/util.h"
 
-
-extern "C" {
-#include "math_lapack/cblas_local.h"
-}
 #include "math_lapack/cblas_templates.h"
 
 #include "math_lapack/getri_lapack.h"
