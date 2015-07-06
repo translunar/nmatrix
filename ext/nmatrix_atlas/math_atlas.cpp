@@ -12,7 +12,7 @@
 #include "math_atlas/math_atlas.h"
 
 //BLAS
-#include "math_atlas/cblas_templates.h"
+#include "math_atlas/cblas_templates_atlas.h"
 
 //LAPACK
 #include "math/laswp.h"

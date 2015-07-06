@@ -1,24 +1,17 @@
-#ifndef CBLAS_TEMPLATES_H
-#define CBLAS_TEMPLATES_H
+//This header files is not used by the main nmatrix gem but has to be stored
+//in this directory so that it can be shared between nmatrix-atlas and
+//nmatrix-lapack
 
-//includes so we have access to internal implementations
-#include "math/rotg.h"
-#include "math/rot.h"
-#include "math/asum.h"
-#include "math/nrm2.h"
-#include "math/imax.h"
-#include "math/scal.h"
-#include "math/gemv.h"
-#include "math/gemm.h"
-#include "math/trsm.h"
+//This is not a normal header file so we don't use an include guard.
+//See ext/nmatrix_atlas/math_atlas/cblas_templates_atlas.h for how
+//to use.
 
-namespace nm { namespace math { namespace atlas {
 //Below are the BLAS functions for which we have internal implementations.
 //The internal implementations are defined in the ext/nmatrix/math directory
 //and are the non-specialized
 //forms of the template functions nm::math::whatever().
 //They are are called below for non-BLAS
-//types in the non-specialized form of the template nm::math::atlas::whatever().
+//types in the non-specialized form of the template nm::math::something_else::whatever().
 //The specialized forms call the appropriate cblas functions.
 
 //For all functions besides herk, we also define the cblas_whatever() template
@@ -41,16 +34,14 @@ inline void rotg(double* a, double* b, double* c, double* s) {
   cblas_drotg(a, b, c, s);
 }
 
-template <>
-inline void rotg(Complex64* a, Complex64* b, Complex64* c, Complex64* s) {
-  cblas_crotg(a, b, c, s);
-}
-
-template <>
-inline void rotg(Complex128* a, Complex128* b, Complex128* c, Complex128* s) {
-  cblas_zrotg(a, b, c, s);
-}
-
+//Complex versions of rot and rotg are available in the ATLAS (and Intel)
+//version of CBLAS, but not part
+//of the reference implementation or OpenBLAS, so we omit them here
+//and fall back to the generic internal implementation.
+//Another options would be to directly call the fortran functions, e.g. ZROTG,
+//which for some reason are a part of the standard.
+//We can still define complex specializations of these functions in an ATLAS-specific
+//header.
 
 template <typename DType>
 inline void cblas_rotg(void* a, void* b, void* c, void* s) {
@@ -71,16 +62,6 @@ inline void rot(const int N, float* X, const int incX, float* Y, const int incY,
 template <>
 inline void rot(const int N, double* X, const int incX, double* Y, const int incY, const double c, const double s) {
   cblas_drot(N, X, incX, Y, incY, c, s);
-}
-
-template <>
-inline void rot(const int N, Complex64* X, const int incX, Complex64* Y, const int incY, const float c, const float s) {
-  cblas_csrot(N, X, incX, Y, incY, c, s);
-}
-
-template <>
-inline void rot(const int N, Complex128* X, const int incX, Complex128* Y, const int incY, const double c, const double s) {
-  cblas_zdrot(N, X, incX, Y, incY, c, s);
 }
 
 template <typename DType, typename CSDType>
@@ -500,7 +481,3 @@ inline static void cblas_trmm(const enum CBLAS_ORDER order, const enum CBLAS_SID
   trmm<DType>(order, side, uplo, ta, diag, m, n, static_cast<const DType*>(alpha),
               static_cast<const DType*>(A), lda, static_cast<DType*>(B), ldb);
 }
-
-}}} //nm::math::atlas
-
-#endif
