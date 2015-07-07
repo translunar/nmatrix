@@ -32,7 +32,7 @@ require 'spec_helper'
 
 describe "NMatrix::LAPACK functions with internal implementations" do
   # where integer math is allowed
-  [:byte, :int8, :int16, :int32, :int64, :rational32, :rational64, :rational128, :float32, :float64, :complex64, :complex128].each do |dtype|
+  [:byte, :int8, :int16, :int32, :int64, :float32, :float64, :complex64, :complex128].each do |dtype|
     context dtype do
       # This spec seems a little weird. It looks like laswp ignores the last
       # element of piv, though maybe I misunderstand smth. It would make
@@ -60,13 +60,13 @@ describe "NMatrix::LAPACK functions with internal implementations" do
   end
 
   # where integer math is not allowed
-  [:rational32, :rational64, :rational128, :float32, :float64, :complex64, :complex128].each do |dtype|
+  [:float32, :float64, :complex64, :complex128].each do |dtype|
     context dtype do
 
       #Spec OK
       it "exposes clapack_gesv" do
-        a = NMatrix[[1.quo(1), 2, 3], [0,1.quo(2),4],[3,3,9]].cast(dtype: dtype)
-        b = NMatrix[[1.quo(1)],[2],[3]].cast(dtype: dtype)
+        a = NMatrix[[1.0, 2, 3], [0,1.0/2,4],[3,3,9]].cast(dtype: dtype)
+        b = NMatrix[[1.0],[2],[3]].cast(dtype: dtype)
         err = case dtype
                 when :float32, :complex64
                   1e-6
@@ -75,7 +75,7 @@ describe "NMatrix::LAPACK functions with internal implementations" do
                 else
                   1e-64
               end
-        expect(NMatrix::LAPACK::clapack_gesv(:row,a.shape[0],b.shape[1],a,a.shape[0],b,b.shape[0])).to be_within(err).of(NMatrix[[-1.quo(2)], [0], [1.quo(2)]].cast(dtype: dtype))
+        expect(NMatrix::LAPACK::clapack_gesv(:row,a.shape[0],b.shape[1],a,a.shape[0],b,b.shape[0])).to be_within(err).of(NMatrix[[-1.0/2], [0], [1.0/2]].cast(dtype: dtype))
       end
 
 
@@ -95,14 +95,14 @@ describe "NMatrix::LAPACK functions with internal implementations" do
               end
 
         expect(a[0,0]).to eq(9)
-        expect(a[0,1]).to be_within(err).of(2.quo(9))
-        expect(a[0,2]).to be_within(err).of(4.quo(9))
+        expect(a[0,1]).to be_within(err).of(2.0/9)
+        expect(a[0,2]).to be_within(err).of(4.0/9)
         expect(a[1,0]).to eq(5)
-        expect(a[1,1]).to be_within(err).of(53.quo(9))
-        expect(a[1,2]).to be_within(err).of(7.quo(53))
+        expect(a[1,1]).to be_within(err).of(53.0/9)
+        expect(a[1,2]).to be_within(err).of(7.0/53)
         expect(a[2,0]).to eq(1)
-        expect(a[2,1]).to be_within(err).of(52.quo(9))
-        expect(a[2,2]).to be_within(err).of(360.quo(53))
+        expect(a[2,1]).to be_within(err).of(52.0/9)
+        expect(a[2,2]).to be_within(err).of(360.0/53)
       end
 
       # this spec is kind of weird. potrf is supposed to decompose a symmetric
@@ -140,7 +140,7 @@ describe "NMatrix::LAPACK functions with internal implementations" do
         NMatrix::LAPACK::clapack_getrs(:row, false, 3, 1, a, 3, ipiv, b, 3)
 
         expect(b[0]).to eq(5)
-        expect(b[1]).to eq(-15.quo(2))
+        expect(b[1]).to eq(-15.0/2)
         expect(b[2]).to eq(-13)
       end
 

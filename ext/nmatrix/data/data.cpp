@@ -105,9 +105,6 @@ const char* const DTYPE_NAMES[nm::NUM_DTYPES] = {
 	"float64",
 	"complex64",
 	"complex128",
-	"rational32",
-	"rational64",
-	"rational128",
 	"object"
 };
 
@@ -122,27 +119,21 @@ const size_t DTYPE_SIZES[nm::NUM_DTYPES] = {
 	sizeof(float64_t),
 	sizeof(nm::Complex64),
 	sizeof(nm::Complex128),
-	sizeof(nm::Rational32),
-	sizeof(nm::Rational64),
-	sizeof(nm::Rational128),
 	sizeof(nm::RubyObject)
 };
 
 
 const nm::dtype_t Upcast[nm::NUM_DTYPES][nm::NUM_DTYPES] = {
-  { nm::BYTE, nm::INT16, nm::INT16, nm::INT32, nm::INT64, nm::FLOAT32, nm::FLOAT64, nm::COMPLEX64, nm::COMPLEX128, nm::RATIONAL32, nm::RATIONAL64, nm::RATIONAL128, nm::RUBYOBJ},
-  { nm::INT16, nm::INT8, nm::INT16, nm::INT32, nm::INT64, nm::FLOAT32, nm::FLOAT64, nm::COMPLEX64, nm::COMPLEX128, nm::RATIONAL32, nm::RATIONAL64, nm::RATIONAL128, nm::RUBYOBJ},
-  { nm::INT16, nm::INT16, nm::INT16, nm::INT32, nm::INT64, nm::FLOAT32, nm::FLOAT64, nm::COMPLEX64, nm::COMPLEX128, nm::RATIONAL32, nm::RATIONAL64, nm::RATIONAL128, nm::RUBYOBJ},
-  { nm::INT32, nm::INT32, nm::INT32, nm::INT32, nm::INT64, nm::FLOAT32, nm::FLOAT64, nm::COMPLEX64, nm::COMPLEX128, nm::RATIONAL32, nm::RATIONAL64, nm::RATIONAL128, nm::RUBYOBJ},
-  { nm::INT64, nm::INT64, nm::INT64, nm::INT64, nm::INT64, nm::FLOAT32, nm::FLOAT64, nm::COMPLEX64, nm::COMPLEX128, nm::RATIONAL32, nm::RATIONAL64, nm::RATIONAL128, nm::RUBYOBJ},
-  { nm::FLOAT32, nm::FLOAT32, nm::FLOAT32, nm::FLOAT32, nm::FLOAT32, nm::FLOAT32, nm::FLOAT64, nm::COMPLEX64, nm::COMPLEX128, nm::FLOAT64, nm::FLOAT64, nm::FLOAT64, nm::RUBYOBJ},
-  { nm::FLOAT64, nm::FLOAT64, nm::FLOAT64, nm::FLOAT64, nm::FLOAT64, nm::FLOAT64, nm::FLOAT64, nm::COMPLEX128, nm::COMPLEX128, nm::FLOAT64, nm::FLOAT64, nm::FLOAT64, nm::RUBYOBJ},
-  { nm::COMPLEX64, nm::COMPLEX64, nm::COMPLEX64, nm::COMPLEX64, nm::COMPLEX64, nm::COMPLEX64, nm::COMPLEX128, nm::COMPLEX64, nm::COMPLEX128, nm::COMPLEX64, nm::COMPLEX64, nm::COMPLEX64, nm::RUBYOBJ},
-  { nm::COMPLEX128, nm::COMPLEX128, nm::COMPLEX128, nm::COMPLEX128, nm::COMPLEX128, nm::COMPLEX128, nm::COMPLEX128, nm::COMPLEX128, nm::COMPLEX128, nm::COMPLEX128, nm::COMPLEX128, nm::COMPLEX128, nm::RUBYOBJ},
-  { nm::RATIONAL32, nm::RATIONAL32, nm::RATIONAL32, nm::RATIONAL32, nm::RATIONAL32, nm::FLOAT64, nm::FLOAT64, nm::COMPLEX64, nm::COMPLEX128, nm::RATIONAL32, nm::RATIONAL64, nm::RATIONAL128, nm::RUBYOBJ},
-  { nm::RATIONAL64, nm::RATIONAL64, nm::RATIONAL64, nm::RATIONAL64, nm::RATIONAL64, nm::FLOAT64, nm::FLOAT64, nm::COMPLEX64, nm::COMPLEX128, nm::RATIONAL64, nm::RATIONAL64, nm::RATIONAL128, nm::RUBYOBJ},
-  { nm::RATIONAL128, nm::RATIONAL128, nm::RATIONAL128, nm::RATIONAL128, nm::RATIONAL128, nm::FLOAT64, nm::FLOAT64, nm::COMPLEX64, nm::COMPLEX128, nm::RATIONAL128, nm::RATIONAL128, nm::RATIONAL128, nm::RUBYOBJ},
-  { nm::RUBYOBJ, nm::RUBYOBJ, nm::RUBYOBJ, nm::RUBYOBJ, nm::RUBYOBJ, nm::RUBYOBJ, nm::RUBYOBJ, nm::RUBYOBJ, nm::RUBYOBJ, nm::RUBYOBJ, nm::RUBYOBJ, nm::RUBYOBJ, nm::RUBYOBJ}
+  { nm::BYTE, nm::INT16, nm::INT16, nm::INT32, nm::INT64, nm::FLOAT32, nm::FLOAT64, nm::COMPLEX64, nm::COMPLEX128, nm::RUBYOBJ},
+  { nm::INT16, nm::INT8, nm::INT16, nm::INT32, nm::INT64, nm::FLOAT32, nm::FLOAT64, nm::COMPLEX64, nm::COMPLEX128, nm::RUBYOBJ},
+  { nm::INT16, nm::INT16, nm::INT16, nm::INT32, nm::INT64, nm::FLOAT32, nm::FLOAT64, nm::COMPLEX64, nm::COMPLEX128, nm::RUBYOBJ},
+  { nm::INT32, nm::INT32, nm::INT32, nm::INT32, nm::INT64, nm::FLOAT32, nm::FLOAT64, nm::COMPLEX64, nm::COMPLEX128, nm::RUBYOBJ},
+  { nm::INT64, nm::INT64, nm::INT64, nm::INT64, nm::INT64, nm::FLOAT32, nm::FLOAT64, nm::COMPLEX64, nm::COMPLEX128, nm::RUBYOBJ},
+  { nm::FLOAT32, nm::FLOAT32, nm::FLOAT32, nm::FLOAT32, nm::FLOAT32, nm::FLOAT32, nm::FLOAT64, nm::COMPLEX64, nm::COMPLEX128, nm::RUBYOBJ},
+  { nm::FLOAT64, nm::FLOAT64, nm::FLOAT64, nm::FLOAT64, nm::FLOAT64, nm::FLOAT64, nm::FLOAT64, nm::COMPLEX128, nm::COMPLEX128, nm::RUBYOBJ},
+  { nm::COMPLEX64, nm::COMPLEX64, nm::COMPLEX64, nm::COMPLEX64, nm::COMPLEX64, nm::COMPLEX64, nm::COMPLEX128, nm::COMPLEX64, nm::COMPLEX128, nm::RUBYOBJ},
+  { nm::COMPLEX128, nm::COMPLEX128, nm::COMPLEX128, nm::COMPLEX128, nm::COMPLEX128, nm::COMPLEX128, nm::COMPLEX128, nm::COMPLEX128, nm::COMPLEX128, nm::RUBYOBJ},
+  { nm::RUBYOBJ, nm::RUBYOBJ, nm::RUBYOBJ, nm::RUBYOBJ, nm::RUBYOBJ, nm::RUBYOBJ, nm::RUBYOBJ, nm::RUBYOBJ, nm::RUBYOBJ, nm::RUBYOBJ}
 };
 
 
@@ -196,18 +187,6 @@ void rubyval_to_cval(VALUE val, nm::dtype_t dtype, void* loc) {
 			*reinterpret_cast<Complex128*>(loc)		= RubyObject(val).to<Complex128>();
 			break;
 
-		case RATIONAL32:
-			*reinterpret_cast<Rational32*>(loc)		= RubyObject(val).to<Rational32>();
-			break;
-
-		case RATIONAL64:
-			*reinterpret_cast<Rational64*>(loc)		= RubyObject(val).to<Rational64>();
-			break;
-
-		case RATIONAL128:
-			*reinterpret_cast<Rational128*>(loc)	= RubyObject(val).to<Rational128>();
-			break;
-
 		case RUBYOBJ:
 		  *reinterpret_cast<VALUE*>(loc)        = val;
 			//rb_raise(rb_eTypeError, "Attempting a bad conversion from a Ruby value.");
@@ -253,15 +232,6 @@ nm::RubyObject rubyobj_from_cval(void* val, nm::dtype_t dtype) {
 		case COMPLEX128:
 			return RubyObject(*reinterpret_cast<Complex128*>(val));
 			
-		case RATIONAL32:
-			return RubyObject(*reinterpret_cast<Rational32*>(val));
-			
-		case RATIONAL64:
-			return RubyObject(*reinterpret_cast<Rational64*>(val));
-			
-		case RATIONAL128:
-			return RubyObject(*reinterpret_cast<Rational128*>(val));
-
 	  default:
 	  	try {
 	  		throw std::logic_error("Cannot create ruby object");
@@ -295,9 +265,6 @@ void* rubyobj_to_cval(VALUE val, nm::dtype_t dtype) {
 void nm_init_data() {
   volatile VALUE t = INT2FIX(1);
   volatile nm::RubyObject obj(t);
-  volatile nm::Rational32 x(const_cast<nm::RubyObject&>(obj));
-  volatile nm::Rational64 y(const_cast<nm::RubyObject&>(obj));
-  volatile nm::Rational128 z(const_cast<nm::RubyObject&>(obj));
   volatile nm::Complex64 a(const_cast<nm::RubyObject&>(obj));
   volatile nm::Complex128 b(const_cast<nm::RubyObject&>(obj));
 }

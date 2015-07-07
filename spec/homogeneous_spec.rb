@@ -33,10 +33,10 @@ require 'pry'
 describe 'NMatrix' do
   context ".x_rotation" do
     it "should generate a matrix representing a rotation about the x axis" do
-      x = NMatrix.x_rotation(Math::PI.quo(6))
+      x = NMatrix.x_rotation(Math::PI/6)
       expect(x).to be_within(1e-8).of(NMatrix.new([4,4], [1.0, 0.0, 0.0, 0.0,
-                                                      0.0, Math.cos(Math::PI.quo(6)), -0.5, 0.0,
-                                                      0.0, 0.5, Math.cos(Math::PI.quo(6)), 0.0,
+                                                      0.0, Math.cos(Math::PI/6), -0.5, 0.0,
+                                                      0.0, 0.5, Math.cos(Math::PI/6), 0.0,
                                                       0.0, 0.0, 0.0, 1.0] ))
     end
   end
@@ -44,19 +44,19 @@ describe 'NMatrix' do
 
   context ".y_rotation" do
     it "should generate a matrix representing a rotation about the y axis" do
-      y = NMatrix.y_rotation(Math::PI.quo(6))
-      expect(y).to be_within(1e-8).of(NMatrix.new([4,4], [Math.cos(Math::PI.quo(6)), 0.0, 0.5, 0.0,
+      y = NMatrix.y_rotation(Math::PI/6)
+      expect(y).to be_within(1e-8).of(NMatrix.new([4,4], [Math.cos(Math::PI/6), 0.0, 0.5, 0.0,
                                                       0.0, 1.0, 0.0, 0.0,
-                                                     -0.5, 0.0, Math.cos(Math::PI.quo(6)), 0.0,
+                                                     -0.5, 0.0, Math.cos(Math::PI/6), 0.0,
                                                       0.0, 0.0, 0.0, 1.0] ))
     end
   end
 
   context ".z_rotation" do
     it "should generate a matrix representing a rotation about the z axis" do
-      z = NMatrix.z_rotation(Math::PI.quo(6))
-      expect(z).to be_within(1e-8).of(NMatrix.new([4,4], [Math.cos(Math::PI.quo(6)), -0.5, 0.0, 0.0,
-                                                      0.5, Math.cos(Math::PI.quo(6)), 0.0, 0.0,
+      z = NMatrix.z_rotation(Math::PI/6)
+      expect(z).to be_within(1e-8).of(NMatrix.new([4,4], [Math.cos(Math::PI/6), -0.5, 0.0, 0.0,
+                                                      0.5, Math.cos(Math::PI/6), 0.0, 0.0,
                                                       0.0, 0.0, 1.0, 0.0,
                                                       0.0, 0.0, 0.0, 1.0] ))
     end

@@ -59,7 +59,6 @@ class NMatrix
     #
     # The default value for +dtype+ is guessed from the first parameter. For example:
     #   NMatrix[1.0, 2.0].dtype # => :float64
-    #   NMatrix[1r, 2r].dtype   # => :rational64
     #
     # But this is just a *guess*. If the other values can't be converted to
     # this dtype, a +TypeError+ will be raised.
@@ -354,8 +353,7 @@ class NMatrix
     # by +Random::rand+. The parameter is the dimension of the matrix.
     #
     # If you use an integer dtype, make sure to specify :scale as a parameter, or you'll
-    # only get a matrix of 0s. You may not currently generate random numbers for
-    # a rational matrix.
+    # only get a matrix of 0s.
     #
     # * *Arguments* :
     #   - +shape+ -> Array (or integer for square matrix) specifying the dimensions.
@@ -371,8 +369,6 @@ class NMatrix
     #
     def random(shape, opts={})
       scale = opts.delete(:scale) || 1.0
-
-      raise(NotImplementedError, "does not support rational random number generation") if opts[:dtype].to_s =~ /^rational/
 
       rng = Random.new
 
@@ -400,7 +396,6 @@ class NMatrix
     #     dindgen(shape) -> NMatrix of :float64
     #     cindgen(shape) -> NMatrix of :complex64
     #     zindgen(shape) -> NMatrix of :complex128
-    #     rindgen(shape) -> NMatrix of :rational128
     #     rbindgen(shape) -> NMatrix of :object
     #
     # Creates a matrix filled with a sequence of integers starting at zero.
@@ -431,7 +426,7 @@ class NMatrix
 
     {:bindgen => :byte, :indgen => :int64, :findgen => :float32, :dindgen => :float64,
      :cindgen => :complex64, :zindgen => :complex128,
-     :rindgen => :rational128, :rbindgen => :object}.each_pair do |meth, dtype|
+     :rbindgen => :object}.each_pair do |meth, dtype|
       define_method(meth) { |shape| NMatrix.seq(shape, :dtype => dtype) }
     end
   end

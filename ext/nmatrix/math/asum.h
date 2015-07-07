@@ -72,7 +72,6 @@ namespace nm { namespace math {
  *    double -> double
  *    complex64 -> float or double
  *    complex128 -> double
- *    rational -> rational
  */
 template <typename ReturnDType, typename DType>
 inline ReturnDType asum(const int N, const DType* X, const int incX) {

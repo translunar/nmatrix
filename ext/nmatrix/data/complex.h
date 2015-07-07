@@ -52,7 +52,6 @@
 namespace nm {
 
 class RubyObject;
-template <typename IntType> class Rational;
 template <typename Type> class Complex;
 
 typedef Complex<float32_t> Complex64;
@@ -83,9 +82,6 @@ class Complex {
 	 */
 	template <typename ComplexType>
 	inline Complex(const Complex<ComplexType>& other) : r(other.r), i(other.i) {}
-
-	template <typename IntType, typename = typename std::enable_if<std::is_integral<IntType>::value>::type>
-	inline Complex(const Rational<IntType>& other) : r(Type(other.n) / Type(other.d)), i(0) {}
 
   Complex(const RubyObject& other);
 
@@ -212,40 +208,6 @@ class Complex {
 		return Complex<OtherType>((OtherType)this->r, (OtherType)this->i);
 	}
 
-	/////////////////////////////////
-	// Complex-Rational Operations //
-	/////////////////////////////////
-
-	template <typename RationalType>
-	inline Complex<Type> operator+(const Rational<RationalType>& other) const {
-		return *this + Complex<Type>(other);
-	}
-
-	template <typename RationalType>
-	inline Complex<Type> operator-(const Rational<RationalType>& other) const {
-		return *this - Complex<Type>(other);
-	}
-
-	template <typename RationalType>
-	inline Complex<Type> operator*(const Rational<RationalType>& other) const {
-		return *this * Complex<Type>(other);
-	}
-
-	template <typename RationalType>
-	inline Complex<Type> operator/(const Rational<RationalType>& other) const {
-		return *this / Complex<Type>(other);
-	}
-
-	template <typename RationalType, typename = typename std::enable_if<std::is_integral<RationalType>::value>::type>
-	inline bool operator!=(const Rational<RationalType>& other) const {
-	  return *this != Complex<Type>(other);
-	}
-
-  template <typename RationalType, typename = typename std::enable_if<std::is_integral<RationalType>::value>::type>
-	inline bool operator==(const Rational<RationalType>& other) const {
-	  return *this == Complex<Type>(other);
-	}
-
 	///////////////////////////////
 	// Complex-Native Operations //
 	///////////////////////////////
@@ -305,23 +267,6 @@ class Complex {
 		return (NativeType)this->r;
 	}
 };
-
-
-/////////////////////////////////
-// Rational-Complex Operations //
-/////////////////////////////////
-
-
-template <typename IntType, typename ComplexType, typename = typename std::enable_if<std::is_integral<IntType>::value>::type>
-inline bool operator==(const Rational<IntType>& left, const Complex<ComplexType>& right) {
-	return Complex<ComplexType>(left) == right;
-}
-
-template <typename IntType, typename ComplexType, typename = typename std::enable_if<std::is_integral<IntType>::value>::type>
-inline bool operator!=(const Rational<IntType>& left, const Complex<ComplexType>& right) {
-	return Complex<ComplexType>(left) != right;
-}
-
 
 ///////////////////////////////
 // Native-Complex Operations //

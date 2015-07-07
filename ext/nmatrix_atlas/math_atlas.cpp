@@ -192,10 +192,6 @@ static VALUE nm_atlas_cblas_scal(VALUE self, VALUE n, VALUE alpha, VALUE vector,
  * The outputs [c,s] will be returned in a Ruby Array at the end; the input
  * NMatrix will also be modified in-place.
  *
- * If you provide rationals, be aware that there's a high probability of an
- * error, since rotg includes a square root -- and most rationals' square roots
- * are irrational. You're better off converting to Float first.
- *
  * This function, like the other cblas_ functions, does minimal type-checking.
  */
 static VALUE nm_atlas_cblas_rotg(VALUE self, VALUE ab) {
@@ -205,14 +201,13 @@ static VALUE nm_atlas_cblas_rotg(VALUE self, VALUE ab) {
       nm::math::atlas::cblas_rotg<double>,
       nm::math::atlas::cblas_rotg<nm::Complex64>,
       nm::math::atlas::cblas_rotg<nm::Complex128>,
-      NULL, NULL, NULL, // no rationals
       NULL //nm::math::atlas::cblas_rotg<nm::RubyObject>
   };
 
   nm::dtype_t dtype = NM_DTYPE(ab);
 
   if (!ttable[dtype]) {
-    rb_raise(nm_eDataTypeError, "this operation undefined for integer and rational vectors");
+    rb_raise(nm_eDataTypeError, "this operation undefined for integer vectors");
     return Qnil;
 
   } else {
@@ -274,9 +269,6 @@ static VALUE nm_atlas_cblas_rot(VALUE self, VALUE n, VALUE x, VALUE incx, VALUE 
       nm::math::atlas::cblas_rot<double,double>,
       nm::math::atlas::cblas_rot<nm::Complex64,float>,
       nm::math::atlas::cblas_rot<nm::Complex128,double>,
-      nm::math::atlas::cblas_rot<nm::Rational32,nm::Rational32>,
-      nm::math::atlas::cblas_rot<nm::Rational64,nm::Rational64>,
-      nm::math::atlas::cblas_rot<nm::Rational128,nm::Rational128>,
       nm::math::atlas::cblas_rot<nm::RubyObject,nm::RubyObject>
   };
 
@@ -339,14 +331,13 @@ static VALUE nm_atlas_cblas_nrm2(VALUE self, VALUE n, VALUE x, VALUE incx) {
       nm::math::atlas::cblas_nrm2<float64_t,float64_t>,
       nm::math::atlas::cblas_nrm2<float32_t,nm::Complex64>,
       nm::math::atlas::cblas_nrm2<float64_t,nm::Complex128>,
-      NULL, NULL, NULL,
       nm::math::atlas::cblas_nrm2<nm::RubyObject,nm::RubyObject>
   };
 
   nm::dtype_t dtype  = NM_DTYPE(x);
 
   if (!ttable[dtype]) {
-    rb_raise(nm_eDataTypeError, "this operation undefined for integer and rational vectors");
+    rb_raise(nm_eDataTypeError, "this operation undefined for integer vectors");
     return Qnil;
 
   } else {
@@ -394,9 +385,6 @@ static VALUE nm_atlas_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx) {
       nm::math::atlas::cblas_asum<float64_t,float64_t>,
       nm::math::atlas::cblas_asum<float32_t,nm::Complex64>,
       nm::math::atlas::cblas_asum<float64_t,nm::Complex128>,
-      nm::math::atlas::cblas_asum<nm::Rational32,nm::Rational32>,
-      nm::math::atlas::cblas_asum<nm::Rational64,nm::Rational64>,
-      nm::math::atlas::cblas_asum<nm::Rational128,nm::Rational128>,
       nm::math::atlas::cblas_asum<nm::RubyObject,nm::RubyObject>
   };
 
@@ -543,9 +531,6 @@ static VALUE nm_atlas_cblas_trsm(VALUE self,
       nm::math::atlas::cblas_trsm<float>,
       nm::math::atlas::cblas_trsm<double>,
       cblas_ctrsm, cblas_ztrsm, // call directly, same function signature!
-      nm::math::atlas::cblas_trsm<nm::Rational32>,
-      nm::math::atlas::cblas_trsm<nm::Rational64>,
-      nm::math::atlas::cblas_trsm<nm::Rational128>,
       nm::math::atlas::cblas_trsm<nm::RubyObject>
   };
 
@@ -581,7 +566,7 @@ static VALUE nm_atlas_cblas_trmm(VALUE self,
       nm::math::atlas::cblas_trmm<float>,
       nm::math::atlas::cblas_trmm<double>,
       cblas_ctrmm, cblas_ztrmm, // call directly, same function signature!
-      NULL, NULL, NULL, NULL
+      NULL
   };
 
   nm::dtype_t dtype = NM_DTYPE(a);
@@ -615,7 +600,7 @@ static VALUE nm_atlas_cblas_syrk(VALUE self,
       nm::math::atlas::cblas_syrk<float>,
       nm::math::atlas::cblas_syrk<double>,
       cblas_csyrk, cblas_zsyrk, // call directly, same function signature!
-      NULL, NULL, NULL, NULL
+      NULL
   };
 
   nm::dtype_t dtype = NM_DTYPE(a);
@@ -682,7 +667,7 @@ static VALUE nm_atlas_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m,
     nm::math::atlas::lapack_gesvd<double,double>,
     nm::math::atlas::lapack_gesvd<nm::Complex64,float>,
     nm::math::atlas::lapack_gesvd<nm::Complex128,double>,
-    NULL, NULL, NULL, NULL // no rationals or Ruby objects
+    NULL // no Ruby objects
   };
 
   nm::dtype_t dtype = NM_DTYPE(a);
@@ -742,7 +727,7 @@ static VALUE nm_atlas_lapack_gesdd(VALUE self, VALUE jobz, VALUE m, VALUE n, VAL
     nm::math::atlas::lapack_gesdd<double,double>,
     nm::math::atlas::lapack_gesdd<nm::Complex64,float>,
     nm::math::atlas::lapack_gesdd<nm::Complex128,double>,
-    NULL, NULL, NULL, NULL // no rationals or Ruby objects
+    NULL // no Ruby objects
   };
 
   nm::dtype_t dtype = NM_DTYPE(a);
@@ -809,7 +794,7 @@ static VALUE nm_atlas_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_
     nm::math::atlas::lapack_geev<double,double>,
     nm::math::atlas::lapack_geev<nm::Complex64,float>,
     nm::math::atlas::lapack_geev<nm::Complex128,double>,
-    NULL, NULL, NULL, NULL // no rationals or Ruby objects
+    NULL // no Ruby objects
   };
 
   nm::dtype_t dtype = NM_DTYPE(a);
@@ -878,6 +863,7 @@ static VALUE nm_atlas_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n
       nm::math::atlas::clapack_lauum<nm::Complex64>,
       nm::math::atlas::clapack_lauum<nm::Complex128>,
 #endif
+      NULL
   };
 
   if (!ttable[NM_DTYPE(a)]) {
@@ -926,9 +912,6 @@ static VALUE nm_atlas_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, V
       nm::math::atlas::clapack_getrf<nm::Complex64>,
       nm::math::atlas::clapack_getrf<nm::Complex128>,
 #endif
-      nm::math::atlas::clapack_getrf<nm::Rational32>,
-      nm::math::atlas::clapack_getrf<nm::Rational64>,
-      nm::math::atlas::clapack_getrf<nm::Rational128>,
       nm::math::atlas::clapack_getrf<nm::RubyObject>
   };
 
@@ -981,7 +964,7 @@ static VALUE nm_atlas_clapack_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n
       nm::math::atlas::clapack_potrf<nm::Complex64>,
       nm::math::atlas::clapack_potrf<nm::Complex128>,
 #endif
-      NULL, NULL, NULL, NULL
+      NULL
   };
 
   if (!ttable[NM_DTYPE(a)]) {
@@ -1013,9 +996,6 @@ static VALUE nm_atlas_clapack_getrs(VALUE self, VALUE order, VALUE trans, VALUE 
       nm::math::atlas::clapack_getrs<nm::Complex64>,
       nm::math::atlas::clapack_getrs<nm::Complex128>,
 #endif
-      nm::math::atlas::clapack_getrs<nm::Rational32>,
-      nm::math::atlas::clapack_getrs<nm::Rational64>,
-      nm::math::atlas::clapack_getrs<nm::Rational128>,
       nm::math::atlas::clapack_getrs<nm::RubyObject>
   };
 
@@ -1059,9 +1039,6 @@ static VALUE nm_atlas_clapack_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n
       nm::math::atlas::clapack_potrs<nm::Complex64,true>,
       nm::math::atlas::clapack_potrs<nm::Complex128,true>,
 #endif
-      nm::math::atlas::clapack_potrs<nm::Rational32,false>,
-      nm::math::atlas::clapack_potrs<nm::Rational64,false>,
-      nm::math::atlas::clapack_potrs<nm::Rational128,false>,
       nm::math::atlas::clapack_potrs<nm::RubyObject,false>
   };
 
@@ -1104,7 +1081,7 @@ static VALUE nm_atlas_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, V
       nm::math::atlas::clapack_getri<nm::Complex64>,
       nm::math::atlas::clapack_getri<nm::Complex128>,
 #endif
-      NULL, NULL, NULL, NULL
+      NULL
   };
 
   // Allocate the C version of the pivot index array
@@ -1156,7 +1133,7 @@ static VALUE nm_atlas_clapack_potri(VALUE self, VALUE order, VALUE uplo, VALUE n
       nm::math::atlas::clapack_potri<nm::Complex64>,
       nm::math::atlas::clapack_potri<nm::Complex128>,
 #endif
-      NULL, NULL, NULL, NULL
+      NULL
   };
 
   if (!ttable[NM_DTYPE(a)]) {
@@ -1193,9 +1170,6 @@ static VALUE nm_atlas_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VAL
       nm::math::clapack_laswp<double>,
       nm::math::clapack_laswp<nm::Complex64>,
       nm::math::clapack_laswp<nm::Complex128>,
-      nm::math::clapack_laswp<nm::Rational32>,
-      nm::math::clapack_laswp<nm::Rational64>,
-      nm::math::clapack_laswp<nm::Rational128>,
       nm::math::clapack_laswp<nm::RubyObject>
   };
 

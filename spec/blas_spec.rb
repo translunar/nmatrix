@@ -30,7 +30,6 @@ require 'spec_helper'
 describe NMatrix::BLAS do
   [:byte, :int8, :int16, :int32, :int64,
    :float32, :float64, :complex64, :complex128,
-   :rational32, :rational64, :rational128,
    :object
   ].each do |dtype|
     context dtype do
@@ -48,41 +47,30 @@ describe NMatrix::BLAS do
     end
   end
 
-  [:rational32, :rational64, :rational128, :float32, :float64, :complex64, :complex128].each do |dtype|
+  [:float32, :float64, :complex64, :complex128].each do |dtype|
     context dtype do
       # This is not the same as "exposes cblas trsm", which would be for a version defined in blas.rb (which
       # would greatly simplify the calling of cblas_trsm in terms of arguments, and which would be accessible
       # as NMatrix::BLAS::trsm)
       # I haven't checked this spec -WL
       it "exposes unfriendly cblas_trsm" do
-        a     = NMatrix.new(3, [4,-1.quo(2), -3.quo(4), -2, 2, -1.quo(4), -4, -2, -1.quo(2)], dtype: dtype)
+        a     = NMatrix.new(3, [4,-1.0/2, -3.0/4, -2, 2, -1.0/4, -4, -2, -1.0/2], dtype: dtype)
         b     = NMatrix.new([3,1], [-1, 17, -9], dtype: dtype)
         NMatrix::BLAS::cblas_trsm(:row, :right, :lower, :transpose, :nonunit, 1, 3, 1.0, a, 3, b, 3)
 
         # These test results all come from actually running a matrix through BLAS. We use them to ensure that NMatrix's
-        # version of these functions (for rationals) give similar results.
+        # version of these functions give similar results.
 
-        expect(b[0]).to eq(-1.quo(4))
-        expect(b[1]).to eq(33.quo(4))
+        expect(b[0]).to eq(-1.0/4)
+        expect(b[1]).to eq(33.0/4)
         expect(b[2]).to eq(-13)
 
         NMatrix::BLAS::cblas_trsm(:row, :right, :upper, :transpose, :unit, 1, 3, 1.0, a, 3, b, 3)
 
-        expect(b[0]).to eq(-15.quo(2))
+        expect(b[0]).to eq(-15.0/2)
         expect(b[1]).to eq(5)
         expect(b[2]).to eq(-13)
       end
-    end
-  end
-
-  #Doesn't test anything for rationals?
-  [:rational32,:rational64,:rational128].each do |dtype|
-    context dtype do
-      it "exposes cblas rot"
-    end
-
-    context dtype do
-      it "exposes cblas rotg"
     end
   end
 
@@ -93,7 +81,7 @@ describe NMatrix::BLAS do
       it "exposes cblas rot" do
         x = NMatrix.new([5,1], [1,2,3,4,5], dtype: dtype)
         y = NMatrix.new([5,1], [-5,-4,-3,-2,-1], dtype: dtype)
-        x, y = NMatrix::BLAS::rot(x, y, 1.quo(2), Math.sqrt(3).quo(2), -1)
+        x, y = NMatrix::BLAS::rot(x, y, 1.0/2, Math.sqrt(3)/2, -1)
 
         expect(x).to be_within(1e-4).of(
                    NMatrix.new([5,1], [-0.3660254037844386, -0.7320508075688772, -1.098076211353316, -1.4641016151377544, -1.8301270189221928], dtype: dtype)
@@ -122,15 +110,15 @@ describe NMatrix::BLAS do
 
         if [:float32, :float64].include?(dtype)
           expect(ab[0]).to be_within(1e-6).of(-10)
-          expect(ab[1]).to be_within(1e-6).of(-5.quo(3))
-          expect(c).to be_within(1e-6).of(-3.quo(5))
+          expect(ab[1]).to be_within(1e-6).of(-5.0/3)
+          expect(c).to be_within(1e-6).of(-3.0/5)
         else
           pending "need correct test cases"
           expect(ab[0]).to be_within(1e-6).of(10)
-          expect(ab[1]).to be_within(1e-6).of(5.quo(3))
-          expect(c).to be_within(1e-6).of(3.quo(5))
+          expect(ab[1]).to be_within(1e-6).of(5.0/3)
+          expect(c).to be_within(1e-6).of(3.0/5)
         end
-        expect(s).to be_within(1e-6).of(4.quo(5))
+        expect(s).to be_within(1e-6).of(4.0/5)
       end
 
       # Note: this exposes gemm, not cblas_gemm (which is the unfriendly CBLAS no-error-checking version)
