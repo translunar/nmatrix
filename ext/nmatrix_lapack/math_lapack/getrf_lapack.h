@@ -69,7 +69,7 @@ inline int getrf(const enum CBLAS_ORDER order, const int m, const int n, Complex
 * This function should normally go in math.cpp, but we need it to be available to nmatrix.cpp.
 */
 template <typename DType>
-inline int clapack_getrf(const enum CBLAS_ORDER order, const int m, const int n, void* a, const int lda, int* ipiv) {
+inline int lapacke_getrf(const enum CBLAS_ORDER order, const int m, const int n, void* a, const int lda, int* ipiv) {
   return getrf<DType>(order, m, n, static_cast<DType*>(a), lda, ipiv);
 }
 

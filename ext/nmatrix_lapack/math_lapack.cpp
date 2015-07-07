@@ -41,9 +41,9 @@ extern "C" {
                              VALUE lda, VALUE beta, VALUE c, VALUE ldc);
 
   /* LAPACK. */
-  static VALUE nm_lapack_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda);
-  //static VALUE nm_lapack_clapack_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE ipiv, VALUE b, VALUE ldb);
-  static VALUE nm_lapack_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE lda, VALUE ipiv);
+  static VALUE nm_lapack_lapacke_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda);
+  //static VALUE nm_lapack_lapacke_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE ipiv, VALUE b, VALUE ldb);
+  static VALUE nm_lapack_lapacke_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE lda, VALUE ipiv);
 }
 
 extern "C" {
@@ -72,9 +72,9 @@ void nm_math_init_lapack() {
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_herk", (METHOD)nm_lapack_cblas_herk, 11);
 
   /* LAPACK Functions */
-  //rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getrf", (METHOD)nm_lapack_clapack_getrf, 5);
-  //rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getrs", (METHOD)nm_lapack_clapack_getrs, 9);
-  //rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getri", (METHOD)nm_lapack_clapack_getri, 5);
+  rb_define_singleton_method(cNMatrix_LAPACK, "lapacke_getrf", (METHOD)nm_lapack_lapacke_getrf, 5);
+  //rb_define_singleton_method(cNMatrix_LAPACK, "lapacke_getrs", (METHOD)nm_lapack_lapacke_getrs, 9);
+  rb_define_singleton_method(cNMatrix_LAPACK, "lapacke_getri", (METHOD)nm_lapack_lapacke_getri, 5);
 }
 
 /*
@@ -601,15 +601,13 @@ static VALUE nm_lapack_cblas_herk(VALUE self,
  *
  * Returns an array giving the pivot indices (normally these are argument #5).
  */
-static VALUE nm_lapack_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE lda, VALUE ipiv) {
-  std::cout << "nm_lapack_clapack_getri" << std::endl;
-
+static VALUE nm_lapack_lapacke_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE lda, VALUE ipiv) {
   static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const int n, void* a, const int lda, const int* ipiv) = {
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
-      nm::math::lapack::clapack_getri<float>,
-      nm::math::lapack::clapack_getri<double>,
-      nm::math::lapack::clapack_getri<nm::Complex64>,
-      nm::math::lapack::clapack_getri<nm::Complex128>,
+      nm::math::lapack::lapacke_getri<float>,
+      nm::math::lapack::lapacke_getri<double>,
+      nm::math::lapack::lapacke_getri<nm::Complex64>,
+      nm::math::lapack::lapacke_getri<nm::Complex128>,
       NULL, NULL, NULL, NULL
   };
 
@@ -658,17 +656,17 @@ static VALUE nm_lapack_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, 
  *
  * Returns an array giving the pivot indices (normally these are argument #5).
  */
-static VALUE nm_lapack_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda) {
+static VALUE nm_lapack_lapacke_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda) {
   static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const int m, const int n, void* a, const int lda, int* ipiv) = {
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
-      nm::math::lapack::clapack_getrf<float>,
-      nm::math::lapack::clapack_getrf<double>,
-      nm::math::lapack::clapack_getrf<nm::Complex64>,
-      nm::math::lapack::clapack_getrf<nm::Complex128>,
-      nm::math::lapack::clapack_getrf<nm::Rational32>,
-      nm::math::lapack::clapack_getrf<nm::Rational64>,
-      nm::math::lapack::clapack_getrf<nm::Rational128>,
-      nm::math::lapack::clapack_getrf<nm::RubyObject>
+      nm::math::lapack::lapacke_getrf<float>,
+      nm::math::lapack::lapacke_getrf<double>,
+      nm::math::lapack::lapacke_getrf<nm::Complex64>,
+      nm::math::lapack::lapacke_getrf<nm::Complex128>,
+      nm::math::lapack::lapacke_getrf<nm::Rational32>,
+      nm::math::lapack::lapacke_getrf<nm::Rational64>,
+      nm::math::lapack::lapacke_getrf<nm::Rational128>,
+      nm::math::lapack::lapacke_getrf<nm::RubyObject>
   };
 
   int M = FIX2INT(m),

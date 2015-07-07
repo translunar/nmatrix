@@ -37,7 +37,7 @@ inline int getri(const enum CBLAS_ORDER order, const int n, Complex128* a, const
  * This function should normally go in math.cpp, but we need it to be available to nmatrix.cpp.
  */
 template <typename DType>
-inline int clapack_getri(const enum CBLAS_ORDER order, const int n, void* a, const int lda, const int* ipiv) {
+inline int lapacke_getri(const enum CBLAS_ORDER order, const int n, void* a, const int lda, const int* ipiv) {
   return getri<DType>(order, n, static_cast<DType*>(a), lda, ipiv);
 }
 
