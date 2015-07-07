@@ -576,10 +576,10 @@ static VALUE nm_lapack_cblas_herk(VALUE self,
   return Qtrue;
 }
 
-/* Call any of the clapack_xgetri functions as directly as possible.
+/* Call any of the lapacke_xgetri functions as directly as possible.
  *
- * You probably don't want to call this function. Instead, why don't you try clapack_getri, which is more flexible
- * with its arguments?
+ * This version (the LAPACKE version) differs from the CLAPACK version in terms of the
+ * input it expects (which is the output of getrf). See getrf for details.
  *
  * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
  * handling, so you can easily crash Ruby!
@@ -617,9 +617,9 @@ static VALUE nm_lapack_lapacke_getri(VALUE self, VALUE order, VALUE n, VALUE a, 
   return a;
 }
 
-/* Call any of the clapack_xgetrf functions as directly as possible.
+/* Call any of the lapacke_xgetrf functions as directly as possible.
  *
- * The clapack_getrf functions (dgetrf, sgetrf, cgetrf, and zgetrf) compute an LU factorization of a general M-by-N
+ * The lapacke_getrf functions (dgetrf, sgetrf, cgetrf, and zgetrf) compute an LU factorization of a general M-by-N
  * matrix A using partial pivoting with row interchanges.
  *
  * The factorization has the form:
@@ -627,14 +627,15 @@ static VALUE nm_lapack_lapacke_getri(VALUE self, VALUE order, VALUE n, VALUE a, 
  * where P is a permutation matrix, L is lower triangular with unit diagonal elements (lower trapezoidal if m > n),
  * and U is upper triangular (upper trapezoidal if m < n).
  *
+ * This version of getrf (the LAPACKE one) differs from the CLAPACK version. The CLAPACK has
+ * different behavior for row-major matrices (the upper matrix has unit diagonals instead of
+ * the lower and it uses column permutations instead of rows).
+ *
  * This is the right-looking level 3 BLAS version of the algorithm.
  *
  * == Arguments
  * See: http://www.netlib.org/lapack/double/dgetrf.f
  * (You don't need argument 5; this is the value returned by this function.)
- *
- * You probably don't want to call this function. Instead, why don't you try clapack_getrf, which is more flexible
- * with its arguments?
  *
  * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
  * handling, so you can easily crash Ruby!
