@@ -127,10 +127,6 @@ static VALUE nm_lapack_cblas_scal(VALUE self, VALUE n, VALUE alpha, VALUE vector
  * The outputs [c,s] will be returned in a Ruby Array at the end; the input
  * NMatrix will also be modified in-place.
  *
- * If you provide rationals, be aware that there's a high probability of an
- * error, since rotg includes a square root -- and most rationals' square roots
- * are irrational. You're better off converting to Float first.
- *
  * This function, like the other cblas_ functions, does minimal type-checking.
  */
 static VALUE nm_lapack_cblas_rotg(VALUE self, VALUE ab) {
@@ -140,14 +136,13 @@ static VALUE nm_lapack_cblas_rotg(VALUE self, VALUE ab) {
       nm::math::lapack::cblas_rotg<double>,
       nm::math::lapack::cblas_rotg<nm::Complex64>,
       nm::math::lapack::cblas_rotg<nm::Complex128>,
-      NULL, NULL, NULL, // no rationals
       NULL //nm::math::lapack::cblas_rotg<nm::RubyObject>
   };
 
   nm::dtype_t dtype = NM_DTYPE(ab);
 
   if (!ttable[dtype]) {
-    rb_raise(nm_eDataTypeError, "this operation undefined for integer and rational vectors");
+    rb_raise(nm_eDataTypeError, "this operation undefined for integer vectors");
     return Qnil;
 
   } else {
@@ -209,9 +204,6 @@ static VALUE nm_lapack_cblas_rot(VALUE self, VALUE n, VALUE x, VALUE incx, VALUE
       nm::math::lapack::cblas_rot<double,double>,
       nm::math::lapack::cblas_rot<nm::Complex64,float>,
       nm::math::lapack::cblas_rot<nm::Complex128,double>,
-      nm::math::lapack::cblas_rot<nm::Rational32,nm::Rational32>,
-      nm::math::lapack::cblas_rot<nm::Rational64,nm::Rational64>,
-      nm::math::lapack::cblas_rot<nm::Rational128,nm::Rational128>,
       nm::math::lapack::cblas_rot<nm::RubyObject,nm::RubyObject>
   };
 
@@ -274,14 +266,13 @@ static VALUE nm_lapack_cblas_nrm2(VALUE self, VALUE n, VALUE x, VALUE incx) {
       nm::math::lapack::cblas_nrm2<float64_t,float64_t>,
       nm::math::lapack::cblas_nrm2<float32_t,nm::Complex64>,
       nm::math::lapack::cblas_nrm2<float64_t,nm::Complex128>,
-      NULL, NULL, NULL,
       nm::math::lapack::cblas_nrm2<nm::RubyObject,nm::RubyObject>
   };
 
   nm::dtype_t dtype  = NM_DTYPE(x);
 
   if (!ttable[dtype]) {
-    rb_raise(nm_eDataTypeError, "this operation undefined for integer and rational vectors");
+    rb_raise(nm_eDataTypeError, "this operation undefined for integer vectors");
     return Qnil;
 
   } else {
@@ -329,9 +320,6 @@ static VALUE nm_lapack_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx) {
       nm::math::lapack::cblas_asum<float64_t,float64_t>,
       nm::math::lapack::cblas_asum<float32_t,nm::Complex64>,
       nm::math::lapack::cblas_asum<float64_t,nm::Complex128>,
-      nm::math::lapack::cblas_asum<nm::Rational32,nm::Rational32>,
-      nm::math::lapack::cblas_asum<nm::Rational64,nm::Rational64>,
-      nm::math::lapack::cblas_asum<nm::Rational128,nm::Rational128>,
       nm::math::lapack::cblas_asum<nm::RubyObject,nm::RubyObject>
   };
 
@@ -478,9 +466,6 @@ static VALUE nm_lapack_cblas_trsm(VALUE self,
       nm::math::lapack::cblas_trsm<float>,
       nm::math::lapack::cblas_trsm<double>,
       cblas_ctrsm, cblas_ztrsm, // call directly, same function signature!
-      nm::math::lapack::cblas_trsm<nm::Rational32>,
-      nm::math::lapack::cblas_trsm<nm::Rational64>,
-      nm::math::lapack::cblas_trsm<nm::Rational128>,
       nm::math::lapack::cblas_trsm<nm::RubyObject>
   };
 
@@ -516,7 +501,7 @@ static VALUE nm_lapack_cblas_trmm(VALUE self,
       nm::math::lapack::cblas_trmm<float>,
       nm::math::lapack::cblas_trmm<double>,
       cblas_ctrmm, cblas_ztrmm, // call directly, same function signature!
-      NULL, NULL, NULL, NULL
+      NULL
   };
 
   nm::dtype_t dtype = NM_DTYPE(a);
@@ -550,7 +535,7 @@ static VALUE nm_lapack_cblas_syrk(VALUE self,
       nm::math::lapack::cblas_syrk<float>,
       nm::math::lapack::cblas_syrk<double>,
       cblas_csyrk, cblas_zsyrk, // call directly, same function signature!
-      NULL, NULL, NULL, NULL
+      NULL
   };
 
   nm::dtype_t dtype = NM_DTYPE(a);
@@ -608,7 +593,7 @@ static VALUE nm_lapack_lapacke_getri(VALUE self, VALUE order, VALUE n, VALUE a, 
       nm::math::lapack::lapacke_getri<double>,
       nm::math::lapack::lapacke_getri<nm::Complex64>,
       nm::math::lapack::lapacke_getri<nm::Complex128>,
-      NULL, NULL, NULL, NULL
+      NULL
   };
 
   // Allocate the C version of the pivot index array
@@ -663,9 +648,6 @@ static VALUE nm_lapack_lapacke_getrf(VALUE self, VALUE order, VALUE m, VALUE n, 
       nm::math::lapack::lapacke_getrf<double>,
       nm::math::lapack::lapacke_getrf<nm::Complex64>,
       nm::math::lapack::lapacke_getrf<nm::Complex128>,
-      nm::math::lapack::lapacke_getrf<nm::Rational32>,
-      nm::math::lapack::lapacke_getrf<nm::Rational64>,
-      nm::math::lapack::lapacke_getrf<nm::Rational128>,
       nm::math::lapack::lapacke_getrf<nm::RubyObject>
   };
 
