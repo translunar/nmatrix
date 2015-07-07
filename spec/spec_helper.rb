@@ -31,10 +31,10 @@ require "./lib/nmatrix"
 require "./lib/nmatrix/rspec"
 
 ALL_DTYPES = [:byte,:int8,:int16,:int32,:int64, :float32,:float64, :object,
-  :rational32,:rational64,:rational128, :complex64, :complex128]
+  :complex64, :complex128]
 
-NON_INTEGER_DTYPES = [:float32, :float64, :complex64, :complex128, :rational32, 
-  :rational64, :rational128, :object]
+NON_INTEGER_DTYPES = [:float32, :float64, :complex64, :complex128,
+  :object]
 
 FLOAT_DTYPES = [:float32, :float64]
   
@@ -43,9 +43,6 @@ MATRIX32A_ARRAY = [12.0, 25.0, 9.0, 10.0, 8.0, 5.0]
 
 COMPLEX_MATRIX43A_ARRAY = MATRIX43A_ARRAY.zip(MATRIX43A_ARRAY.reverse).collect { |ary| Complex(ary[0], ary[1]) }
 COMPLEX_MATRIX32A_ARRAY = MATRIX32A_ARRAY.zip(MATRIX32A_ARRAY.reverse).collect { |ary| Complex(ary[0], -ary[1]) }
-
-RATIONAL_MATRIX43A_ARRAY = MATRIX43A_ARRAY.collect { |x| x.to_r }
-RATIONAL_MATRIX32A_ARRAY = MATRIX32A_ARRAY.collect { |x| x.to_r }
 
 def create_matrix(stype) #:nodoc:
   m = NMatrix.new([3,3], 0, dtype: :int32, stype: stype, default: 0)
@@ -132,10 +129,6 @@ def nm_eql(n, m) #:nodoc:
     end
   end
   true
-end
-
-def rational_dtype? dtype
-  [:rational32,:rational64,:rational128].include?(dtype)
 end
 
 def integer_dtype? dtype

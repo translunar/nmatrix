@@ -207,7 +207,7 @@
  * Types
  */
 
-#define NM_NUM_DTYPES 13  // data/data.h
+#define NM_NUM_DTYPES 10  // data/data.h
 #define NM_NUM_STYPES 3   // storage/storage.h
 
 //#ifdef __cplusplus
@@ -229,10 +229,7 @@ NM_DEF_ENUM(dtype_t,    BYTE                =  0,  // unsigned char
                         FLOAT64         =  6,  // double
                         COMPLEX64       =  7,  // Complex64 class
                         COMPLEX128  =  8,  // Complex128 class
-                        RATIONAL32  =  9,  // Rational32 class
-                        RATIONAL64  = 10,  // Rational64 class
-                        RATIONAL128 = 11,  // Rational128 class
-                        RUBYOBJ         = 12);  // Ruby VALUE type
+                        RUBYOBJ         = 9);  // Ruby VALUE type
 
 NM_DEF_ENUM(symm_t,   NONSYMM   = 0,
                       SYMM      = 1,

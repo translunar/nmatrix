@@ -61,9 +61,6 @@
 
 namespace nm { namespace math {
 
-// FIXME: This is not working properly for rational numbers. Do we need some kind of symbolic
-// type to handle square roots?
-
 
 // TODO: Test this to see if it works properly on complex. ATLAS has a separate algorithm for complex, which looks like
 // TODO: it may actually be the same one.

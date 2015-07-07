@@ -12,9 +12,6 @@ DTYPES = [
           :float64_t,
           :'nm::Complex64',
           :'nm::Complex128',
-          :'nm::Rational32',
-          :'nm::Rational64',
-          :'nm::Rational128',
           :'nm::RubyObject'
          ]
 
@@ -54,9 +51,6 @@ LR_ALLOWED = {
   :float64_t		=> DTYPES,
   :'nm::Complex64'		=> DTYPES,
   :'nm::Complex128'		=> DTYPES,
-  :'nm::Rational32'		=> nullify([:float32_t, :float64_t, :'nm::Complex64', :'nm::Complex128']),
-  :'nm::Rational64'		=> nullify([:float32_t, :float64_t, :'nm::Complex64', :'nm::Complex128']),
-  :'nm::Rational128'	=> nullify([:float32_t, :float64_t, :'nm::Complex64', :'nm::Complex128']),
   :'nm::RubyObject'		=> DTYPES
 }
 

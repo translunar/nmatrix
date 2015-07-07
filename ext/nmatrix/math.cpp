@@ -99,7 +99,7 @@
 //    Copy and paste the output into the default templated function you wrote in Step 1.
 //    Fix it so it works as a template instead of just for doubles.
 //
-// 8. Write tests to confirm that it works for integers, rationals, and Ruby objects.
+// 8. Write tests to confirm that it works for all data types.
 //
 // 9. See about adding a Ruby-like interface, such as matrix_matrix_multiply for cblas_gemm,
 //    or matrix_vector_multiply for cblas_gemv. This step is not mandatory.
@@ -623,10 +623,6 @@ static VALUE nm_cblas_scal(VALUE self, VALUE n, VALUE alpha, VALUE vector, VALUE
  * The outputs [c,s] will be returned in a Ruby Array at the end; the input
  * NMatrix will also be modified in-place.
  *
- * If you provide rationals, be aware that there's a high probability of an
- * error, since rotg includes a square root -- and most rationals' square roots
- * are irrational. You're better off converting to Float first.
- *
  * This function, like the other cblas_ functions, does minimal type-checking.
  */
 static VALUE nm_cblas_rotg(VALUE self, VALUE ab) {
@@ -636,14 +632,13 @@ static VALUE nm_cblas_rotg(VALUE self, VALUE ab) {
       nm::math::cblas_rotg<double>,
       nm::math::cblas_rotg<nm::Complex64>,
       nm::math::cblas_rotg<nm::Complex128>,
-      NULL, NULL, NULL, // no rationals
       NULL //nm::math::cblas_rotg<nm::RubyObject>
   };
 
   nm::dtype_t dtype = NM_DTYPE(ab);
 
   if (!ttable[dtype]) {
-    rb_raise(nm_eDataTypeError, "this operation undefined for integer and rational vectors");
+    rb_raise(nm_eDataTypeError, "this operation undefined for integer vectors");
     return Qnil;
 
   } else {
@@ -705,9 +700,6 @@ static VALUE nm_cblas_rot(VALUE self, VALUE n, VALUE x, VALUE incx, VALUE y, VAL
       nm::math::cblas_rot<double,double>,
       nm::math::cblas_rot<nm::Complex64,float>,
       nm::math::cblas_rot<nm::Complex128,double>,
-      nm::math::cblas_rot<nm::Rational32,nm::Rational32>,
-      nm::math::cblas_rot<nm::Rational64,nm::Rational64>,
-      nm::math::cblas_rot<nm::Rational128,nm::Rational128>,
       nm::math::cblas_rot<nm::RubyObject,nm::RubyObject>
   };
 
@@ -774,17 +766,13 @@ static VALUE nm_cblas_nrm2(VALUE self, VALUE n, VALUE x, VALUE incx) {
       nm::math::cblas_nrm2<float64_t,float64_t>,
       nm::math::cblas_nrm2<float32_t,nm::Complex64>,
       nm::math::cblas_nrm2<float64_t,nm::Complex128>,
-      //nm::math::cblas_nrm2<nm::Rational32,nm::Rational32>,
-      //nm::math::cblas_nrm2<nm::Rational64,nm::Rational64>,
-      //nm::math::cblas_nrm2<nm::Rational128,nm::Rational128>,
-      NULL, NULL, NULL,
       nm::math::cblas_nrm2<nm::RubyObject,nm::RubyObject>
   };
 
   nm::dtype_t dtype  = NM_DTYPE(x);
 
   if (!ttable[dtype]) {
-    rb_raise(nm_eDataTypeError, "this operation undefined for integer and rational vectors");
+    rb_raise(nm_eDataTypeError, "this operation undefined for integer vectors");
     return Qnil;
 
   } else {
@@ -832,9 +820,6 @@ static VALUE nm_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx) {
       nm::math::cblas_asum<float64_t,float64_t>,
       nm::math::cblas_asum<float32_t,nm::Complex64>,
       nm::math::cblas_asum<float64_t,nm::Complex128>,
-      nm::math::cblas_asum<nm::Rational32,nm::Rational32>,
-      nm::math::cblas_asum<nm::Rational64,nm::Rational64>,
-      nm::math::cblas_asum<nm::Rational128,nm::Rational128>,
       nm::math::cblas_asum<nm::RubyObject,nm::RubyObject>
   };
 
@@ -984,9 +969,6 @@ static VALUE nm_cblas_trsm(VALUE self,
       nm::math::cblas_trsm<double>,
       nm::math::cblas_trsm<nm::Complex64>,
       nm::math::cblas_trsm<nm::Complex128>,
-      nm::math::cblas_trsm<nm::Rational32>,
-      nm::math::cblas_trsm<nm::Rational64>,
-      nm::math::cblas_trsm<nm::Rational128>,
       nm::math::cblas_trsm<nm::RubyObject>
   };
 
@@ -1163,9 +1145,6 @@ static VALUE nm_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a
       nm::math::clapack_getrf<double>,
       nm::math::clapack_getrf<nm::Complex64>,
       nm::math::clapack_getrf<nm::Complex128>,
-      nm::math::clapack_getrf<nm::Rational32>,
-      nm::math::clapack_getrf<nm::Rational64>,
-      nm::math::clapack_getrf<nm::Rational128>,
       nm::math::clapack_getrf<nm::RubyObject>
   };
 
@@ -1221,9 +1200,6 @@ static VALUE nm_clapack_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VAL
       nm::math::clapack_getrs<double>,
       nm::math::clapack_getrs<nm::Complex64>,
       nm::math::clapack_getrs<nm::Complex128>,
-      nm::math::clapack_getrs<nm::Rational32>,
-      nm::math::clapack_getrs<nm::Rational64>,
-      nm::math::clapack_getrs<nm::Rational128>,
       nm::math::clapack_getrs<nm::RubyObject>
   };
 
@@ -1263,9 +1239,6 @@ static VALUE nm_clapack_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALU
       nm::math::clapack_potrs<double,false>,
       nm::math::clapack_potrs<nm::Complex64,true>,
       nm::math::clapack_potrs<nm::Complex128,true>,
-      nm::math::clapack_potrs<nm::Rational32,false>,
-      nm::math::clapack_potrs<nm::Rational64,false>,
-      nm::math::clapack_potrs<nm::Rational128,false>,
       nm::math::clapack_potrs<nm::RubyObject,false>
   };
 
@@ -1340,9 +1313,6 @@ static VALUE nm_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1,
       nm::math::clapack_laswp<double>,
       nm::math::clapack_laswp<nm::Complex64>,
       nm::math::clapack_laswp<nm::Complex128>,
-      nm::math::clapack_laswp<nm::Rational32>,
-      nm::math::clapack_laswp<nm::Rational64>,
-      nm::math::clapack_laswp<nm::Rational128>,
       nm::math::clapack_laswp<nm::RubyObject>
   };
 
@@ -1399,7 +1369,6 @@ void nm_math_hessenberg(VALUE a) {
       nm::math::hessenberg<float>,
       nm::math::hessenberg<double>,
       NULL, NULL, // does not support Complex
-      NULL,NULL, NULL, // no support for rationals
       NULL // no support for Ruby Object
   };
     

@@ -50,7 +50,6 @@ class Array
       case type
       when Fixnum   then :int64
       when Float    then :float64
-      when Rational then :rational128
       when Complex  then :complex128
       end
     }
