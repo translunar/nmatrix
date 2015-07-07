@@ -99,7 +99,6 @@ inline void cblas_rot(const int N, void* X, const int incX, void* Y, const int i
  *    double -> double
  *    complex64 -> float or double
  *    complex128 -> double
- *    rational -> rational
  */
 template <typename ReturnDType, typename DType>
 inline ReturnDType asum(const int N, const DType* X, const int incX) {
@@ -142,7 +141,6 @@ inline void cblas_asum(const int N, const void* X, const int incX, void* sum) {
  *    double -> double
  *    complex64 -> float or double
  *    complex128 -> double
- *    rational -> rational
  */
 template <typename ReturnDType, typename DType>
 inline ReturnDType nrm2(const int N, const DType* X, const int incX) {
