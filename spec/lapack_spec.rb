@@ -80,6 +80,7 @@ describe "NMatrix::LAPACK functions with internal implementations" do
 
 
       # spec OK, but tricky. It's the upper matrix that has unit diagonals and the permutation is done in columns not rows. See the code details. This is normal for CLAPACK with row-major matrices, but not for plain LAPACK.
+      # Also, should check the pivot matrix here.
       it "exposes clapack_getrf" do
         a = NMatrix.new(3, [4,9,2,3,5,7,8,1,6], dtype: dtype)
         NMatrix::LAPACK::clapack_getrf(:row, 3, 3, a, 3)

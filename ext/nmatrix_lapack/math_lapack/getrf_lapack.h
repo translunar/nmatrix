@@ -33,12 +33,9 @@ namespace nm { namespace math { namespace lapack {
 
 template <typename DType>
 inline int getrf(const enum CBLAS_ORDER order, const int m, const int n, DType* a, const int lda, int* ipiv) {
-  //unless overridden below, use the internal implementation of getrf
-  //from ext/nmatrix/math/getrf.h
-  //THIS IS PROBLEMATIC because the internal implementation uses the ATLAS
-  //interpretation of getrf which behaves differently for row-major matrices
-  //(different in terms of whether upper or lower matrix has the unit diagonals).
-  return nm::math::getrf<DType>(order, m, n, a, lda, ipiv);
+  //We don't want to call the internal implementation since the the CLAPACK interface is slightly different than the LAPACKE.
+  rb_raise(rb_eNotImpError, "lapacke_getrf not implemented for non_BLAS dtypes. Try clapack_getrf instead.");
+  return 0;
 }
 
 template <>
