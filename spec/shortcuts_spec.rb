@@ -105,10 +105,6 @@ describe NMatrix do
       m = NMatrix.random(2, :dtype => :complex128)
     end
 
-    it "forbids generation of a rational matrix" do
-      expect { m = NMatrix.random(2, dtype: :rational128) }.to raise_error
-    end
-
     it "correctly accepts :scale parameter" do
       m = NMatrix.random([2,2], dtype: :byte, scale: 255)
       m.each do |v|

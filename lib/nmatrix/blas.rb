@@ -217,7 +217,7 @@ module NMatrix::BLAS
     #
     # Apply givens plane rotation to the coordinates (a,b), returning the cosine and sine of the angle theta.
     #
-    # Since the givens rotation includes a square root, integers and rationals are disallowed.
+    # Since the givens rotation includes a square root, integers are disallowed.
     #
     # * *Arguments* :
     #   - +ab+ -> NMatrix with two elements

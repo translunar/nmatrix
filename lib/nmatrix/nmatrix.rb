@@ -49,7 +49,7 @@ require_relative './monkeys'
 
 # NMatrix is a matrix class that supports both multidimensional arrays
 # (`:dense` stype) and sparse storage (`:list` or `:yale` stypes) and 13 data
-# types, including complex and rational numbers, various integer and
+# types, including complex numbers, various integer and
 # floating-point sizes and ruby objects.
 class NMatrix
   # Read and write extensions for NMatrix.
@@ -221,7 +221,7 @@ class NMatrix
   # one. You can actually call this function with no arguments, in which case it functions like #clone.
   #
   # If your dtype is :object and you are converting from :dense to a sparse type, it is recommended that you
-  # provide a :default, as 0 may behave differently from its Float, Rational, or Complex equivalent. If no option
+  # provide a :default, as 0 may behave differently from its Float or Complex equivalent. If no option
   # is given, Fixnum 0 will be used.
   def cast(*params)
     if (params.size > 0 && params[0].is_a?(Hash))
@@ -363,16 +363,6 @@ class NMatrix
   #
   def complex_dtype?
     [:complex64, :complex128].include?(self.dtype)
-  end
-
-  ##
-  # call-seq:
-  #   complex_dtype?() -> Boolean
-  #
-  # Checks if dtype is a rational type
-  #
-  def rational_dtype?
-    [:rational32, :rational64, :rational128].include?(self.dtype)
   end
 
   ##

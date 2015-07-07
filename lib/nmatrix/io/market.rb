@@ -94,15 +94,15 @@ module NMatrix::IO::Market
     #   - +matrix+ -> NMatrix with the data to be saved.
     #   - +filename+ -> String with the filename to be saved.
     # * *Raises* :
-    #   - +DataTypeError+ -> MatrixMarket does not support rational or Ruby objects.
+    #   - +DataTypeError+ -> MatrixMarket does not support Ruby objects.
     #   - +ArgumentError+ -> Expected two-dimensional NMatrix.
     def save(matrix, filename, options = {})
       options = {:pattern => false,
         :symmetry => :general}.merge(options)
 
       mode = matrix.stype == :dense ? :array : :coordinate
-      if [:rational32,:rational64,:rational128,:object].include?(matrix.dtype)
-        raise(DataTypeError, "MatrixMarket does not support rational or Ruby objects")
+      if [:object].include?(matrix.dtype)
+        raise(DataTypeError, "MatrixMarket does not support Ruby objects")
       end
       entry_type = options[:pattern] ? :pattern : ENTRY_TYPE[matrix.dtype]
 

@@ -42,9 +42,6 @@ namespace nm { namespace math {
   template <> struct LongDType<double> { typedef double type; };
   template <> struct LongDType<Complex64> { typedef Complex128 type; };
   template <> struct LongDType<Complex128> { typedef Complex128 type; };
-  template <> struct LongDType<Rational32> { typedef Rational128 type; };
-  template <> struct LongDType<Rational64> { typedef Rational128 type; };
-  template <> struct LongDType<Rational128> { typedef Rational128 type; };
   template <> struct LongDType<RubyObject> { typedef RubyObject type; };
 
 }} // end of namespace nm::math

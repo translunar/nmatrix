@@ -258,8 +258,8 @@ describe "Slice operation" do
         end
 
         if stype == :dense
-          [:byte,:int8,:int16,:int32,:int64,:float32,:float64,:rational64,:rational128].each do |left_dtype|
-            [:byte,:int8,:int16,:int32,:int64,:float32,:float64,:rational64,:rational128].each do |right_dtype|
+          [:byte,:int8,:int16,:int32,:int64,:float32,:float64].each do |left_dtype|
+            [:byte,:int8,:int16,:int32,:int64,:float32,:float64].each do |right_dtype|
 
               # Won't work if they're both 1-byte, due to overflow.
               next if [:byte,:int8].include?(left_dtype) && [:byte,:int8].include?(right_dtype)
@@ -272,16 +272,12 @@ describe "Slice operation" do
 
                 nary = if left_dtype.to_s =~ /complex/
                          COMPLEX_MATRIX43A_ARRAY
-                       elsif left_dtype.to_s =~ /rational/
-                         RATIONAL_MATRIX43A_ARRAY
                        else
                          MATRIX43A_ARRAY
                        end
 
                 mary = if right_dtype.to_s =~ /complex/
                          COMPLEX_MATRIX32A_ARRAY
-                       elsif right_dtype.to_s =~ /rational/
-                         RATIONAL_MATRIX32A_ARRAY
                        else
                          MATRIX32A_ARRAY
                        end

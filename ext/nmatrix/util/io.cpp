@@ -212,7 +212,7 @@ static VALUE nm_rbstring_matlab_repack(VALUE self, VALUE str, VALUE from, VALUE 
 
   // For next few lines, see explanation above NM_MATLAB_DTYPE_TEMPLATE_TABLE definition in io.h.
   if (to_type >= static_cast<uint8_t>(nm::COMPLEX64)) {
-    rb_raise(rb_eArgError, "can only repack into a simple dtype, no complex/rational/VALUE");
+    rb_raise(rb_eArgError, "can only repack into a simple dtype, no complex/VALUE");
   }
 
   // Do the actual repacking -- really simple!
