@@ -120,11 +120,8 @@
 #include "math/cblas_enums.h"
 
 #include "data/data.h"
-#include "math/swap.h"
 #include "math/imax.h"
 #include "math/scal.h"
-#include "math/ger.h"
-#include "math/getf2.h"
 #include "math/laswp.h"
 #include "math/trsm.h"
 #include "math/gemm.h"
