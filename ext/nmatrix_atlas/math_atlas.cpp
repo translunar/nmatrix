@@ -9,17 +9,12 @@
 
 #include "math/util.h"
 
-#include "math_atlas/math_atlas.h"
-
 //BLAS
 #include "math_atlas/cblas_templates_atlas.h"
 
 //LAPACK
 #include "math/laswp.h"
-#include "math_atlas/getrf_atlas.h"
-#include "math_atlas/getri_atlas.h"
-#include "math_atlas/getrs_atlas.h"
-#include "math_atlas/potrs_atlas.h"
+#include "math_atlas/clapack_templates.h"
 
 #include "math_atlas/gesvd.h"
 #include "math_atlas/gesdd.h"
