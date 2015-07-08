@@ -42,7 +42,7 @@ extern "C" {
 
   /* LAPACK. */
   static VALUE nm_lapack_lapacke_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda);
-  //static VALUE nm_lapack_lapacke_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE ipiv, VALUE b, VALUE ldb);
+  static VALUE nm_lapack_lapacke_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE ipiv, VALUE b, VALUE ldb);
   static VALUE nm_lapack_lapacke_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE lda, VALUE ipiv);
 }
 
@@ -73,7 +73,7 @@ void nm_math_init_lapack() {
 
   /* LAPACK Functions */
   rb_define_singleton_method(cNMatrix_LAPACK, "lapacke_getrf", (METHOD)nm_lapack_lapacke_getrf, 5);
-  //rb_define_singleton_method(cNMatrix_LAPACK, "lapacke_getrs", (METHOD)nm_lapack_lapacke_getrs, 9);
+  rb_define_singleton_method(cNMatrix_LAPACK, "lapacke_getrs", (METHOD)nm_lapack_lapacke_getrs, 9);
   rb_define_singleton_method(cNMatrix_LAPACK, "lapacke_getri", (METHOD)nm_lapack_lapacke_getri, 5);
 }
 
@@ -673,6 +673,45 @@ static VALUE nm_lapack_lapacke_getrf(VALUE self, VALUE order, VALUE m, VALUE n, 
   }
 
   return ipiv_array;
+}
+
+/*
+ * Call any of the lapacke_xgetrs functions as directly as possible.
+ */
+static VALUE nm_lapack_lapacke_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE ipiv, VALUE b, VALUE ldb) {
+  static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER Order, char Trans, const int N,
+                                       const int NRHS, const void* A, const int lda, const int* ipiv, void* B,
+                                       const int ldb) = {
+      NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
+      nm::math::lapack::lapacke_getrs<float>,
+      nm::math::lapack::lapacke_getrs<double>,
+      nm::math::lapack::lapacke_getrs<nm::Complex64>,
+      nm::math::lapack::lapacke_getrs<nm::Complex128>,
+      nm::math::lapack::lapacke_getrs<nm::RubyObject>
+  };
+
+  // Allocate the C version of the pivot index array
+  int* ipiv_;
+  if (TYPE(ipiv) != T_ARRAY) {
+    rb_raise(rb_eArgError, "ipiv must be of type Array");
+  } else {
+    ipiv_ = NM_ALLOCA_N(int, RARRAY_LEN(ipiv));
+    for (int index = 0; index < RARRAY_LEN(ipiv); ++index) {
+      ipiv_[index] = FIX2INT( RARRAY_PTR(ipiv)[index] );
+    }
+  }
+
+  if (!ttable[NM_DTYPE(a)]) {
+    rb_raise(nm_eDataTypeError, "this matrix operation undefined for integer matrices");
+  } else {
+
+    // Call either our version of getrs or the LAPACK version.
+    ttable[NM_DTYPE(a)](blas_order_sym(order), lapacke_transpose_sym(trans), FIX2INT(n), FIX2INT(nrhs), NM_STORAGE_DENSE(a)->elements, FIX2INT(lda),
+                        ipiv_, NM_STORAGE_DENSE(b)->elements, FIX2INT(ldb));
+  }
+
+  // b is both returned and modified directly in the argument list.
+  return b;
 }
 
 }

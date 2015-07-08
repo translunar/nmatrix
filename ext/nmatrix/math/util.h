@@ -15,6 +15,18 @@ static inline enum CBLAS_TRANSPOSE blas_transpose_sym(VALUE op) {
   return CblasNoTrans;
 }
 
+/* Interprets transpose argument which could be any of false/:no_transpose, :transpose, or :complex_conjugate,
+ * into an character recognized by LAPACKE. LAPACKE uses a different system than CBLAS for this.
+ *
+ */
+static inline char lapacke_transpose_sym(VALUE op) {
+  if (op == Qfalse || rb_to_id(op) == nm_rb_no_transpose) return 'N';
+  else if (rb_to_id(op) == nm_rb_transpose) return 'T';
+  else if (rb_to_id(op) == nm_rb_complex_conjugate) return 'C';
+  else rb_raise(rb_eArgError, "Expected false, :transpose, or :complex_conjugate");
+  return 'N';
+}
+
 /*
  * Interprets cblas argument which could be :left or :right
  *

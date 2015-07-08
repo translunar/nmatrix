@@ -68,6 +68,49 @@ inline int lapacke_getri(const enum CBLAS_ORDER order, const int n, void* a, con
   return getri<DType>(order, n, static_cast<DType*>(a), lda, ipiv);
 }
 
+//getrs
+template <typename DType>
+inline int getrs(const enum CBLAS_ORDER Order, char Trans, const int N, const int NRHS, const DType* A,
+           const int lda, const int* ipiv, DType* B, const int ldb)
+{
+  rb_raise(rb_eNotImpError, "lapacke_getrs not implemented for non_BLAS dtypes. Try clapack_getrs instead.");
+  return 0;
+}
+
+template <>
+inline int getrs(const enum CBLAS_ORDER Order, char Trans, const int N, const int NRHS, const float* A,
+           const int lda, const int* ipiv, float* B, const int ldb)
+{
+  return LAPACKE_sgetrs(Order, Trans, N, NRHS, A, lda, ipiv, B, ldb);
+}
+
+template <>
+inline int getrs(const enum CBLAS_ORDER Order, char Trans, const int N, const int NRHS, const double* A,
+           const int lda, const int* ipiv, double* B, const int ldb)
+{
+  return LAPACKE_dgetrs(Order, Trans, N, NRHS, A, lda, ipiv, B, ldb);
+}
+
+template <>
+inline int getrs(const enum CBLAS_ORDER Order, char Trans, const int N, const int NRHS, const Complex64* A,
+           const int lda, const int* ipiv, Complex64* B, const int ldb)
+{
+  return LAPACKE_cgetrs(Order, Trans, N, NRHS, A, lda, ipiv, B, ldb);
+}
+
+template <>
+inline int getrs(const enum CBLAS_ORDER Order, char Trans, const int N, const int NRHS, const Complex128* A,
+           const int lda, const int* ipiv, Complex128* B, const int ldb)
+{
+  return LAPACKE_zgetrs(Order, Trans, N, NRHS, A, lda, ipiv, B, ldb);
+}
+
+template <typename DType>
+inline int lapacke_getrs(const enum CBLAS_ORDER order, char trans, const int n, const int nrhs,
+                         const void* a, const int lda, const int* ipiv, void* b, const int ldb) {
+  return getrs<DType>(order, trans, n, nrhs, static_cast<const DType*>(a), lda, ipiv, static_cast<DType*>(b), ldb);
+}
+
 }}}
 
 #endif
