@@ -8,8 +8,8 @@
 
 #include "math_lapack/cblas_templates_lapack.h"
 
-#include "math_lapack/getri_lapack.h"
-#include "math_lapack/getrf_lapack.h"
+#include "math_lapack/lapacke_templates.h"
+
 
 /*
  * Forward Declarations
