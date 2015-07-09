@@ -44,6 +44,9 @@ extern "C" {
   static VALUE nm_lapack_lapacke_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda);
   static VALUE nm_lapack_lapacke_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE ipiv, VALUE b, VALUE ldb);
   static VALUE nm_lapack_lapacke_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE lda, VALUE ipiv);
+  static VALUE nm_lapack_lapacke_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
+  static VALUE nm_lapack_lapacke_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE b, VALUE ldb);
+  static VALUE nm_lapack_lapacke_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
 }
 
 extern "C" {
@@ -75,6 +78,9 @@ void nm_math_init_lapack() {
   rb_define_singleton_method(cNMatrix_LAPACK, "lapacke_getrf", (METHOD)nm_lapack_lapacke_getrf, 5);
   rb_define_singleton_method(cNMatrix_LAPACK, "lapacke_getrs", (METHOD)nm_lapack_lapacke_getrs, 9);
   rb_define_singleton_method(cNMatrix_LAPACK, "lapacke_getri", (METHOD)nm_lapack_lapacke_getri, 5);
+  rb_define_singleton_method(cNMatrix_LAPACK, "lapacke_potrf", (METHOD)nm_lapack_lapacke_potrf, 5);
+  rb_define_singleton_method(cNMatrix_LAPACK, "lapacke_potrs", (METHOD)nm_lapack_lapacke_potrs, 8);
+  rb_define_singleton_method(cNMatrix_LAPACK, "lapacke_potri", (METHOD)nm_lapack_lapacke_potri, 5);
 }
 
 /*
@@ -588,7 +594,7 @@ static VALUE nm_lapack_cblas_herk(VALUE self,
  */
 static VALUE nm_lapack_lapacke_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE lda, VALUE ipiv) {
   static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const int n, void* a, const int lda, const int* ipiv) = {
-      NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
+      NULL, NULL, NULL, NULL, NULL,
       nm::math::lapack::lapacke_getri<float>,
       nm::math::lapack::lapacke_getri<double>,
       nm::math::lapack::lapacke_getri<nm::Complex64>,
@@ -610,7 +616,6 @@ static VALUE nm_lapack_lapacke_getri(VALUE self, VALUE order, VALUE n, VALUE a, 
   if (!ttable[NM_DTYPE(a)]) {
     rb_raise(rb_eNotImpError, "this operation not yet implemented for non-BLAS dtypes");
   } else {
-    // Call either our version of getri or the LAPACK version.
     ttable[NM_DTYPE(a)](blas_order_sym(order), FIX2INT(n), NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), ipiv_);
   }
 
@@ -644,12 +649,12 @@ static VALUE nm_lapack_lapacke_getri(VALUE self, VALUE order, VALUE n, VALUE a, 
  */
 static VALUE nm_lapack_lapacke_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda) {
   static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const int m, const int n, void* a, const int lda, int* ipiv) = {
-      NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
+      NULL, NULL, NULL, NULL, NULL,
       nm::math::lapack::lapacke_getrf<float>,
       nm::math::lapack::lapacke_getrf<double>,
       nm::math::lapack::lapacke_getrf<nm::Complex64>,
       nm::math::lapack::lapacke_getrf<nm::Complex128>,
-      nm::math::lapack::lapacke_getrf<nm::RubyObject>
+      NULL
   };
 
   int M = FIX2INT(m),
@@ -662,7 +667,6 @@ static VALUE nm_lapack_lapacke_getrf(VALUE self, VALUE order, VALUE m, VALUE n, 
   if (!ttable[NM_DTYPE(a)]) {
     rb_raise(nm_eDataTypeError, "this matrix operation undefined for integer matrices");
   } else {
-    // Call either our version of getrf or the LAPACK version.
     ttable[NM_DTYPE(a)](blas_order_sym(order), M, N, NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), ipiv);
   }
 
@@ -682,12 +686,12 @@ static VALUE nm_lapack_lapacke_getrs(VALUE self, VALUE order, VALUE trans, VALUE
   static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER Order, char Trans, const int N,
                                        const int NRHS, const void* A, const int lda, const int* ipiv, void* B,
                                        const int ldb) = {
-      NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
+      NULL, NULL, NULL, NULL, NULL,
       nm::math::lapack::lapacke_getrs<float>,
       nm::math::lapack::lapacke_getrs<double>,
       nm::math::lapack::lapacke_getrs<nm::Complex64>,
       nm::math::lapack::lapacke_getrs<nm::Complex128>,
-      nm::math::lapack::lapacke_getrs<nm::RubyObject>
+      NULL
   };
 
   // Allocate the C version of the pivot index array
@@ -704,14 +708,89 @@ static VALUE nm_lapack_lapacke_getrs(VALUE self, VALUE order, VALUE trans, VALUE
   if (!ttable[NM_DTYPE(a)]) {
     rb_raise(nm_eDataTypeError, "this matrix operation undefined for integer matrices");
   } else {
-
-    // Call either our version of getrs or the LAPACK version.
     ttable[NM_DTYPE(a)](blas_order_sym(order), lapacke_transpose_sym(trans), FIX2INT(n), FIX2INT(nrhs), NM_STORAGE_DENSE(a)->elements, FIX2INT(lda),
                         ipiv_, NM_STORAGE_DENSE(b)->elements, FIX2INT(ldb));
   }
 
   // b is both returned and modified directly in the argument list.
   return b;
+}
+
+/* Call any of the LAPACKE_xpotrf functions as directly as possible.
+ *
+ * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
+ * handling, so you can easily crash Ruby!
+ */
+static VALUE nm_lapack_lapacke_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
+
+  static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, char, const int n, void* a, const int lda) = {
+      NULL, NULL, NULL, NULL, NULL,
+      nm::math::lapack::lapacke_potrf<float>,
+      nm::math::lapack::lapacke_potrf<double>,
+      nm::math::lapack::lapacke_potrf<nm::Complex64>,
+      nm::math::lapack::lapacke_potrf<nm::Complex128>,
+      NULL
+  };
+
+  if (!ttable[NM_DTYPE(a)]) {
+    rb_raise(rb_eNotImpError, "this operation not yet implemented for non-BLAS dtypes");
+  } else {
+    ttable[NM_DTYPE(a)](blas_order_sym(order), lapacke_uplo_sym(uplo), FIX2INT(n), NM_STORAGE_DENSE(a)->elements, FIX2INT(lda));
+  }
+
+  return a;
+}
+
+/*
+ * Call any of the LAPACKE_xpotrs functions as directly as possible.
+ */
+static VALUE nm_lapack_lapacke_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE b, VALUE ldb) {
+  static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER Order, char Uplo, const int N,
+                                       const int NRHS, const void* A, const int lda, void* B, const int ldb) = {
+      NULL, NULL, NULL, NULL, NULL,
+      nm::math::lapack::lapacke_potrs<float>,
+      nm::math::lapack::lapacke_potrs<double>,
+      nm::math::lapack::lapacke_potrs<nm::Complex64>,
+      nm::math::lapack::lapacke_potrs<nm::Complex128>,
+      NULL
+  };
+
+
+  if (!ttable[NM_DTYPE(a)]) {
+    rb_raise(nm_eDataTypeError, "this matrix operation undefined for integer matrices");
+  } else {
+
+    ttable[NM_DTYPE(a)](blas_order_sym(order), lapacke_uplo_sym(uplo), FIX2INT(n), FIX2INT(nrhs), NM_STORAGE_DENSE(a)->elements, FIX2INT(lda),
+                        NM_STORAGE_DENSE(b)->elements, FIX2INT(ldb));
+  }
+
+  // b is both returned and modified directly in the argument list.
+  return b;
+}
+
+/* Call any of the lapacke_xpotri functions as directly as possible.
+ *
+ * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
+ * handling, so you can easily crash Ruby!
+ */
+static VALUE nm_lapack_lapacke_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
+
+  static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, char, const int n, void* a, const int lda) = {
+      NULL, NULL, NULL, NULL, NULL,
+      nm::math::lapack::lapacke_potri<float>,
+      nm::math::lapack::lapacke_potri<double>,
+      nm::math::lapack::lapacke_potri<nm::Complex64>,
+      nm::math::lapack::lapacke_potri<nm::Complex128>,
+      NULL
+  };
+
+  if (!ttable[NM_DTYPE(a)]) {
+    rb_raise(rb_eNotImpError, "this operation not yet implemented for non-BLAS dtypes");
+  } else {
+    ttable[NM_DTYPE(a)](blas_order_sym(order), lapacke_uplo_sym(uplo), FIX2INT(n), NM_STORAGE_DENSE(a)->elements, FIX2INT(lda));
+  }
+
+  return a;
 }
 
 }

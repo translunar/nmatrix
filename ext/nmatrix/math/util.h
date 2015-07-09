@@ -53,6 +53,18 @@ static inline enum CBLAS_UPLO blas_uplo_sym(VALUE op) {
   return CblasUpper;
 }
 
+/*
+ * Interprets cblas argument which could be :upper or :lower
+ *
+ * Called by nm_cblas_trsm -- basically inline
+ */
+static inline char lapacke_uplo_sym(VALUE op) {
+  ID op_id = rb_to_id(op);
+  if (op_id == nm_rb_upper) return 'U';
+  if (op_id == nm_rb_lower) return 'L';
+  rb_raise(rb_eArgError, "Expected :upper or :lower for uplo argument");
+  return 'U';
+}
 
 /*
  * Interprets cblas argument which could be :unit (true) or :nonunit (false or anything other than true/:unit)
@@ -66,6 +78,10 @@ static inline enum CBLAS_DIAG blas_diag_sym(VALUE op) {
 
 /*
  * Interprets cblas argument which could be :row or :col
+ * 
+ * This function, unlike the other ones, works for LAPACKE as well as for CBLAS/CLAPACK.
+ * Although LAPACKE calls this an int instead of a enum, the magic values are the same
+ * (101 for row-major, 102 for column-major).
  */
 static inline enum CBLAS_ORDER blas_order_sym(VALUE op) {
   if (rb_to_id(op) == rb_intern("row") || rb_to_id(op) == rb_intern("row_major")) return CblasRowMajor;
