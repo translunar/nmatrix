@@ -1,6 +1,6 @@
 == Temporary build instructions
 
-Two gems are provided: the nmatrix gem which provides core features, and the nmatrix-atlas gem which extends the nmatrix gem and provides advanced linear algebra operations via ATLAS. Available from the <tt>atlas_plugin</tt> branch of <tt>https://github.com/wlevine/nmatrix.git</tt>
+Two gems are provided: the nmatrix gem which provides core features, and the nmatrix-atlas gem which extends the nmatrix gem and provides advanced linear algebra operations via ATLAS. Available from the <tt>atlas_plugin</tt> branch of https://github.com/wlevine/nmatrix.git
 
 If you want to build (or use) the nmatrix-atlas gem, you will need to install ATLAS, {here is some help with that}[https://github.com/SciRuby/nmatrix/wiki/Installation].
 
@@ -19,6 +19,8 @@ To run the specs:
 To install both gems:
 
     rake install nmatrix_plugins=atlas
+
+Note that if you already have a previous version of nmatrix installed, you should run <tt>gem uninstall nmatrix</tt> before trying to install a new version. There seems to be a bug in rubygems that prevents the new installation from completely overwriting the old installation.
 
 If you only want to test the nmatrix gem, and not nmatrix-atlas, use the same commands, but omit the <tt>nmatrix_plugins=atlas</tt>.
 
