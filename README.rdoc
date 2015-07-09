@@ -6,29 +6,21 @@ If you want to build (or use) the nmatrix-atlas gem, you will need to install AT
 
 If you don't want the nmatrix-atlas gem, you don't need to worry about installing ATLAS, all the dependencies should be handled by bundler:
 
-```
-bundle install
-```
+    bundle install
 
 To build both plugins for testing and developement:
 
-```
-rake compile nmatrix_plugins=atlas
-```
+    rake compile nmatrix_plugins=atlas
 
 To run the specs:
 
-```
-rake spec nmatrix_plugins=atlas
-```
+    rake spec nmatrix_plugins=atlas
 
 To install both gems:
 
-```
-rake install nmatrix_plugins=atlas
-```
+    rake install nmatrix_plugins=atlas
 
-If you only want to test the nmatrix gem, and not nmatrix-atlas, use the same commands, but omit the `nmatix_plugins=atlas`
+If you only want to test the nmatrix gem, and not nmatrix-atlas, use the same commands, but omit the +nmatix_plugins=atlas+
 
 = NMatrix
 
