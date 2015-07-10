@@ -71,6 +71,26 @@ describe "NMatrix::LAPACK functions implemented with LAPACKE interface" do
         expect(b[1]).to be_within(err).of(-15.0/2)
         expect(b[2]).to be_within(err).of(-13)
       end
+
+
+      #see notes for clapack_potrf spec. I haven't tested this.
+      it "exposes lapacke_potrf" do
+        # first do upper
+        begin
+          a = NMatrix.new(:dense, 3, [25,15,-5, 0,18,0, 0,0,11], dtype)
+          NMatrix::LAPACK::lapacke_potrf(:row, :upper, 3, a, 3)
+          b = NMatrix.new(:dense, 3, [5,3,-1, 0,3,1, 0,0,3], dtype)
+          expect(a).to eq(b)
+        end
+
+        # then do lower
+        a = NMatrix.new(:dense, 3, [25,0,0, 15,18,0,-5,0,11], dtype)
+        NMatrix::LAPACK::lapacke_potrf(:row, :lower, 3, a, 3)
+        b = NMatrix.new(:dense, 3, [5,0,0, 3,3,0, -1,1,3], dtype)
+        expect(a).to eq(b)
+      end
+
+      #NEED SPECS for potri and potrs!
     end
   end
 end
