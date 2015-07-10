@@ -54,7 +54,7 @@ static inline enum CBLAS_UPLO blas_uplo_sym(VALUE op) {
 }
 
 /*
- * Interprets cblas argument which could be :upper or :lower
+ * Interprets argument which could be :upper or :lower for LAPACKE
  *
  * Called by nm_cblas_trsm -- basically inline
  */
