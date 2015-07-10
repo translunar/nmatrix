@@ -149,22 +149,33 @@ describe "NMatrix::LAPACK functions with internal implementations" do
         expect(a).to be_within(err).of(b)
       end
 
+      #Like getrs, potrs doesn't work if b isn't a vector. It does work though if you transpose b before and after calling potrs. Needs to be fixed.
       it "exposes clapack_potrs" do
         pending "potrs requires clapack" unless NMatrix.has_clapack?
 
-#        a = NMatrix.new(3, [4, 0,-1,
-#                            0, 2, 1,
-#                            0, 0, 1], dtype: dtype)
-#        b = NMatrix.new([3,2], [3,4,
-#                                0,1,
-#                                2,6]
-#        NMatrix::LAPACK::clapack_potrf(:row, :upper, 3, a, 3)
-#        NMatrix::LAPACK::clapack_potrs(:row, :upper, 3, 2, a, 3, b, 2)
-#        expect(a).to be_within(0.001).of(b)
+        a = NMatrix.new(3, [4, 0,-1,
+                            0, 2, 1,
+                            0, 0, 1], dtype: dtype)
+        b = NMatrix.new([3,1], [3,0,2], dtype: dtype)
+
+        NMatrix::LAPACK::clapack_potrf(:row, :upper, 3, a, 3)
+        NMatrix::LAPACK::clapack_potrs(:row, :upper, 3, 1, a, 3, b, 3)
+
+        x = NMatrix.new([3,1], [3.5, -5.5, 11], dtype: dtype)
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-5
+                when :float64, :complex128
+                  1e-14
+              end
+
+        expect(b).to be_within(err).of(x)
       end
 
       # Together, these calls are basically xGESV from LAPACK: http://www.netlib.org/lapack/double/dgesv.f
       # Spec OK
+      # Doesn't work is b isn't a vector. Should add a spec for this when it's fixed.
       it "exposes clapack_getrs" do
         a     = NMatrix.new(3, [-2,4,-3,3,-2,1,0,-4,3], dtype: dtype)
         ipiv  = NMatrix::LAPACK::clapack_getrf(:row, 3, 3, a, 3)
