@@ -51,6 +51,7 @@ extern "C" {
                              VALUE lda, VALUE beta, VALUE c, VALUE ldc);
 
   /* LAPACK. */
+  static VALUE nm_atlas_has_clapack(VALUE self);
   static VALUE nm_atlas_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda);
   static VALUE nm_atlas_clapack_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
   static VALUE nm_atlas_clapack_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE ipiv, VALUE b, VALUE ldb);
@@ -102,6 +103,8 @@ extern "C" {
 
 void nm_math_init_atlas() {
 
+  rb_define_singleton_method(cNMatrix, "has_clapack?", (METHOD)nm_atlas_has_clapack, 0);
+
   /* ATLAS-CLAPACK Functions */
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getrf", (METHOD)nm_atlas_clapack_getrf, 5);
   rb_define_singleton_method(cNMatrix_LAPACK, "clapack_potrf", (METHOD)nm_atlas_clapack_potrf, 5);
@@ -135,6 +138,18 @@ void nm_math_init_atlas() {
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_syrk", (METHOD)nm_atlas_cblas_syrk, 11);
   rb_define_singleton_method(cNMatrix_BLAS, "cblas_herk", (METHOD)nm_atlas_cblas_herk, 11);
 
+}
+
+/*
+ * Simple way to check from within Ruby code if clapack functions are available, without
+ * having to wait around for an exception to be thrown.
+ */
+static VALUE nm_atlas_has_clapack(VALUE self) {
+#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
+  return Qtrue;
+#else
+  return Qfalse;
+#endif
 }
 
 /*
