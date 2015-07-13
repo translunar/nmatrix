@@ -1041,15 +1041,15 @@ static VALUE nm_atlas_clapack_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n
   static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const int N,
                                        const int NRHS, const void* A, const int lda, void* B, const int ldb) = {
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
-      nm::math::atlas::clapack_potrs<float,false>,
-      nm::math::atlas::clapack_potrs<double,false>,
+      nm::math::atlas::clapack_potrs<float>,
+      nm::math::atlas::clapack_potrs<double>,
 #if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
       clapack_cpotrs, clapack_zpotrs, // call directly, same function signature!
 #else // Especially important for Mac OS, which doesn't seem to include the ATLAS clapack interface.
-      nm::math::atlas::clapack_potrs<nm::Complex64,true>,
-      nm::math::atlas::clapack_potrs<nm::Complex128,true>,
+      nm::math::atlas::clapack_potrs<nm::Complex64>,
+      nm::math::atlas::clapack_potrs<nm::Complex128>,
 #endif
-      nm::math::atlas::clapack_potrs<nm::RubyObject,false>
+      nm::math::atlas::clapack_potrs<nm::RubyObject>
   };
 
 
