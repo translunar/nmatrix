@@ -73,7 +73,6 @@ describe "NMatrix::LAPACK functions implemented with LAPACKE interface" do
       end
 
 
-      #see notes for clapack_potrf spec. I haven't tested this.
       it "exposes lapacke_potrf" do
         # first do upper
         begin
@@ -90,7 +89,71 @@ describe "NMatrix::LAPACK functions implemented with LAPACKE interface" do
         expect(a).to eq(b)
       end
 
-      #NEED SPECS for potri and potrs!
+      it "exposes lapacke_potri" do
+        a = NMatrix.new(3, [4, 0,-1,
+                            0, 2, 1,
+                            0, 0, 1], dtype: dtype)
+        NMatrix::LAPACK::lapacke_potrf(:row, :upper, 3, a, 3)
+        NMatrix::LAPACK::lapacke_potri(:row, :upper, 3, a, 3)
+        b = NMatrix.new(3, [0.5, -0.5, 1,  0, 1.5, -2,  0, 0, 4], dtype: dtype)
+        err = case dtype
+                when :float32, :complex64
+                  1e-6
+                when :float64, :complex128
+                  1e-14
+              end
+        expect(a).to be_within(err).of(b)
+      end
+
+      it "exposes lapacke_potrs with vector solution" do
+        a = NMatrix.new(3, [4, 0,-1,
+                            0, 2, 1,
+                            0, 0, 1], dtype: dtype)
+        b = NMatrix.new([3,1], [3,0,2], dtype: dtype)
+
+        NMatrix::LAPACK::lapacke_potrf(:row, :upper, 3, a, 3)
+        #ldb is different from CLAPACK versions
+        NMatrix::LAPACK::lapacke_potrs(:row, :upper, 3, 1, a, 3, b, 1)
+
+        x = NMatrix.new([3,1], [3.5, -5.5, 11], dtype: dtype)
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-5
+                when :float64, :complex128
+                  1e-14
+              end
+
+        expect(b).to be_within(err).of(x)
+      end
+
+      it "exposes lapacke_potrs with matrix solution" do
+        a = NMatrix.new(3, [4, 0,-1,
+                            0, 2, 1,
+                            0, 0, 1], dtype: dtype)
+        b = NMatrix.new([3,2], [3,4,
+                                0,4,
+                                2,0], dtype: dtype)
+
+        NMatrix::LAPACK::lapacke_potrf(:row, :upper, 3, a, 3)
+        #ldb is different from CLAPACK versions
+        NMatrix::LAPACK::lapacke_potrs(:row, :upper, 3, 2, a, 3, b, 2)
+
+        x = NMatrix.new([3,2], [3.5, 0,
+                                -5.5, 4,
+                                11, -4], dtype: dtype)
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-5
+                when :float64, :complex128
+                  1e-14
+              end
+
+        expect(b).to be_within(err).of(x)
+      end
+
+      #add specs for posv and gesv once we have lapacke versions
     end
   end
 end
