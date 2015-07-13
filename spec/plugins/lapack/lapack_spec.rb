@@ -49,9 +49,8 @@ describe "NMatrix::LAPACK functions implemented with LAPACKE interface" do
         b = NMatrix.new(:dense, 3, [-5,0,-2,-4,1,-1,1.5,0,0.5], dtype)
         expect(a).to be_within(err).of(b)
       end
-      #
-      # Together, these calls are basically xGESV from LAPACK: http://www.netlib.org/lapack/double/dgesv.f
-      it "exposes lapacke_getrs" do
+
+      it "exposes lapacke_getrs with vector solutions" do
         a     = NMatrix.new(3, [-2,4,-3,3,-2,1,0,-4,3], dtype: dtype)
         ipiv  = NMatrix::LAPACK::lapacke_getrf(:row, 3, 3, a, 3)
         b     = NMatrix.new([3,1], [-1, 17, -9], dtype: dtype)
@@ -72,6 +71,25 @@ describe "NMatrix::LAPACK functions implemented with LAPACKE interface" do
         expect(b[2]).to be_within(err).of(-13)
       end
 
+      it "exposes lapacke_getrs with matrix solutions" do
+        a     = NMatrix.new(3, [-2,4,-3,3,-2,1,0,-4,3], dtype: dtype)
+        ipiv  = NMatrix::LAPACK::lapacke_getrf(:row, 3, 3, a, 3)
+        b     = NMatrix.new([3,2], [-1, 2, 17, 10, -9, 1], dtype: dtype)
+
+        #be careful! the leading dimenension (lda,ldb) is the number of rows for row-major in LAPACKE. Different from CLAPACK convention!
+        NMatrix::LAPACK::lapacke_getrs(:row, false, 3, 2, a, 3, ipiv, b, 2)
+
+        # delta varies for different dtypes
+        err = case dtype
+                when :float32, :complex64
+                  1e-5
+                when :float64, :complex128
+                  1e-13
+              end
+
+        x = NMatrix.new([3,2], [5, -1.5, -7.5, -21.25, -13, -28], dtype: dtype)
+        expect(b).to be_within(err).of(x)
+      end
 
       it "exposes lapacke_potrf" do
         # first do upper
