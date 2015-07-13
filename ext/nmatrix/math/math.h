@@ -429,46 +429,6 @@ inline void smmp_sort_columns(const size_t n, const IType* ia, IType* ja, DType*
 }
 
 
-/*
- * From ATLAS 3.8.0:
- *
- * Computes one of two LU factorizations based on the setting of the Order
- * parameter, as follows:
- * ----------------------------------------------------------------------------
- *                       Order == CblasColMajor
- * Column-major factorization of form
- *   A = P * L * U
- * where P is a row-permutation matrix, L is lower triangular with unit
- * diagonal elements (lower trapazoidal if M > N), and U is upper triangular
- * (upper trapazoidal if M < N).
- *
- * ----------------------------------------------------------------------------
- *                       Order == CblasRowMajor
- * Row-major factorization of form
- *   A = P * L * U
- * where P is a column-permutation matrix, L is lower triangular (lower
- * trapazoidal if M > N), and U is upper triangular with unit diagonals (upper
- * trapazoidal if M < N).
- *
- * ============================================================================
- * Let IERR be the return value of the function:
- *    If IERR == 0, successful exit.
- *    If (IERR < 0) the -IERR argument had an illegal value
- *    If (IERR > 0 && Order == CblasColMajor)
- *       U(i-1,i-1) is exactly zero.  The factorization has been completed,
- *       but the factor U is exactly singular, and division by zero will
- *       occur if it is used to solve a system of equations.
- *    If (IERR > 0 && Order == CblasRowMajor)
- *       L(i-1,i-1) is exactly zero.  The factorization has been completed,
- *       but the factor L is exactly singular, and division by zero will
- *       occur if it is used to solve a system of equations.
- */
-template <typename DType>
-inline int potrf(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, DType* A, const int lda) {
-  rb_raise(rb_eNotImpError, "only CLAPACK version implemented thus far");
-  return 0;
-}
-
 // Copies an upper row-major array from U, zeroing U; U is unit, so diagonal is not copied.
 //
 // From ATLAS 3.8.0.
@@ -797,43 +757,6 @@ LAPACK_GETRF(double,     clapack_dgetrf, double)
 LAPACK_GETRF(Complex64,  clapack_cgetrf, void)
 LAPACK_GETRF(Complex128, clapack_zgetrf, void)
 */
-
-
-
-/*
-* Function signature conversion for calling LAPACK's potrf functions as directly as possible.
-*
-* For documentation: http://www.netlib.org/lapack/double/dpotrf.f
-*
-* This function should normally go in math.cpp, but we need it to be available to nmatrix.cpp.
-*/
-template <typename DType>
-inline int clapack_potrf(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, void* a, const int lda) {
-  return potrf<DType>(order, uplo, n, reinterpret_cast<DType*>(a), lda);
-}
-
-
-
-template <typename DType>
-inline int potri(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, DType* a, const int lda) {
-  rb_raise(rb_eNotImpError, "potri not yet implemented for non-BLAS dtypes");
-  return 0;
-}
-
-/*
- * Function signature conversion for calling LAPACK's potri functions as directly as possible.
- *
- * For documentation: http://www.netlib.org/lapack/double/dpotri.f
- *
- * This function should normally go in math.cpp, but we need it to be available to nmatrix.cpp.
- */
-template <typename DType>
-inline int clapack_potri(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, void* a, const int lda) {
-  return potri<DType>(order, uplo, n, reinterpret_cast<DType*>(a), lda);
-}
-
-
-
 
 }} // end namespace nm::math
 
