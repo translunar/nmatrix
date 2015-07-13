@@ -130,7 +130,6 @@
 #include "math/nrm2.h"
 #include "math/getrf.h"
 #include "math/getrs.h"
-#include "math/potrs.h"
 #include "math/rot.h"
 #include "math/rotg.h"
 #include "math/math.h"
@@ -1229,27 +1228,7 @@ static VALUE nm_clapack_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VAL
  * Call any of the clapack_xpotrs functions as directly as possible.
  */
 static VALUE nm_clapack_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE b, VALUE ldb) {
-  static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const int N,
-                                       const int NRHS, const void* A, const int lda, void* B, const int ldb) = {
-      NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
-      nm::math::clapack_potrs<float,false>,
-      nm::math::clapack_potrs<double,false>,
-      nm::math::clapack_potrs<nm::Complex64,true>,
-      nm::math::clapack_potrs<nm::Complex128,true>,
-      nm::math::clapack_potrs<nm::RubyObject,false>
-  };
-
-
-  if (!ttable[NM_DTYPE(a)]) {
-    rb_raise(nm_eDataTypeError, "this matrix operation undefined for integer matrices");
-  } else {
-
-    // Call either our version of potrs or the LAPACK version.
-    ttable[NM_DTYPE(a)](blas_order_sym(order), blas_uplo_sym(uplo), FIX2INT(n), FIX2INT(nrhs), NM_STORAGE_DENSE(a)->elements, FIX2INT(lda),
-                        NM_STORAGE_DENSE(b)->elements, FIX2INT(ldb));
-  }
-
-  // b is both returned and modified directly in the argument list.
+  rb_raise(rb_eNotImpError, "potrf currently requires CLAPACK");
   return b;
 }
 

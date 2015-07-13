@@ -106,33 +106,100 @@ describe "NMatrix::LAPACK functions with internal implementations" do
         expect(a[2,2]).to be_within(err).of(360.0/53)
       end
 
-      # this spec is kind of weird. potrf is supposed to decompose a symmetric
+      # Spec OK.
+      # potrf decomposes a symmetric (or Hermitian)
       # positive-definite matrix. The matrix tested below isn't symmetric.
-      # But this may not be technically wrong, since potrf just examines the
-      # upper/lower half (as requested) of the matrix and assumes it is symmetric.
-      # I haven't actually checked that this spec is right.
+      # But this is okay since potrf just examines the upper/lower half
+      # (as requested) of the matrix and assumes that the rest is symmetric,
+      # so we just set the other part of the matrix to zero.
       # Also, we don't have an internal implementation of this, so maybe it doesn't
       # have to be shared
-      it "exposes clapack_potrf" do
-        # first do upper
-        begin
-          a = NMatrix.new(:dense, 3, [25,15,-5, 0,18,0, 0,0,11], dtype)
-          NMatrix::LAPACK::clapack_potrf(:row, :upper, 3, a, 3)
-          b = NMatrix.new(:dense, 3, [5,3,-1, 0,3,1, 0,0,3], dtype)
-          expect(a).to eq(b)
-        rescue NotImplementedError => e
-          pending e.to_s
-        end
+      it "exposes clapack_potrf upper" do
+        pending "potrf requires clapack" unless NMatrix.has_clapack?
 
-        # then do lower
+        a = NMatrix.new(:dense, 3, [25,15,-5, 0,18,0, 0,0,11], dtype)
+        NMatrix::LAPACK::clapack_potrf(:row, :upper, 3, a, 3)
+        b = NMatrix.new(:dense, 3, [5,3,-1, 0,3,1, 0,0,3], dtype)
+        expect(a).to eq(b)
+      end
+
+      it "exposes clapack_potrf lower" do
+        pending "potrf requires clapack" unless NMatrix.has_clapack?
+
         a = NMatrix.new(:dense, 3, [25,0,0, 15,18,0,-5,0,11], dtype)
         NMatrix::LAPACK::clapack_potrf(:row, :lower, 3, a, 3)
         b = NMatrix.new(:dense, 3, [5,0,0, 3,3,0, -1,1,3], dtype)
         expect(a).to eq(b)
       end
 
+      it "exposes clapack_potri" do
+        pending "potri requires clapack" unless NMatrix.has_clapack?
+
+        a = NMatrix.new(3, [4, 0,-1,
+                            0, 2, 1,
+                            0, 0, 1], dtype: dtype)
+        NMatrix::LAPACK::clapack_potrf(:row, :upper, 3, a, 3)
+        NMatrix::LAPACK::clapack_potri(:row, :upper, 3, a, 3)
+        b = NMatrix.new(3, [0.5, -0.5, 1,  0, 1.5, -2,  0, 0, 4], dtype: dtype)
+        err = case dtype
+                when :float32, :complex64
+                  1e-6
+                when :float64, :complex128
+                  1e-14
+              end
+        expect(a).to be_within(err).of(b)
+      end
+
+      #Like getrs, potrs doesn't work if b isn't a vector. It does work though if you transpose b before and after calling potrs. Needs to be fixed.
+      it "exposes clapack_potrs" do
+        pending "potrs requires clapack" unless NMatrix.has_clapack?
+
+        a = NMatrix.new(3, [4, 0,-1,
+                            0, 2, 1,
+                            0, 0, 1], dtype: dtype)
+        b = NMatrix.new([3,1], [3,0,2], dtype: dtype)
+
+        NMatrix::LAPACK::clapack_potrf(:row, :upper, 3, a, 3)
+        NMatrix::LAPACK::clapack_potrs(:row, :upper, 3, 1, a, 3, b, 3)
+
+        x = NMatrix.new([3,1], [3.5, -5.5, 11], dtype: dtype)
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-5
+                when :float64, :complex128
+                  1e-14
+              end
+
+        expect(b).to be_within(err).of(x)
+      end
+
+      #posv is like potrf+potrs
+      it "exposes clapack_posv" do
+        pending "posv requires clapack" unless NMatrix.has_clapack?
+
+        a = NMatrix.new(3, [4, 0,-1,
+                            0, 2, 1,
+                            0, 0, 1], dtype: dtype)
+        b = NMatrix.new([3,1], [3,0,2], dtype: dtype)
+
+        NMatrix::LAPACK::clapack_posv(:row, :upper, 3, 1, a, 3, b, 3)
+
+        x = NMatrix.new([3,1], [3.5, -5.5, 11], dtype: dtype)
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-5
+                when :float64, :complex128
+                  1e-14
+              end
+
+        expect(b).to be_within(err).of(x)
+      end
+
       # Together, these calls are basically xGESV from LAPACK: http://www.netlib.org/lapack/double/dgesv.f
       # Spec OK
+      # Doesn't work is b isn't a vector. Should add a spec for this when it's fixed.
       it "exposes clapack_getrs" do
         a     = NMatrix.new(3, [-2,4,-3,3,-2,1,0,-4,3], dtype: dtype)
         ipiv  = NMatrix::LAPACK::clapack_getrf(:row, 3, 3, a, 3)

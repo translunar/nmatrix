@@ -4,7 +4,6 @@
 //needed to get access to internal implementations
 #include "math/getrf.h"
 #include "math/getrs.h"
-#include "math/potrs.h"
 
 namespace nm { namespace math { namespace atlas {
 //The first group of functions are those for which we have internal implementations.
@@ -41,18 +40,18 @@ inline int getrf(const enum CBLAS_ORDER order, const int m, const int n, double*
 
 template <>
 inline int getrf(const enum CBLAS_ORDER order, const int m, const int n, Complex64* a, const int lda, int* ipiv) {
-  return clapack_cgetrf(order, m, n, reinterpret_cast<void*>(a), lda, ipiv);
+  return clapack_cgetrf(order, m, n, a, lda, ipiv);
 }
 
 template <>
 inline int getrf(const enum CBLAS_ORDER order, const int m, const int n, Complex128* a, const int lda, int* ipiv) {
-  return clapack_zgetrf(order, m, n, reinterpret_cast<void*>(a), lda, ipiv);
+  return clapack_zgetrf(order, m, n, a, lda, ipiv);
 }
 #endif
 
 template <typename DType>
 inline int clapack_getrf(const enum CBLAS_ORDER order, const int m, const int n, void* a, const int lda, int* ipiv) {
-  return getrf<DType>(order, m, n, reinterpret_cast<DType*>(a), lda, ipiv);
+  return getrf<DType>(order, m, n, static_cast<DType*>(a), lda, ipiv);
 }
 
 //getrs
@@ -87,71 +86,21 @@ template <>
 inline int getrs(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE Trans, const int N, const int NRHS, const Complex64* A,
            const int lda, const int* ipiv, Complex64* B, const int ldb)
 {
-  return clapack_cgetrs(Order, Trans, N, NRHS, reinterpret_cast<const void*>(A), lda, ipiv, reinterpret_cast<void*>(B), ldb);
+  return clapack_cgetrs(Order, Trans, N, NRHS, A, lda, ipiv, static_cast<void*>(B), ldb);
 }
 
 template <>
 inline int getrs(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE Trans, const int N, const int NRHS, const Complex128* A,
            const int lda, const int* ipiv, Complex128* B, const int ldb)
 {
-  return clapack_zgetrs(Order, Trans, N, NRHS, reinterpret_cast<const void*>(A), lda, ipiv, reinterpret_cast<void*>(B), ldb);
+  return clapack_zgetrs(Order, Trans, N, NRHS, A, lda, ipiv, static_cast<void*>(B), ldb);
 }
 #endif
 
 template <typename DType>
 inline int clapack_getrs(const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE trans, const int n, const int nrhs,
                          const void* a, const int lda, const int* ipiv, void* b, const int ldb) {
-  return getrs<DType>(order, trans, n, nrhs, reinterpret_cast<const DType*>(a), lda, ipiv, reinterpret_cast<DType*>(b), ldb);
-}
-
-//potrs
-/*
- * Solves a system of linear equations A*X = B with a symmetric positive definite matrix A using the Cholesky factorization computed by POTRF.
- *
- * From ATLAS 3.8.0.
- */
-template <typename DType, bool is_complex>
-inline int potrs(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const int N, const int NRHS, const DType* A,
-           const int lda, DType* B, const int ldb)
-{
-  //call the internal implementation if not overridden below
-  return nm::math::potrs<DType, is_complex>(Order, Uplo, N, NRHS, A, lda, B, ldb);
-}
-
-#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
-template <>
-inline int potrs<float,false> (const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const int N, const int NRHS, const float* A,
-           const int lda, float* B, const int ldb)
-{
-  return clapack_spotrs(Order, Uplo, N, NRHS, A, lda, B, ldb);
-}
-
-template <>
-inline int potrs<double,false>(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const int N, const int NRHS, const double* A,
-           const int lda, double* B, const int ldb)
-{
-  return clapack_dpotrs(Order, Uplo, N, NRHS, A, lda, B, ldb);
-}
-
-template <>
-inline int potrs<Complex64,true>(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const int N, const int NRHS, const Complex64* A,
-           const int lda, Complex64* B, const int ldb)
-{
-  return clapack_cpotrs(Order, Uplo, N, NRHS, reinterpret_cast<const void*>(A), lda, reinterpret_cast<void *>(B), ldb);
-}
-
-template <>
-inline int potrs<Complex128,true>(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const int N, const int NRHS, const Complex128* A,
-           const int lda, Complex128* B, const int ldb)
-{
-  return clapack_zpotrs(Order, Uplo, N, NRHS, reinterpret_cast<const void*>(A), lda, reinterpret_cast<void *>(B), ldb);
-}
-#endif
-
-template <typename DType, bool is_complex>
-inline int clapack_potrs(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, const int nrhs,
-                         const void* a, const int lda, void* b, const int ldb) {
-  return potrs<DType,is_complex>(order, uplo, n, nrhs, reinterpret_cast<const DType*>(a), lda, reinterpret_cast<DType*>(b), ldb);
+  return getrs<DType>(order, trans, n, nrhs, static_cast<const DType*>(a), lda, ipiv, static_cast<DType*>(b), ldb);
 }
 
 
@@ -177,18 +126,18 @@ inline int getri(const enum CBLAS_ORDER order, const int n, double* a, const int
 
 template <>
 inline int getri(const enum CBLAS_ORDER order, const int n, Complex64* a, const int lda, const int* ipiv) {
-  return clapack_cgetri(order, n, reinterpret_cast<void*>(a), lda, ipiv);
+  return clapack_cgetri(order, n, a, lda, ipiv);
 }
 
 template <>
 inline int getri(const enum CBLAS_ORDER order, const int n, Complex128* a, const int lda, const int* ipiv) {
-  return clapack_zgetri(order, n, reinterpret_cast<void*>(a), lda, ipiv);
+  return clapack_zgetri(order, n, a, lda, ipiv);
 }
 #endif
 
 template <typename DType>
 inline int clapack_getri(const enum CBLAS_ORDER order, const int n, void* a, const int lda, const int* ipiv) {
-  return getri<DType>(order, n, reinterpret_cast<DType*>(a), lda, ipiv);
+  return getri<DType>(order, n, static_cast<DType*>(a), lda, ipiv);
 }
 
 //potrf
@@ -249,18 +198,18 @@ inline int potrf(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const
 
 template <>
 inline int potrf(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex64* A, const int lda) {
-  return clapack_cpotrf(order, uplo, N, reinterpret_cast<void*>(A), lda);
+  return clapack_cpotrf(order, uplo, N, A, lda);
 }
 
 template <>
 inline int potrf(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex128* A, const int lda) {
-  return clapack_zpotrf(order, uplo, N, reinterpret_cast<void*>(A), lda);
+  return clapack_zpotrf(order, uplo, N, A, lda);
 }
 #endif
 
 template <typename DType>
 inline int clapack_potrf(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, void* a, const int lda) {
-  return potrf<DType>(order, uplo, n, reinterpret_cast<DType*>(a), lda);
+  return potrf<DType>(order, uplo, n, static_cast<DType*>(a), lda);
 }
 
 //potri
@@ -284,18 +233,69 @@ inline int potri(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const
 
 template <>
 inline int potri(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, Complex64* a, const int lda) {
-  return clapack_cpotri(order, uplo, n, reinterpret_cast<void*>(a), lda);
+  return clapack_cpotri(order, uplo, n, a, lda);
 }
 
 template <>
 inline int potri(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, Complex128* a, const int lda) {
-  return clapack_zpotri(order, uplo, n, reinterpret_cast<void*>(a), lda);
+  return clapack_zpotri(order, uplo, n, a, lda);
 }
 #endif
 
 template <typename DType>
 inline int clapack_potri(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, void* a, const int lda) {
-  return potri<DType>(order, uplo, n, reinterpret_cast<DType*>(a), lda);
+  return potri<DType>(order, uplo, n, static_cast<DType*>(a), lda);
+}
+
+//potrs
+/*
+ * Solves a system of linear equations A*X = B with a symmetric positive definite matrix A using the Cholesky factorization computed by POTRF.
+ */
+template <typename DType>
+inline int potrs(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const int N, const int NRHS, const DType* A,
+           const int lda, DType* B, const int ldb)
+{
+#if defined HAVE_CLAPACK_H || defined HAVE_ATLAS_CLAPACK_H
+  rb_raise(rb_eNotImpError, "not yet implemented for non-BLAS dtypes");
+#else
+  rb_raise(rb_eNotImpError, "only CLAPACK version implemented thus far");
+#endif
+}
+
+#if defined (HAVE_CLAPACK_H) || defined (HAVE_ATLAS_CLAPACK_H)
+template <>
+inline int potrs<float> (const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const int N, const int NRHS, const float* A,
+           const int lda, float* B, const int ldb)
+{
+  return clapack_spotrs(Order, Uplo, N, NRHS, A, lda, B, ldb);
+}
+
+template <>
+inline int potrs<double>(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const int N, const int NRHS, const double* A,
+           const int lda, double* B, const int ldb)
+{
+  return clapack_dpotrs(Order, Uplo, N, NRHS, A, lda, B, ldb);
+}
+
+template <>
+inline int potrs<Complex64>(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const int N, const int NRHS, const Complex64* A,
+           const int lda, Complex64* B, const int ldb)
+{
+  return clapack_cpotrs(Order, Uplo, N, NRHS, A, lda, static_cast<void *>(B), ldb);
+}
+
+template <>
+inline int potrs<Complex128>(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const int N, const int NRHS, const Complex128* A,
+           const int lda, Complex128* B, const int ldb)
+{
+  return clapack_zpotrs(Order, Uplo, N, NRHS, A, lda, static_cast<void *>(B), ldb);
+}
+#endif
+
+template <typename DType>
+inline int clapack_potrs(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, const int nrhs,
+                         const void* a, const int lda, void* b, const int ldb) {
+  return potrs<DType>(order, uplo, n, nrhs, static_cast<const DType*>(a), lda, static_cast<DType*>(b), ldb);
 }
 
 //lauum

@@ -239,40 +239,34 @@ describe "math" do
       end
     end
 
-    #not totally sure the deal with these specs
     context dtype do
-      it "should correctly invert a matrix in place (bang)" do
-        a = NMatrix.new(:dense, 3, [1,2,3,0,1,4,5,6,0], dtype)
-        b = NMatrix.new(:dense, 3, [-24,18,5,20,-15,-4,-5,4,1], dtype)
-        begin
-          a.invert!
-        rescue NotImplementedError => e
-          pending e.to_s
-        end
-        expect(a.round).to eq(b)
-      end
+      err = case dtype
+              when :float32, :complex64
+                1e-4
+              when :float64, :complex128
+                1e-13
+            end
 
-      unless NMatrix.has_clapack? #why?
-        it "should correctly invert a matrix in place" do #this doesn't look in place
-          a = NMatrix.new(:dense, 5, [1, 8,-9, 7, 5, 
-                                      0, 1, 0, 4, 4, 
-                                      0, 0, 1, 2, 5, 
-                                      0, 0, 0, 1,-5,
-                                      0, 0, 0, 0, 1 ], dtype)
-          b = NMatrix.new(:dense, 5, [1,-8, 9, 7, 17,
-                                      0, 1, 0,-4,-24,
-                                      0, 0, 1,-2,-15,
-                                      0, 0, 0, 1,  5,
-                                      0, 0, 0, 0,  1,], dtype)
-          expect(a.invert).to eq(b)
-        end
+      it "should correctly invert a matrix in place (bang)" do
+        a = NMatrix.new(:dense, 5, [1, 8,-9, 7, 5, 
+                                    0, 1, 0, 4, 4, 
+                                    0, 0, 1, 2, 5, 
+                                    0, 0, 0, 1,-5,
+                                    0, 0, 0, 0, 1 ], dtype)
+        b = NMatrix.new(:dense, 5, [1,-8, 9, 7, 17,
+                                    0, 1, 0,-4,-24,
+                                    0, 0, 1,-2,-15,
+                                    0, 0, 0, 1,  5,
+                                    0, 0, 0, 0,  1,], dtype)
+        a.invert!
+        expect(a).to be_within(err).of(b)
       end
 
       it "should correctly invert a matrix out-of-place" do
         a = NMatrix.new(:dense, 3, [1,2,3,0,1,4,5,6,0], dtype)
         b = NMatrix.new(:dense, 3, [-24,18,5,20,-15,-4,-5,4,1], dtype)
 
-        expect(a.invert(3,3)).to eq(b) #these arguments don't do anything??
+        expect(a.invert).to be_within(err).of(b)
       end
     end
   end
@@ -627,7 +621,7 @@ describe "math" do
                   when :float32, :complex64
                     1e-6
                   when :float64, :complex128
-                    1e-14 #this was originally 1e-15, this seemed to work when using ATLAS, but not with internal implementation? Look into this?
+                    1e-14
                   else
                     1e-64 # FIXME: should be 0, but be_within(0) does not work.
                 end
