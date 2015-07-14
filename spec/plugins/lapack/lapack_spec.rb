@@ -171,6 +171,35 @@ describe "NMatrix::LAPACK functions implemented with LAPACKE interface" do
         expect(b).to be_within(err).of(x)
       end
 
+      it "calculates the singular value decomposition with lapacke_gesvd" do
+        #example from Wikipedia
+        m = 4
+        n = 5
+        mn_min = [m,n].min
+        a = NMatrix.new([m,n],[1,0,0,0,2, 0,0,3,0,0, 0,0,0,0,0, 0,4,0,0,0], dtype: dtype)
+        s = NMatrix.new([mn_min], 0, dtype: a.abs_dtype) #s is always real and always returned as float/double, never as complex
+        u = NMatrix.new([m,m], 0, dtype: dtype)
+        vt = NMatrix.new([n,n], 0, dtype: dtype)
+        superb = NMatrix.new([mn_min-1], dtype: a.abs_dtype)
+
+        NMatrix::LAPACK.lapacke_gesvd(:row, :a, :a, m, n, a, n, s, u, m, vt, n, superb)
+
+        s_true = NMatrix.new([mn_min], [4,3,Math.sqrt(5),0], dtype: a.abs_dtype)
+        u_true = NMatrix.new([m,m], [0,0,1,0, 0,1,0,0, 0,0,0,-1, 1,0,0,0], dtype: dtype)
+        vt_true = NMatrix.new([n,n], [0,1,0,0,0, 0,0,1,0,0, Math.sqrt(0.2),0,0,0,Math.sqrt(0.8), 0,0,0,1,0, -Math.sqrt(0.8),0,0,0,Math.sqrt(0.2)], dtype: dtype)
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-5
+                when :float64, :complex128
+                  1e-14
+              end
+
+        expect(s).to be_within(err).of(s_true)
+        expect(u).to be_within(err).of(u_true)
+        expect(vt).to be_within(err).of(vt_true)
+      end
+
       #add specs for posv and gesv once we have lapacke versions
     end
   end
