@@ -49,6 +49,7 @@ extern "C" {
   static VALUE nm_lapack_lapacke_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
 
   static VALUE nm_lapack_lapacke_gesvd(VALUE self, VALUE order, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE superb);
+  static VALUE nm_lapack_lapacke_gesdd(VALUE self, VALUE order, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt);
 }
 
 extern "C" {
@@ -85,6 +86,7 @@ void nm_math_init_lapack() {
   rb_define_singleton_method(cNMatrix_LAPACK, "lapacke_potri", (METHOD)nm_lapack_lapacke_potri, 5);
 
   rb_define_singleton_method(cNMatrix_LAPACK, "lapacke_gesvd", (METHOD)nm_lapack_lapacke_gesvd, 13);
+  rb_define_singleton_method(cNMatrix_LAPACK, "lapacke_gesdd", (METHOD)nm_lapack_lapacke_gesdd, 11);
 }
 
 /*
@@ -813,7 +815,6 @@ static VALUE nm_lapack_lapacke_potri(VALUE self, VALUE order, VALUE uplo, VALUE 
  *
  * Note that the routine returns V**T, not V.
  */
-
 static VALUE nm_lapack_lapacke_gesvd(VALUE self, VALUE order, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE superb) {
   static int (*gesvd_table[nm::NUM_DTYPES])(int, char, char, int, int, void* a, int, void* s, void* u, int, void* vt, int, void* superb) = {
     NULL, NULL, NULL, NULL, NULL, // no integer ops
@@ -840,6 +841,34 @@ static VALUE nm_lapack_lapacke_gesvd(VALUE self, VALUE order, VALUE jobu, VALUE 
     int info = gesvd_table[dtype](blas_order_sym(order),JOBU, JOBVT, M, N, NM_STORAGE_DENSE(a)->elements, FIX2INT(lda),
       NM_STORAGE_DENSE(s)->elements, NM_STORAGE_DENSE(u)->elements, FIX2INT(ldu), NM_STORAGE_DENSE(vt)->elements, FIX2INT(ldvt),
       NM_STORAGE_DENSE(superb)->elements);
+    return INT2FIX(info);
+  }
+}
+
+static VALUE nm_lapack_lapacke_gesdd(VALUE self, VALUE order, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt) {
+  static int (*gesdd_table[nm::NUM_DTYPES])(int, char, int, int, void* a, int, void* s, void* u, int, void* vt, int) = {
+    NULL, NULL, NULL, NULL, NULL, // no integer ops
+    nm::math::lapack::lapacke_gesdd<float,float>,
+    nm::math::lapack::lapacke_gesdd<double,double>,
+    nm::math::lapack::lapacke_gesdd<nm::Complex64,float>,
+    nm::math::lapack::lapacke_gesdd<nm::Complex128,double>,
+    NULL // no Ruby objects
+  };
+
+  nm::dtype_t dtype = NM_DTYPE(a);
+
+
+  if (!gesdd_table[dtype]) {
+    rb_raise(rb_eNotImpError, "this operation not yet implemented for non-BLAS dtypes");
+    return Qfalse;
+  } else {
+    int M = FIX2INT(m),
+        N = FIX2INT(n);
+
+    char JOBZ = lapack_svd_job_sym(jobz);
+
+    int info = gesdd_table[dtype](blas_order_sym(order),JOBZ, M, N, NM_STORAGE_DENSE(a)->elements, FIX2INT(lda),
+      NM_STORAGE_DENSE(s)->elements, NM_STORAGE_DENSE(u)->elements, FIX2INT(ldu), NM_STORAGE_DENSE(vt)->elements, FIX2INT(ldvt));
     return INT2FIX(info);
   }
 }

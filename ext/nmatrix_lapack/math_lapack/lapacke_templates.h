@@ -250,6 +250,38 @@ inline int lapacke_gesvd(int matrix_layout, char jobu, char jobvt, int m, int n,
   return gesvd<DType,CType>(matrix_layout, jobu, jobvt, m, n, static_cast<DType*>(a), lda, static_cast<CType*>(s), static_cast<DType*>(u), ldu, static_cast<DType*>(vt), ldvt, static_cast<CType*>(superb));
 }
 
+//gesdd
+template <typename DType, typename CType>
+inline int gesdd(int matrix_layout, char jobz, int m, int n, DType* a, int lda, CType* s, DType* u, int ldu, DType* vt, int ldvt) {
+  rb_raise(rb_eNotImpError, "gesdd not yet implemented for non-BLAS dtypes");
+  return 0;
+}
+
+template <>
+inline int gesdd<float, float>(int matrix_layout, char jobz, int m, int n, float* a, int lda, float* s, float* u, int ldu, float* vt, int ldvt) {
+  return LAPACKE_sgesdd(matrix_layout, jobz, m, n, a, lda, s, u, ldu, vt, ldvt);
+}
+
+template <>
+inline int gesdd<double, double>(int matrix_layout, char jobz, int m, int n, double* a, int lda, double* s, double* u, int ldu, double* vt, int ldvt) {
+  return LAPACKE_dgesdd(matrix_layout, jobz, m, n, a, lda, s, u, ldu, vt, ldvt);
+}
+
+template <>
+inline int gesdd<nm::Complex64, float>(int matrix_layout, char jobz, int m, int n, nm::Complex64* a, int lda, float* s, nm::Complex64* u, int ldu, nm::Complex64* vt, int ldvt) {
+  return LAPACKE_cgesdd(matrix_layout, jobz, m, n, a, lda, s, u, ldu, vt, ldvt);
+}
+
+template <>
+inline int gesdd<nm::Complex128, double>(int matrix_layout, char jobz, int m, int n, nm::Complex128* a, int lda, double* s, nm::Complex128* u, int ldu, nm::Complex128* vt, int ldvt) {
+  return LAPACKE_zgesdd(matrix_layout, jobz, m, n, a, lda, s, u, ldu, vt, ldvt);
+}
+
+template <typename DType, typename CType>
+inline int lapacke_gesdd(int matrix_layout, char jobz, int m, int n, void* a, int lda, void* s, void* u, int ldu, void* vt, int ldvt) {
+  return gesdd<DType,CType>(matrix_layout, jobz, m, n, static_cast<DType*>(a), lda, static_cast<CType*>(s), static_cast<DType*>(u), ldu, static_cast<DType*>(vt), ldvt);
+}
+
 }}}
 
 #endif
