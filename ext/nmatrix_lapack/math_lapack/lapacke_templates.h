@@ -218,6 +218,37 @@ inline int lapacke_potri(const enum CBLAS_ORDER order, char uplo, const int n, v
   return potri<DType>(order, uplo, n, static_cast<DType*>(a), lda);
 }
 
+//gesvd
+template <typename DType, typename CType>
+inline int gesvd(int matrix_layout, char jobu, char jobvt, int m, int n, DType* a, int lda, CType* s, DType* u, int ldu, DType* vt, int ldvt, CType* superb) {
+  rb_raise(rb_eNotImpError, "gesvd not yet implemented for non-BLAS dtypes");
+  return 0;
+}
+
+template <>
+inline int gesvd<float, float>(int matrix_layout, char jobu, char jobvt, int m, int n, float* a, int lda, float* s, float* u, int ldu, float* vt, int ldvt, float* superb) {
+  return LAPACKE_sgesvd(matrix_layout, jobu, jobvt, m, n, a, lda, s, u, ldu, vt, ldvt, superb);
+}
+
+template <>
+inline int gesvd<double, double>(int matrix_layout, char jobu, char jobvt, int m, int n, double* a, int lda, double* s, double* u, int ldu, double* vt, int ldvt, double* superb) {
+  return LAPACKE_dgesvd(matrix_layout, jobu, jobvt, m, n, a, lda, s, u, ldu, vt, ldvt, superb);
+}
+
+template <>
+inline int gesvd<nm::Complex64, float>(int matrix_layout, char jobu, char jobvt, int m, int n, nm::Complex64* a, int lda, float* s, nm::Complex64* u, int ldu, nm::Complex64* vt, int ldvt, float* superb) {
+  return LAPACKE_cgesvd(matrix_layout, jobu, jobvt, m, n, a, lda, s, u, ldu, vt, ldvt, superb);
+}
+
+template <>
+inline int gesvd<nm::Complex128, double>(int matrix_layout, char jobu, char jobvt, int m, int n, nm::Complex128* a, int lda, double* s, nm::Complex128* u, int ldu, nm::Complex128* vt, int ldvt, double* superb) {
+  return LAPACKE_zgesvd(matrix_layout, jobu, jobvt, m, n, a, lda, s, u, ldu, vt, ldvt, superb);
+}
+
+template <typename DType, typename CType>
+inline int lapacke_gesvd(int matrix_layout, char jobu, char jobvt, int m, int n, void* a, int lda, void* s, void* u, int ldu, void* vt, int ldvt, void* superb) {
+  return gesvd<DType,CType>(matrix_layout, jobu, jobvt, m, n, static_cast<DType*>(a), lda, static_cast<CType*>(s), static_cast<DType*>(u), ldu, static_cast<DType*>(vt), ldvt, static_cast<CType*>(superb));
+}
 
 }}}
 

@@ -47,6 +47,8 @@ extern "C" {
   static VALUE nm_lapack_lapacke_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
   static VALUE nm_lapack_lapacke_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE b, VALUE ldb);
   static VALUE nm_lapack_lapacke_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
+
+  static VALUE nm_lapack_lapacke_gesvd(VALUE self, VALUE order, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE superb);
 }
 
 extern "C" {
@@ -81,6 +83,8 @@ void nm_math_init_lapack() {
   rb_define_singleton_method(cNMatrix_LAPACK, "lapacke_potrf", (METHOD)nm_lapack_lapacke_potrf, 5);
   rb_define_singleton_method(cNMatrix_LAPACK, "lapacke_potrs", (METHOD)nm_lapack_lapacke_potrs, 8);
   rb_define_singleton_method(cNMatrix_LAPACK, "lapacke_potri", (METHOD)nm_lapack_lapacke_potri, 5);
+
+  rb_define_singleton_method(cNMatrix_LAPACK, "lapacke_gesvd", (METHOD)nm_lapack_lapacke_gesvd, 13);
 }
 
 /*
@@ -791,6 +795,53 @@ static VALUE nm_lapack_lapacke_potri(VALUE self, VALUE order, VALUE uplo, VALUE 
   }
 
   return a;
+}
+
+/*
+ * xGESVD computes the singular value decomposition (SVD) of a real
+ * M-by-N matrix A, optionally computing the left and/or right singular
+ * vectors. The SVD is written
+ *
+ *      A = U * SIGMA * transpose(V)
+ *
+ * where SIGMA is an M-by-N matrix which is zero except for its
+ * min(m,n) diagonal elements, U is an M-by-M orthogonal matrix, and
+ * V is an N-by-N orthogonal matrix.  The diagonal elements of SIGMA
+ * are the singular values of A; they are real and non-negative, and
+ * are returned in descending order.  The first min(m,n) columns of
+ * U and V are the left and right singular vectors of A.
+ *
+ * Note that the routine returns V**T, not V.
+ */
+
+static VALUE nm_lapack_lapacke_gesvd(VALUE self, VALUE order, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE superb) {
+  static int (*gesvd_table[nm::NUM_DTYPES])(int, char, char, int, int, void* a, int, void* s, void* u, int, void* vt, int, void* superb) = {
+    NULL, NULL, NULL, NULL, NULL, // no integer ops
+    nm::math::lapack::lapacke_gesvd<float,float>,
+    nm::math::lapack::lapacke_gesvd<double,double>,
+    nm::math::lapack::lapacke_gesvd<nm::Complex64,float>,
+    nm::math::lapack::lapacke_gesvd<nm::Complex128,double>,
+    NULL // no Ruby objects
+  };
+
+  nm::dtype_t dtype = NM_DTYPE(a);
+
+
+  if (!gesvd_table[dtype]) {
+    rb_raise(rb_eNotImpError, "this operation not yet implemented for non-BLAS dtypes");
+    return Qfalse;
+  } else {
+    int M = FIX2INT(m),
+        N = FIX2INT(n);
+
+    char JOBU = lapack_svd_job_sym(jobu),
+         JOBVT = lapack_svd_job_sym(jobvt);
+
+    int info = gesvd_table[dtype](blas_order_sym(order),JOBU, JOBVT, M, N, NM_STORAGE_DENSE(a)->elements, FIX2INT(lda),
+      NM_STORAGE_DENSE(s)->elements, NM_STORAGE_DENSE(u)->elements, FIX2INT(ldu), NM_STORAGE_DENSE(vt)->elements, FIX2INT(ldvt),
+      NM_STORAGE_DENSE(superb)->elements);
+    return INT2FIX(info);
+  }
 }
 
 }
