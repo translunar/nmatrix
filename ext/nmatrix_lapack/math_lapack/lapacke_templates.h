@@ -282,6 +282,47 @@ inline int lapacke_gesdd(int matrix_layout, char jobz, int m, int n, void* a, in
   return gesdd<DType,CType>(matrix_layout, jobz, m, n, static_cast<DType*>(a), lda, static_cast<CType*>(s), static_cast<DType*>(u), ldu, static_cast<DType*>(vt), ldvt);
 }
 
+//geev
+//This one is a little tricky. The signature is different for the complex
+//versions than for the real ones. This is because real matrices can have
+//complex eigenvalues. For the complex types, the eigenvalues are just
+//returned in argument that's a complex array, but for real types the real
+//parts of the eigenvalues are returned
+//in one (array) argument, and the complex parts in a separate argument.
+//The solution is that the template takes an vi argument, but it is just
+//ignored in the specializations for complex types.
+
+template <typename DType>
+inline int geev(int matrix_layout, char jobvl, char jobvr, int n, DType* a, int lda, DType* w, DType* wi, DType* vl, int ldvl, DType* vr, int ldvr) {
+  rb_raise(rb_eNotImpError, "not yet implemented for non-BLAS dtypes");
+  return -1;
+}
+
+template <>
+inline int geev(int matrix_layout, char jobvl, char jobvr, int n, float* a, int lda, float* w, float* wi, float* vl, int ldvl, float* vr, int ldvr) {
+  return LAPACKE_sgeev(matrix_layout, jobvl, jobvr, n, a, lda, w, wi, vl, ldvl, vr, ldvr);
+}
+
+template <>
+inline int geev(int matrix_layout, char jobvl, char jobvr, int n, double* a, int lda, double* w, double* wi, double* vl, int ldvl, double* vr, int ldvr) {
+  return LAPACKE_dgeev(matrix_layout, jobvl, jobvr, n, a, lda, w, wi, vl, ldvl, vr, ldvr);
+}
+
+template <>
+inline int geev(int matrix_layout, char jobvl, char jobvr, int n, Complex64* a, int lda, Complex64* w, Complex64* wi, Complex64* vl, int ldvl, Complex64* vr, int ldvr) {
+  return LAPACKE_cgeev(matrix_layout, jobvl, jobvr, n, a, lda, w, vl, ldvl, vr, ldvr);
+}
+
+template <>
+inline int geev(int matrix_layout, char jobvl, char jobvr, int n, Complex128* a, int lda, Complex128* w, Complex128* wi, Complex128* vl, int ldvl, Complex128* vr, int ldvr) {
+  return LAPACKE_zgeev(matrix_layout, jobvl, jobvr, n, a, lda, w, vl, ldvl, vr, ldvr);
+}
+
+template <typename DType>
+inline int lapacke_geev(int matrix_layout, char jobvl, char jobvr, int n, void* a, int lda, void* w, void* wi, void* vl, int ldvl, void* vr, int ldvr) {
+  return geev<DType>(matrix_layout, jobvl, jobvr, n, static_cast<DType*>(a), lda, static_cast<DType*>(w), static_cast<DType*>(wi), static_cast<DType*>(vl), ldvl, static_cast<DType*>(vr), ldvr);
+}
+
 }}}
 
 #endif

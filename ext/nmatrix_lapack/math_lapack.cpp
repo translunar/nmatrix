@@ -50,6 +50,7 @@ extern "C" {
 
   static VALUE nm_lapack_lapacke_gesvd(VALUE self, VALUE order, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE superb);
   static VALUE nm_lapack_lapacke_gesdd(VALUE self, VALUE order, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt);
+  static VALUE nm_lapack_lapacke_geev(VALUE self, VALUE order, VALUE jobvl, VALUE jobvr, VALUE n, VALUE a, VALUE lda, VALUE w, VALUE wi, VALUE vl, VALUE ldvl, VALUE vr, VALUE ldvr);
 }
 
 extern "C" {
@@ -87,6 +88,7 @@ void nm_math_init_lapack() {
 
   rb_define_singleton_method(cNMatrix_LAPACK, "lapacke_gesvd", (METHOD)nm_lapack_lapacke_gesvd, 13);
   rb_define_singleton_method(cNMatrix_LAPACK, "lapacke_gesdd", (METHOD)nm_lapack_lapacke_gesdd, 11);
+  rb_define_singleton_method(cNMatrix_LAPACK, "lapacke_geev", (METHOD)nm_lapack_lapacke_geev, 12);
 }
 
 /*
@@ -799,6 +801,8 @@ static VALUE nm_lapack_lapacke_potri(VALUE self, VALUE order, VALUE uplo, VALUE 
   return a;
 }
 
+//badly need docs for gesvd, gesdd because of the real/complex mixing
+
 /*
  * xGESVD computes the singular value decomposition (SVD) of a real
  * M-by-N matrix A, optionally computing the left and/or right singular
@@ -872,5 +876,57 @@ static VALUE nm_lapack_lapacke_gesdd(VALUE self, VALUE order, VALUE jobz, VALUE 
     return INT2FIX(info);
   }
 }
+
+/*
+ * GEEV computes for an N-by-N real nonsymmetric matrix A, the
+ * eigenvalues and, optionally, the left and/or right eigenvectors.
+ *
+ * The right eigenvector v(j) of A satisfies
+ *                    A * v(j) = lambda(j) * v(j)
+ * where lambda(j) is its eigenvalue.
+ *
+ * The left eigenvector u(j) of A satisfies
+ *                 u(j)**H * A = lambda(j) * u(j)**H
+ * where u(j)**H denotes the conjugate transpose of u(j).
+ *
+ * The computed eigenvectors are normalized to have Euclidean norm
+ * equal to 1 and largest component real.
+ */
+//note on wi
+static VALUE nm_lapack_lapacke_geev(VALUE self, VALUE order, VALUE jobvl, VALUE jobvr, VALUE n, VALUE a, VALUE lda, VALUE w, VALUE wi, VALUE vl, VALUE ldvl, VALUE vr, VALUE ldvr) {
+  static int (*geev_table[nm::NUM_DTYPES])(int, char, char, int, void* a, int, void* w, void* wi, void* vl, int, void* vr, int) = {
+    NULL, NULL, NULL, NULL, NULL, // no integer ops
+    nm::math::lapack::lapacke_geev<float>,
+    nm::math::lapack::lapacke_geev<double>,
+    nm::math::lapack::lapacke_geev<nm::Complex64>,
+    nm::math::lapack::lapacke_geev<nm::Complex128>,
+    NULL // no Ruby objects
+  };
+
+  nm::dtype_t dtype = NM_DTYPE(a);
+
+
+  if (!geev_table[dtype]) {
+    rb_raise(rb_eNotImpError, "this operation not yet implemented for non-BLAS dtypes");
+    return Qfalse;
+  } else {
+    int N = FIX2INT(n);
+
+    char JOBVL = lapack_evd_job_sym(jobvl),
+         JOBVR = lapack_evd_job_sym(jobvr);
+
+    void* A  = NM_STORAGE_DENSE(a)->elements;
+    void* W = NM_STORAGE_DENSE(w)->elements;
+    void* WI = wi == Qnil ? NULL : NM_STORAGE_DENSE(wi)->elements; //For complex, wi should be nil
+    void* VL = NM_STORAGE_DENSE(vl)->elements;
+    void* VR = NM_STORAGE_DENSE(vr)->elements;
+
+    // Perform the actual calculation.
+    int info = geev_table[dtype](blas_order_sym(order), JOBVL, JOBVR, N, A, FIX2INT(lda), W, WI, VL, FIX2INT(ldvl), VR, FIX2INT(ldvr));
+
+    return INT2FIX(info);
+  }
+}
+
 
 }

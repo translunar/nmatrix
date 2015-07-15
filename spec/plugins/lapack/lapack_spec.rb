@@ -229,6 +229,61 @@ describe "NMatrix::LAPACK functions implemented with LAPACKE interface" do
         expect(vt).to be_within(err).of(vt_true)
       end
 
+      #should sync this with other geev spec
+      it "calculates eigenvalues and eigenvectors using lapacke_geev" do
+        n = 3
+        a = NMatrix.new([n,n], [-1,0,0, 0,1,-2, 0,1,-1], dtype: dtype)
+        w = NMatrix.new([n], dtype: dtype)
+        if a.complex_dtype? #for real dtypes, imaginary parts of eigenvalues are stored in separate vector
+          wi = nil
+        else
+          wi = NMatrix.new([n], dtype: dtype)
+        end
+        vl = NMatrix.new([n,n], dtype: dtype)
+        vr = NMatrix.new([n,n], dtype: dtype)
+
+        NMatrix::LAPACK.lapacke_geev(:row, :t, :t, n, a, n, w, wi, vl, n, vr, n)
+
+        if !a.complex_dtype?
+          w = w + wi*Complex(0,1)
+        end
+
+        w_true = NMatrix.new([n], [Complex(0,1), -Complex(0,1), -1], dtype: NMatrix.upcast(dtype, :complex64))
+        if a.complex_dtype?
+          #For complex types the right/left eigenvectors are stored as columns
+          #of vr/vl.
+          vr_true = NMatrix.new([n,n],[0,0,1,
+                                       2/Math.sqrt(6),2/Math.sqrt(6),0,
+                                       Complex(1,-1)/Math.sqrt(6),Complex(1,1)/Math.sqrt(6),0], dtype: dtype)
+          vl_true = NMatrix.new([n,n],[0,0,1,
+                                       Complex(-1,1)/Math.sqrt(6),Complex(-1,-1)/Math.sqrt(6),0,
+                                       2/Math.sqrt(6),2/Math.sqrt(6),0], dtype: dtype)
+        else
+          #For real types, the real part of the first and second eigenvectors is
+          #stored in the first column, the imaginary part of the first (= the
+          #negative of the imaginary part of the second) eigenvector is stored
+          #in the second column, and the third eigenvector (purely real) is the
+          #third column.
+          vr_true = NMatrix.new([n,n],[0,0,1,
+                                       2/Math.sqrt(6),0,0,
+                                       1/Math.sqrt(6),-1/Math.sqrt(6),0], dtype: dtype)
+          vl_true = NMatrix.new([n,n],[0,0,1,
+                                       -1/Math.sqrt(6),1/Math.sqrt(6),0,
+                                       2/Math.sqrt(6),0,0], dtype: dtype)
+        end
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-6
+                when :float64, :complex128
+                  1e-15
+              end
+
+        expect(w).to be_within(err).of(w_true)
+        expect(vr).to be_within(err).of(vr_true)
+        expect(vl).to be_within(err).of(vl_true)
+      end
+
       #add specs for posv and gesv once we have lapacke versions
     end
   end
