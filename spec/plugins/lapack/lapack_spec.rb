@@ -82,7 +82,7 @@ describe "NMatrix::LAPACK functions implemented with LAPACKE interface" do
         # delta varies for different dtypes
         err = case dtype
                 when :float32, :complex64
-                  1e-5
+                  1e-4
                 when :float64, :complex128
                   1e-13
               end
