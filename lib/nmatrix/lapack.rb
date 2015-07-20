@@ -7,7 +7,7 @@ NMatrix.register_lapack_extension("nmatrix-lapack")
 require "nmatrix_lapack.so"
 
 class NMatrix
-  #Add functions from the LAPACKE C extension to the main LAPACK and BLAS.
+  #Add functions from the LAPACKE C extension to the main LAPACK and BLAS modules.
   #This will overwrite the original functions where applicable.
   module LAPACK
     class << self

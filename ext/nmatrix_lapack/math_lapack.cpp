@@ -61,7 +61,7 @@ extern "C" {
 
 void nm_math_init_lapack() {
 
-	VALUE cNMatrix_LAPACKE = rb_define_module_under(cNMatrix, "LAPACKE");
+  VALUE cNMatrix_LAPACKE = rb_define_module_under(cNMatrix, "LAPACKE");
 
   VALUE cNMatrix_LAPACKE_LAPACK = rb_define_module_under(cNMatrix_LAPACKE, "LAPACK");
   VALUE cNMatrix_LAPACKE_BLAS = rb_define_module_under(cNMatrix_LAPACKE, "BLAS");
