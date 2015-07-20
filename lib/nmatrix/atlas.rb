@@ -6,9 +6,6 @@ NMatrix.register_lapack_extension("nmatrix-atlas")
 require "nmatrix_atlas.so"
 
 class NMatrix
-  def test_return_3
-    3
-  end
 
   #Add functions from the ATLAS C extension to the main LAPACK and BLAS.
   #This will overwrite the original functions where applicable.
