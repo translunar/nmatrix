@@ -33,7 +33,16 @@
 #++
 
 class NMatrix
+
   module LAPACK
+
+    #Add functions from C extension to main LAPACK module
+    class << self
+      NMatrix::Internal::LAPACK.singleton_methods.each do |m|
+        define_method m, NMatrix::Internal::LAPACK.method(m).to_proc
+      end
+    end
+
     class << self
       #
       # call-seq:

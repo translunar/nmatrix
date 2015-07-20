@@ -28,6 +28,14 @@
 #++
 
 module NMatrix::BLAS
+
+  #Add functions from C extension to main BLAS module
+  class << self
+    NMatrix::Internal::BLAS.singleton_methods.each do |m|
+      define_method m, NMatrix::Internal::BLAS.method(m).to_proc
+    end
+  end
+
   class << self
     #
     # call-seq:

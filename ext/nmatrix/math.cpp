@@ -533,40 +533,42 @@ extern "C" {
 ///////////////////
 
 void nm_math_init_blas() {
-	cNMatrix_LAPACK = rb_define_module_under(cNMatrix, "LAPACK");
+  VALUE cNMatrix_Internal = rb_define_module_under(cNMatrix, "Internal");
 
   rb_define_singleton_method(cNMatrix, "has_clapack?", (METHOD)nm_has_clapack, 0);
 
+  VALUE cNMatrix_Internal_LAPACK = rb_define_module_under(cNMatrix_Internal, "LAPACK");
+
   /* ATLAS-CLAPACK Functions */
-  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getrf", (METHOD)nm_clapack_getrf, 5);
-  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_potrf", (METHOD)nm_clapack_potrf, 5);
-  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getrs", (METHOD)nm_clapack_getrs, 9);
-  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_potrs", (METHOD)nm_clapack_potrs, 8);
-  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_getri", (METHOD)nm_clapack_getri, 5);
-  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_potri", (METHOD)nm_clapack_potri, 5);
-  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_laswp", (METHOD)nm_clapack_laswp, 7);
-  rb_define_singleton_method(cNMatrix_LAPACK, "clapack_lauum", (METHOD)nm_clapack_lauum, 5);
+  rb_define_singleton_method(cNMatrix_Internal_LAPACK, "clapack_getrf", (METHOD)nm_clapack_getrf, 5);
+  rb_define_singleton_method(cNMatrix_Internal_LAPACK, "clapack_potrf", (METHOD)nm_clapack_potrf, 5);
+  rb_define_singleton_method(cNMatrix_Internal_LAPACK, "clapack_getrs", (METHOD)nm_clapack_getrs, 9);
+  rb_define_singleton_method(cNMatrix_Internal_LAPACK, "clapack_potrs", (METHOD)nm_clapack_potrs, 8);
+  rb_define_singleton_method(cNMatrix_Internal_LAPACK, "clapack_getri", (METHOD)nm_clapack_getri, 5);
+  rb_define_singleton_method(cNMatrix_Internal_LAPACK, "clapack_potri", (METHOD)nm_clapack_potri, 5);
+  rb_define_singleton_method(cNMatrix_Internal_LAPACK, "clapack_laswp", (METHOD)nm_clapack_laswp, 7);
+  rb_define_singleton_method(cNMatrix_Internal_LAPACK, "clapack_lauum", (METHOD)nm_clapack_lauum, 5);
 
   /* Non-ATLAS regular LAPACK Functions called via Fortran interface */
-  rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesvd", (METHOD)nm_lapack_gesvd, 12);
-  rb_define_singleton_method(cNMatrix_LAPACK, "lapack_gesdd", (METHOD)nm_lapack_gesdd, 11);
-  rb_define_singleton_method(cNMatrix_LAPACK, "lapack_geev",  (METHOD)nm_lapack_geev,  12);
+  rb_define_singleton_method(cNMatrix_Internal_LAPACK, "lapack_gesvd", (METHOD)nm_lapack_gesvd, 12);
+  rb_define_singleton_method(cNMatrix_Internal_LAPACK, "lapack_gesdd", (METHOD)nm_lapack_gesdd, 11);
+  rb_define_singleton_method(cNMatrix_Internal_LAPACK, "lapack_geev",  (METHOD)nm_lapack_geev,  12);
 
-  cNMatrix_BLAS = rb_define_module_under(cNMatrix, "BLAS");
+  VALUE cNMatrix_Internal_BLAS = rb_define_module_under(cNMatrix_Internal, "BLAS");
 
-  rb_define_singleton_method(cNMatrix_BLAS, "cblas_scal", (METHOD)nm_cblas_scal, 4);
-  rb_define_singleton_method(cNMatrix_BLAS, "cblas_nrm2", (METHOD)nm_cblas_nrm2, 3);
-  rb_define_singleton_method(cNMatrix_BLAS, "cblas_asum", (METHOD)nm_cblas_asum, 3);
-  rb_define_singleton_method(cNMatrix_BLAS, "cblas_rot",  (METHOD)nm_cblas_rot,  7);
-  rb_define_singleton_method(cNMatrix_BLAS, "cblas_rotg", (METHOD)nm_cblas_rotg, 1);
-  rb_define_singleton_method(cNMatrix_BLAS, "cblas_imax", (METHOD)nm_cblas_imax, 3);
+  rb_define_singleton_method(cNMatrix_Internal_BLAS, "cblas_scal", (METHOD)nm_cblas_scal, 4);
+  rb_define_singleton_method(cNMatrix_Internal_BLAS, "cblas_nrm2", (METHOD)nm_cblas_nrm2, 3);
+  rb_define_singleton_method(cNMatrix_Internal_BLAS, "cblas_asum", (METHOD)nm_cblas_asum, 3);
+  rb_define_singleton_method(cNMatrix_Internal_BLAS, "cblas_rot",  (METHOD)nm_cblas_rot,  7);
+  rb_define_singleton_method(cNMatrix_Internal_BLAS, "cblas_rotg", (METHOD)nm_cblas_rotg, 1);
+  rb_define_singleton_method(cNMatrix_Internal_BLAS, "cblas_imax", (METHOD)nm_cblas_imax, 3);
 
-	rb_define_singleton_method(cNMatrix_BLAS, "cblas_gemm", (METHOD)nm_cblas_gemm, 14);
-	rb_define_singleton_method(cNMatrix_BLAS, "cblas_gemv", (METHOD)nm_cblas_gemv, 11);
-	rb_define_singleton_method(cNMatrix_BLAS, "cblas_trsm", (METHOD)nm_cblas_trsm, 12);
-	rb_define_singleton_method(cNMatrix_BLAS, "cblas_trmm", (METHOD)nm_cblas_trmm, 12);
-	rb_define_singleton_method(cNMatrix_BLAS, "cblas_syrk", (METHOD)nm_cblas_syrk, 11);
-	rb_define_singleton_method(cNMatrix_BLAS, "cblas_herk", (METHOD)nm_cblas_herk, 11);
+  rb_define_singleton_method(cNMatrix_Internal_BLAS, "cblas_gemm", (METHOD)nm_cblas_gemm, 14);
+  rb_define_singleton_method(cNMatrix_Internal_BLAS, "cblas_gemv", (METHOD)nm_cblas_gemv, 11);
+  rb_define_singleton_method(cNMatrix_Internal_BLAS, "cblas_trsm", (METHOD)nm_cblas_trsm, 12);
+  rb_define_singleton_method(cNMatrix_Internal_BLAS, "cblas_trmm", (METHOD)nm_cblas_trmm, 12);
+  rb_define_singleton_method(cNMatrix_Internal_BLAS, "cblas_syrk", (METHOD)nm_cblas_syrk, 11);
+  rb_define_singleton_method(cNMatrix_Internal_BLAS, "cblas_herk", (METHOD)nm_cblas_herk, 11);
 }
 
 /*
