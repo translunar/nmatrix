@@ -142,8 +142,6 @@ class NMatrix
     NMatrix::LAPACK::clapack_getrf(:row, self.shape[0], self.shape[1], self, self.shape[1])
   end
 
-  alias :lu_decomposition! :getrf!
-
   #
   # call-seq:
   #     potrf!(upper_or_lower) -> NMatrix
@@ -258,7 +256,7 @@ class NMatrix
     x     = b.clone_structure
     clone = self.clone
     t     = clone.transpose # transpose because of the getrf anomaly described above.
-    pivot = t.lu_decomposition!
+    pivot = t.getrf!
     t     = t.transpose
     
     __solve__(t, b, x, pivot)
