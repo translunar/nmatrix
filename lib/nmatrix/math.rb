@@ -146,22 +146,6 @@ class NMatrix
 
   #
   # call-seq:
-  #     getrf -> NMatrix
-  #
-  # In-place version of #getrf!. Returns the new matrix, which contains L and U matrices.
-  #
-  # * *Raises* :
-  #   - +StorageTypeError+ -> ATLAS functions only work on dense matrices.
-  #
-  def getrf
-    a = self.clone
-    a.getrf!
-    return a
-  end
-
-
-  #
-  # call-seq:
   #     potrf!(upper_or_lower) -> NMatrix
   #
   # Cholesky factorization of a symmetric positive-definite matrix -- or, if complex,
