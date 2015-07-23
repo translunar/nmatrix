@@ -39,19 +39,19 @@ class NMatrix
   # Methods for generating permutation matrix from LU factorization results.
   module FactorizeLUMethods
     class << self
-      def permutation_matrix_from pivot_array
-        perm_arry = permutation_array_for pivot_array
-        n         = NMatrix.zeros perm_arry.size, dtype: :byte
+      def permutation_matrix_from(pivot_array)
+        perm_arry = permutation_array_for(pivot_array)
+        n         = NMatrix.zeros(perm_arry.size, dtype: :byte)
 
-        perm_arry.each_with_index { |e, i| n[i,e] = 1 }
+        perm_arry.each_with_index { |e, i| n[e,i] = 1 }
 
         n
       end
 
-      def permutation_array_for pivot_array
+      def permutation_array_for(pivot_array)
         perm_arry = Array.new(pivot_array.size) { |i| i }
         perm_arry.each_index do |i|
-          perm_arry[i], perm_arry[pivot_array[i]] = perm_arry[pivot_array[i]], perm_arry[i]
+          perm_arry[i], perm_arry[pivot_array[i]-1] = perm_arry[pivot_array[i]-1], perm_arry[i]
         end
 
         perm_arry
@@ -68,9 +68,15 @@ class NMatrix
   # elimination.
   #
   def invert!
+    #without external clapack we have getrf, but NOT getri
+    #should move the clapack into the atlas plugin
+    #
+    #Check if dense. Check if square.
     if NMatrix.has_clapack?
       # Get the pivot array; factor the matrix
-      pivot = self.getrf!
+
+      #We can't used getrf! here since it doesn't have the clapack behavior, so it doesn't play nicely with clapack_getri, but that means we need to do checking here
+      pivot = NMatrix::LAPACK::clapack_getrf(:row, self.shape[0], self.shape[1], self, self.shape[1])
 
       # Now calculate the inverse using the pivot array
       NMatrix::LAPACK::clapack_getri(:row, self.shape[1], self, self.shape[1], pivot)
@@ -127,10 +133,17 @@ class NMatrix
 
   #
   # call-seq:
-  #     getrf! -> NMatrix
+  #     getrf! -> Array
   #
   # LU factorization of a general M-by-N matrix +A+ using partial pivoting with
-  # row interchanges. Only works in dense matrices.
+  # row interchanges. The LU factorization is A = PLU, where P is a row permutation
+  # matrix, L is a lower triangular matrix with unit diagonals, and U is an upper
+  # triangular matrix (note that this convention is different from the
+  # clapack_getrf behavior, but matches the standard LAPACK getrf).
+  # +A+ is overwritten with the elements of L and U (the unit
+  # diagonal elements of L are not saved). P is not returned directly and must be
+  # constructed from the pivot array ipiv. The row indices in ipiv start from 1.
+  # Only works for dense matrices.
   #
   # * *Returns* :
   #   - The IPIV vector. The L and U matrices are stored in A.
@@ -139,7 +152,23 @@ class NMatrix
   #
   def getrf!
     raise(StorageTypeError, "ATLAS functions only work on dense matrices") unless self.dense?
-    NMatrix::LAPACK::clapack_getrf(:row, self.shape[0], self.shape[1], self, self.shape[1])
+
+    #For row-major matrices, clapack_getrf uses a different convention than
+    #described above (U has unit diagonal elements instead of L and columns
+    #are interchanged rather than rows). For column-major matrices, clapack
+    #uses the stanard conventions. So we just transpose the matrix before
+    #and after calling clapack_getrf.
+    #Unfortunately, this is not a very good way, uses a lot of memory.
+    temp = self.transpose
+    ipiv = NMatrix::LAPACK::clapack_getrf(:col, self.shape[0], self.shape[1], temp, self.shape[0])
+    temp = temp.transpose
+    self[0...self.shape[0], 0...self.shape[1]] = temp
+
+    #for some reason, in clapack_getrf, the indices in ipiv start from 0
+    #instead of 1 as in LAPACK.
+    ipiv.each_index { |i| ipiv[i]+=1 }
+
+    return ipiv
   end
 
   #
@@ -194,18 +223,15 @@ class NMatrix
   # +with_permutation_matrix+ - If set to *true* will return the permutation 
   #   matrix alongwith the LU factorization as a second return value.
   # 
-  # FIXME: For some reason, getrf seems to require that the matrix be transposed first -- and then you have to transpose the
-  # FIXME: result again. Ideally, this would be an in-place factorize instead, and would be called nm_factorize_lu_bang.
-  #
   def factorize_lu with_permutation_matrix=nil
     raise(NotImplementedError, "only implemented for dense storage") unless self.stype == :dense
     raise(NotImplementedError, "matrix is not 2-dimensional") unless self.dimensions == 2
 
-    t     = self.transpose
-    pivot = NMatrix::LAPACK::clapack_getrf(:row, t.shape[0], t.shape[1], t, t.shape[1])
-    return t.transpose unless with_permutation_matrix
+    t     = self.clone
+    pivot = t.getrf!
+    return t unless with_permutation_matrix
 
-    [t.transpose, FactorizeLUMethods.permutation_matrix_from(pivot)]
+    [t, FactorizeLUMethods.permutation_matrix_from(pivot)]
   end
 
   # Reduce self to upper hessenberg form using householder transforms.
@@ -255,9 +281,10 @@ class NMatrix
 
     x     = b.clone_structure
     clone = self.clone
-    t     = clone.transpose # transpose because of the getrf anomaly described above.
     pivot = t.getrf!
-    t     = t.transpose
+
+    #this pivot stuff should be fixed. use clapack_getrf?
+    pivot.each_index {|i| pivot[i]-=1}
     
     __solve__(t, b, x, pivot)
     x
@@ -437,7 +464,8 @@ class NMatrix
 
     num_perm = 0 #number of permutations
     pivot.each_with_index do |swap, i|
-      num_perm += 1 if swap != i
+      #crappy pivot stuff
+      num_perm += 1 if swap-1 != i
     end
     prod = num_perm % 2 == 1 ? -1 : 1 # odd permutations => negative
     [shape[0],shape[1]].min.times do |i|
