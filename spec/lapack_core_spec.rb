@@ -108,8 +108,10 @@ describe "NMatrix::LAPACK functions with internal implementations" do
       end
 
       it "calculates LU decomposition using clapack_getrf (row-major, rectangular)" do
-        a = NMatrix.new([3,4], [-1,0,10,4,9,2,3,5,7,8,1,6], dtype: dtype)
+        a = NMatrix.new([3,4], GETRF_EXAMPLE_ARRAY, dtype: dtype)
         ipiv = NMatrix::LAPACK::clapack_getrf(:row, a.shape[0], a.shape[1], a, a.shape[1])
+        #we can't use GETRF_SOLUTION_ARRAY here, because of the different
+        #conventions of clapack_getrf
         b = NMatrix.new([3,4],[10.0, -0.1,      0.0,       0.4,
                                3.0,   9.3,  20.0/93,   38.0/93,
                                1.0,   7.1, 602.0/93, 251.0/602], dtype: dtype)
@@ -157,11 +159,9 @@ describe "NMatrix::LAPACK functions with internal implementations" do
       end
 
       it "calculates LU decomposition using #getrf! (row-major, rectangular)" do
-        a = NMatrix.new([3,4], [-1,0,10,4,9,2,3,5,7,8,1,6], dtype: dtype)
+        a = NMatrix.new([3,4], GETRF_EXAMPLE_ARRAY, dtype: dtype)
         ipiv = a.getrf!
-        b = NMatrix.new([3,4],[9.0, 2.0, 3.0, 5.0,
-                               7.0/9, 58.0/9, -4.0/3, 19.0/9,
-                               -1.0/9, 1.0/29, 301.0/29, 130.0/29], dtype: dtype)
+        b = NMatrix.new([3,4], GETRF_SOLUTION_ARRAY, dtype: dtype)
         ipiv_true = [2,3,3]
 
         # delta varies for different dtypes
