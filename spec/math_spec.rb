@@ -206,38 +206,30 @@ describe "math" do
     next if dtype == :object
     context dtype do
       before do
-        @m = NMatrix.new(:dense, 3, [4,9,2,3,5,7,8,1,6], dtype)
+        @m = NMatrix.new([3,4], GETRF_EXAMPLE_ARRAY, dtype: dtype)
+        @err = case dtype
+                 when :float32, :complex64
+                   1e-6
+                 when :float64, :complex128
+                   1e-14
+                 else
+                   1e-64 # FIXME: should be 0, but be_within(0) does not work.
+               end
       end
 
       #haven't check this spec yet. Also it doesn't check all the elements of the matrix.
       it "should correctly factorize a matrix" do
         a = @m.factorize_lu
-        expect(a[0,0]).to eq(8)
-        expect(a[0,1]).to eq(1)
-        expect(a[0,2]).to eq(6)
-        expect(a[1,0]).to eq(0.5)
-        expect(a[1,1]).to eq(8.5)
-        expect(a[1,2]).to eq(-1)
-        expect(a[2,0]).to eq(0.375)
+        expect(a).to be_within(@err).of(NMatrix.new([3,4], GETRF_SOLUTION_ARRAY, dtype: dtype))
       end
 
       it "also returns the permutation matrix" do
         a, p = @m.factorize_lu perm_matrix: true
 
-#compare whole matrix
-        expect(a[0,0]).to eq(8)
-        expect(a[0,1]).to eq(1)
-        expect(a[0,2]).to eq(6)
-        expect(a[1,0]).to eq(0.5)
-        expect(a[1,1]).to eq(8.5)
-        expect(a[1,2]).to eq(-1)
-        expect(a[2,0]).to eq(0.375)
+        expect(a).to be_within(@err).of(NMatrix.new([3,4], GETRF_SOLUTION_ARRAY, dtype: dtype))
 
-        puts p
-#compare whole matrix
-        expect(p[0,1]).to eq(1)
-        expect(p[1,2]).to eq(1)
-        expect(p[2,0]).to eq(1)
+        p_true = NMatrix.new([3,3], [0,0,1,1,0,0,0,1,0], dtype: dtype)
+        expect(p).to eq(p_true)
       end
     end
 
