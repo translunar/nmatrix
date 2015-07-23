@@ -156,6 +156,28 @@ describe "NMatrix::LAPACK functions with internal implementations" do
         expect(ipiv).to eq(ipiv_true)
       end
 
+      it "calculates LU decomposition using #getrf! (row-major, rectangular)" do
+        a = NMatrix.new([3,4], [-1,0,10,4,9,2,3,5,7,8,1,6], dtype: dtype)
+        ipiv = a.getrf!
+        b = NMatrix.new([3,4],[9.0, 2.0, 3.0, 5.0,
+                               7.0/9, 58.0/9, -4.0/3, 19.0/9,
+                               -1.0/9, 1.0/29, 301.0/29, 130.0/29], dtype: dtype)
+        ipiv_true = [2,3,3]
+
+        # delta varies for different dtypes
+        err = case dtype
+                when :float32, :complex64
+                  1e-6
+                when :float64, :complex128
+                  1e-14
+                else
+                  1e-64 # FIXME: should be 0, but be_within(0) does not work.
+              end
+
+        expect(a).to be_within(err).of(b)
+        expect(ipiv).to eq(ipiv_true)
+      end
+
       # Spec OK.
       # potrf decomposes a symmetric (or Hermitian)
       # positive-definite matrix. The matrix tested below isn't symmetric.
