@@ -79,11 +79,19 @@ describe "NMatrix::LAPACK functions with internal implementations" do
       end
 
 
-      # spec OK, but tricky. It's the upper matrix that has unit diagonals and the permutation is done in columns not rows. See the code details. This is normal for CLAPACK with row-major matrices, but not for plain LAPACK.
-      # Also, should check the pivot matrix here.
-      it "exposes clapack_getrf" do
+      # clapack_getrf performs a LU decomposition, but unlike the
+      # standard LAPACK getrf, it's the upper matrix that has unit diagonals
+      # and the permutation is done in columns not rows. See the code for
+      # details.
+      # Also the rows in the pivot vector are indexed starting from 0,
+      # rather than 1 as in LAPACK
+      it "calculates LU decomposition using clapack_getrf (row-major, square)" do
         a = NMatrix.new(3, [4,9,2,3,5,7,8,1,6], dtype: dtype)
-        NMatrix::LAPACK::clapack_getrf(:row, 3, 3, a, 3)
+        ipiv = NMatrix::LAPACK::clapack_getrf(:row, a.shape[0], a.shape[1], a, a.shape[1])
+        b = NMatrix.new(3,[9, 2.0/9, 4.0/9,
+                           5, 53.0/9, 7.0/53,
+                           1, 52.0/9, 360.0/53], dtype: dtype)
+        ipiv_true = [1,2,2]
 
         # delta varies for different dtypes
         err = case dtype
@@ -95,15 +103,57 @@ describe "NMatrix::LAPACK functions with internal implementations" do
                   1e-64 # FIXME: should be 0, but be_within(0) does not work.
               end
 
-        expect(a[0,0]).to eq(9)
-        expect(a[0,1]).to be_within(err).of(2.0/9)
-        expect(a[0,2]).to be_within(err).of(4.0/9)
-        expect(a[1,0]).to eq(5)
-        expect(a[1,1]).to be_within(err).of(53.0/9)
-        expect(a[1,2]).to be_within(err).of(7.0/53)
-        expect(a[2,0]).to eq(1)
-        expect(a[2,1]).to be_within(err).of(52.0/9)
-        expect(a[2,2]).to be_within(err).of(360.0/53)
+        expect(a).to be_within(err).of(b)
+        expect(ipiv).to eq(ipiv_true)
+      end
+
+      it "calculates LU decomposition using clapack_getrf (row-major, rectangular)" do
+        a = NMatrix.new([3,4], [-1,0,10,4,9,2,3,5,7,8,1,6], dtype: dtype)
+        ipiv = NMatrix::LAPACK::clapack_getrf(:row, a.shape[0], a.shape[1], a, a.shape[1])
+        b = NMatrix.new([3,4],[10.0, -0.1,      0.0,       0.4,
+                               3.0,   9.3,  20.0/93,   38.0/93,
+                               1.0,   7.1, 602.0/93, 251.0/602], dtype: dtype)
+        ipiv_true = [2,2,2]
+
+        # delta varies for different dtypes
+        err = case dtype
+                when :float32, :complex64
+                  1e-6
+                when :float64, :complex128
+                  1e-15
+                else
+                  1e-64 # FIXME: should be 0, but be_within(0) does not work.
+              end
+
+        expect(a).to be_within(err).of(b)
+        expect(ipiv).to eq(ipiv_true)
+      end
+
+      #Normally we wouldn't check column-major routines, since all our matrices
+      #are row-major, but we use the column-major version in #getrf!, so we
+      #want to test it here.
+      it "calculates LU decomposition using clapack_getrf (col-major, rectangular)" do
+        #this is supposed to represent the 3x2 matrix
+        # -1  2
+        #  0  3
+        #  1 -2
+        a = NMatrix.new([1,6], [-1,0,1,2,3,-2], dtype: dtype)
+        ipiv = NMatrix::LAPACK::clapack_getrf(:col, 3, 2, a, 3)
+        b = NMatrix.new([1,6], [-1,0,-1,2,3,0], dtype: dtype)
+        ipiv_true = [0,1]
+
+        # delta varies for different dtypes
+        err = case dtype
+                when :float32, :complex64
+                  1e-6
+                when :float64, :complex128
+                  1e-15
+                else
+                  1e-64 # FIXME: should be 0, but be_within(0) does not work.
+              end
+
+        expect(a).to be_within(err).of(b)
+        expect(ipiv).to eq(ipiv_true)
       end
 
       # Spec OK.

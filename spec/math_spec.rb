@@ -224,6 +224,7 @@ describe "math" do
       it "also returns the permutation matrix" do
         a, p = @m.factorize_lu perm_matrix: true
 
+#compare whole matrix
         expect(a[0,0]).to eq(8)
         expect(a[0,1]).to eq(1)
         expect(a[0,2]).to eq(6)
@@ -233,9 +234,10 @@ describe "math" do
         expect(a[2,0]).to eq(0.375)
 
         puts p
-        expect(p[1,0]).to eq(1)
-        expect(p[2,1]).to eq(1)
-        expect(p[0,2]).to eq(1)
+#compare whole matrix
+        expect(p[0,1]).to eq(1)
+        expect(p[1,2]).to eq(1)
+        expect(p[2,0]).to eq(1)
       end
     end
 
