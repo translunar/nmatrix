@@ -272,6 +272,7 @@ class NMatrix
   #   b = NMatrix.new [2,1], [9,8], dtype: dtype
   #   a.solve(b)
   def solve b
+    #this could use gesv if available
     raise ArgumentError, "b must be a column vector" if b.shape[1] != 1
     raise ArgumentError, "number of rows of b must equal number of cols of self" if 
       self.shape[1] != b.shape[0]
@@ -281,12 +282,12 @@ class NMatrix
 
     x     = b.clone_structure
     clone = self.clone
-    pivot = t.getrf!
+    pivot = clone.getrf!
 
     #this pivot stuff should be fixed. use clapack_getrf?
     pivot.each_index {|i| pivot[i]-=1}
     
-    __solve__(t, b, x, pivot)
+    __solve__(clone, b, x, pivot)
     x
   end
 
