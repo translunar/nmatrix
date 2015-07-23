@@ -99,8 +99,6 @@ describe "NMatrix::LAPACK functions with internal implementations" do
                   1e-6
                 when :float64, :complex128
                   1e-15
-                else
-                  1e-64 # FIXME: should be 0, but be_within(0) does not work.
               end
 
         expect(a).to be_within(err).of(b)
@@ -123,8 +121,6 @@ describe "NMatrix::LAPACK functions with internal implementations" do
                   1e-6
                 when :float64, :complex128
                   1e-15
-                else
-                  1e-64 # FIXME: should be 0, but be_within(0) does not work.
               end
 
         expect(a).to be_within(err).of(b)
@@ -150,8 +146,6 @@ describe "NMatrix::LAPACK functions with internal implementations" do
                   1e-6
                 when :float64, :complex128
                   1e-15
-                else
-                  1e-64 # FIXME: should be 0, but be_within(0) does not work.
               end
 
         expect(a).to be_within(err).of(b)
@@ -170,8 +164,6 @@ describe "NMatrix::LAPACK functions with internal implementations" do
                   1e-6
                 when :float64, :complex128
                   1e-14
-                else
-                  1e-64 # FIXME: should be 0, but be_within(0) does not work.
               end
 
         expect(a).to be_within(err).of(b)

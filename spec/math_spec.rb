@@ -212,8 +212,6 @@ describe "math" do
                    1e-6
                  when :float64, :complex128
                    1e-14
-                 else
-                   1e-64 # FIXME: should be 0, but be_within(0) does not work.
                end
       end
 
