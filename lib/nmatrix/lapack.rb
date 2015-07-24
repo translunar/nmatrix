@@ -24,4 +24,12 @@ class NMatrix
       end
     end
   end
+
+  def getrf!
+    raise(StorageTypeError, "ATLAS functions only work on dense matrices") unless self.dense?
+
+    ipiv = NMatrix::LAPACK::lapacke_getrf(:row, self.shape[0], self.shape[1], self, self.shape[1])
+
+    return ipiv
+  end
 end
