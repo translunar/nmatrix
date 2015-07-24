@@ -152,7 +152,7 @@ describe "NMatrix::LAPACK functions with internal implementations" do
         expect(ipiv).to eq(ipiv_true)
       end
 
-      it "calculates LU decomposition using #getrf! (row-major, rectangular)" do
+      it "calculates LU decomposition using #getrf! (rectangular)" do
         a = NMatrix.new([3,4], GETRF_EXAMPLE_ARRAY, dtype: dtype)
         ipiv = a.getrf!
         b = NMatrix.new([3,4], GETRF_SOLUTION_ARRAY, dtype: dtype)
@@ -167,6 +167,17 @@ describe "NMatrix::LAPACK functions with internal implementations" do
               end
 
         expect(a).to be_within(err).of(b)
+        expect(ipiv).to eq(ipiv_true)
+      end
+
+      it "calculates LU decomposition using #getrf! (square)" do
+        a = NMatrix.new([4,4], [0,1,2,3, 1,1,1,1, 0,-1,-2,0, 0,2,0,2], dtype: dtype)
+        ipiv = a.getrf!
+
+        b = NMatrix.new([4,4], [1,1,1,1, 0,2,0,2, 0,-0.5,-2,1, 0,0.5,-1,3], dtype: dtype)
+        ipiv_true = [2,4,3,4]
+
+        expect(a).to eq(b)
         expect(ipiv).to eq(ipiv_true)
       end
 
