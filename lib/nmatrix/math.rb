@@ -51,6 +51,8 @@ class NMatrix
       def permutation_array_for(pivot_array)
         perm_arry = Array.new(pivot_array.size) { |i| i }
         perm_arry.each_index do |i|
+          #the pivot indices returned by LAPACK getrf are indexed starting
+          #from 1, so we need to subtract 1 here
           perm_arry[i], perm_arry[pivot_array[i]-1] = perm_arry[pivot_array[i]-1], perm_arry[i]
         end
 
@@ -142,7 +144,8 @@ class NMatrix
   # clapack_getrf behavior, but matches the standard LAPACK getrf).
   # +A+ is overwritten with the elements of L and U (the unit
   # diagonal elements of L are not saved). P is not returned directly and must be
-  # constructed from the pivot array ipiv. The row indices in ipiv start from 1.
+  # constructed from the pivot array ipiv. The row indices in ipiv are indexed
+  # starting from 1.
   # Only works for dense matrices.
   #
   # * *Returns* :
@@ -465,7 +468,7 @@ class NMatrix
 
     num_perm = 0 #number of permutations
     pivot.each_with_index do |swap, i|
-      #crappy pivot stuff
+      #pivot indexes rows starting from 1, instead of 0, so need to subtract 1 here
       num_perm += 1 if swap-1 != i
     end
     prod = num_perm % 2 == 1 ? -1 : 1 # odd permutations => negative
