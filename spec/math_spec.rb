@@ -234,7 +234,7 @@ describe "math" do
 
   ALL_DTYPES.each do |dtype|
     next if dtype == :byte #doesn't work for unsigned types
-    next if dtype == :object #doesn't work for unsigned types
+    next if dtype == :object
 
     context dtype do
       err = case dtype

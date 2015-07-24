@@ -76,7 +76,7 @@ class NMatrix
   #
   def invert!
     raise(StorageTypeError, "invert only works on dense matrices currently") unless self.dense?
-    raise(ShapeError, "Cannot invert non-square matrix") unless shape[0] == shape[1]
+    raise(ShapeError, "Cannot invert non-square matrix") unless self.dim == 2 && self.shape[0] == self.shape[1]
     raise(DataTypeError, "Cannot invert an integer matrix in-place") if self.integer_dtype?
 
     #No internal implementation of getri, so use this other function
@@ -414,7 +414,7 @@ class NMatrix
   #     det -> determinant
   #
   # Calculate the determinant by way of LU decomposition. This is accomplished
-  # using clapack_getrf, and then by summing the diagonal elements. There is a
+  # using clapack_getrf, and then by taking the product of the diagonal elements. There is a
   # risk of underflow/overflow.
   #
   # There are probably also more efficient ways to calculate the determinant.
@@ -432,13 +432,13 @@ class NMatrix
   # * *Returns* :
   #   - The determinant of the matrix. It's the same type as the matrix's dtype.
   # * *Raises* :
-  #   - +NotImplementedError+ -> Must be used in 2D matrices.
+  #   - +ShapeError+ -> Must be used on square matrices.
   #
   def det
-    raise(NotImplementedError, "determinant can be calculated only for 2D matrices") unless self.dim == 2
+    raise(ShapeError, "determinant can be calculated only for square matrices") unless self.dim == 2 && self.shape[0] == self.shape[1]
 
     # Cast to a dtype for which getrf is implemented
-    new_dtype = [:byte,:int8,:int16,:int32,:int64].include?(self.dtype) ? :float64 : self.dtype
+    new_dtype = self.integer_dtype? ? :float64 : self.dtype
     copy = self.cast(:dense, new_dtype)
 
     # Need to know the number of permutations. We'll add up the diagonals of
