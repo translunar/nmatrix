@@ -230,12 +230,17 @@ describe "math" do
         expect(p).to eq(p_true)
       end
     end
+  end
+
+  ALL_DTYPES.each do |dtype|
+    next if dtype == :byte #doesn't work for unsigned types
+    next if dtype == :object #doesn't work for unsigned types
 
     context dtype do
       err = case dtype
               when :float32, :complex64
                 1e-4
-              when :float64, :complex128
+              else #integer matrices will return :float64
                 1e-13
             end
 
@@ -250,13 +255,24 @@ describe "math" do
                                     0, 0, 1,-2,-15,
                                     0, 0, 0, 1,  5,
                                     0, 0, 0, 0,  1,], dtype)
-        a.invert!
-        expect(a).to be_within(err).of(b)
+        if a.integer_dtype?
+          expect{a.invert!}.to raise_error(DataTypeError)
+        else
+          #should return inverse as well as modifying a
+          r = a.invert!
+          expect(a).to be_within(err).of(b)
+          expect(r).to be_within(err).of(b)
+        end
       end
 
       it "should correctly invert a matrix out-of-place" do
         a = NMatrix.new(:dense, 3, [1,2,3,0,1,4,5,6,0], dtype)
-        b = NMatrix.new(:dense, 3, [-24,18,5,20,-15,-4,-5,4,1], dtype)
+
+        if a.integer_dtype?
+          b = NMatrix.new(:dense, 3, [-24,18,5,20,-15,-4,-5,4,1], :float64)
+        else
+          b = NMatrix.new(:dense, 3, [-24,18,5,20,-15,-4,-5,4,1], dtype)
+        end
 
         expect(a.invert).to be_within(err).of(b)
       end

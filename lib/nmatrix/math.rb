@@ -90,9 +90,10 @@ class NMatrix
   # Make a copy of the matrix, then invert using Gauss-Jordan elimination.
   # Works without LAPACK.
   #
-  #
   # * *Returns* :
-  #   - A dense NMatrix.
+  #   - A dense NMatrix. Will be the same type as the input NMatrix,
+  #   except if the input is an integral dtype, in which case it will be a
+  #   :float64 NMatrix.
   #
   # * *Raises* :
   #   - +StorageTypeError+ -> only implemented on dense matrices.
