@@ -32,4 +32,18 @@ class NMatrix
 
     return ipiv
   end
+
+  def invert!
+    raise(StorageTypeError, "invert only works on dense matrices currently") unless self.dense?
+    raise(ShapeError, "Cannot invert non-square matrix") unless shape[0] == shape[1]
+    raise(DataTypeError, "Cannot invert an integer matrix in-place") if self.integer_dtype?
+
+    # Get the pivot array; factor the matrix
+    n = self.shape[0]
+    pivot = NMatrix::LAPACK::lapacke_getrf(:row, n, n, self, n)
+    # Now calculate the inverse using the pivot array
+    NMatrix::LAPACK::lapacke_getri(:row, n, self, n, pivot)
+
+    self
+  end
 end

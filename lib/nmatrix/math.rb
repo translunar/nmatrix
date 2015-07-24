@@ -69,29 +69,18 @@ class NMatrix
   # Only works on dense matrices. Alternatively uses in-place Gauss-Jordan 
   # elimination.
   #
+  # * *Raises* :
+  #   - +StorageTypeError+ -> only implemented on dense matrices.
+  #   - +ShapeError+ -> matrix must be square.
+  #   - +DataTypeError+ -> cannot invert an integer matrix in-place.
+  #
   def invert!
-    #without external clapack we have getrf, but NOT getri
-    #should move the clapack into the atlas plugin
-    #
-    #Check if dense. Check if square.
-    if NMatrix.has_clapack?
-      # Get the pivot array; factor the matrix
+    raise(StorageTypeError, "invert only works on dense matrices currently") unless self.dense?
+    raise(ShapeError, "Cannot invert non-square matrix") unless shape[0] == shape[1]
+    raise(DataTypeError, "Cannot invert an integer matrix in-place") if self.integer_dtype?
 
-      #We can't used getrf! here since it doesn't have the clapack behavior, so it doesn't play nicely with clapack_getri, but that means we need to do checking here
-      pivot = NMatrix::LAPACK::clapack_getrf(:row, self.shape[0], self.shape[1], self, self.shape[1])
-
-      # Now calculate the inverse using the pivot array
-      NMatrix::LAPACK::clapack_getri(:row, self.shape[1], self, self.shape[1], pivot)
-
-      self
-    else
-      if self.integer_dtype?
-        __inverse__(self.cast(dtype: :float64), true)
-      else
-        dtype = self.dtype
-        __inverse__(self, true)
-      end
-    end
+    #No internal implementation of getri, so use this other function
+    __inverse__(self, true)
   end
 
   #
@@ -105,30 +94,19 @@ class NMatrix
   # * *Returns* :
   #   - A dense NMatrix.
   #
-  def invert lda=nil, ldb=nil
-    if lda.nil? and ldb.nil?
-      if NMatrix.has_clapack?
-        begin
-          self.cast(:dense, self.dtype).invert! # call CLAPACK version
-        rescue NotImplementedError
-          inverse = self.clone
-          __inverse__(inverse, false)
-        end
-      elsif self.integer_dtype? # FIXME: This check is probably too slow.
-        casted = self.cast(dtype: :float64)
-        inverse       = casted.clone
-        casted.__inverse__(inverse, false)
-      else
-        inverse       = self.clone
-        __inverse__(inverse, false)
-      end
+  # * *Raises* :
+  #   - +StorageTypeError+ -> only implemented on dense matrices.
+  #   - +ShapeError+ -> matrix must be square.
+  #
+  def invert
+    #write this in terms of invert! so plugins will only have to overwrite
+    #invert! and not invert
+    if self.integer_dtype?
+      cloned = self.cast(dtype: :float64)
+      cloned.invert!
     else
-      inverse = self.clone_structure
-      if self.integer_dtype?
-        __inverse_exact__(inverse.cast(dtype: :float64), lda, ldb)
-      else
-        __inverse_exact__(inverse, lda, ldb)
-      end
+      cloned = self.clone
+      cloned.invert!
     end
   end
   alias :inverse :invert
