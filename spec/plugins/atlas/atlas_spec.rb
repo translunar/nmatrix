@@ -4,6 +4,95 @@ require "./lib/nmatrix/atlas"
 describe "NMatrix::LAPACK implementation from nmatrix-atlas plugin" do
   [:float32, :float64, :complex64, :complex128].each do |dtype|
     context dtype do
+      # Specs OK.
+      # potrf decomposes a symmetric (or Hermitian)
+      # positive-definite matrix. The matrix tested below isn't symmetric.
+      # But this is okay since potrf just examines the upper/lower half
+      # (as requested) of the matrix and assumes that the rest is symmetric,
+      # so we just set the other part of the matrix to zero.
+      it "exposes clapack_potrf upper" do
+        pending "potrf requires clapack" unless NMatrix.has_clapack?
+
+        a = NMatrix.new(:dense, 3, [25,15,-5, 0,18,0, 0,0,11], dtype)
+        NMatrix::LAPACK::clapack_potrf(:row, :upper, 3, a, 3)
+        b = NMatrix.new(:dense, 3, [5,3,-1, 0,3,1, 0,0,3], dtype)
+        expect(a).to eq(b)
+      end
+
+      it "exposes clapack_potrf lower" do
+        pending "potrf requires clapack" unless NMatrix.has_clapack?
+
+        a = NMatrix.new(:dense, 3, [25,0,0, 15,18,0,-5,0,11], dtype)
+        NMatrix::LAPACK::clapack_potrf(:row, :lower, 3, a, 3)
+        b = NMatrix.new(:dense, 3, [5,0,0, 3,3,0, -1,1,3], dtype)
+        expect(a).to eq(b)
+      end
+
+      it "exposes clapack_potri" do
+        pending "potri requires clapack" unless NMatrix.has_clapack?
+
+        a = NMatrix.new(3, [4, 0,-1,
+                            0, 2, 1,
+                            0, 0, 1], dtype: dtype)
+        NMatrix::LAPACK::clapack_potrf(:row, :upper, 3, a, 3)
+        NMatrix::LAPACK::clapack_potri(:row, :upper, 3, a, 3)
+        b = NMatrix.new(3, [0.5, -0.5, 1,  0, 1.5, -2,  0, 0, 4], dtype: dtype)
+        err = case dtype
+                when :float32, :complex64
+                  1e-6
+                when :float64, :complex128
+                  1e-14
+              end
+        expect(a).to be_within(err).of(b)
+      end
+
+      #Like getrs, potrs doesn't work if b isn't a vector. It does work though if you transpose b before and after calling potrs. Needs to be fixed.
+      it "exposes clapack_potrs" do
+        pending "potrs requires clapack" unless NMatrix.has_clapack?
+
+        a = NMatrix.new(3, [4, 0,-1,
+                            0, 2, 1,
+                            0, 0, 1], dtype: dtype)
+        b = NMatrix.new([3,1], [3,0,2], dtype: dtype)
+
+        NMatrix::LAPACK::clapack_potrf(:row, :upper, 3, a, 3)
+        NMatrix::LAPACK::clapack_potrs(:row, :upper, 3, 1, a, 3, b, 3)
+
+        x = NMatrix.new([3,1], [3.5, -5.5, 11], dtype: dtype)
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-5
+                when :float64, :complex128
+                  1e-14
+              end
+
+        expect(b).to be_within(err).of(x)
+      end
+
+      #posv is like potrf+potrs
+      it "exposes clapack_posv" do
+        pending "posv requires clapack" unless NMatrix.has_clapack?
+
+        a = NMatrix.new(3, [4, 0,-1,
+                            0, 2, 1,
+                            0, 0, 1], dtype: dtype)
+        b = NMatrix.new([3,1], [3,0,2], dtype: dtype)
+
+        NMatrix::LAPACK::clapack_posv(:row, :upper, 3, 1, a, 3, b, 3)
+
+        x = NMatrix.new([3,1], [3.5, -5.5, 11], dtype: dtype)
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-5
+                when :float64, :complex128
+                  1e-14
+              end
+
+        expect(b).to be_within(err).of(x)
+      end
+
       #This spec should include separate tests for complex types and also tests for :lower
       #lauum is supposed to calculate the upper/lower part of U*U^T or L^T*L for triangular matrices
       it "exposes clapack_lauum" do
