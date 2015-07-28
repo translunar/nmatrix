@@ -34,7 +34,7 @@ rescue Bundler::BundlerError => e
 end
 
 desc "Build and install into system gems."
-task :install => :package do
+task :install => :repackage do
   gemspecs.each do |gemspec|
     gem_file = "pkg/#{gemspec.name}-#{gemspec.version}.gem"
     system "gem install '#{gem_file}'"
