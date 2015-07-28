@@ -158,19 +158,27 @@ class NMatrix
   #     potrf!(upper_or_lower) -> NMatrix
   #
   # Cholesky factorization of a symmetric positive-definite matrix -- or, if complex,
-  # a Hermitian positive-definite matrix +A+. This uses the ATLAS function clapack_potrf,
-  # so the result will be written in either the upper or lower triangular portion of the
-  # matrix upon which it is called.
+  # a Hermitian positive-definite matrix +A+.
+  # The result will be written in either the upper or lower triangular portion of the
+  # matrix, depending on whether the argument is +:upper+ or +:lower+.
+  # Also the function only reads in the upper or lower part of the matrix,
+  # so it doesn't actually have to be symmetric/Hermitian.
+  # However, if the matrix (i.e. the symmetric matrix implied by the lower/upper
+  # half) is not positive-definite, the function will return nonsense.
+  #
+  # This functions requires either the nmatrix-atlas or nmatrix-lapack gem
+  # installed.
   #
   # * *Returns* :
   #   the triangular portion specified by the parameter
   # * *Raises* :
   #   - +StorageTypeError+ -> ATLAS functions only work on dense matrices.
+  #   - +ShapeError+ -> Must be square.
+  #   - +NotImplementedError+ -> If called without nmatrix-atlas or nmatrix-lapack gem
   #
   def potrf!(which)
-    raise(StorageTypeError, "ATLAS functions only work on dense matrices") unless self.dense?
-    # FIXME: Surely there's an easy way to calculate one of these from the other. Do we really need to run twice?
-    NMatrix::LAPACK::clapack_potrf(:row, which, self.shape[0], self, self.shape[1])
+    # The real implementation is in the plugin files.
+    raise(NotImplementedError, "potrf! requires either the nmatrix-atlas or nmatrix-lapack gem")
   end
 
   def potrf_upper!
@@ -184,12 +192,20 @@ class NMatrix
 
   #
   # call-seq:
-  #     factorize_cholesky -> ...
+  #     factorize_cholesky -> [upper NMatrix, lower NMatrix]
   #
-  # Cholesky factorization of a matrix.
+  # Calculates the Cholesky factorization of a matrix and returns the
+  # upper and lower matrices such that A=LU and L=U*, where * is
+  # either the transpose or conjugate transpose.
+  #
+  # Unlike potrf!, this makes method requires that the original is matrix is
+  # symmetric or Hermitian. However, it is still your responsibility to make
+  # sure it is positive-definite.
   def factorize_cholesky
-    [self.clone.potrf_upper!.triu!,
-    self.clone.potrf_lower!.tril!]
+    raise "Matrix must be symmetric/Hermitian for Cholesky factorization" unless self.hermitian?
+    l = self.clone.potrf_lower!.tril!
+    u = l.conjugate_transpose
+    [u,l]
   end
 
   #

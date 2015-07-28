@@ -232,6 +232,59 @@ describe "math" do
     end
   end
 
+  NON_INTEGER_DTYPES.each do |dtype|
+    next if dtype == :object
+    context dtype do
+
+      it "calculates cholesky decomposition using potrf (lower)" do
+        #a = NMatrix.new([3,3],[1,1,1, 1,2,2, 1,2,6], dtype: dtype)
+        # We use the matrix
+        # 1 1 1
+        # 1 2 2
+        # 1 2 6
+        # which is symmetric and positive-definite as required, but
+        # we need only store the lower-half of the matrix.
+        a = NMatrix.new([3,3],[1,0,0, 1,2,0, 1,2,6], dtype: dtype)
+        begin
+          r = a.potrf!(:lower)
+
+          b = NMatrix.new([3,3],[1,0,0, 1,1,0, 1,1,2], dtype: dtype)
+          expect(a).to eq(b)
+          expect(r).to eq(b)
+        rescue NotImplementedError
+          pending "potrf! not implemented without plugins"
+        end
+      end
+
+      it "calculates cholesky decomposition using potrf (upper)" do
+        a = NMatrix.new([3,3],[1,1,1, 0,2,2, 0,0,6], dtype: dtype)
+        begin
+          r = a.potrf!(:upper)
+
+          b = NMatrix.new([3,3],[1,1,1, 0,1,1, 0,0,2], dtype: dtype)
+          expect(a).to eq(b)
+          expect(r).to eq(b)
+        rescue NotImplementedError
+          pending "potrf! not implemented without plugins"
+        end
+      end
+
+      it "calculates cholesky decomposition using #factorize_cholesky" do
+        a = NMatrix.new([3,3],[1,2,1, 2,13,5, 1,5,6], dtype: dtype)
+        begin
+          u,l = a.factorize_cholesky
+
+          l_true = NMatrix.new([3,3],[1,0,0, 2,3,0, 1,1,2], dtype: dtype)
+          u_true = l_true.transpose
+          expect(u).to eq(u_true)
+          expect(l).to eq(l_true)
+        rescue NotImplementedError
+          pending "potrf! not implemented without plugins"
+        end
+      end
+    end
+  end
+
   ALL_DTYPES.each do |dtype|
     next if dtype == :byte #doesn't work for unsigned types
     next if dtype == :object
