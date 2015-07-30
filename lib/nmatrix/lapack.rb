@@ -53,4 +53,21 @@ class NMatrix
 
     NMatrix::LAPACK::lapacke_potrf(:row, which, self.shape[0], self, self.shape[1])
   end
+
+  def solve b
+    raise(ShapeError, "b must be a column vector") unless b.dim == 2 && b.shape[1] == 1
+    raise(ShapeError, "Must be called on square matrix") unless self.dim == 2 && self.shape[0] == self.shape[1]
+    raise(ShapeError, "number of rows of b must equal number of cols of self") if 
+      self.shape[1] != b.shape[0]
+    raise ArgumentError, "only works with dense matrices" if self.stype != :dense
+    raise ArgumentError, "only works for non-integer, non-object dtypes" if 
+      integer_dtype? or object_dtype? or b.integer_dtype? or b.object_dtype?
+
+    x     = b.clone
+    clone = self.clone
+    n = self.shape[0]
+    ipiv = NMatrix::LAPACK.lapacke_getrf(:row, n, n, clone, n)
+    NMatrix::LAPACK.lapacke_getrs(:row, :no_transpose, n, b.shape[1], clone, n, ipiv, x, b.shape[1])
+    x
+  end
 end
