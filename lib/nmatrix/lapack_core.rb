@@ -46,48 +46,6 @@ class NMatrix
     class << self
       #
       # call-seq:
-      #     clapack_gesv(order, n, nrhs, a, lda, ipiv, b, ldb) -> NMatrix
-      #
-      # Computes the solution to a system of linear equations
-      #   A * X = B,
-      # where A is an N-by-N matrix and X and B are N-by-NRHS matrices.
-      #
-      # The LU factorization used to factor A is dependent on the +order+
-      # parameter, as detailed in the leading comments of clapack_getrf.
-      #
-      # The factored form of A is then used solve the system of equations
-      # A * X = B.
-      #
-      # A is overwritten with the appropriate LU factorization, and B, which
-      # contains B on input, is overwritten with the solution X on output.
-      #
-      # From ATLAS 3.8.0.
-      #
-      # Note: Because this function is implemented in Ruby, the ATLAS lib 
-      # version is never called! For float32, float64, complex64, and 
-      # complex128, the ATLAS lib versions of getrf and getrs *will* be called.
-      #
-      # * *Arguments* :
-      #   - +order+ ->
-      #   - +n+ ->
-      #   - +nrhs+ ->
-      #   - +a+ ->
-      #   - +lda+ ->
-      #   - +b+ ->
-      #   - +ldb+ ->
-      #   - +ipiv+ -> A pivot array (if nil, one will be generated with +clapack_getrf+)
-      # * *Returns* :
-      #   -
-      # * *Raises* :
-      #   - ++ ->
-      #
-      def clapack_gesv(order, n, nrhs, a, lda, b, ldb, ipiv=nil)
-        ipiv ||= clapack_getrf(order, n, n, a, lda)
-        clapack_getrs(order, :no_transpose, n, nrhs, a, lda, ipiv, b, ldb)
-      end
-
-      #
-      # call-seq:
       #     clapack_posv(order, uplo, n ,nrhs, a, lda, b, ldb) -> ...
       #
       # TODO Complete this description.
