@@ -561,10 +561,17 @@ describe "math" do
       end
 
       it "solves linear equation for #{dtype} (non-symmetric matrix)" do
-        a = NMatrix.new [3,3], [1,2,3,5,6,7,3,5,3], dtype: dtype
-        b = NMatrix.new [3,1], [2,3,4], dtype: dtype
+        a = NMatrix.new [3,3], [1,1,1, -1,0,1, 3,4,6], dtype: dtype
+        b = NMatrix.new [3,1], [6,2,29], dtype: dtype
 
-        expect(a.solve(b)).to be_within(0.01).of(NMatrix.new([3,1], [-1.437,1.62,0.062], dtype: dtype))
+        err = case dtype
+                when :float32, :complex64
+                  1e-5
+                else
+                  1e-14
+              end
+
+        expect(a.solve(b)).to be_within(err).of(NMatrix.new([3,1], [1,2,3], dtype: dtype))
       end
     end
   end
