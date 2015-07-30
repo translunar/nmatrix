@@ -270,22 +270,21 @@ class NMatrix
   #   b = NMatrix.new [2,1], [9,8], dtype: dtype
   #   a.solve(b)
   def solve b
-    #this could use gesv if available
-    raise ArgumentError, "b must be a column vector" if b.shape[1] != 1
-    raise ArgumentError, "number of rows of b must equal number of cols of self" if 
+    # Ideally this would work with non-vector b, but currently doesn't
+    # due to a bug(?) in clapack_getrs
+    raise(ShapeError, "b must be a column vector") unless b.dim == 2 && b.shape[1] == 1
+    raise(ShapeError, "Must be called on square matrix") unless self.dim == 2 && self.shape[0] == self.shape[1]
+    raise(ShapeError, "number of rows of b must equal number of cols of self") if 
       self.shape[1] != b.shape[0]
     raise ArgumentError, "only works with dense matrices" if self.stype != :dense
     raise ArgumentError, "only works for non-integer, non-object dtypes" if 
       integer_dtype? or object_dtype? or b.integer_dtype? or b.object_dtype?
 
-    x     = b.clone_structure
+    x     = b.clone
     clone = self.clone
-    pivot = clone.getrf!
-
-    #this pivot stuff should be fixed. use clapack_getrf?
-    pivot.each_index {|i| pivot[i]-=1}
-    
-    __solve__(clone, b, x, pivot)
+    n = self.shape[0]
+    ipiv = NMatrix::LAPACK.clapack_getrf(:row, n, n, clone, n)
+    NMatrix::LAPACK.clapack_getrs(:row, :no_transpose, n, b.shape[1], clone, n, ipiv, x, n)
     x
   end
 
