@@ -155,7 +155,6 @@ static VALUE matrix_multiply_scalar(NMATRIX* left, VALUE scalar);
 static VALUE matrix_multiply(NMATRIX* left, NMATRIX* right);
 static VALUE nm_multiply(VALUE left_v, VALUE right_v);
 static VALUE nm_det_exact(VALUE self);
-static VALUE nm_solve(VALUE self, VALUE lu, VALUE b, VALUE x, VALUE ipiv);
 static VALUE nm_hessenberg(VALUE self, VALUE a);
 static VALUE nm_inverse(VALUE self, VALUE inverse, VALUE bang);
 static VALUE nm_inverse_exact(VALUE self, VALUE inverse, VALUE lda, VALUE ldb);
@@ -352,7 +351,6 @@ void Init_nmatrix() {
   rb_define_protected_method(cNMatrix, "__inverse_exact__", (METHOD)nm_inverse_exact, 3);
 
   // private methods
-  rb_define_private_method(cNMatrix, "__solve__", (METHOD)nm_solve, 4);
   rb_define_private_method(cNMatrix, "__hessenberg__", (METHOD)nm_hessenberg, 1);
 
 	/////////////////
@@ -2946,30 +2944,6 @@ static VALUE matrix_multiply(NMATRIX* left, NMATRIX* right) {
   nm_unregister_nmatrix(result);
 
   return to_return;
-}
-
-/*
- * Solve the system of linear equations when passed the LU factorized matrix
- * of the matrix of co-effcients and the column-matrix of right hand sides.
- * Does no error checking of its own. Expects it all to be done in Ruby. See
- * #solve in math.rb for details. Modifies x.
- *
- * == Arguments
- *
- *  self - The NMatrix object calling this function
- *  lu   - LU Decomoposition of self. Values never change.
- *  b    - The vector of right hand sides. Values never change.
- *  x    - The vector of variables to found. The computed values are stored in this.
- *  ipiv - The pivot array of the LU factorized matrix.
- *
- * == Notes
- * 
- * LAPACK free.
-*/
-static VALUE nm_solve(VALUE self, VALUE lu, VALUE b, VALUE x, VALUE ipiv) {
-  nm_math_solve(lu, b, x, ipiv);
-
-  return x;
 }
 
 /*
