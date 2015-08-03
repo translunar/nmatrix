@@ -28,10 +28,9 @@ NMatrix requires a C compiler, and has been tested only
 with GCC 4.6+. We are happy to accept contributions
 which improve the portability of this project.
 
-Also required is ATLAS. Most Linux distributions and Mac
-versions include ATLAS, but you may wish to compile it
-yourself. The Ubuntu/Debian apt package for ATLAS WILL
-NOT WORK with NMatrix if LAPACK is also installed.
+Faster matrix calculations and more advanced linear
+algebra features are available by installing either
+the nmatrix-atlas or nmatrix-lapacke plugins.
 
 More explicit instructions for NMatrix and SciRuby should
 be available on the SciRuby website, sciruby.com, or
