@@ -2,13 +2,13 @@
 
 #include "lapacke.h"
 
-#include "math_lapack/cblas_local.h"
+#include "math_lapacke/cblas_local.h"
 
 #include "math/util.h"
 
-#include "math_lapack/cblas_templates_lapack.h"
+#include "math_lapacke/cblas_templates_lapack.h"
 
-#include "math_lapack/lapacke_templates.h"
+#include "math_lapacke/lapacke_templates.h"
 
 
 /*

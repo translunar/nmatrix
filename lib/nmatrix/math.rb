@@ -166,7 +166,7 @@ class NMatrix
   # However, if the matrix (i.e. the symmetric matrix implied by the lower/upper
   # half) is not positive-definite, the function will return nonsense.
   #
-  # This functions requires either the nmatrix-atlas or nmatrix-lapack gem
+  # This functions requires either the nmatrix-atlas or nmatrix-lapacke gem
   # installed.
   #
   # * *Returns* :
@@ -174,11 +174,11 @@ class NMatrix
   # * *Raises* :
   #   - +StorageTypeError+ -> ATLAS functions only work on dense matrices.
   #   - +ShapeError+ -> Must be square.
-  #   - +NotImplementedError+ -> If called without nmatrix-atlas or nmatrix-lapack gem
+  #   - +NotImplementedError+ -> If called without nmatrix-atlas or nmatrix-lapacke gem
   #
   def potrf!(which)
     # The real implementation is in the plugin files.
-    raise(NotImplementedError, "potrf! requires either the nmatrix-atlas or nmatrix-lapack gem")
+    raise(NotImplementedError, "potrf! requires either the nmatrix-atlas or nmatrix-lapacke gem")
   end
 
   def potrf_upper!

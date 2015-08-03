@@ -1,10 +1,10 @@
-# This is the main ruby file for the nmatrix-lapack gem
+# This is the main ruby file for the nmatrix-lapacke gem
 require 'nmatrix' #need to have nmatrix required first or else bad things will happen
 require_relative 'lapack_ext_common'
 
-NMatrix.register_lapack_extension("nmatrix-lapack")
+NMatrix.register_lapack_extension("nmatrix-lapacke")
 
-require "nmatrix_lapack.so"
+require "nmatrix_lapacke.so"
 
 class NMatrix
   #Add functions from the LAPACKE C extension to the main LAPACK and BLAS modules.

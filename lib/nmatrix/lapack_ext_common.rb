@@ -1,4 +1,4 @@
-# This file is for functions shared by nmatrix-atlas and nmatrix-lapack gems.
+# This file is for functions shared by nmatrix-atlas and nmatrix-lapacke gems.
 
 class NMatrix
   def NMatrix.register_lapack_extension(name)

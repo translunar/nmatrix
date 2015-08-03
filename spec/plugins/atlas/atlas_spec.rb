@@ -153,7 +153,7 @@ describe "NMatrix::LAPACK implementation from nmatrix-atlas plugin" do
         err = err *5e1
         a_clone = a.clone #clone a so we can check our results later
         begin
-          # There is a subtlety here. The LAPACK *gesvd functions expect a matrix stored in column-major form, so we need to some adjusting for this. See lib/nmatrix/lapack.rb for an explanation of why we use these arguments
+          # There is a subtlety here. The LAPACK *gesvd functions expect a matrix stored in column-major form, so we need to some adjusting for this. See lib/nmatrix/lapack_core.rb for an explanation of why we use these arguments
           info = NMatrix::LAPACK::lapack_gesvd(:a, :a, a.shape[1], a.shape[0], a, a.shape[1], s, vt, ldvt, u, ldu, 500)
         rescue NotImplementedError => e
           pending e.to_s
@@ -218,7 +218,7 @@ describe "NMatrix::LAPACK implementation from nmatrix-atlas plugin" do
         err = err *5e1
         a_clone = a.clone #clone a so we can compare to it later
         begin
-          # There is a subtlety here. The LAPACK *gesdd functions expect a matrix stored in column-major form, so we need to some adjusting for this. See lib/nmatrix/lapack.rb for an explanation of why we use these arguments
+          # There is a subtlety here. The LAPACK *gesdd functions expect a matrix stored in column-major form, so we need to some adjusting for this. See lib/nmatrix/lapack_core.rb for an explanation of why we use these arguments
           info = NMatrix::LAPACK::lapack_gesdd(:a, a.shape[1], a.shape[0], a, a.shape[1], s, vt, ldvt, u, ldu, 500)
         rescue NotImplementedError => e
           pending e.to_s

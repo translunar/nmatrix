@@ -5,7 +5,7 @@ require 'rubygems/package_task'
 require 'bundler'
 
 #Specify plugins to build on the command line like:
-#rake whatever nmatrix_plugins=atlas,lapack
+#rake whatever nmatrix_plugins=atlas,lapacke
 #or
 #rake whatever nmatrix_plugins=all
 #If you want to build *only* plugins and not the core nmatrix gem:

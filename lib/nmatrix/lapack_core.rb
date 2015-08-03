@@ -21,7 +21,7 @@
 #
 # * https://github.com/SciRuby/sciruby/wiki/Contributor-Agreement
 #
-# == lapack.rb
+# == lapack_core.rb
 #
 # This file contains friendlier interfaces to LAPACK functions
 # implemented in C.

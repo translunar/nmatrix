@@ -103,7 +103,7 @@ $CPPFLAGS = ["-Wall -Werror=return-type -I$(srcdir)/../nmatrix -I$(srcdir)/lapac
 
 # When adding objects here, make sure their directories are included in CLEANOBJS down at the bottom of extconf.rb.
 # Why not just autogenerate this list from all .c/.cpp files in directory?
-basenames = %w{nmatrix_lapack math_lapack lapacke}
+basenames = %w{nmatrix_lapacke math_lapacke lapacke}
 $objs = basenames.map { |b| "#{b}.o"   }
 $srcs = basenames.map { |b| "#{b}.cpp" }
 
@@ -190,8 +190,8 @@ CONFIG['warnflags'].gsub!('-Wshorten-64-to-32', '') # doesn't work except in Mac
 CONFIG['warnflags'].gsub!('-Wdeclaration-after-statement', '')
 CONFIG['warnflags'].gsub!('-Wimplicit-function-declaration', '')
 
-create_conf_h("nmatrix_lapack_config.h")
-create_makefile("nmatrix_lapack")
+create_conf_h("nmatrix_lapacke_config.h")
+create_makefile("nmatrix_lapacke")
 
 # to clean up object files in subdirectories:
 open('Makefile', 'a') do |f|

@@ -1,5 +1,5 @@
 require 'spec_helper'
-require "./lib/nmatrix/lapack"
+require "./lib/nmatrix/lapacke"
 
 #should include additional specs now in atlas_spec.rb
 describe "NMatrix::LAPACK functions implemented with LAPACKE interface" do
