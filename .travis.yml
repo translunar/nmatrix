@@ -1,16 +1,27 @@
 language: ruby
+sudo: required
 cache: bundler
 env:
-  - CPLUS_INCLUDE_PATH=/usr/include/atlas C_INCLUDE_PATH=/usr/include/atlas
+  - USE_ATLAS=1 # This configuration installs ATLAS, builds and tests the nmatrix, nmatrix-atlas, and nmatrix-lapacke gems
 rvm:
   - 1.9.3
   - 2.0
   - 2.1
   - 2.2
-before_install:
-  - gem install bundler -v '~> 1.6'
-  - sudo apt-get update -qq
-  - sudo apt-get install -qq libatlas-base-dev
-script: bundle exec rake compile && bundle exec rake spec
-notifications:
-  irc: "chat.freenode.net#sciruby"
+before_install: ./travis.sh before_install
+script: ./travis.sh script
+
+# Define extra configurations to add to the build matrix.
+# The idea here is that the USE_ATLAS=1 option should exercise all the ruby
+# code, so it is the only one we need to test with all versions of ruby.
+# For other configurations we only test with one version of ruby.
+matrix:
+  include:
+    - rvm: 2.2
+      env: USE_OPENBLAS=1 # Installs OpenBLAS and reference LAPACK, builds and tests nmatrix, nmatrix-lapacke
+    - rvm: 2.2
+      env: USE_REF=1 # Installs reference implementations of LAPACK and BLAS, builds and tests nmatrix, nmatrix-lapacke
+    - rvm: 2.2
+      env: NO_EXTERNAL_LIB=1 # No external libraries installed, only nmatrix
+#notifications:
+#  irc: "chat.freenode.net#sciruby"
