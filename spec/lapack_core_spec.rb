@@ -167,9 +167,8 @@ describe "NMatrix::LAPACK functions with internal implementations" do
 
       # Together, these calls are basically xGESV from LAPACK: http://www.netlib.org/lapack/double/dgesv.f
       # Spec OK
-      # Doesn't work is b isn't a vector. Should add a spec for this when it's fixed.
       it "exposes clapack_getrs" do
-        a     = NMatrix.new(3, [-2,4,-3,3,-2,1,0,-4,3], dtype: dtype)
+        a     = NMatrix.new(3, [-2,4,-3, 3,-2,1, 0,-4,3], dtype: dtype)
         ipiv  = NMatrix::LAPACK::clapack_getrf(:row, 3, 3, a, 3)
         b     = NMatrix.new([3,1], [-1, 17, -9], dtype: dtype)
 
@@ -178,6 +177,24 @@ describe "NMatrix::LAPACK functions with internal implementations" do
         expect(b[0]).to eq(5)
         expect(b[1]).to eq(-15.0/2)
         expect(b[2]).to eq(-13)
+      end
+
+      it "solves matrix equation (non-vector rhs) using clapack_getrs" do
+        a     = NMatrix.new(3, [-2,4,-3, 3,-2,1, 0,-4,3], dtype: dtype)
+        b     = NMatrix.new([3,2], [-1,2, 17,1, -9,-4], dtype: dtype)
+
+        n = a.shape[0]
+        nrhs = b.shape[1]
+
+        ipiv  = NMatrix::LAPACK::clapack_getrf(:row, n, n, a, n)
+        # Even though we pass :row to clapack_getrs, it still interprets b as
+        # column-major, so need to transpose b before and after:
+        b = b.transpose
+        NMatrix::LAPACK::clapack_getrs(:row, false, n, nrhs, a, n, ipiv, b, n)
+        b = b.transpose
+
+        b_true = NMatrix.new([3,2], [5,1, -7.5,1, -13,0], dtype: dtype)
+        expect(b).to eq(b_true)
       end
 
       #spec OK, but getri is only implemented by the atlas plugin, so maybe this one doesn't have to be shared

@@ -274,8 +274,6 @@ describe "NMatrix::LAPACK functions implemented with LAPACKE interface" do
         expect(vr).to be_within(err).of(vr_true)
         expect(vl).to be_within(err).of(vl_true)
       end
-
-      #add specs for posv and gesv once we have lapacke versions
     end
   end
 end

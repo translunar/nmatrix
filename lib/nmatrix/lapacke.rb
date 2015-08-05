@@ -55,7 +55,6 @@ class NMatrix
   end
 
   def solve b
-    raise(ShapeError, "b must be a column vector") unless b.dim == 2 && b.shape[1] == 1
     raise(ShapeError, "Must be called on square matrix") unless self.dim == 2 && self.shape[0] == self.shape[1]
     raise(ShapeError, "number of rows of b must equal number of cols of self") if 
       self.shape[1] != b.shape[0]

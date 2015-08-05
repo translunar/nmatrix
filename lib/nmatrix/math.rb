@@ -256,13 +256,10 @@ class NMatrix
     self
   end
 
-  # Solve a system of linear equations where *self* is the matrix of co-efficients
-  # and *b* is the vertical vector of right hand sides. Only works with dense
+  # Solve the matrix equation AX = B, where A is +self+, B is the first
+  # argument, and X is returned. A must be a nxn square matrix, while B must be
+  # nxm. Only works with dense
   # matrices and non-integer, non-object data types.
-  # 
-  # == Arguments
-  # 
-  # +b+ - Vector of Right Hand Sides.
   # 
   # == Usage
   # 
@@ -270,9 +267,6 @@ class NMatrix
   #   b = NMatrix.new [2,1], [9,8], dtype: dtype
   #   a.solve(b)
   def solve b
-    # Ideally this would work with non-vector b, but currently doesn't
-    # due to a bug(?) in clapack_getrs
-    raise(ShapeError, "b must be a column vector") unless b.dim == 2 && b.shape[1] == 1
     raise(ShapeError, "Must be called on square matrix") unless self.dim == 2 && self.shape[0] == self.shape[1]
     raise(ShapeError, "number of rows of b must equal number of cols of self") if 
       self.shape[1] != b.shape[0]
@@ -283,9 +277,15 @@ class NMatrix
     x     = b.clone
     clone = self.clone
     n = self.shape[0]
+
     ipiv = NMatrix::LAPACK.clapack_getrf(:row, n, n, clone, n)
+    # When we call clapack_getrs with :row, actually only the first matrix
+    # (i.e. clone) is interpreted as row-major, while the other matrix (x)
+    # is interpreted as column-major. So we must transpose x before and after
+    # calling it.
+    x = x.transpose
     NMatrix::LAPACK.clapack_getrs(:row, :no_transpose, n, b.shape[1], clone, n, ipiv, x, n)
-    x
+    x.transpose
   end
 
   #

@@ -573,6 +573,13 @@ describe "math" do
 
         expect(a.solve(b)).to be_within(err).of(NMatrix.new([3,1], [1,2,3], dtype: dtype))
       end
+
+      it "solves linear equation for dtype #{dtype} (non-vector rhs)" do
+        a = NMatrix.new [3,3], [1,0,0, -1,0,1, 2,1,1], dtype: dtype
+        b = NMatrix.new [3,2], [1,0, 1,2, 4,2], dtype: dtype
+
+        expect(a.solve(b)).to eq(NMatrix.new [3,2], [1,0, 0,0, 2,2], dtype: dtype)
+      end
     end
   end
 
