@@ -44,47 +44,22 @@ class NMatrix
     end
 
     class << self
-      #
-      # call-seq:
-      #     clapack_posv(order, uplo, n ,nrhs, a, lda, b, ldb) -> ...
-      #
-      # TODO Complete this description.
-      #
-      # Computes the solution to a real system of linear equations
-      #   A * X = B,
-      # where A is an N-by-N symmetric positive definite matrix and X and B
-      # are N-by-NRHS matrices.
-      #
-      # The Cholesky decomposition is used to factor A as
-      #   A = U**T* U,  if UPLO = 'U', or
-      #   A = L * L**T,  if UPLO = 'L',
-      # where U is an upper triangular matrix and L is a lower triangular
-      # matrix.  The factored form of A is then used to solve the system of
-      # equations A * X = B.
-      #
-      # From ATLAS 3.8.0.
-      #
-      # Note: Because this function is implemented in Ruby, the ATLAS lib
-      # version is never called! For float32, float64, complex64, and 
-      # complex128, the ATLAS lib versions of potrf and potrs *will* be called.
-      #
+      # Solve the matrix equation AX = B, where A is a symmetric (or Hermitian)
+      # positive-definite matrix. If A is a nxn matrix, B must be mxn.
+      # Depending on the value of uplo, only the upper or lower half of +a+
+      # is read.
+      # This uses the Cholesky decomposition so it should be faster than
+      # the generic NMatrix#solve method.
+      # Doesn't modify inputs.
+      # Requires either the nmatrix-atlas or nmatrix-lapacke gem.
       # * *Arguments* :
-      #   - +order+ ->
-      #   - +uplo+ ->
-      #   - +n+ ->
-      #   - +nrhs+ ->
-      #   - +a+ ->
-      #   - +lda+ ->
-      #   - +b+ ->
-      #   - +ldb+ ->
+      #   - +uplo+ -> Either +:upper+ or +:lower+. Specifies which half of +a+ to read.
+      #   - +a+ -> The matrix A.
+      #   - +b+ -> The right-hand side B.
       # * *Returns* :
-      #   -
-      # * *Raises* :
-      #   - ++ ->
-      #
-      def clapack_posv(order, uplo, n, nrhs, a, lda, b, ldb)
-        clapack_potrf(order, uplo, n, a, lda)
-        clapack_potrs(order, uplo, n, nrhs, a, lda, b, ldb)
+      #   - The solution X
+      def posv(uplo, a, b)
+        raise(NotImplementedError, "Either the nmatrix-atlas or nmatrix-lapacke gem must be installed to use posv")
       end
 
       #     laswp(matrix, ipiv) -> NMatrix

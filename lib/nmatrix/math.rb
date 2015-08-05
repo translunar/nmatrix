@@ -277,14 +277,16 @@ class NMatrix
     x     = b.clone
     clone = self.clone
     n = self.shape[0]
+    nrhs = b.shape[1]
 
     ipiv = NMatrix::LAPACK.clapack_getrf(:row, n, n, clone, n)
     # When we call clapack_getrs with :row, actually only the first matrix
     # (i.e. clone) is interpreted as row-major, while the other matrix (x)
-    # is interpreted as column-major. So we must transpose x before and after
+    # is interpreted as column-major. See here: http://math-atlas.sourceforge.net/faq.html#RowSolve
+    # So we must transpose x before and after
     # calling it.
     x = x.transpose
-    NMatrix::LAPACK.clapack_getrs(:row, :no_transpose, n, b.shape[1], clone, n, ipiv, x, n)
+    NMatrix::LAPACK.clapack_getrs(:row, :no_transpose, n, nrhs, clone, n, ipiv, x, n)
     x.transpose
   end
 

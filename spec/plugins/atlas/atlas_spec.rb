@@ -70,29 +70,6 @@ describe "NMatrix::LAPACK implementation from nmatrix-atlas plugin" do
         expect(b).to be_within(err).of(x)
       end
 
-      #posv is like potrf+potrs
-      it "exposes clapack_posv" do
-        pending "posv requires clapack" unless NMatrix.has_clapack?
-
-        a = NMatrix.new(3, [4, 0,-1,
-                            0, 2, 1,
-                            0, 0, 1], dtype: dtype)
-        b = NMatrix.new([3,1], [3,0,2], dtype: dtype)
-
-        NMatrix::LAPACK::clapack_posv(:row, :upper, 3, 1, a, 3, b, 3)
-
-        x = NMatrix.new([3,1], [3.5, -5.5, 11], dtype: dtype)
-
-        err = case dtype
-                when :float32, :complex64
-                  1e-5
-                when :float64, :complex128
-                  1e-14
-              end
-
-        expect(b).to be_within(err).of(x)
-      end
-
       #This spec should include separate tests for complex types and also tests for :lower
       #lauum is supposed to calculate the upper/lower part of U*U^T or L^T*L for triangular matrices
       it "exposes clapack_lauum" do

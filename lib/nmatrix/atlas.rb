@@ -25,6 +25,28 @@ class NMatrix
     end
   end
 
+  module LAPACK
+    class << self
+      def posv(uplo, a, b)
+        raise(ShapeError, "a must be square") unless a.dim == 2 && a.shape[0] == a.shape[1]
+        raise(ShapeError, "number of rows of b must equal number of cols of a") unless a.shape[1] == b.shape[0]
+        raise(StorageTypeError, "only works with dense matrices") unless a.stype == :dense && b.stype == :dense
+        raise(DataTypeError, "only works for non-integer, non-object dtypes") if 
+          a.integer_dtype? || a.object_dtype? || b.integer_dtype? || b.object_dtype?
+
+        x     = b.clone
+        clone = a.clone
+        n = a.shape[0]
+        nrhs = b.shape[1]
+        clapack_potrf(:row, uplo, n, clone, n)
+        # Must transpose b before and after: http://math-atlas.sourceforge.net/faq.html#RowSolve
+        x = x.transpose
+        clapack_potrs(:row, uplo, n, nrhs, clone, n, x, n)
+        x = x.transpose
+      end
+    end
+  end
+
   def invert!
     raise(StorageTypeError, "invert only works on dense matrices currently") unless self.dense?
     raise(ShapeError, "Cannot invert non-square matrix") unless shape[0] == shape[1]

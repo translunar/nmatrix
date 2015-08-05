@@ -25,6 +25,26 @@ class NMatrix
     end
   end
 
+  module LAPACK
+    class << self
+      def posv(uplo, a, b)
+        raise(ShapeError, "a must be square") unless a.dim == 2 && a.shape[0] == a.shape[1]
+        raise(ShapeError, "number of rows of b must equal number of cols of a") unless a.shape[1] == b.shape[0]
+        raise(StorageTypeError, "only works with dense matrices") unless a.stype == :dense && b.stype == :dense
+        raise(DataTypeError, "only works for non-integer, non-object dtypes") if 
+          a.integer_dtype? || a.object_dtype? || b.integer_dtype? || b.object_dtype?
+
+        x     = b.clone
+        clone = a.clone
+        n = a.shape[0]
+        nrhs = b.shape[1]
+        lapacke_potrf(:row, uplo, n, clone, n)
+        lapacke_potrs(:row, uplo, n, nrhs, clone, n, x, b.shape[1])
+        x
+      end
+    end
+  end
+
   def getrf!
     raise(StorageTypeError, "ATLAS functions only work on dense matrices") unless self.dense?
 

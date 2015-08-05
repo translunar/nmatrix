@@ -211,6 +211,57 @@ describe "NMatrix::LAPACK functions with internal implementations" do
           pending e.to_s
         end
       end
+
+      #posv is like potrf+potrs
+      #posv is implemented in both nmatrix-atlas and nmatrix-lapacke, so the spec
+      #needs to be shared here
+      it "solves a (symmetric positive-definite) matrix equation using posv (vector rhs)" do
+        a = NMatrix.new(3, [4, 0,-1,
+                            0, 2, 1,
+                            0, 0, 1], dtype: dtype)
+        b = NMatrix.new([3,1], [4,2,0], dtype: dtype)
+
+        begin
+          x = NMatrix::LAPACK::posv(:upper, a, b)
+        rescue NotImplementedError => e
+          pending e.to_s
+        end
+
+        x_true = NMatrix.new([3,1], [1, 1, 0], dtype: dtype)
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-5
+                when :float64, :complex128
+                  1e-14
+              end
+
+        expect(x).to be_within(err).of(x_true)
+      end
+
+      it "solves a (symmetric positive-definite) matrix equation using posv (non-vector rhs)" do
+        a = NMatrix.new(3, [4, 0,-1,
+                            0, 2, 1,
+                            0, 0, 1], dtype: dtype)
+        b = NMatrix.new([3,2], [4,-1, 2,-1, 0,0], dtype: dtype)
+
+        begin
+          x = NMatrix::LAPACK::posv(:upper, a, b)
+        rescue NotImplementedError => e
+          pending e.to_s
+        end
+
+        x_true = NMatrix.new([3,2], [1,0, 1,-1, 0,1], dtype: dtype)
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-5
+                when :float64, :complex128
+                  1e-14
+              end
+
+        expect(x).to be_within(err).of(x_true)
+      end
     end
   end
 end
