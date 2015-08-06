@@ -28,6 +28,9 @@ NMatrix requires a C compiler, and has been tested only
 with GCC 4.6+. We are happy to accept contributions
 which improve the portability of this project.
 
+If you are upgrading from NMatrix 0.1.0 and rely on
+ATLAS features, please check the README.
+
 Faster matrix calculations and more advanced linear
 algebra features are available by installing either
 the nmatrix-atlas or nmatrix-lapacke plugins.
