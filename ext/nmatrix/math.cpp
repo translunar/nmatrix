@@ -177,7 +177,6 @@ extern "C" {
   static VALUE nm_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE lda, VALUE ipiv);
   static VALUE nm_clapack_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
   static VALUE nm_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1, VALUE k2, VALUE ipiv, VALUE incx);
-  static VALUE nm_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
 
   static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lworkspace_size);
   static VALUE nm_lapack_gesdd(VALUE self, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lworkspace_size);
@@ -503,7 +502,6 @@ void nm_math_init_blas() {
   rb_define_singleton_method(cNMatrix_Internal_LAPACK, "clapack_getri", (METHOD)nm_clapack_getri, 5);
   rb_define_singleton_method(cNMatrix_Internal_LAPACK, "clapack_potri", (METHOD)nm_clapack_potri, 5);
   rb_define_singleton_method(cNMatrix_Internal_LAPACK, "clapack_laswp", (METHOD)nm_clapack_laswp, 7);
-  rb_define_singleton_method(cNMatrix_Internal_LAPACK, "clapack_lauum", (METHOD)nm_clapack_lauum, 5);
 
   /* Non-ATLAS regular LAPACK Functions called via Fortran interface */
   rb_define_singleton_method(cNMatrix_Internal_LAPACK, "lapack_gesvd", (METHOD)nm_lapack_gesvd, 12);
@@ -1059,14 +1057,6 @@ static VALUE nm_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_right,
   rb_raise(rb_eNotImpError, "not implemented without external libraries");
   return Qfalse;
 }
-
-
-static VALUE nm_clapack_lauum(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
-  //should I remove this entirely?
-  rb_raise(rb_eNotImpError, "not implemented without external libraries");
-  return Qfalse;
-}
-
 
 /* Call any of the clapack_xgetrf functions as directly as possible.
  *

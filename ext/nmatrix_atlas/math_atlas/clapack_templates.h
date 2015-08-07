@@ -298,48 +298,6 @@ inline int clapack_potrs(const enum CBLAS_ORDER order, const enum CBLAS_UPLO upl
   return potrs<DType>(order, uplo, n, nrhs, static_cast<const DType*>(a), lda, static_cast<DType*>(b), ldb);
 }
 
-//lauum
-template <typename DType>
-inline void lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, DType* A, const int lda) {
-#if defined HAVE_CLAPACK_H || defined HAVE_ATLAS_CLAPACK_H
-  rb_raise(rb_eNotImpError, "not yet implemented for non-BLAS dtypes");
-#else
-  rb_raise(rb_eNotImpError, "only CLAPACK version implemented thus far");
-#endif
-}
-
-#if defined HAVE_CLAPACK_H || defined HAVE_ATLAS_CLAPACK_H
-template <>
-inline void lauum<float>(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, float* A, const int lda) {
-  clapack_slauum(order, uplo, N, A, lda);
-}
-
-template <>
-inline void lauum<double>(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, double* A, const int lda) {
-  clapack_dlauum(order, uplo, N, A, lda);
-}
-
-template <>
-inline void lauum<Complex64>(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex64* A, const int lda) {
-  clapack_clauum(order, uplo, N, A, lda);
-}
-
-template <>
-inline void lauum<Complex128>(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int N, Complex128* A, const int lda) {
-  clapack_zlauum(order, uplo, N, A, lda);
-}
-#endif
-
-template <typename DType>
-inline int clapack_lauum(const enum CBLAS_ORDER order, const enum CBLAS_UPLO uplo, const int n, void* a, const int lda) {
-  if (n < 0)              rb_raise(rb_eArgError, "n cannot be less than zero, is set to %d", n);
-  if (lda < n || lda < 1) rb_raise(rb_eArgError, "lda must be >= max(n,1); lda=%d, n=%d\n", lda, n);
-
-  lauum<DType>(order, uplo, n, static_cast<DType*>(a), lda);
-
-  return 0;
-}
-
 }}}
 
 #endif
