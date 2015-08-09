@@ -924,8 +924,8 @@ static VALUE nm_lapack_lapacke_geev(VALUE self, VALUE order, VALUE jobvl, VALUE 
     void* A  = NM_STORAGE_DENSE(a)->elements;
     void* W = NM_STORAGE_DENSE(w)->elements;
     void* WI = wi == Qnil ? NULL : NM_STORAGE_DENSE(wi)->elements; //For complex, wi should be nil
-    void* VL = NM_STORAGE_DENSE(vl)->elements;
-    void* VR = NM_STORAGE_DENSE(vr)->elements;
+    void* VL = JOBVL == 'V' ? NM_STORAGE_DENSE(vl)->elements : NULL;
+    void* VR = JOBVR == 'V' ? NM_STORAGE_DENSE(vr)->elements : NULL;
 
     // Perform the actual calculation.
     int info = geev_table[dtype](blas_order_sym(order), JOBVL, JOBVR, N, A, FIX2INT(lda), W, WI, VL, FIX2INT(ldvl), VR, FIX2INT(ldvr));

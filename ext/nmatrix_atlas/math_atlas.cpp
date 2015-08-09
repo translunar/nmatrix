@@ -825,8 +825,8 @@ static VALUE nm_atlas_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_
     void* A  = NM_STORAGE_DENSE(a)->elements;
     void* WR = NM_STORAGE_DENSE(w)->elements;
     void* WI = wi == Qnil ? NULL : NM_STORAGE_DENSE(wi)->elements;
-    void* VL = NM_STORAGE_DENSE(vl)->elements;
-    void* VR = NM_STORAGE_DENSE(vr)->elements;
+    void* VL = JOBVL == 'V' ? NM_STORAGE_DENSE(vl)->elements : NULL;
+    void* VR = JOBVR == 'V' ? NM_STORAGE_DENSE(vr)->elements : NULL;
 
     // only need rwork for complex matrices (wi == Qnil for complex)
     int rwork_size  = dtype == nm::COMPLEX64 || dtype == nm::COMPLEX128 ? N * DTYPE_SIZES[dtype] : 0; // 2*N*floattype for complex only, otherwise 0

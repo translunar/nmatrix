@@ -262,6 +262,173 @@ describe "NMatrix::LAPACK functions with internal implementations" do
 
         expect(x).to be_within(err).of(x_true)
       end
+
+      it "calculates eigenvalues and eigenvectors NMatrix::LAPACK.geev (real matrix, complex eigenvalues)" do
+        n = 3
+        a = NMatrix.new([n,n], [-1,0,0, 0,1,-2, 0,1,-1], dtype: dtype)
+
+        begin
+          eigenvalues, vl, vr = NMatrix::LAPACK.geev(a)
+        rescue NotImplementedError => e
+          pending e.to_s
+        end
+
+        eigenvalues_true = NMatrix.new([n,1], [Complex(0,1), -Complex(0,1), -1], dtype: NMatrix.upcast(dtype, :complex64))
+        vr_true = NMatrix.new([n,n],[0,0,1,
+                                     2/Math.sqrt(6),2/Math.sqrt(6),0,
+                                     Complex(1,-1)/Math.sqrt(6),Complex(1,1)/Math.sqrt(6),0], dtype: NMatrix.upcast(dtype, :complex64))
+        vl_true = NMatrix.new([n,n],[0,0,1,
+                                     Complex(-1,1)/Math.sqrt(6),Complex(-1,-1)/Math.sqrt(6),0,
+                                     2/Math.sqrt(6),2/Math.sqrt(6),0], dtype: NMatrix.upcast(dtype, :complex64))
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-6
+                when :float64, :complex128
+                  1e-15
+              end
+
+        expect(eigenvalues).to be_within(err).of(eigenvalues_true)
+        expect(vr).to be_within(err).of(vr_true)
+        expect(vl).to be_within(err).of(vl_true)
+
+        expect(eigenvalues.dtype).to eq(NMatrix.upcast(dtype, :complex64))
+        expect(vr.dtype).to eq(NMatrix.upcast(dtype, :complex64))
+        expect(vl.dtype).to eq(NMatrix.upcast(dtype, :complex64))
+      end
+
+      it "calculates eigenvalues and eigenvectors NMatrix::LAPACK.geev (real matrix, real eigenvalues)" do
+        n = 3
+        a = NMatrix.new([n,n], [2,0,0, 0,3,2, 0,1,2], dtype: dtype)
+
+        begin
+          eigenvalues, vl, vr = NMatrix::LAPACK.geev(a)
+        rescue NotImplementedError => e
+          pending e.to_s
+        end
+
+        eigenvalues_true = NMatrix.new([n,1], [1, 4, 2], dtype: dtype)
+
+        # For some reason, some of the eigenvectors have different signs
+        # when we use the complex versions of geev. This is totally fine, since
+        # they are still normalized eigenvectors even with the sign flipped.
+        if a.complex_dtype?
+          vr_true = NMatrix.new([n,n],[0,0,1,
+                                       1/Math.sqrt(2),2/Math.sqrt(5),0,
+                                       -1/Math.sqrt(2),1/Math.sqrt(5),0], dtype: dtype)
+          vl_true = NMatrix.new([n,n],[0,0,1,
+                                       -1/Math.sqrt(5),1/Math.sqrt(2),0,
+                                       2/Math.sqrt(5),1/Math.sqrt(2),0], dtype: dtype)
+        else
+          vr_true = NMatrix.new([n,n],[0,0,1,
+                                       1/Math.sqrt(2),-2/Math.sqrt(5),0,
+                                       -1/Math.sqrt(2),-1/Math.sqrt(5),0], dtype: dtype)
+          vl_true = NMatrix.new([n,n],[0,0,1,
+                                       1/Math.sqrt(5),-1/Math.sqrt(2),0,
+                                       -2/Math.sqrt(5),-1/Math.sqrt(2),0], dtype: dtype)
+        end
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-6
+                when :float64, :complex128
+                  1e-15
+              end
+
+        expect(eigenvalues).to be_within(err).of(eigenvalues_true)
+        expect(vr).to be_within(err).of(vr_true)
+        expect(vl).to be_within(err).of(vl_true)
+
+        expect(eigenvalues.dtype).to eq(dtype)
+        expect(vr.dtype).to eq(dtype)
+        expect(vl.dtype).to eq(dtype)
+      end
+
+      it "calculates eigenvalues and eigenvectors NMatrix::LAPACK.geev (left eigenvectors only)" do
+        n = 3
+        a = NMatrix.new([n,n], [-1,0,0, 0,1,-2, 0,1,-1], dtype: dtype)
+
+        begin
+          eigenvalues, vl = NMatrix::LAPACK.geev(a, :left)
+        rescue NotImplementedError => e
+          pending e.to_s
+        end
+
+        eigenvalues_true = NMatrix.new([n,1], [Complex(0,1), -Complex(0,1), -1], dtype: NMatrix.upcast(dtype, :complex64))
+        vl_true = NMatrix.new([n,n],[0,0,1,
+                                     Complex(-1,1)/Math.sqrt(6),Complex(-1,-1)/Math.sqrt(6),0,
+                                     2/Math.sqrt(6),2/Math.sqrt(6),0], dtype: NMatrix.upcast(dtype, :complex64))
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-6
+                when :float64, :complex128
+                  1e-15
+              end
+
+        expect(eigenvalues).to be_within(err).of(eigenvalues_true)
+        expect(vl).to be_within(err).of(vl_true)
+      end
+
+      it "calculates eigenvalues and eigenvectors NMatrix::LAPACK.geev (right eigenvectors only)" do
+        n = 3
+        a = NMatrix.new([n,n], [-1,0,0, 0,1,-2, 0,1,-1], dtype: dtype)
+
+        begin
+          eigenvalues, vr = NMatrix::LAPACK.geev(a, :right)
+        rescue NotImplementedError => e
+          pending e.to_s
+        end
+
+        eigenvalues_true = NMatrix.new([n,1], [Complex(0,1), -Complex(0,1), -1], dtype: NMatrix.upcast(dtype, :complex64))
+        vr_true = NMatrix.new([n,n],[0,0,1,
+                                     2/Math.sqrt(6),2/Math.sqrt(6),0,
+                                     Complex(1,-1)/Math.sqrt(6),Complex(1,1)/Math.sqrt(6),0], dtype: NMatrix.upcast(dtype, :complex64))
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-6
+                when :float64, :complex128
+                  1e-15
+              end
+
+        expect(eigenvalues).to be_within(err).of(eigenvalues_true)
+        expect(vr).to be_within(err).of(vr_true)
+      end
+    end
+  end
+
+  [:complex64, :complex128].each do |dtype|
+    context dtype do
+      it "calculates eigenvalues and eigenvectors NMatrix::LAPACK.geev (complex matrix)" do
+        n = 3
+        a = NMatrix.new([n,n], [Complex(0,1),0,0, 0,3,2, 0,1,2], dtype: dtype)
+
+        begin
+          eigenvalues, vl, vr = NMatrix::LAPACK.geev(a)
+        rescue NotImplementedError => e
+          pending e.to_s
+        end
+
+        eigenvalues_true = NMatrix.new([n,1], [1, 4, Complex(0,1)], dtype: dtype)
+        vr_true = NMatrix.new([n,n],[0,0,1,
+                                     1/Math.sqrt(2),2/Math.sqrt(5),0,
+                                     -1/Math.sqrt(2),1/Math.sqrt(5),0], dtype: dtype)
+        vl_true = NMatrix.new([n,n],[0,0,1,
+                                     -1/Math.sqrt(5),1/Math.sqrt(2),0,
+                                     2/Math.sqrt(5),1/Math.sqrt(2),0], dtype: dtype)
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-6
+                when :float64, :complex128
+                  1e-15
+              end
+
+        expect(eigenvalues).to be_within(err).of(eigenvalues_true)
+        expect(vr).to be_within(err).of(vr_true)
+        expect(vl).to be_within(err).of(vl_true)
+      end
     end
   end
 end

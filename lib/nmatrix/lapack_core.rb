@@ -145,45 +145,26 @@ class NMatrix
       #
       # Perform eigenvalue decomposition on a matrix using LAPACK's xGEEV function.
       #
+      # +eigenvalues+ is a n-by-1 NMatrix containing the eigenvalues.
+      #
+      # +right_eigenvalues+ is a n-by-n matrix such that its j'th column
+      # contains the (right) eigenvalue of +matrix+ corresponding
+      # to the j'th eigenvalue.
+      # This means that +matrix+ = RDR^(-1),
+      # where R is +right_eigenvalues+ and D is the diagonal matrix formed
+      # from +eigenvalues+.
+      #
+      # +left_eigenvalues+ is n-by-n and its columns are the left
+      # eigenvalues of +matrix+, using the {definition of left eigenvalue
+      # from LAPACK}[https://software.intel.com/en-us/node/521147].
+      #
+      # For real dtypes, +eigenvalues+ and the eigenvector matrices
+      # will be complex if and only if +matrix+ has complex eigenvalues.
+      #
+      # Only available if nmatrix-lapack or nmatrix-atlas is installed.
+      #
       def geev(matrix, which=:both)
-        jobvl = (which == :both || which == :left) ? :left : false
-        jobvr = (which == :both || which == :right) ? :right : false
-
-        # Copy the matrix so it doesn't get overwritten.
-        temporary_matrix = matrix.clone
-
-        # Outputs
-        real_eigenvalues = NMatrix.new([matrix.shape[0], 1], dtype: matrix.dtype)
-        imag_eigenvalues = NMatrix.new([matrix.shape[0], 1], dtype: matrix.dtype)
-
-        left_output      = jobvl == :left ? matrix.clone_structure : NMatrix.new(1, dtype: matrix.dtype)
-        right_output     = jobvr == :right ? matrix.clone_structure : NMatrix.new(1, dtype: matrix.dtype)
-
-        NMatrix::LAPACK::lapack_geev(jobvl, # compute left eigenvectors of A?
-                                     jobvr, # compute right eigenvectors of A? (left eigenvectors of A**T)
-                                     matrix.shape[0], # order of the matrix
-                                     temporary_matrix,# input matrix (used as work)
-                                     matrix.shape[0], # leading dimension of matrix
-                                     real_eigenvalues,# real part of computed eigenvalues
-                                     imag_eigenvalues,# imag part of computed eigenvalues
-                                     left_output,     # left eigenvectors, if applicable
-                                     left_output.shape[0], # leading dimension of left_output
-                                     right_output,    # right eigenvectors, if applicable
-                                     right_output.shape[0], # leading dimension of right_output
-                                     2*matrix.shape[0])
-
-        # Put the real and imaginary parts together
-        eigenvalues = real_eigenvalues.to_a.flatten.map.with_index do |real,i|
-          imag_eigenvalues[i] != 0 ? Complex(real, imag_eigenvalues[i]) : real
-        end
-
-        if which == :both
-          return [eigenvalues, left_output.transpose, right_output.transpose]
-        elsif which == :left
-          return [eigenvalues, left_output.transpose]
-        else
-          return [eigenvalues, right_output]
-        end
+        raise(NotImplementedError, "geev requires either the nmatrix-atlas or nmatrix-lapack gem")
       end
 
     end
