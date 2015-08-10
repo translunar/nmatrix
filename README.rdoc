@@ -119,7 +119,10 @@ Again, you can find the complete API documentation {on our website}[http://sciru
 
 === Using advanced features provided by plugins
 
-Need to decide how this is going to work
+Certain features (see the documentation) require either the nmatrix-atlas or
+the nmatrix-lapacke gem to be installed. These can be accessed by using <tt>require 'nmatrix/atlas'</tt>
+or <tt>require 'nmatrix/lapacke'</tt>. If you don't care which of the two gems is installed,
+use <tt>require 'nmatrix/lapack_plugin'</tt>, which will require whichever one of the two is available.
 
 == NArray Compatibility
 
