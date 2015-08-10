@@ -1,4 +1,4 @@
-require 'nmatrix' #need to have nmatrix required first or else bad things will happen
+require 'nmatrix/nmatrix.rb' #need to have nmatrix required first or else bad things will happen
 require_relative 'lapack_ext_common'
 
 NMatrix.register_lapack_extension("nmatrix-atlas")
