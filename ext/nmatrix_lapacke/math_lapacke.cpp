@@ -29,7 +29,7 @@
 
 #include "data/data.h"
 
-#include "lapacke.h"
+#include "lapacke_nmatrix.h"
 
 #include "math_lapacke/cblas_local.h"
 
