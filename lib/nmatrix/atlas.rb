@@ -1,3 +1,32 @@
+#--
+# = NMatrix
+#
+# A linear algebra library for scientific computation in Ruby.
+# NMatrix is part of SciRuby.
+#
+# NMatrix was originally inspired by and derived from NArray, by
+# Masahiro Tanaka: http://narray.rubyforge.org
+#
+# == Copyright Information
+#
+# SciRuby is Copyright (c) 2010 - 2014, Ruby Science Foundation
+# NMatrix is Copyright (c) 2012 - 2014, John Woods and the Ruby Science Foundation
+#
+# Please see LICENSE.txt for additional copyright notices.
+#
+# == Contributing
+#
+# By contributing source code to SciRuby, you agree to be bound by
+# our Contributor Agreement:
+#
+# * https://github.com/SciRuby/sciruby/wiki/Contributor-Agreement
+#
+# == atlas.rb
+#
+# ruby file for the nmatrix-atlas gem. Loads the C extension and defines
+# nice ruby interfaces for ATLAS functions.
+#++
+
 require 'nmatrix/nmatrix.rb' #need to have nmatrix required first or else bad things will happen
 require_relative 'lapack_ext_common'
 
@@ -89,7 +118,6 @@ class NMatrix
           n.times do |i|
             complex_indices << i if imag_eigenvalues[i] != 0.0
           end
-          puts complex_indices
 
           if !complex_indices.empty?
             # For real dtypes, put the real and imaginary parts together

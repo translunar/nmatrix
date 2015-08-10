@@ -20,10 +20,11 @@
 #
 # * https://github.com/SciRuby/sciruby/wiki/Contributor-Agreement
 #
-# == lapack_spec.rb
+# == lapack_core_spec.rb
 #
 # Tests for LAPACK functions that have internal implementations (i.e. they
-# don't rely on external libraries). These tests will also be run for the
+# don't rely on external libraries) and also functions that are implemented
+# by both nmatrix-atlas and nmatrix-lapacke. These tests will also be run for the
 # plugins that do use external libraries, since they will override the
 # internal implmentations.
 #

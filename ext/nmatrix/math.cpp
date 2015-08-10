@@ -23,90 +23,103 @@
 //
 // == math.cpp
 //
-// Ruby-exposed BLAS functions.
+// Ruby-exposed CBLAS and LAPACK functions that are available without
+// an external library.
 //
-// === Procedure for adding LAPACK or CBLAS functions to math.cpp/math.h:
+// === Procedure for adding CBLAS functions to math.cpp/math.h:
 //
 // This procedure is written as if for a fictional function with double
-// version dbacon, which we'll say is from LAPACK.
+// version dbacon, which we'll say is from CBLAS.
 //
 // 1. Write a default templated version which probably returns a boolean.
 //    Call it bacon, and put it in math.h.
-//
-//    Order will always be row-major, so we don't need to pass that.
-//    CBLAS_TRANSPOSE-type arguments, however, should be passed.
-//
-//    Otherwise, arguments should look like those in cblas.h or clapack.h:
 //
 //    template <typename DType>
 //    bool bacon(const CBLAS_TRANSPOSE trans, const int M, const int N, DType* A, ...) {
 //      rb_raise(rb_eNotImpError, "only implemented for ATLAS types (float32, float64, complex64, complex128)");
 //    }
 //
+//    Make sure this is in namespace nm::math
+//
 // 2. In math.cpp, add a templated inline static version of the function which takes
-//    only void* pointers and uses reinterpret_cast to convert them to the
-//    proper dtype.
+//    only void* pointers and uses static_cast to convert them to the
+//    proper dtype. This should also be in namespace nm::math
 //
 //    This function may also need to switch m and n if these arguments are given.
 //
 //    For an example, see cblas_gemm. This function should do nothing other than cast
-//    appropriately. If clapack_dbacon, clapack_sbacon, clapack_cbacon, and clapack_zbacon
+//    appropriately. If cblas_dbacon, cblas_sbacon, cblas_cbacon, and cblas_zbacon
 //    all take void* only, and no other pointers that vary between functions, you can skip
 //    this particular step -- as we can call them directly using a custom function pointer
 //    array (same function signature!).
 //
-//    This version of the function will be the one exposed through NMatrix::LAPACK. We
-//    want it to be as close to the actual LAPACK version of the function as possible,
+//    This version of the function will be the one exposed through NMatrix::BLAS. We
+//    want it to be as close to the actual BLAS version of the function as possible,
 //    and with as few checks as possible.
 //
 //    You will probably need a forward declaration in the extern "C" block.
 //
 //    Note: In that case, the function you wrote in Step 1 should also take exactly the
-//    same arguments as clapack_xbacon. Otherwise Bad Things will happen.
+//    same arguments as cblas_xbacon. Otherwise Bad Things will happen.
 //
-// 3. In math.cpp, add inline specialized versions of bacon for the different ATLAS types.
+// 3. In cblas_templates_core.h, add a default template like in step 1 (which will just
+//    call nm::math::bacon()) and also
+//    inline specialized versions of bacon for the different BLAS types.
+//    This will allow both nmatrix-atlas and nmatrix-lapacke to use the optimized version
+//    of bacon from whatever external library is available, as well as the internal version
+//    if an external version is not available. These functions will end up in a namsespace
+//    like nm::math::atlas, but don't explicitly put them in a namespace, they will get
+//    put in the appropriate namespace when cblas_templates_core.h is included.
 //
-//    You could do this with a macro, if the arguments are all similar (see #define LAPACK_GETRF).
-//    Or you may prefer to do it by hand:
+//    template <typename DType>
+//    inline bool bacon(const CBLAS_TRANSPOSE trans, const int M, const int N, DType* A, ...) {
+//      nm::math::bacon(trans, M, N, A, ...);
+//    }
 //
 //    template <>
 //    inline bool bacon(const CBLAS_TRANSPOSE trans, const int M, const int N, float* A, ...) {
-//      clapack_sbacon(trans, M, N, A, ...);
+//      cblas_sbacon(trans, M, N, A, ...);
 //      return true;
 //    }
 //
-//    Make sure these functions are in the namespace nm::math.
-//
 //    Note that you should do everything in your power here to parse any return values
-//    clapack_sbacon may give you. We're not trying very hard in this example, but you might
+//    cblas_sbacon may give you. We're not trying very hard in this example, but you might
 //    look at getrf to see how it might be done.
 //
-// 4. Expose the function in nm_math_init_blas(), in math.cpp:
+// 4. Write the C function nm_cblas_bacon, which is what Ruby will call. Use the example
+//    of nm_cblas_gemm below. Also you must add a similar function in math_atlas.cpp
+//    and math_lapacke.cpp
 //
-//    rb_define_singleton_method(cNMatrix_LAPACK, "clapack_bacon", (METHOD)nm_lapack_bacon, 5);
+// 5. Expose the function in nm_math_init_blas(), in math.cpp:
 //
-//    Here, we're telling Ruby that nm_lapack_bacon takes five arguments as a Ruby function.
+//    rb_define_singleton_method(cNMatrix_Internal_BLAS, "cblas_bacon", (METHOD)nm_cblas_bacon, 5);
 //
-// 5. In blas.rb, write a bacon function which accesses clapack_bacon, but does all the
+//    Do something similar in math_atlas.cpp and math_lapacke.cpp to add the function
+//    to the plugin gems.
+//
+//    Here, we're telling Ruby that nm_cblas_bacon takes five arguments as a Ruby function.
+//
+// 6. In blas.rb, write a bacon function which accesses cblas_bacon, but does all the
 //    sanity checks we left out in step 2.
 //
-// 6. Write tests for NMatrix::LAPACK::getrf, confirming that it works for the ATLAS dtypes.
+// 7. Write tests for NMatrix::BLAS::bacon, confirming that it works for the ATLAS dtypes.
 //
-// 7. After you get it working properly with ATLAS, download dbacon.f from NETLIB, and use
+// 8. After you get it working properly with CBLAS, download dbacon.f from NETLIB, and use
 //    f2c to convert it to C. Clean it up so it's readable. Remove the extra indices -- f2c
 //    inserts a lot of unnecessary stuff.
 //
 //    Copy and paste the output into the default templated function you wrote in Step 1.
 //    Fix it so it works as a template instead of just for doubles.
 //
-// 8. Write tests to confirm that it works for all data types.
+//    Because of step 3, this will automatically also work for the nmatrix-atlas
+//    and nmatrix-lapacke implementations.
 //
-// 9. See about adding a Ruby-like interface, such as matrix_matrix_multiply for cblas_gemm,
+// 9. Write tests to confirm that it works for all data types.
+//
+// 10. See about adding a Ruby-like interface, such as matrix_matrix_multiply for cblas_gemm,
 //    or matrix_vector_multiply for cblas_gemv. This step is not mandatory.
 //
-// 10. Pull request!
-
-
+// 11. Pull request!
 
 /*
  * Project Includes
