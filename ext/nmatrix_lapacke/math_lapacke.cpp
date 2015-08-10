@@ -35,7 +35,7 @@
 
 #include "math/util.h"
 
-#include "math_lapacke/cblas_templates_lapack.h"
+#include "math_lapacke/cblas_templates_lapacke.h"
 
 #include "math_lapacke/lapacke_templates.h"
 
@@ -46,40 +46,40 @@
 
 extern "C" {
   /* BLAS Level 1. */
-  static VALUE nm_lapack_cblas_scal(VALUE self, VALUE n, VALUE scale, VALUE vector, VALUE incx);
-  static VALUE nm_lapack_cblas_nrm2(VALUE self, VALUE n, VALUE x, VALUE incx);
-  static VALUE nm_lapack_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx);
-  static VALUE nm_lapack_cblas_rot(VALUE self, VALUE n, VALUE x, VALUE incx, VALUE y, VALUE incy, VALUE c, VALUE s);
-  static VALUE nm_lapack_cblas_rotg(VALUE self, VALUE ab);
-  static VALUE nm_lapack_cblas_imax(VALUE self, VALUE n, VALUE x, VALUE incx);
+  static VALUE nm_lapacke_cblas_scal(VALUE self, VALUE n, VALUE scale, VALUE vector, VALUE incx);
+  static VALUE nm_lapacke_cblas_nrm2(VALUE self, VALUE n, VALUE x, VALUE incx);
+  static VALUE nm_lapacke_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx);
+  static VALUE nm_lapacke_cblas_rot(VALUE self, VALUE n, VALUE x, VALUE incx, VALUE y, VALUE incy, VALUE c, VALUE s);
+  static VALUE nm_lapacke_cblas_rotg(VALUE self, VALUE ab);
+  static VALUE nm_lapacke_cblas_imax(VALUE self, VALUE n, VALUE x, VALUE incx);
 
   /* BLAS Level 2. */
-  static VALUE nm_lapack_cblas_gemv(VALUE self, VALUE trans_a, VALUE m, VALUE n, VALUE vAlpha, VALUE a, VALUE lda,
+  static VALUE nm_lapacke_cblas_gemv(VALUE self, VALUE trans_a, VALUE m, VALUE n, VALUE vAlpha, VALUE a, VALUE lda,
                              VALUE x, VALUE incx, VALUE vBeta, VALUE y, VALUE incy);
 
   /* BLAS Level 3. */
-  static VALUE nm_lapack_cblas_gemm(VALUE self, VALUE order, VALUE trans_a, VALUE trans_b, VALUE m, VALUE n, VALUE k, VALUE vAlpha,
+  static VALUE nm_lapacke_cblas_gemm(VALUE self, VALUE order, VALUE trans_a, VALUE trans_b, VALUE m, VALUE n, VALUE k, VALUE vAlpha,
                              VALUE a, VALUE lda, VALUE b, VALUE ldb, VALUE vBeta, VALUE c, VALUE ldc);
-  static VALUE nm_lapack_cblas_trsm(VALUE self, VALUE order, VALUE side, VALUE uplo, VALUE trans_a, VALUE diag, VALUE m, VALUE n,
+  static VALUE nm_lapacke_cblas_trsm(VALUE self, VALUE order, VALUE side, VALUE uplo, VALUE trans_a, VALUE diag, VALUE m, VALUE n,
                              VALUE vAlpha, VALUE a, VALUE lda, VALUE b, VALUE ldb);
-  static VALUE nm_lapack_cblas_trmm(VALUE self, VALUE order, VALUE side, VALUE uplo, VALUE trans_a, VALUE diag, VALUE m, VALUE n,
+  static VALUE nm_lapacke_cblas_trmm(VALUE self, VALUE order, VALUE side, VALUE uplo, VALUE trans_a, VALUE diag, VALUE m, VALUE n,
                              VALUE alpha, VALUE a, VALUE lda, VALUE b, VALUE ldb);
-  static VALUE nm_lapack_cblas_herk(VALUE self, VALUE order, VALUE uplo, VALUE trans, VALUE n, VALUE k, VALUE alpha, VALUE a,
+  static VALUE nm_lapacke_cblas_herk(VALUE self, VALUE order, VALUE uplo, VALUE trans, VALUE n, VALUE k, VALUE alpha, VALUE a,
                              VALUE lda, VALUE beta, VALUE c, VALUE ldc);
-  static VALUE nm_lapack_cblas_syrk(VALUE self, VALUE order, VALUE uplo, VALUE trans, VALUE n, VALUE k, VALUE alpha, VALUE a,
+  static VALUE nm_lapacke_cblas_syrk(VALUE self, VALUE order, VALUE uplo, VALUE trans, VALUE n, VALUE k, VALUE alpha, VALUE a,
                              VALUE lda, VALUE beta, VALUE c, VALUE ldc);
 
   /* LAPACK. */
-  static VALUE nm_lapack_lapacke_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda);
-  static VALUE nm_lapack_lapacke_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE ipiv, VALUE b, VALUE ldb);
-  static VALUE nm_lapack_lapacke_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE lda, VALUE ipiv);
-  static VALUE nm_lapack_lapacke_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
-  static VALUE nm_lapack_lapacke_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE b, VALUE ldb);
-  static VALUE nm_lapack_lapacke_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
+  static VALUE nm_lapacke_lapacke_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda);
+  static VALUE nm_lapacke_lapacke_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE ipiv, VALUE b, VALUE ldb);
+  static VALUE nm_lapacke_lapacke_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE lda, VALUE ipiv);
+  static VALUE nm_lapacke_lapacke_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
+  static VALUE nm_lapacke_lapacke_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE b, VALUE ldb);
+  static VALUE nm_lapacke_lapacke_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
 
-  static VALUE nm_lapack_lapacke_gesvd(VALUE self, VALUE order, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE superb);
-  static VALUE nm_lapack_lapacke_gesdd(VALUE self, VALUE order, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt);
-  static VALUE nm_lapack_lapacke_geev(VALUE self, VALUE order, VALUE jobvl, VALUE jobvr, VALUE n, VALUE a, VALUE lda, VALUE w, VALUE wi, VALUE vl, VALUE ldvl, VALUE vr, VALUE ldvr);
+  static VALUE nm_lapacke_lapacke_gesvd(VALUE self, VALUE order, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE superb);
+  static VALUE nm_lapacke_lapacke_gesdd(VALUE self, VALUE order, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt);
+  static VALUE nm_lapacke_lapacke_geev(VALUE self, VALUE order, VALUE jobvl, VALUE jobvr, VALUE n, VALUE a, VALUE lda, VALUE w, VALUE wi, VALUE vl, VALUE ldvl, VALUE vr, VALUE ldvr);
 }
 
 extern "C" {
@@ -96,34 +96,34 @@ void nm_math_init_lapack() {
   VALUE cNMatrix_LAPACKE_BLAS = rb_define_module_under(cNMatrix_LAPACKE, "BLAS");
 
   //BLAS Level 1
-  rb_define_singleton_method(cNMatrix_LAPACKE_BLAS, "cblas_scal", (METHOD)nm_lapack_cblas_scal, 4);
-  rb_define_singleton_method(cNMatrix_LAPACKE_BLAS, "cblas_nrm2", (METHOD)nm_lapack_cblas_nrm2, 3);
-  rb_define_singleton_method(cNMatrix_LAPACKE_BLAS, "cblas_asum", (METHOD)nm_lapack_cblas_asum, 3);
-  rb_define_singleton_method(cNMatrix_LAPACKE_BLAS, "cblas_rot",  (METHOD)nm_lapack_cblas_rot,  7);
-  rb_define_singleton_method(cNMatrix_LAPACKE_BLAS, "cblas_rotg", (METHOD)nm_lapack_cblas_rotg, 1);
-  rb_define_singleton_method(cNMatrix_LAPACKE_BLAS, "cblas_imax", (METHOD)nm_lapack_cblas_imax, 3);
+  rb_define_singleton_method(cNMatrix_LAPACKE_BLAS, "cblas_scal", (METHOD)nm_lapacke_cblas_scal, 4);
+  rb_define_singleton_method(cNMatrix_LAPACKE_BLAS, "cblas_nrm2", (METHOD)nm_lapacke_cblas_nrm2, 3);
+  rb_define_singleton_method(cNMatrix_LAPACKE_BLAS, "cblas_asum", (METHOD)nm_lapacke_cblas_asum, 3);
+  rb_define_singleton_method(cNMatrix_LAPACKE_BLAS, "cblas_rot",  (METHOD)nm_lapacke_cblas_rot,  7);
+  rb_define_singleton_method(cNMatrix_LAPACKE_BLAS, "cblas_rotg", (METHOD)nm_lapacke_cblas_rotg, 1);
+  rb_define_singleton_method(cNMatrix_LAPACKE_BLAS, "cblas_imax", (METHOD)nm_lapacke_cblas_imax, 3);
 
   //BLAS Level 2
-  rb_define_singleton_method(cNMatrix_LAPACKE_BLAS, "cblas_gemv", (METHOD)nm_lapack_cblas_gemv, 11);
+  rb_define_singleton_method(cNMatrix_LAPACKE_BLAS, "cblas_gemv", (METHOD)nm_lapacke_cblas_gemv, 11);
 
   //BLAS Level 3
-  rb_define_singleton_method(cNMatrix_LAPACKE_BLAS, "cblas_gemm", (METHOD)nm_lapack_cblas_gemm, 14);
-  rb_define_singleton_method(cNMatrix_LAPACKE_BLAS, "cblas_trsm", (METHOD)nm_lapack_cblas_trsm, 12);
-  rb_define_singleton_method(cNMatrix_LAPACKE_BLAS, "cblas_trmm", (METHOD)nm_lapack_cblas_trmm, 12);
-  rb_define_singleton_method(cNMatrix_LAPACKE_BLAS, "cblas_syrk", (METHOD)nm_lapack_cblas_syrk, 11);
-  rb_define_singleton_method(cNMatrix_LAPACKE_BLAS, "cblas_herk", (METHOD)nm_lapack_cblas_herk, 11);
+  rb_define_singleton_method(cNMatrix_LAPACKE_BLAS, "cblas_gemm", (METHOD)nm_lapacke_cblas_gemm, 14);
+  rb_define_singleton_method(cNMatrix_LAPACKE_BLAS, "cblas_trsm", (METHOD)nm_lapacke_cblas_trsm, 12);
+  rb_define_singleton_method(cNMatrix_LAPACKE_BLAS, "cblas_trmm", (METHOD)nm_lapacke_cblas_trmm, 12);
+  rb_define_singleton_method(cNMatrix_LAPACKE_BLAS, "cblas_syrk", (METHOD)nm_lapacke_cblas_syrk, 11);
+  rb_define_singleton_method(cNMatrix_LAPACKE_BLAS, "cblas_herk", (METHOD)nm_lapacke_cblas_herk, 11);
 
   /* LAPACK Functions */
-  rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_getrf", (METHOD)nm_lapack_lapacke_getrf, 5);
-  rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_getrs", (METHOD)nm_lapack_lapacke_getrs, 9);
-  rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_getri", (METHOD)nm_lapack_lapacke_getri, 5);
-  rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_potrf", (METHOD)nm_lapack_lapacke_potrf, 5);
-  rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_potrs", (METHOD)nm_lapack_lapacke_potrs, 8);
-  rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_potri", (METHOD)nm_lapack_lapacke_potri, 5);
+  rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_getrf", (METHOD)nm_lapacke_lapacke_getrf, 5);
+  rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_getrs", (METHOD)nm_lapacke_lapacke_getrs, 9);
+  rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_getri", (METHOD)nm_lapacke_lapacke_getri, 5);
+  rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_potrf", (METHOD)nm_lapacke_lapacke_potrf, 5);
+  rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_potrs", (METHOD)nm_lapacke_lapacke_potrs, 8);
+  rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_potri", (METHOD)nm_lapacke_lapacke_potri, 5);
 
-  rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_gesvd", (METHOD)nm_lapack_lapacke_gesvd, 13);
-  rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_gesdd", (METHOD)nm_lapack_lapacke_gesdd, 11);
-  rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_geev", (METHOD)nm_lapack_lapacke_geev, 12);
+  rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_gesvd", (METHOD)nm_lapacke_lapacke_gesvd, 13);
+  rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_gesdd", (METHOD)nm_lapacke_lapacke_gesdd, 11);
+  rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_geev", (METHOD)nm_lapacke_lapacke_geev, 12);
 }
 
 /*
@@ -141,13 +141,13 @@ void nm_math_init_lapack() {
  * - +vector+ -> NMatrix of shape [n,1] or [1,n]. Modified in-place.
  * - +inc+ -> Increment used in the scaling function. Should generally be 1.
  */
-static VALUE nm_lapack_cblas_scal(VALUE self, VALUE n, VALUE alpha, VALUE vector, VALUE incx) {
+static VALUE nm_lapacke_cblas_scal(VALUE self, VALUE n, VALUE alpha, VALUE vector, VALUE incx) {
   nm::dtype_t dtype = NM_DTYPE(vector);
 
   void* scalar = NM_ALLOCA_N(char, DTYPE_SIZES[dtype]);
   rubyval_to_cval(alpha, dtype, scalar);
 
-  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::lapack::cblas_scal, void, const int n,
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::lapacke::cblas_scal, void, const int n,
       const void* scalar, void* x, const int incx);
 
   ttable[dtype](FIX2INT(n), scalar, NM_STORAGE_DENSE(vector)->elements,
@@ -178,14 +178,14 @@ static VALUE nm_lapack_cblas_scal(VALUE self, VALUE n, VALUE alpha, VALUE vector
  *
  * This function, like the other cblas_ functions, does minimal type-checking.
  */
-static VALUE nm_lapack_cblas_rotg(VALUE self, VALUE ab) {
+static VALUE nm_lapacke_cblas_rotg(VALUE self, VALUE ab) {
   static void (*ttable[nm::NUM_DTYPES])(void* a, void* b, void* c, void* s) = {
       NULL, NULL, NULL, NULL, NULL, // can't represent c and s as integers, so no point in having integer operations.
-      nm::math::lapack::cblas_rotg<float>,
-      nm::math::lapack::cblas_rotg<double>,
-      nm::math::lapack::cblas_rotg<nm::Complex64>,
-      nm::math::lapack::cblas_rotg<nm::Complex128>,
-      NULL //nm::math::lapack::cblas_rotg<nm::RubyObject>
+      nm::math::lapacke::cblas_rotg<float>,
+      nm::math::lapacke::cblas_rotg<double>,
+      nm::math::lapacke::cblas_rotg<nm::Complex64>,
+      nm::math::lapacke::cblas_rotg<nm::Complex128>,
+      NULL //nm::math::lapacke::cblas_rotg<nm::RubyObject>
   };
 
   nm::dtype_t dtype = NM_DTYPE(ab);
@@ -246,14 +246,14 @@ static VALUE nm_lapack_cblas_rotg(VALUE self, VALUE ab) {
  * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
  * handling, so you can easily crash Ruby!
  */
-static VALUE nm_lapack_cblas_rot(VALUE self, VALUE n, VALUE x, VALUE incx, VALUE y, VALUE incy, VALUE c, VALUE s) {
+static VALUE nm_lapacke_cblas_rot(VALUE self, VALUE n, VALUE x, VALUE incx, VALUE y, VALUE incy, VALUE c, VALUE s) {
   static void (*ttable[nm::NUM_DTYPES])(const int N, void*, const int, void*, const int, const void*, const void*) = {
       NULL, NULL, NULL, NULL, NULL, // can't represent c and s as integers, so no point in having integer operations.
-      nm::math::lapack::cblas_rot<float,float>,
-      nm::math::lapack::cblas_rot<double,double>,
-      nm::math::lapack::cblas_rot<nm::Complex64,float>,
-      nm::math::lapack::cblas_rot<nm::Complex128,double>,
-      nm::math::lapack::cblas_rot<nm::RubyObject,nm::RubyObject>
+      nm::math::lapacke::cblas_rot<float,float>,
+      nm::math::lapacke::cblas_rot<double,double>,
+      nm::math::lapacke::cblas_rot<nm::Complex64,float>,
+      nm::math::lapacke::cblas_rot<nm::Complex128,double>,
+      nm::math::lapacke::cblas_rot<nm::RubyObject,nm::RubyObject>
   };
 
   nm::dtype_t dtype = NM_DTYPE(x);
@@ -307,15 +307,15 @@ static VALUE nm_lapack_cblas_rot(VALUE self, VALUE n, VALUE x, VALUE incx, VALUE
  * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
  * handling, so you can easily crash Ruby!
  */
-static VALUE nm_lapack_cblas_nrm2(VALUE self, VALUE n, VALUE x, VALUE incx) {
+static VALUE nm_lapacke_cblas_nrm2(VALUE self, VALUE n, VALUE x, VALUE incx) {
 
   static void (*ttable[nm::NUM_DTYPES])(const int N, const void* X, const int incX, void* sum) = {
       NULL, NULL, NULL, NULL, NULL, // no help for integers
-      nm::math::lapack::cblas_nrm2<float32_t,float32_t>,
-      nm::math::lapack::cblas_nrm2<float64_t,float64_t>,
-      nm::math::lapack::cblas_nrm2<float32_t,nm::Complex64>,
-      nm::math::lapack::cblas_nrm2<float64_t,nm::Complex128>,
-      nm::math::lapack::cblas_nrm2<nm::RubyObject,nm::RubyObject>
+      nm::math::lapacke::cblas_nrm2<float32_t,float32_t>,
+      nm::math::lapacke::cblas_nrm2<float64_t,float64_t>,
+      nm::math::lapacke::cblas_nrm2<float32_t,nm::Complex64>,
+      nm::math::lapacke::cblas_nrm2<float64_t,nm::Complex128>,
+      nm::math::lapacke::cblas_nrm2<nm::RubyObject,nm::RubyObject>
   };
 
   nm::dtype_t dtype  = NM_DTYPE(x);
@@ -357,19 +357,19 @@ static VALUE nm_lapack_cblas_nrm2(VALUE self, VALUE n, VALUE x, VALUE incx) {
  * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
  * handling, so you can easily crash Ruby!
  */
-static VALUE nm_lapack_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx) {
+static VALUE nm_lapacke_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx) {
 
   static void (*ttable[nm::NUM_DTYPES])(const int N, const void* X, const int incX, void* sum) = {
-      nm::math::lapack::cblas_asum<uint8_t,uint8_t>,
-      nm::math::lapack::cblas_asum<int8_t,int8_t>,
-      nm::math::lapack::cblas_asum<int16_t,int16_t>,
-      nm::math::lapack::cblas_asum<int32_t,int32_t>,
-      nm::math::lapack::cblas_asum<int64_t,int64_t>,
-      nm::math::lapack::cblas_asum<float32_t,float32_t>,
-      nm::math::lapack::cblas_asum<float64_t,float64_t>,
-      nm::math::lapack::cblas_asum<float32_t,nm::Complex64>,
-      nm::math::lapack::cblas_asum<float64_t,nm::Complex128>,
-      nm::math::lapack::cblas_asum<nm::RubyObject,nm::RubyObject>
+      nm::math::lapacke::cblas_asum<uint8_t,uint8_t>,
+      nm::math::lapacke::cblas_asum<int8_t,int8_t>,
+      nm::math::lapacke::cblas_asum<int16_t,int16_t>,
+      nm::math::lapacke::cblas_asum<int32_t,int32_t>,
+      nm::math::lapacke::cblas_asum<int64_t,int64_t>,
+      nm::math::lapacke::cblas_asum<float32_t,float32_t>,
+      nm::math::lapacke::cblas_asum<float64_t,float64_t>,
+      nm::math::lapacke::cblas_asum<float32_t,nm::Complex64>,
+      nm::math::lapacke::cblas_asum<float64_t,nm::Complex128>,
+      nm::math::lapacke::cblas_asum<nm::RubyObject,nm::RubyObject>
   };
 
   nm::dtype_t dtype  = NM_DTYPE(x);
@@ -399,8 +399,8 @@ static VALUE nm_lapack_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx) {
  * - +inc+ -> It's the increment used when searching. Use 1 except if you know
  *   what you're doing.
  */
-static VALUE nm_lapack_cblas_imax(VALUE self, VALUE n, VALUE x, VALUE incx) {
-  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::lapack::cblas_imax, int, const int n, const void* x, const int incx);
+static VALUE nm_lapacke_cblas_imax(VALUE self, VALUE n, VALUE x, VALUE incx) {
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::lapacke::cblas_imax, int, const int n, const void* x, const int incx);
 
   nm::dtype_t dtype = NM_DTYPE(x);
 
@@ -431,7 +431,7 @@ static VALUE nm_lapack_cblas_imax(VALUE self, VALUE n, VALUE x, VALUE incx) {
  * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
  * handling, so you can easily crash Ruby!
  */
-static VALUE nm_lapack_cblas_gemv(VALUE self,
+static VALUE nm_lapacke_cblas_gemv(VALUE self,
                            VALUE trans_a,
                            VALUE m, VALUE n,
                            VALUE alpha,
@@ -440,7 +440,7 @@ static VALUE nm_lapack_cblas_gemv(VALUE self,
                            VALUE beta,
                            VALUE y, VALUE incy)
 {
-  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::lapack::cblas_gemv, bool, const enum CBLAS_TRANSPOSE, const int, const int, const void*, const void*, const int, const void*, const int, const void*, void*, const int)
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::lapacke::cblas_gemv, bool, const enum CBLAS_TRANSPOSE, const int, const int, const void*, const void*, const int, const void*, const int, const void*, void*, const int)
 
   nm::dtype_t dtype = NM_DTYPE(a);
 
@@ -473,7 +473,7 @@ static VALUE nm_lapack_cblas_gemv(VALUE self,
  * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
  * handling, so you can easily crash Ruby!
  */
-static VALUE nm_lapack_cblas_gemm(VALUE self,
+static VALUE nm_lapacke_cblas_gemm(VALUE self,
                            VALUE order,
                            VALUE trans_a, VALUE trans_b,
                            VALUE m, VALUE n, VALUE k,
@@ -483,7 +483,7 @@ static VALUE nm_lapack_cblas_gemm(VALUE self,
                            VALUE beta,
                            VALUE c, VALUE ldc)
 {
-  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::lapack::cblas_gemm, void, const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b, int m, int n, int k, void* alpha, void* a, int lda, void* b, int ldb, void* beta, void* c, int ldc);
+  NAMED_DTYPE_TEMPLATE_TABLE(ttable, nm::math::lapacke::cblas_gemm, void, const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE trans_a, const enum CBLAS_TRANSPOSE trans_b, int m, int n, int k, void* alpha, void* a, int lda, void* b, int ldb, void* beta, void* c, int ldc);
 
   nm::dtype_t dtype = NM_DTYPE(a);
 
@@ -498,7 +498,7 @@ static VALUE nm_lapack_cblas_gemm(VALUE self,
 }
 
 
-static VALUE nm_lapack_cblas_trsm(VALUE self,
+static VALUE nm_lapacke_cblas_trsm(VALUE self,
                            VALUE order,
                            VALUE side, VALUE uplo,
                            VALUE trans_a, VALUE diag,
@@ -512,10 +512,10 @@ static VALUE nm_lapack_cblas_trsm(VALUE self,
                                         const int m, const int n, const void* alpha, const void* a,
                                         const int lda, void* b, const int ldb) = {
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
-      nm::math::lapack::cblas_trsm<float>,
-      nm::math::lapack::cblas_trsm<double>,
+      nm::math::lapacke::cblas_trsm<float>,
+      nm::math::lapacke::cblas_trsm<double>,
       cblas_ctrsm, cblas_ztrsm, // call directly, same function signature!
-      nm::math::lapack::cblas_trsm<nm::RubyObject>
+      nm::math::lapacke::cblas_trsm<nm::RubyObject>
   };
 
   nm::dtype_t dtype = NM_DTYPE(a);
@@ -532,7 +532,7 @@ static VALUE nm_lapack_cblas_trsm(VALUE self,
   return Qtrue;
 }
 
-static VALUE nm_lapack_cblas_trmm(VALUE self,
+static VALUE nm_lapacke_cblas_trmm(VALUE self,
                            VALUE order,
                            VALUE side, VALUE uplo,
                            VALUE trans_a, VALUE diag,
@@ -547,8 +547,8 @@ static VALUE nm_lapack_cblas_trmm(VALUE self,
                                         const int m, const int n, const void* alpha, const void* a,
                                         const int lda, void* b, const int ldb) = {
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
-      nm::math::lapack::cblas_trmm<float>,
-      nm::math::lapack::cblas_trmm<double>,
+      nm::math::lapacke::cblas_trmm<float>,
+      nm::math::lapacke::cblas_trmm<double>,
       cblas_ctrmm, cblas_ztrmm, // call directly, same function signature!
       NULL
   };
@@ -567,7 +567,7 @@ static VALUE nm_lapack_cblas_trmm(VALUE self,
   return b;
 }
 
-static VALUE nm_lapack_cblas_syrk(VALUE self,
+static VALUE nm_lapacke_cblas_syrk(VALUE self,
                            VALUE order,
                            VALUE uplo,
                            VALUE trans,
@@ -581,8 +581,8 @@ static VALUE nm_lapack_cblas_syrk(VALUE self,
                                         const int n, const int k, const void* alpha, const void* a,
                                         const int lda, const void* beta, void* c, const int ldc) = {
       NULL, NULL, NULL, NULL, NULL, // integers not allowed due to division
-      nm::math::lapack::cblas_syrk<float>,
-      nm::math::lapack::cblas_syrk<double>,
+      nm::math::lapacke::cblas_syrk<float>,
+      nm::math::lapacke::cblas_syrk<double>,
       cblas_csyrk, cblas_zsyrk, // call directly, same function signature!
       NULL
   };
@@ -603,7 +603,7 @@ static VALUE nm_lapack_cblas_syrk(VALUE self,
   return Qtrue;
 }
 
-static VALUE nm_lapack_cblas_herk(VALUE self,
+static VALUE nm_lapacke_cblas_herk(VALUE self,
                            VALUE order,
                            VALUE uplo,
                            VALUE trans,
@@ -635,13 +635,13 @@ static VALUE nm_lapack_cblas_herk(VALUE self,
  *
  * Returns an array giving the pivot indices (normally these are argument #5).
  */
-static VALUE nm_lapack_lapacke_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE lda, VALUE ipiv) {
+static VALUE nm_lapacke_lapacke_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE lda, VALUE ipiv) {
   static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const int n, void* a, const int lda, const int* ipiv) = {
       NULL, NULL, NULL, NULL, NULL,
-      nm::math::lapack::lapacke_getri<float>,
-      nm::math::lapack::lapacke_getri<double>,
-      nm::math::lapack::lapacke_getri<nm::Complex64>,
-      nm::math::lapack::lapacke_getri<nm::Complex128>,
+      nm::math::lapacke::lapacke_getri<float>,
+      nm::math::lapacke::lapacke_getri<double>,
+      nm::math::lapacke::lapacke_getri<nm::Complex64>,
+      nm::math::lapacke::lapacke_getri<nm::Complex128>,
       NULL
   };
 
@@ -690,13 +690,13 @@ static VALUE nm_lapack_lapacke_getri(VALUE self, VALUE order, VALUE n, VALUE a, 
  *
  * Returns an array giving the pivot indices (normally these are argument #5).
  */
-static VALUE nm_lapack_lapacke_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda) {
+static VALUE nm_lapacke_lapacke_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda) {
   static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, const int m, const int n, void* a, const int lda, int* ipiv) = {
       NULL, NULL, NULL, NULL, NULL,
-      nm::math::lapack::lapacke_getrf<float>,
-      nm::math::lapack::lapacke_getrf<double>,
-      nm::math::lapack::lapacke_getrf<nm::Complex64>,
-      nm::math::lapack::lapacke_getrf<nm::Complex128>,
+      nm::math::lapacke::lapacke_getrf<float>,
+      nm::math::lapacke::lapacke_getrf<double>,
+      nm::math::lapacke::lapacke_getrf<nm::Complex64>,
+      nm::math::lapacke::lapacke_getrf<nm::Complex128>,
       NULL
   };
 
@@ -725,15 +725,15 @@ static VALUE nm_lapack_lapacke_getrf(VALUE self, VALUE order, VALUE m, VALUE n, 
 /*
  * Call any of the lapacke_xgetrs functions as directly as possible.
  */
-static VALUE nm_lapack_lapacke_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE ipiv, VALUE b, VALUE ldb) {
+static VALUE nm_lapacke_lapacke_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE ipiv, VALUE b, VALUE ldb) {
   static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER Order, char Trans, const int N,
                                        const int NRHS, const void* A, const int lda, const int* ipiv, void* B,
                                        const int ldb) = {
       NULL, NULL, NULL, NULL, NULL,
-      nm::math::lapack::lapacke_getrs<float>,
-      nm::math::lapack::lapacke_getrs<double>,
-      nm::math::lapack::lapacke_getrs<nm::Complex64>,
-      nm::math::lapack::lapacke_getrs<nm::Complex128>,
+      nm::math::lapacke::lapacke_getrs<float>,
+      nm::math::lapacke::lapacke_getrs<double>,
+      nm::math::lapacke::lapacke_getrs<nm::Complex64>,
+      nm::math::lapacke::lapacke_getrs<nm::Complex128>,
       NULL
   };
 
@@ -764,14 +764,14 @@ static VALUE nm_lapack_lapacke_getrs(VALUE self, VALUE order, VALUE trans, VALUE
  * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
  * handling, so you can easily crash Ruby!
  */
-static VALUE nm_lapack_lapacke_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
+static VALUE nm_lapacke_lapacke_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
 
   static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, char, const int n, void* a, const int lda) = {
       NULL, NULL, NULL, NULL, NULL,
-      nm::math::lapack::lapacke_potrf<float>,
-      nm::math::lapack::lapacke_potrf<double>,
-      nm::math::lapack::lapacke_potrf<nm::Complex64>,
-      nm::math::lapack::lapacke_potrf<nm::Complex128>,
+      nm::math::lapacke::lapacke_potrf<float>,
+      nm::math::lapacke::lapacke_potrf<double>,
+      nm::math::lapacke::lapacke_potrf<nm::Complex64>,
+      nm::math::lapacke::lapacke_potrf<nm::Complex128>,
       NULL
   };
 
@@ -787,14 +787,14 @@ static VALUE nm_lapack_lapacke_potrf(VALUE self, VALUE order, VALUE uplo, VALUE 
 /*
  * Call any of the LAPACKE_xpotrs functions as directly as possible.
  */
-static VALUE nm_lapack_lapacke_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE b, VALUE ldb) {
+static VALUE nm_lapacke_lapacke_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE b, VALUE ldb) {
   static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER Order, char Uplo, const int N,
                                        const int NRHS, const void* A, const int lda, void* B, const int ldb) = {
       NULL, NULL, NULL, NULL, NULL,
-      nm::math::lapack::lapacke_potrs<float>,
-      nm::math::lapack::lapacke_potrs<double>,
-      nm::math::lapack::lapacke_potrs<nm::Complex64>,
-      nm::math::lapack::lapacke_potrs<nm::Complex128>,
+      nm::math::lapacke::lapacke_potrs<float>,
+      nm::math::lapacke::lapacke_potrs<double>,
+      nm::math::lapacke::lapacke_potrs<nm::Complex64>,
+      nm::math::lapacke::lapacke_potrs<nm::Complex128>,
       NULL
   };
 
@@ -816,14 +816,14 @@ static VALUE nm_lapack_lapacke_potrs(VALUE self, VALUE order, VALUE uplo, VALUE 
  * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
  * handling, so you can easily crash Ruby!
  */
-static VALUE nm_lapack_lapacke_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
+static VALUE nm_lapacke_lapacke_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
 
   static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER, char, const int n, void* a, const int lda) = {
       NULL, NULL, NULL, NULL, NULL,
-      nm::math::lapack::lapacke_potri<float>,
-      nm::math::lapack::lapacke_potri<double>,
-      nm::math::lapack::lapacke_potri<nm::Complex64>,
-      nm::math::lapack::lapacke_potri<nm::Complex128>,
+      nm::math::lapacke::lapacke_potri<float>,
+      nm::math::lapacke::lapacke_potri<double>,
+      nm::math::lapacke::lapacke_potri<nm::Complex64>,
+      nm::math::lapacke::lapacke_potri<nm::Complex128>,
       NULL
   };
 
@@ -854,13 +854,13 @@ static VALUE nm_lapack_lapacke_potri(VALUE self, VALUE order, VALUE uplo, VALUE 
  *
  * Note that the routine returns V**T, not V.
  */
-static VALUE nm_lapack_lapacke_gesvd(VALUE self, VALUE order, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE superb) {
+static VALUE nm_lapacke_lapacke_gesvd(VALUE self, VALUE order, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE superb) {
   static int (*gesvd_table[nm::NUM_DTYPES])(int, char, char, int, int, void* a, int, void* s, void* u, int, void* vt, int, void* superb) = {
     NULL, NULL, NULL, NULL, NULL, // no integer ops
-    nm::math::lapack::lapacke_gesvd<float,float>,
-    nm::math::lapack::lapacke_gesvd<double,double>,
-    nm::math::lapack::lapacke_gesvd<nm::Complex64,float>,
-    nm::math::lapack::lapacke_gesvd<nm::Complex128,double>,
+    nm::math::lapacke::lapacke_gesvd<float,float>,
+    nm::math::lapacke::lapacke_gesvd<double,double>,
+    nm::math::lapacke::lapacke_gesvd<nm::Complex64,float>,
+    nm::math::lapacke::lapacke_gesvd<nm::Complex128,double>,
     NULL // no Ruby objects
   };
 
@@ -884,13 +884,13 @@ static VALUE nm_lapack_lapacke_gesvd(VALUE self, VALUE order, VALUE jobu, VALUE 
   }
 }
 
-static VALUE nm_lapack_lapacke_gesdd(VALUE self, VALUE order, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt) {
+static VALUE nm_lapacke_lapacke_gesdd(VALUE self, VALUE order, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt) {
   static int (*gesdd_table[nm::NUM_DTYPES])(int, char, int, int, void* a, int, void* s, void* u, int, void* vt, int) = {
     NULL, NULL, NULL, NULL, NULL, // no integer ops
-    nm::math::lapack::lapacke_gesdd<float,float>,
-    nm::math::lapack::lapacke_gesdd<double,double>,
-    nm::math::lapack::lapacke_gesdd<nm::Complex64,float>,
-    nm::math::lapack::lapacke_gesdd<nm::Complex128,double>,
+    nm::math::lapacke::lapacke_gesdd<float,float>,
+    nm::math::lapacke::lapacke_gesdd<double,double>,
+    nm::math::lapacke::lapacke_gesdd<nm::Complex64,float>,
+    nm::math::lapacke::lapacke_gesdd<nm::Complex128,double>,
     NULL // no Ruby objects
   };
 
@@ -928,13 +928,13 @@ static VALUE nm_lapack_lapacke_gesdd(VALUE self, VALUE order, VALUE jobz, VALUE 
  * equal to 1 and largest component real.
  */
 //note on wi
-static VALUE nm_lapack_lapacke_geev(VALUE self, VALUE order, VALUE jobvl, VALUE jobvr, VALUE n, VALUE a, VALUE lda, VALUE w, VALUE wi, VALUE vl, VALUE ldvl, VALUE vr, VALUE ldvr) {
+static VALUE nm_lapacke_lapacke_geev(VALUE self, VALUE order, VALUE jobvl, VALUE jobvr, VALUE n, VALUE a, VALUE lda, VALUE w, VALUE wi, VALUE vl, VALUE ldvl, VALUE vr, VALUE ldvr) {
   static int (*geev_table[nm::NUM_DTYPES])(int, char, char, int, void* a, int, void* w, void* wi, void* vl, int, void* vr, int) = {
     NULL, NULL, NULL, NULL, NULL, // no integer ops
-    nm::math::lapack::lapacke_geev<float>,
-    nm::math::lapack::lapacke_geev<double>,
-    nm::math::lapack::lapacke_geev<nm::Complex64>,
-    nm::math::lapack::lapacke_geev<nm::Complex128>,
+    nm::math::lapacke::lapacke_geev<float>,
+    nm::math::lapacke::lapacke_geev<double>,
+    nm::math::lapacke::lapacke_geev<nm::Complex64>,
+    nm::math::lapacke::lapacke_geev<nm::Complex128>,
     NULL // no Ruby objects
   };
 

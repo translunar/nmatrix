@@ -21,10 +21,10 @@
 //
 // * https://github.com/SciRuby/sciruby/wiki/Contributor-Agreement
 //
-// == cblas_templaces_lapack.h
+// == cblas_templaces_lapacke.h
 //
 // Define template functions for calling CBLAS functions in the
-// nm::math::lapack namespace.
+// nm::math::lapacke namespace.
 //
 
 #ifndef CBLAS_TEMPLATES_LAPACK_H
@@ -41,7 +41,7 @@
 #include "math/gemm.h"
 #include "math/trsm.h"
 
-namespace nm { namespace math { namespace lapack {
+namespace nm { namespace math { namespace lapacke {
  
 //Add cblas templates in the correct namespace
 #include "math/cblas_templates_core.h"

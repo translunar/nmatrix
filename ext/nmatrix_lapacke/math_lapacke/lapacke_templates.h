@@ -29,7 +29,7 @@
 #ifndef LAPACKE_TEMPLATES_H
 #define LAPACKE_TEMPLATES_H
 
-namespace nm { namespace math { namespace lapack {
+namespace nm { namespace math { namespace lapacke {
 
 //getrf
 template <typename DType>
