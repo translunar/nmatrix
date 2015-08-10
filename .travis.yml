@@ -24,5 +24,5 @@ matrix:
       env: USE_REF=1 # Installs reference implementations of LAPACK and BLAS, builds and tests nmatrix, nmatrix-lapacke
     - rvm: 2.2
       env: NO_EXTERNAL_LIB=1 # No external libraries installed, only nmatrix
-#notifications:
-#  irc: "chat.freenode.net#sciruby"
+notifications:
+  irc: "chat.freenode.net#sciruby"
