@@ -31,7 +31,20 @@ require "./lib/nmatrix/atlas"
 describe "NMatrix::LAPACK implementation from nmatrix-atlas plugin" do
   [:float32, :float64, :complex64, :complex128].each do |dtype|
     context dtype do
-      # Specs OK.
+      it "exposes clapack_getri" do
+        a = NMatrix.new(:dense, 3, [1,0,4,1,1,6,-3,0,-10], dtype)
+        ipiv = NMatrix::LAPACK::clapack_getrf(:row, 3, 3, a, 3) # get pivot from getrf, use for getri
+
+        begin
+          NMatrix::LAPACK::clapack_getri(:row, 3, a, 3, ipiv)
+
+          b = NMatrix.new(:dense, 3, [-5,0,-2,-4,1,-1,1.5,0,0.5], dtype)
+          expect(a).to eq(b)
+        rescue NotImplementedError => e
+          pending e.to_s
+        end
+      end
+
       # potrf decomposes a symmetric (or Hermitian)
       # positive-definite matrix. The matrix tested below isn't symmetric.
       # But this is okay since potrf just examines the upper/lower half
@@ -73,7 +86,6 @@ describe "NMatrix::LAPACK implementation from nmatrix-atlas plugin" do
         expect(a).to be_within(err).of(b)
       end
 
-      #Like getrs, potrs doesn't work if b isn't a vector. It does work though if you transpose b before and after calling potrs. Needs to be fixed.
       it "exposes clapack_potrs" do
         pending "potrs requires clapack" unless NMatrix.has_clapack?
 
@@ -99,7 +111,6 @@ describe "NMatrix::LAPACK implementation from nmatrix-atlas plugin" do
     end
   end
 
-  #gesvd, gesdd, geev don't have to be shared
   [:float32, :float64, :complex64, :complex128].each do |dtype|
     context dtype do
       #gesvd, gesdd specs OK
@@ -335,7 +346,7 @@ describe "NMatrix::LAPACK implementation from nmatrix-atlas plugin" do
         expect(vt.dot(vt.conjugate_transpose)).to be_within(err).of(NMatrix.eye(vt.shape,dtype: dtype))
       end
 
-      it "exposes geev" do
+      it "exposes lapack_geev" do
         n = 3
         a = NMatrix.new([n,n], [-1,0,0, 0,1,-2, 0,1,-1], dtype: dtype)
         w = NMatrix.new([n], dtype: dtype)

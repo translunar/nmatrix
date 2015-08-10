@@ -52,7 +52,6 @@ describe NMatrix::BLAS do
       # This is not the same as "exposes cblas trsm", which would be for a version defined in blas.rb (which
       # would greatly simplify the calling of cblas_trsm in terms of arguments, and which would be accessible
       # as NMatrix::BLAS::trsm)
-      # I haven't checked this spec -WL
       it "exposes unfriendly cblas_trsm" do
         a     = NMatrix.new(3, [4,-1.0/2, -3.0/4, -2, 2, -1.0/4, -4, -2, -1.0/2], dtype: dtype)
         b     = NMatrix.new([3,1], [-1, 17, -9], dtype: dtype)

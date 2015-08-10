@@ -28,7 +28,6 @@
 require 'spec_helper'
 require "./lib/nmatrix/lapacke"
 
-#should include additional specs now in atlas_spec.rb
 describe "NMatrix::LAPACK functions implemented with LAPACKE interface" do
   [:float32, :float64, :complex64, :complex128].each do |dtype|
     context dtype do
@@ -247,7 +246,6 @@ describe "NMatrix::LAPACK functions implemented with LAPACKE interface" do
         expect(vt).to be_within(err).of(vt_true)
       end
 
-      #should sync this with other geev spec
       it "calculates eigenvalues and eigenvectors using lapacke_geev" do
         n = 3
         a = NMatrix.new([n,n], [-1,0,0, 0,1,-2, 0,1,-1], dtype: dtype)

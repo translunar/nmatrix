@@ -167,7 +167,6 @@ describe "NMatrix::LAPACK functions with internal implementations" do
       end
 
       # Together, these calls are basically xGESV from LAPACK: http://www.netlib.org/lapack/double/dgesv.f
-      # Spec OK
       it "exposes clapack_getrs" do
         a     = NMatrix.new(3, [-2,4,-3, 3,-2,1, 0,-4,3], dtype: dtype)
         ipiv  = NMatrix::LAPACK::clapack_getrf(:row, 3, 3, a, 3)
@@ -196,21 +195,6 @@ describe "NMatrix::LAPACK functions with internal implementations" do
 
         b_true = NMatrix.new([3,2], [5,1, -7.5,1, -13,0], dtype: dtype)
         expect(b).to eq(b_true)
-      end
-
-      #spec OK, but getri is only implemented by the atlas plugin, so maybe this one doesn't have to be shared
-      it "exposes clapack_getri" do
-        a = NMatrix.new(:dense, 3, [1,0,4,1,1,6,-3,0,-10], dtype)
-        ipiv = NMatrix::LAPACK::clapack_getrf(:row, 3, 3, a, 3) # get pivot from getrf, use for getri
-
-        begin
-          NMatrix::LAPACK::clapack_getri(:row, 3, a, 3, ipiv)
-
-          b = NMatrix.new(:dense, 3, [-5,0,-2,-4,1,-1,1.5,0,0.5], dtype)
-          expect(a).to eq(b)
-        rescue NotImplementedError => e
-          pending e.to_s
-        end
       end
 
       #posv is like potrf+potrs
