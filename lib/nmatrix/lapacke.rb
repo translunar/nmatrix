@@ -141,6 +141,28 @@ class NMatrix
           return [eigenvalues, right_output]
         end
       end
+
+      def gesvd(matrix, workspace_size=1)
+        result = alloc_svd_result(matrix)
+
+        m = matrix.shape[0]
+        n = matrix.shape[1]
+
+        superb = NMatrix.new([[m,n].min], dtype: matrix.abs_dtype)
+
+        NMatrix::LAPACK::lapacke_gesvd(:row, :a, :a, m, n, matrix, n, result[1], result[0], m, result[2], n, superb)
+        result
+      end
+
+      def gesdd(matrix, workspace_size=nil)
+        result = alloc_svd_result(matrix)
+
+        m = matrix.shape[0]
+        n = matrix.shape[1]
+
+        NMatrix::LAPACK::lapacke_gesdd(:row, :a, m, n, matrix, n, result[1], result[0], m, result[2], n)
+        result
+      end
     end
   end
 

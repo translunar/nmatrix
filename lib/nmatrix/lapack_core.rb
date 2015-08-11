@@ -77,7 +77,7 @@ class NMatrix
       def alloc_svd_result(matrix)
         [
           NMatrix.new(matrix.shape[0], dtype: matrix.dtype),
-          NMatrix.new([[matrix.shape[0],matrix.shape[1]].min,1], dtype: matrix.dtype),
+          NMatrix.new([[matrix.shape[0],matrix.shape[1]].min,1], dtype: matrix.abs_dtype),
           NMatrix.new(matrix.shape[1], dtype: matrix.dtype)
         ]
       end
@@ -93,19 +93,10 @@ class NMatrix
       # Optionally accepts a +workspace_size+ parameter, which will be honored only if it is larger than what LAPACK
       # requires.
       #
+      # Requires either the nmatrix-lapacke or nmatrix-atlas gem.
+      #
       def gesvd(matrix, workspace_size=1)
-        result = alloc_svd_result(matrix)
-        # The LAPACK functions *gesvd expect a column-major matrix and our
-        # matrices are stored row-major. However, all is not lost!
-        # Our m x n matrix, M, stored row-major is equivalent to the n x m
-        # transpose, M^T, stored column-major.
-        # So we get LAPACK to give us the SVD of M^T.
-        # Given an SVD of M^T, we can easily get a SVD of M:
-        # M^T = U S V^(*T)
-        # M = V^* S^T U^T
-        # V^* and U^T will still be unitary and S^T will still be diagonal, so this satisfies all the criteria for a SVD
-        NMatrix::LAPACK::lapack_gesvd(:a, :a, matrix.shape[1], matrix.shape[0], matrix, matrix.shape[1], result[1], result[2], matrix.shape[1], result[0], matrix.shape[0], workspace_size)
-        result
+        raise(NotImplementedError,"gesvd requires either the nmatrix-atlas or nmatrix-lapacke gem")
       end
 
       #
@@ -119,23 +110,11 @@ class NMatrix
       # Optionally accepts a +workspace_size+ parameter, which will be honored only if it is larger than what LAPACK
       # requires.
       #
+      # Requires either the nmatrix-lapacke or nmatrix-atlas gem.
+      #
       def gesdd(matrix, workspace_size=nil)
-        min_workspace_size = matrix.shape.min * (6 + 4 * matrix.shape.min) + matrix.shape.max
-        workspace_size = min_workspace_size if workspace_size.nil? || workspace_size < min_workspace_size
-        result = alloc_svd_result(matrix)
-        NMatrix::LAPACK::lapack_gesdd(:a, matrix.shape[1], matrix.shape[0], matrix, matrix.shape[1], result[1], result[2], matrix.shape[1], result[0], matrix.shape[0], workspace_size)
-        result
+        raise(NotImplementedError,"gesvd requires either the nmatrix-atlas or nmatrix-lapacke gem")
       end
-
-      def alloc_evd_result(matrix)
-        [
-          NMatrix.new(matrix.shape[0], dtype: matrix.dtype),
-          NMatrix.new(matrix.shape[0], dtype: matrix.dtype),
-          NMatrix.new([matrix.shape[0],1], dtype: matrix.dtype),
-          NMatrix.new([matrix.shape[0],1], dtype: matrix.dtype),
-        ]
-      end
-
 
       #
       # call-seq:

@@ -147,6 +147,39 @@ class NMatrix
           return [eigenvalues, right_output]
         end
       end
+
+      def gesvd(matrix, workspace_size=1)
+        result = alloc_svd_result(matrix)
+
+        m = matrix.shape[0]
+        n = matrix.shape[1]
+
+        # This is a pure LAPACK function so it expects column-major functions.
+        # So we need to transpose the input as well as the output.
+        matrix = matrix.transpose
+        NMatrix::LAPACK::lapack_gesvd(:a, :a, m, n, matrix, m, result[1], result[0], m, result[2], n, workspace_size)
+        result[0] = result[0].transpose
+        result[2] = result[2].transpose
+        result
+      end
+
+      def gesdd(matrix, workspace_size=nil)
+        min_workspace_size = matrix.shape.min * (6 + 4 * matrix.shape.min) + matrix.shape.max
+        workspace_size = min_workspace_size if workspace_size.nil? || workspace_size < min_workspace_size
+
+        result = alloc_svd_result(matrix)
+
+        m = matrix.shape[0]
+        n = matrix.shape[1]
+
+        # This is a pure LAPACK function so it expects column-major functions.
+        # So we need to transpose the input as well as the output.
+        matrix = matrix.transpose
+        NMatrix::LAPACK::lapack_gesdd(:a, m, n, matrix, m, result[1], result[0], m, result[2], n, workspace_size)
+        result[0] = result[0].transpose
+        result[2] = result[2].transpose
+        result
+      end
     end
   end
 

@@ -217,7 +217,6 @@ describe "NMatrix::LAPACK functions implemented with LAPACKE interface" do
         expect(vt).to be_within(err).of(vt_true)
       end
 
-      #should share test setup between gesvd, gesdd
       it "calculates the singular value decomposition with lapacke_gesdd" do
         #example from Wikipedia
         m = 4
