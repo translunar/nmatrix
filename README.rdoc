@@ -38,8 +38,8 @@ To install the latest stable version:
     gem install nmatrix
 
 The requirements for NMatrix are:
-* GCC version >= 4.3
-* Ruby 1.9.3+
+* GCC 4.3 or later
+* Ruby 1.9.3 or later
 
 To install +nmatrix-atlas+ or +nmatrix-lapacke+, an additional requirement is a
 compatible LAPACK library.
