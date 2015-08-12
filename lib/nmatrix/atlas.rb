@@ -188,15 +188,20 @@ class NMatrix
     raise(ShapeError, "Cannot invert non-square matrix") unless shape[0] == shape[1]
     raise(DataTypeError, "Cannot invert an integer matrix in-place") if self.integer_dtype?
 
-    # Get the pivot array; factor the matrix
-    # We can't used getrf! here since it doesn't have the clapack behavior,
-    # so it doesn't play nicely with clapack_getri
-    n = self.shape[0]
-    pivot = NMatrix::LAPACK::clapack_getrf(:row, n, n, self, n)
-    # Now calculate the inverse using the pivot array
-    NMatrix::LAPACK::clapack_getri(:row, n, self, n, pivot)
-
-    self
+    # Even though we are using the ATLAS plugin, we still might be missing
+    # CLAPACK (and thus clapack_getri) if we are on OS X.
+    if NMatrix.has_clapack?
+      # Get the pivot array; factor the matrix
+      # We can't used getrf! here since it doesn't have the clapack behavior,
+      # so it doesn't play nicely with clapack_getri
+      n = self.shape[0]
+      pivot = NMatrix::LAPACK::clapack_getrf(:row, n, n, self, n)
+      # Now calculate the inverse using the pivot array
+      NMatrix::LAPACK::clapack_getri(:row, n, self, n, pivot)
+      self
+    else
+      __inverse__(self,true)
+    end
   end
 
   def potrf!(which)
