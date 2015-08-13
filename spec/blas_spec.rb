@@ -70,6 +70,22 @@ describe NMatrix::BLAS do
         expect(b[1]).to eq(5)
         expect(b[2]).to eq(-13)
       end
+
+      # trmm multiplies two matrices, where one of the two is required to be
+      # triangular
+      it "exposes cblas_trmm" do
+        a = NMatrix.new([3,3], [1,1,1, 0,1,2, 0,0,-1], dtype: dtype)
+        b = NMatrix.new([3,3], [1,2,3, 4,5,6, 7,8,9], dtype: dtype)
+
+        begin
+          NMatrix::BLAS.cblas_trmm(:row, :left, :upper, false, :not_unit, 3, 3, 1, a, 3, b, 3)
+        rescue NotImplementedError => e
+          pending e.to_s
+        end
+
+        product = NMatrix.new([3,3], [12,15,18, 18,21,24, -7,-8,-9], dtype: dtype)
+        expect(b).to eq(product)
+      end
     end
   end
 
