@@ -146,6 +146,36 @@ class NMatrix
         raise(NotImplementedError, "geev requires either the nmatrix-atlas or nmatrix-lapack gem")
       end
 
+      # The following are functions that used to be implemented in C, but
+      # now require nmatrix-atlas to run properly, so we can just
+      # implemented their stubs in Ruby.
+      def lapack_gesvd(jobu, jobvt, m, n, a, lda, s, u, ldu, vt, ldvt, lwork)
+        raise(NotImplementedError,"lapack_gesvd requires the nmatrix-atlas gem")
+      end
+
+      def lapack_gesdd(jobz, m, n, a, lda, s, u, ldu, vt, ldvt, lwork)
+        raise(NotImplementedError,"lapack_gesdd requires the nmatrix-atlas gem")
+      end
+
+      def lapack_geev(jobvl, jobvr, n, a, lda, w, wi, vl, ldvl, vr, ldvr, lwork)
+        raise(NotImplementedError,"lapack_geev requires the nmatrix-atlas gem")
+      end
+
+      def clapack_potrf(order, uplo, n, a, lda)
+        raise(NotImplementedError,"clapack_potrf requires the nmatrix-atlas gem")
+      end
+
+      def clapack_potri(order, uplo, n, a, lda)
+        raise(NotImplementedError,"clapack_potri requires the nmatrix-atlas gem")
+      end
+
+      def clapack_potrs(order, uplo, n, nrhs, a, lda, b, ldb)
+        raise(NotImplementedError,"clapack_potrs requires the nmatrix-atlas gem")
+      end
+
+      def clapack_getri(order, n, a, lda, ipiv)
+        raise(NotImplementedError,"clapack_getri requires the nmatrix-atlas gem")
+      end
     end
   end
 end

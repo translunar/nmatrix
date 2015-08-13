@@ -21,7 +21,7 @@
 #
 # * https://github.com/SciRuby/sciruby/wiki/Contributor-Agreement
 #
-# == atlas.rb
+# == lapacke.rb
 #
 # ruby file for the nmatrix-lapacke gem. Loads the C extension and defines
 # nice ruby interfaces for LAPACK functions.

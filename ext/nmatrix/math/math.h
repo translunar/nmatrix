@@ -118,26 +118,6 @@ namespace nm {
  * Functions
  */
 
-
-template <typename DType>
-inline void syrk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE Trans, const int N,
-                 const int K, const DType* alpha, const DType* A, const int lda, const DType* beta, DType* C, const int ldc) {
-  rb_raise(rb_eNotImpError, "syrk not available without external BLAS library");
-}
-
-template <typename DType>
-inline void herk(const enum CBLAS_ORDER Order, const enum CBLAS_UPLO Uplo, const enum CBLAS_TRANSPOSE Trans, const int N,
-                 const int K, const DType* alpha, const DType* A, const int lda, const DType* beta, DType* C, const int ldc) {
-  rb_raise(rb_eNotImpError, "herk not available without external BLAS library");
-}
-
-template <typename DType>
-inline void trmm(const enum CBLAS_ORDER order, const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
-                 const enum CBLAS_TRANSPOSE ta, const enum CBLAS_DIAG diag, const int m, const int n, const DType* alpha,
-                 const DType* A, const int lda, DType* B, const int ldb) {
-  rb_raise(rb_eNotImpError, "trmm not available without external BLAS library");
-}
-
 // Yale: numeric matrix multiply c=a*b
 template <typename DType>
 inline void numbmm(const unsigned int n, const unsigned int m, const unsigned int l, const IType* ia, const IType* ja, const DType* a, const bool diaga,

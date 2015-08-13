@@ -174,26 +174,12 @@ extern "C" {
                              VALUE a, VALUE lda, VALUE b, VALUE ldb, VALUE vBeta, VALUE c, VALUE ldc);
   static VALUE nm_cblas_trsm(VALUE self, VALUE order, VALUE side, VALUE uplo, VALUE trans_a, VALUE diag, VALUE m, VALUE n,
                              VALUE vAlpha, VALUE a, VALUE lda, VALUE b, VALUE ldb);
-  static VALUE nm_cblas_trmm(VALUE self, VALUE order, VALUE side, VALUE uplo, VALUE trans_a, VALUE diag, VALUE m, VALUE n,
-                             VALUE alpha, VALUE a, VALUE lda, VALUE b, VALUE ldb);
-  static VALUE nm_cblas_herk(VALUE self, VALUE order, VALUE uplo, VALUE trans, VALUE n, VALUE k, VALUE alpha, VALUE a,
-                             VALUE lda, VALUE beta, VALUE c, VALUE ldc);
-  static VALUE nm_cblas_syrk(VALUE self, VALUE order, VALUE uplo, VALUE trans, VALUE n, VALUE k, VALUE alpha, VALUE a,
-                             VALUE lda, VALUE beta, VALUE c, VALUE ldc);
 
   /* LAPACK. */
   static VALUE nm_has_clapack(VALUE self);
   static VALUE nm_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda);
-  static VALUE nm_clapack_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
   static VALUE nm_clapack_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE ipiv, VALUE b, VALUE ldb);
-  static VALUE nm_clapack_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE b, VALUE ldb);
-  static VALUE nm_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE lda, VALUE ipiv);
-  static VALUE nm_clapack_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
   static VALUE nm_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1, VALUE k2, VALUE ipiv, VALUE incx);
-
-  static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lworkspace_size);
-  static VALUE nm_lapack_gesdd(VALUE self, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lworkspace_size);
-  static VALUE nm_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_right, VALUE n, VALUE a, VALUE lda, VALUE w, VALUE wi, VALUE vl, VALUE ldvl, VALUE vr, VALUE ldvr, VALUE lwork);
 } // end of extern "C" block
 
 ////////////////////
@@ -507,19 +493,10 @@ void nm_math_init_blas() {
 
   VALUE cNMatrix_Internal_LAPACK = rb_define_module_under(cNMatrix_Internal, "LAPACK");
 
-  /* ATLAS-CLAPACK Functions */
+  /* ATLAS-CLAPACK Functions that are implemented internally */
   rb_define_singleton_method(cNMatrix_Internal_LAPACK, "clapack_getrf", (METHOD)nm_clapack_getrf, 5);
-  rb_define_singleton_method(cNMatrix_Internal_LAPACK, "clapack_potrf", (METHOD)nm_clapack_potrf, 5);
   rb_define_singleton_method(cNMatrix_Internal_LAPACK, "clapack_getrs", (METHOD)nm_clapack_getrs, 9);
-  rb_define_singleton_method(cNMatrix_Internal_LAPACK, "clapack_potrs", (METHOD)nm_clapack_potrs, 8);
-  rb_define_singleton_method(cNMatrix_Internal_LAPACK, "clapack_getri", (METHOD)nm_clapack_getri, 5);
-  rb_define_singleton_method(cNMatrix_Internal_LAPACK, "clapack_potri", (METHOD)nm_clapack_potri, 5);
   rb_define_singleton_method(cNMatrix_Internal_LAPACK, "clapack_laswp", (METHOD)nm_clapack_laswp, 7);
-
-  /* Non-ATLAS regular LAPACK Functions called via Fortran interface */
-  rb_define_singleton_method(cNMatrix_Internal_LAPACK, "lapack_gesvd", (METHOD)nm_lapack_gesvd, 12);
-  rb_define_singleton_method(cNMatrix_Internal_LAPACK, "lapack_gesdd", (METHOD)nm_lapack_gesdd, 11);
-  rb_define_singleton_method(cNMatrix_Internal_LAPACK, "lapack_geev",  (METHOD)nm_lapack_geev,  12);
 
   VALUE cNMatrix_Internal_BLAS = rb_define_module_under(cNMatrix_Internal, "BLAS");
 
@@ -533,9 +510,6 @@ void nm_math_init_blas() {
   rb_define_singleton_method(cNMatrix_Internal_BLAS, "cblas_gemm", (METHOD)nm_cblas_gemm, 14);
   rb_define_singleton_method(cNMatrix_Internal_BLAS, "cblas_gemv", (METHOD)nm_cblas_gemv, 11);
   rb_define_singleton_method(cNMatrix_Internal_BLAS, "cblas_trsm", (METHOD)nm_cblas_trsm, 12);
-  rb_define_singleton_method(cNMatrix_Internal_BLAS, "cblas_trmm", (METHOD)nm_cblas_trmm, 12);
-  rb_define_singleton_method(cNMatrix_Internal_BLAS, "cblas_syrk", (METHOD)nm_cblas_syrk, 11);
-  rb_define_singleton_method(cNMatrix_Internal_BLAS, "cblas_herk", (METHOD)nm_cblas_herk, 11);
 }
 
 /*
@@ -951,126 +925,6 @@ static VALUE nm_cblas_trsm(VALUE self,
   return Qtrue;
 }
 
-
-static VALUE nm_cblas_trmm(VALUE self,
-                           VALUE order,
-                           VALUE side, VALUE uplo,
-                           VALUE trans_a, VALUE diag,
-                           VALUE m, VALUE n,
-                           VALUE alpha,
-                           VALUE a, VALUE lda,
-                           VALUE b, VALUE ldb)
-{
-  //remove function totally?
-  rb_raise(rb_eNotImpError, "BLAS not linked");
-  return Qtrue;
-}
-
-
-static VALUE nm_cblas_syrk(VALUE self,
-                           VALUE order,
-                           VALUE uplo,
-                           VALUE trans,
-                           VALUE n, VALUE k,
-                           VALUE alpha,
-                           VALUE a, VALUE lda,
-                           VALUE beta,
-                           VALUE c, VALUE ldc)
-{
-  //remove function totally?
-  rb_raise(rb_eNotImpError, "BLAS not linked");
-  return Qtrue;
-}
-
-
-static VALUE nm_cblas_herk(VALUE self,
-                           VALUE order,
-                           VALUE uplo,
-                           VALUE trans,
-                           VALUE n, VALUE k,
-                           VALUE alpha,
-                           VALUE a, VALUE lda,
-                           VALUE beta,
-                           VALUE c, VALUE ldc)
-{
-  //remove function totally?
-  rb_raise(rb_eNotImpError, "BLAS not linked");
-  return Qtrue;
-}
-
-
-/*
- * Function signature conversion for calling CBLAS' gesvd functions as directly as possible.
- *
- * xGESVD computes the singular value decomposition (SVD) of a real
- * M-by-N matrix A, optionally computing the left and/or right singular
- * vectors. The SVD is written
- *
- *      A = U * SIGMA * transpose(V)
- *
- * where SIGMA is an M-by-N matrix which is zero except for its
- * min(m,n) diagonal elements, U is an M-by-M orthogonal matrix, and
- * V is an N-by-N orthogonal matrix.  The diagonal elements of SIGMA
- * are the singular values of A; they are real and non-negative, and
- * are returned in descending order.  The first min(m,n) columns of
- * U and V are the left and right singular vectors of A.
- *
- * Note that the routine returns V**T, not V.
- */
-static VALUE nm_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lwork) {
-  //should I remove this entirely?
-  rb_raise(rb_eNotImpError, "not implemented without external libraries");
-  return Qfalse;
-}
-
-/*
- * Function signature conversion for calling CBLAS' gesdd functions as directly as possible.
- *
- * xGESDD uses a divide-and-conquer strategy to compute the singular value decomposition (SVD) of a real
- * M-by-N matrix A, optionally computing the left and/or right singular
- * vectors. The SVD is written
- *
- *      A = U * SIGMA * transpose(V)
- *
- * where SIGMA is an M-by-N matrix which is zero except for its
- * min(m,n) diagonal elements, U is an M-by-M orthogonal matrix, and
- * V is an N-by-N orthogonal matrix.  The diagonal elements of SIGMA
- * are the singular values of A; they are real and non-negative, and
- * are returned in descending order.  The first min(m,n) columns of
- * U and V are the left and right singular vectors of A.
- *
- * Note that the routine returns V**T, not V.
- */
-static VALUE nm_lapack_gesdd(VALUE self, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lwork) {
-  //should I remove this entirely?
-  rb_raise(rb_eNotImpError, "not implemented without external libraries");
-  return Qfalse;
-}
-
-
-/*
- * Function signature conversion for calling CBLAS' geev functions as directly as possible.
- *
- * GEEV computes for an N-by-N real nonsymmetric matrix A, the
- * eigenvalues and, optionally, the left and/or right eigenvectors.
- *
- * The right eigenvector v(j) of A satisfies
- *                    A * v(j) = lambda(j) * v(j)
- * where lambda(j) is its eigenvalue.
- *
- * The left eigenvector u(j) of A satisfies
- *                 u(j)**H * A = lambda(j) * u(j)**H
- * where u(j)**H denotes the conjugate transpose of u(j).
- *
- * The computed eigenvectors are normalized to have Euclidean norm
- * equal to 1 and largest component real.
- */
-static VALUE nm_lapack_geev(VALUE self, VALUE compute_left, VALUE compute_right, VALUE n, VALUE a, VALUE lda, VALUE w, VALUE wi, VALUE vl, VALUE ldvl, VALUE vr, VALUE ldvr, VALUE lwork) {
-  //should I remove this entirely?
-  rb_raise(rb_eNotImpError, "not implemented without external libraries");
-  return Qfalse;
-}
-
 /* Call any of the clapack_xgetrf functions as directly as possible.
  *
  * The clapack_getrf functions (dgetrf, sgetrf, cgetrf, and zgetrf) compute an LU factorization of a general M-by-N
@@ -1129,22 +983,6 @@ static VALUE nm_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a
 }
 
 
-/* Call any of the clapack_xpotrf functions as directly as possible.
- *
- * You probably don't want to call this function. Instead, why don't you try clapack_potrf, which is more flexible
- * with its arguments?
- *
- * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
- * handling, so you can easily crash Ruby!
- *
- * Returns an array giving the pivot indices (normally these are argument #5).
- */
-static VALUE nm_clapack_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
-  rb_raise(rb_eNotImpError, "potrf currently requires CLAPACK");
-  return a;
-}
-
-
 /*
  * Call any of the clapack_xgetrs functions as directly as possible.
  */
@@ -1184,15 +1022,6 @@ static VALUE nm_clapack_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VAL
   return b;
 }
 
-
-/*
- * Call any of the clapack_xpotrs functions as directly as possible.
- */
-static VALUE nm_clapack_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE b, VALUE ldb) {
-  rb_raise(rb_eNotImpError, "potrf currently requires CLAPACK");
-  return b;
-}
-
 /*
  * Simple way to check from within Ruby code if clapack functions are available, without
  * having to wait around for an exception to be thrown.
@@ -1200,38 +1029,6 @@ static VALUE nm_clapack_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALU
 static VALUE nm_has_clapack(VALUE self) {
   return Qfalse;
 }
-
-/* Call any of the clapack_xgetri functions as directly as possible.
- *
- * You probably don't want to call this function. Instead, why don't you try clapack_getri, which is more flexible
- * with its arguments?
- *
- * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
- * handling, so you can easily crash Ruby!
- *
- * Returns an array giving the pivot indices (normally these are argument #5).
- */
-static VALUE nm_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, VALUE lda, VALUE ipiv) {
-  rb_raise(rb_eNotImpError, "getri currently requires CLAPACK");
-  return a;
-}
-
-
-/* Call any of the clapack_xpotri functions as directly as possible.
- *
- * You probably don't want to call this function. Instead, why don't you try clapack_potri, which is more flexible
- * with its arguments?
- *
- * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
- * handling, so you can easily crash Ruby!
- *
- * Returns an array giving the pivot indices (normally these are argument #5).
- */
-static VALUE nm_clapack_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
-  rb_raise(rb_eNotImpError, "potri currently requires CLAPACK");
-  return a;
-}
-
 
 /*
  * Call any of the clapack_xlaswp functions as directly as possible.

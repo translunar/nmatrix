@@ -700,7 +700,6 @@ static VALUE nm_atlas_cblas_herk(VALUE self,
  *
  * Note that the routine returns V**T, not V.
  */
-
 static VALUE nm_atlas_lapack_gesvd(VALUE self, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE lwork) {
   static int (*gesvd_table[nm::NUM_DTYPES])(char, char, int, int, void* a, int, void* s, void* u, int, void* vt, int, void* work, int, void* rwork) = {
     NULL, NULL, NULL, NULL, NULL, // no integer ops
@@ -962,8 +961,6 @@ static VALUE nm_atlas_clapack_getrf(VALUE self, VALUE order, VALUE m, VALUE n, V
  *
  * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
  * handling, so you can easily crash Ruby!
- *
- * Returns an array giving the pivot indices (normally these are argument #5).
  */
 static VALUE nm_atlas_clapack_potrf(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
 #if !defined(HAVE_CLAPACK_H) && !defined(HAVE_ATLAS_CLAPACK_H)
@@ -1131,8 +1128,6 @@ static VALUE nm_atlas_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, V
  *
  * This function does almost no type checking. Seriously, be really careful when you call it! There's no exception
  * handling, so you can easily crash Ruby!
- *
- * Returns an array giving the pivot indices (normally these are argument #5).
  */
 static VALUE nm_atlas_clapack_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda) {
 #if !defined (HAVE_CLAPACK_H) && !defined (HAVE_ATLAS_CLAPACK_H)
