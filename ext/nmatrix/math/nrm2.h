@@ -59,6 +59,8 @@
 #ifndef NRM2_H
 # define NRM2_H
 
+#include "math/long_dtype.h"
+
 
 namespace nm { namespace math {
 
@@ -97,27 +99,6 @@ ReturnDType nrm2(const int N, const DType* X, const int incX) {
 }
 
 
-#if defined HAVE_CBLAS_H || defined HAVE_ATLAS_CBLAS_H
-template <>
-inline float nrm2(const int N, const float* X, const int incX) {
-  return cblas_snrm2(N, X, incX);
-}
-
-template <>
-inline double nrm2(const int N, const double* X, const int incX) {
-  return cblas_dnrm2(N, X, incX);
-}
-
-template <>
-inline float nrm2(const int N, const Complex64* X, const int incX) {
-  return cblas_scnrm2(N, X, incX);
-}
-
-template <>
-inline double nrm2(const int N, const Complex128* X, const int incX) {
-  return cblas_dznrm2(N, X, incX);
-}
-#else
 template <typename FloatDType>
 static inline void nrm2_complex_helper(const FloatDType& xr, const FloatDType& xi, double& scale, double& ssq) {
   double absx = std::abs(xr);
@@ -166,7 +147,6 @@ double nrm2(const int N, const Complex128* X, const int incX) {
 
   return scale * std::sqrt( ssq );
 }
-#endif
 
 template <typename ReturnDType, typename DType>
 inline void cblas_nrm2(const int N, const void* X, const int incX, void* result) {

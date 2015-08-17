@@ -70,9 +70,26 @@ describe NMatrix::BLAS do
         expect(b[1]).to eq(5)
         expect(b[2]).to eq(-13)
       end
+
+      # trmm multiplies two matrices, where one of the two is required to be
+      # triangular
+      it "exposes cblas_trmm" do
+        a = NMatrix.new([3,3], [1,1,1, 0,1,2, 0,0,-1], dtype: dtype)
+        b = NMatrix.new([3,3], [1,2,3, 4,5,6, 7,8,9], dtype: dtype)
+
+        begin
+          NMatrix::BLAS.cblas_trmm(:row, :left, :upper, false, :not_unit, 3, 3, 1, a, 3, b, 3)
+        rescue NotImplementedError => e
+          pending e.to_s
+        end
+
+        product = NMatrix.new([3,3], [12,15,18, 18,21,24, -7,-8,-9], dtype: dtype)
+        expect(b).to eq(product)
+      end
     end
   end
 
+  #should have a separate test for complex
   [:float32, :float64, :complex64, :complex128, :object].each do |dtype|
     context dtype do
 
@@ -100,7 +117,11 @@ describe NMatrix::BLAS do
         pending("broken for :object") if dtype == :object
 
         ab = NMatrix.new([2,1], [6,-8], dtype: dtype)
-        c,s = NMatrix::BLAS::rotg(ab)
+        begin
+          c,s = NMatrix::BLAS::rotg(ab)
+        rescue NotImplementedError => e
+          pending e.to_s
+        end
 
         if [:float32, :float64].include?(dtype)
           expect(ab[0]).to be_within(1e-6).of(-10)
@@ -127,7 +148,6 @@ describe NMatrix::BLAS do
         expect(r).to eq(NMatrix.new([4,2], [273,455,243,235,244,205,102,160], dtype: dtype))
       end
 
-
       it "exposes gemv" do
         a = NMatrix.new([4,3], [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0], dtype: dtype)
         x = NMatrix.new([3,1], [2.0, 1.0, 0.0], dtype: dtype)
@@ -136,8 +156,10 @@ describe NMatrix::BLAS do
       end
 
       it "exposes asum" do
-        x = NMatrix.new([4,1], [1,2,3,4], dtype: :float64)
-        expect(NMatrix::BLAS.asum(x)).to eq(10.0)
+        pending("broken for :object") if dtype == :object
+
+        x = NMatrix.new([4,1], [-1,2,3,4], dtype: dtype)
+        expect(NMatrix::BLAS.asum(x)).to eq(10)
       end
 
       it "exposes asum for single element" do
@@ -151,8 +173,19 @@ describe NMatrix::BLAS do
       end
 
       it "exposes nrm2" do
-        x = NMatrix.new([4,1], [2,-4,3,5], dtype: :float64)
-        expect(NMatrix::BLAS.nrm2(x, 1, 3)).to be_within(1e-10).of(5.385164807134504)
+        pending("broken for :object") if dtype == :object
+        pending("Temporarily disable because the internal implementation of nrm2 is broken -WL 2015-05-17") if dtype == :complex64 || dtype == :complex128
+
+        x = NMatrix.new([4,1], [2,-4,3,5], dtype: dtype)
+        err = case dtype
+                when :float32, :complex64
+                  1e-6
+                when :float64, :complex128
+                  1e-14
+                else
+                  1e-14
+              end
+        expect(NMatrix::BLAS.nrm2(x, 1, 3)).to be_within(err).of(5.385164807134504)
       end
 
     end

@@ -28,6 +28,14 @@
 #++
 
 module NMatrix::BLAS
+
+  #Add functions from C extension to main BLAS module
+  class << self
+    NMatrix::Internal::BLAS.singleton_methods.each do |m|
+      define_method m, NMatrix::Internal::BLAS.method(m).to_proc
+    end
+  end
+
   class << self
     #
     # call-seq:
@@ -277,6 +285,21 @@ module NMatrix::BLAS
       raise(ArgumentError, "Expected dense NMatrix for arg 0") unless x.is_a?(NMatrix)
       raise(RangeError, "n out of range") if n*incx > x.size || n*incx <= 0 || n <= 0
       ::NMatrix::BLAS.cblas_nrm2(n, x, incx)
+    end
+
+    # The following are functions that used to be implemented in C, but
+    # now require nmatrix-atlas or nmatrix-lapcke to run properly, so we can just
+    # implemented their stubs in Ruby.
+    def cblas_trmm(order, side, uplo, trans_a, diag, m, n, alpha, a, lda, b, ldb)
+      raise(NotImplementedError,"cblas_trmm requires either the nmatrix-lapacke or nmatrix-atlas gem")
+    end
+
+    def cblas_syrk(order, uplo, trans, n, k, alpha, a, lda, beta, c, ldc)
+      raise(NotImplementedError,"cblas_syrk requires either the nmatrix-lapacke or nmatrix-atlas gem")
+    end
+
+    def cblas_herk(order, uplo, trans, n, k, alpha, a, lda, beta, c, ldc)
+      raise(NotImplementedError,"cblas_herk requires either the nmatrix-lapacke or nmatrix-atlas gem")
     end
   end
 end

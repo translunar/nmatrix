@@ -206,71 +206,128 @@ describe "math" do
     next if dtype == :object
     context dtype do
       before do
-        @m = NMatrix.new(:dense, 3, [4,9,2,3,5,7,8,1,6], dtype)
+        @m = NMatrix.new([3,4], GETRF_EXAMPLE_ARRAY, dtype: dtype)
+        @err = case dtype
+                 when :float32, :complex64
+                   1e-6
+                 when :float64, :complex128
+                   1e-14
+               end
       end
 
+      #haven't check this spec yet. Also it doesn't check all the elements of the matrix.
       it "should correctly factorize a matrix" do
         a = @m.factorize_lu
-        expect(a[0,0]).to eq(8)
-        expect(a[0,1]).to eq(1)
-        expect(a[0,2]).to eq(6)
-        expect(a[1,0]).to eq(0.5)
-        expect(a[1,1]).to eq(8.5)
-        expect(a[1,2]).to eq(-1)
-        expect(a[2,0]).to eq(0.375)
+        expect(a).to be_within(@err).of(NMatrix.new([3,4], GETRF_SOLUTION_ARRAY, dtype: dtype))
       end
 
       it "also returns the permutation matrix" do
         a, p = @m.factorize_lu perm_matrix: true
 
-        expect(a[0,0]).to eq(8)
-        expect(a[0,1]).to eq(1)
-        expect(a[0,2]).to eq(6)
-        expect(a[1,0]).to eq(0.5)
-        expect(a[1,1]).to eq(8.5)
-        expect(a[1,2]).to eq(-1)
-        expect(a[2,0]).to eq(0.375)
+        expect(a).to be_within(@err).of(NMatrix.new([3,4], GETRF_SOLUTION_ARRAY, dtype: dtype))
 
-        puts p
-        expect(p[1,0]).to eq(1)
-        expect(p[2,1]).to eq(1)
-        expect(p[0,2]).to eq(1)
+        p_true = NMatrix.new([3,3], [0,0,1,1,0,0,0,1,0], dtype: dtype)
+        expect(p).to eq(p_true)
       end
     end
+  end
 
+  NON_INTEGER_DTYPES.each do |dtype|
+    next if dtype == :object
     context dtype do
-      it "should correctly invert a matrix in place (bang)" do
-        a = NMatrix.new(:dense, 3, [1,2,3,0,1,4,5,6,0], dtype)
-        b = NMatrix.new(:dense, 3, [-24,18,5,20,-15,-4,-5,4,1], dtype)
+
+      it "calculates cholesky decomposition using potrf (lower)" do
+        #a = NMatrix.new([3,3],[1,1,1, 1,2,2, 1,2,6], dtype: dtype)
+        # We use the matrix
+        # 1 1 1
+        # 1 2 2
+        # 1 2 6
+        # which is symmetric and positive-definite as required, but
+        # we need only store the lower-half of the matrix.
+        a = NMatrix.new([3,3],[1,0,0, 1,2,0, 1,2,6], dtype: dtype)
         begin
-          a.invert!
-        rescue NotImplementedError => e
-          pending e.to_s
+          r = a.potrf!(:lower)
+
+          b = NMatrix.new([3,3],[1,0,0, 1,1,0, 1,1,2], dtype: dtype)
+          expect(a).to eq(b)
+          expect(r).to eq(b)
+        rescue NotImplementedError
+          pending "potrf! not implemented without plugins"
         end
-        expect(a.round).to eq(b)
       end
 
-      unless NMatrix.has_clapack?
-        it "should correctly invert a matrix in place" do
-          a = NMatrix.new(:dense, 5, [1, 8,-9, 7, 5, 
-                                      0, 1, 0, 4, 4, 
-                                      0, 0, 1, 2, 5, 
-                                      0, 0, 0, 1,-5,
-                                      0, 0, 0, 0, 1 ], dtype)
-          b = NMatrix.new(:dense, 5, [1,-8, 9, 7, 17,
-                                      0, 1, 0,-4,-24,
-                                      0, 0, 1,-2,-15,
-                                      0, 0, 0, 1,  5,
-                                      0, 0, 0, 0,  1,], dtype)
-          expect(a.invert).to eq(b)
+      it "calculates cholesky decomposition using potrf (upper)" do
+        a = NMatrix.new([3,3],[1,1,1, 0,2,2, 0,0,6], dtype: dtype)
+        begin
+          r = a.potrf!(:upper)
+
+          b = NMatrix.new([3,3],[1,1,1, 0,1,1, 0,0,2], dtype: dtype)
+          expect(a).to eq(b)
+          expect(r).to eq(b)
+        rescue NotImplementedError
+          pending "potrf! not implemented without plugins"
+        end
+      end
+
+      it "calculates cholesky decomposition using #factorize_cholesky" do
+        a = NMatrix.new([3,3],[1,2,1, 2,13,5, 1,5,6], dtype: dtype)
+        begin
+          u,l = a.factorize_cholesky
+
+          l_true = NMatrix.new([3,3],[1,0,0, 2,3,0, 1,1,2], dtype: dtype)
+          u_true = l_true.transpose
+          expect(u).to eq(u_true)
+          expect(l).to eq(l_true)
+        rescue NotImplementedError
+          pending "potrf! not implemented without plugins"
+        end
+      end
+    end
+  end
+
+  ALL_DTYPES.each do |dtype|
+    next if dtype == :byte #doesn't work for unsigned types
+    next if dtype == :object
+
+    context dtype do
+      err = case dtype
+              when :float32, :complex64
+                1e-4
+              else #integer matrices will return :float64
+                1e-13
+            end
+
+      it "should correctly invert a matrix in place (bang)" do
+        a = NMatrix.new(:dense, 5, [1, 8,-9, 7, 5, 
+                                    0, 1, 0, 4, 4, 
+                                    0, 0, 1, 2, 5, 
+                                    0, 0, 0, 1,-5,
+                                    0, 0, 0, 0, 1 ], dtype)
+        b = NMatrix.new(:dense, 5, [1,-8, 9, 7, 17,
+                                    0, 1, 0,-4,-24,
+                                    0, 0, 1,-2,-15,
+                                    0, 0, 0, 1,  5,
+                                    0, 0, 0, 0,  1,], dtype)
+        if a.integer_dtype?
+          expect{a.invert!}.to raise_error(DataTypeError)
+        else
+          #should return inverse as well as modifying a
+          r = a.invert!
+          expect(a).to be_within(err).of(b)
+          expect(r).to be_within(err).of(b)
         end
       end
 
       it "should correctly invert a matrix out-of-place" do
         a = NMatrix.new(:dense, 3, [1,2,3,0,1,4,5,6,0], dtype)
-        b = NMatrix.new(:dense, 3, [-24,18,5,20,-15,-4,-5,4,1], dtype)
 
-        expect(a.invert(3,3)).to eq(b)
+        if a.integer_dtype?
+          b = NMatrix.new(:dense, 3, [-24,18,5,20,-15,-4,-5,4,1], :float64)
+        else
+          b = NMatrix.new(:dense, 3, [-24,18,5,20,-15,-4,-5,4,1], dtype)
+        end
+
+        expect(a.invert).to be_within(err).of(b)
       end
     end
   end
@@ -504,10 +561,24 @@ describe "math" do
       end
 
       it "solves linear equation for #{dtype} (non-symmetric matrix)" do
-        a = NMatrix.new [3,3], [1,2,3,5,6,7,3,5,3], dtype: dtype
-        b = NMatrix.new [3,1], [2,3,4], dtype: dtype
+        a = NMatrix.new [3,3], [1,1,1, -1,0,1, 3,4,6], dtype: dtype
+        b = NMatrix.new [3,1], [6,2,29], dtype: dtype
 
-        expect(a.solve(b)).to be_within(0.01).of(NMatrix.new([3,1], [-1.437,1.62,0.062], dtype: dtype))
+        err = case dtype
+                when :float32, :complex64
+                  1e-5
+                else
+                  1e-14
+              end
+
+        expect(a.solve(b)).to be_within(err).of(NMatrix.new([3,1], [1,2,3], dtype: dtype))
+      end
+
+      it "solves linear equation for dtype #{dtype} (non-vector rhs)" do
+        a = NMatrix.new [3,3], [1,0,0, -1,0,1, 2,1,1], dtype: dtype
+        b = NMatrix.new [3,2], [1,0, 1,2, 4,2], dtype: dtype
+
+        expect(a.solve(b)).to eq(NMatrix.new [3,2], [1,0, 0,0, 2,2], dtype: dtype)
       end
     end
   end
@@ -625,7 +696,7 @@ describe "math" do
                   when :float32, :complex64
                     1e-6
                   when :float64, :complex128
-                    1e-15
+                    1e-14
                   else
                     1e-64 # FIXME: should be 0, but be_within(0) does not work.
                 end

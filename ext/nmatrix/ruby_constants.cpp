@@ -86,8 +86,6 @@ VALUE cNMatrix,
       cNMatrix_IO,
       cNMatrix_IO_Matlab,
 			cNMatrix_YaleFunctions,
-			cNMatrix_BLAS,
-			cNMatrix_LAPACK,
 
       cNMatrix_GC_holder,
 
