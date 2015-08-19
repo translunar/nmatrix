@@ -983,6 +983,16 @@ bool eqeq(const DENSE_STORAGE* left, const DENSE_STORAGE* right) {
     return false;
   }
 
+  size_t dim = left->dim;
+  for (size_t i=0; i<dim; i++) {
+    if (left->shape[i] != right->shape[i]) {
+      nm_dense_storage_unregister(right);
+      nm_dense_storage_unregister(left);
+
+      return false;
+    }
+  }
+
   LDType* left_elements	  = (LDType*)left->elements;
   RDType* right_elements  = (RDType*)right->elements;
 

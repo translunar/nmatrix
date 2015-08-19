@@ -1077,8 +1077,6 @@ protected
   end
 
 
-  # Function assumes the dimensions and such have already been tested.
-  #
   # Called from inside NMatrix: nm_eqeq
   #
   # There are probably more efficient ways to do this, but currently it's unclear how.
@@ -1089,6 +1087,8 @@ protected
   # cast and then run the comparison. For now, let's assume that people aren't going
   # to be doing this very often, and we can optimize as needed.
   def dense_eql_sparse? m #:nodoc:
+    return false if self.shape != m.shape
+
     m.each_with_indices do |v,*indices|
       return false if self[*indices] != v
     end
