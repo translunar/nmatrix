@@ -44,7 +44,7 @@ The requirements for NMatrix are:
 To install +nmatrix-atlas+ or +nmatrix-lapacke+, an additional requirement is a
 compatible LAPACK library.
 Detailed directions for this step can be found
-{here}[https://github.com/wlevine/nmatrix/wiki/Installation].
+{here}[https://github.com/SciRuby/nmatrix/wiki/Installation].
 
 If you want to obtain the latest (development) code, you should generally do:
 
@@ -79,7 +79,7 @@ singular value decomposition, eigenvalues/eigenvectors, inverses of matrices
 bigger than 3-by-3), your code now depends on the +nmatrix-atlas+ gem. You
 will need to add this a dependency of your project and <tt>require 'nmatrix/atlas'</tt>
 in addition to <tt>require 'nmatrix'</tt>. In most cases, no further changes
-should be necessary, however there have been a few {API changes}[https://github.com/wlevine/nmatrix/wiki/API-Changes], please check
+should be necessary, however there have been a few {API changes}[https://github.com/SciRuby/nmatrix/wiki/API-Changes], please check
 to see if these affect you.
 
 == Documentation
