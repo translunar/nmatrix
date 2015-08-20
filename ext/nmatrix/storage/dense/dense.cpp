@@ -976,22 +976,6 @@ bool eqeq(const DENSE_STORAGE* left, const DENSE_STORAGE* right) {
   tmp1 = NULL; tmp2 = NULL;
   bool result = true;
   /* FIXME: Very strange behavior! The GC calls the method directly with non-initialized data. */
-  if (left->dim != right->dim) {
-    nm_dense_storage_unregister(right);
-    nm_dense_storage_unregister(left);
-
-    return false;
-  }
-
-  size_t dim = left->dim;
-  for (size_t i=0; i<dim; i++) {
-    if (left->shape[i] != right->shape[i]) {
-      nm_dense_storage_unregister(right);
-      nm_dense_storage_unregister(left);
-
-      return false;
-    }
-  }
 
   LDType* left_elements	  = (LDType*)left->elements;
   RDType* right_elements  = (RDType*)right->elements;

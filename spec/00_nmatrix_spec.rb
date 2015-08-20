@@ -484,7 +484,6 @@ describe 'NMatrix' do
             m = NMatrix.new([3,4], [0,0,1,2,0,0,3,4,0,0,0,0], stype: right)
 
             expect(n==m).to eq(true)
-            expect(m==n).to eq(true)
           end
 
           it "tests equality of two unequal matrices" do
@@ -492,24 +491,23 @@ describe 'NMatrix' do
             m = NMatrix.new([3,4], [0,0,1,2,0,0,3,4,0,0,0,0], stype: right)
 
             expect(n==m).to eq(false)
-            expect(m==n).to eq(false)
           end
 
           it "tests equality of matrices with different shapes" do
             n = NMatrix.new([2,2], [1,2, 3,4], stype: left)
             m = NMatrix.new([2,3], [1,2, 3,4, 5,6], stype: right)
+            x = NMatrix.new([1,4], [1,2, 3,4], stype: right)
 
-            expect(n==m).to eq(false)
-            expect(m==n).to eq(false)
+            expect{n==m}.to raise_error(ShapeError)
+            expect{n==x}.to raise_error(ShapeError)
           end
 
           it "tests equality of matrices with different dimension" do
             n = NMatrix.new([2,1], [1,2], stype: left)
             m = NMatrix.new([2], [1,2], stype: right)
 
-            expect(n==m).to eq(false)
-            expect(m==n).to eq(false)
-          end if left != :yale && right != :yale
+            expect{n==m}.to raise_error(ShapeError)
+          end if left != :yale && right != :yale # yale must have dimension 2
         end
       end
     end
