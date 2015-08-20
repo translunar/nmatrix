@@ -1318,6 +1318,13 @@ void nm_list_storage_remove(STORAGE* storage, SLICE* slice) {
 bool nm_list_storage_eqeq(const STORAGE* left, const STORAGE* right) {
 	NAMED_LR_DTYPE_TEMPLATE_TABLE(ttable, nm::list_storage::eqeq_r, bool, nm::list_storage::RecurseData& left, nm::list_storage::RecurseData& right, const LIST* l, const LIST* r, size_t rec)
 
+  // Check that the shapes match before going any further.
+  if (left->dim != right->dim) return false;
+  size_t dim = left->dim;
+  for (size_t i=0; i<dim; i++) {
+    if (left->shape[i] != right->shape[i]) return false;
+  }
+
   nm::list_storage::RecurseData ldata(reinterpret_cast<const LIST_STORAGE*>(left)),
                                 rdata(reinterpret_cast<const LIST_STORAGE*>(right));
 
