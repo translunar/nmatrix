@@ -880,6 +880,22 @@ static VALUE nm_eqeq(VALUE left, VALUE right) {
 
   bool result = false;
 
+  // Check that the shapes match before going any further.
+  if (l->storage->dim != r->storage->dim) {
+    NM_CONSERVATIVE(nm_unregister_value(&left));
+    NM_CONSERVATIVE(nm_unregister_value(&right));
+    rb_raise(nm_eShapeError, "cannot compare matrices with different dimension");
+  }
+
+  size_t dim = l->storage->dim;
+  for (size_t i=0; i<dim; i++) {
+    if (l->storage->shape[i] != r->storage->shape[i]) {
+      NM_CONSERVATIVE(nm_unregister_value(&left));
+      NM_CONSERVATIVE(nm_unregister_value(&right));
+      rb_raise(nm_eShapeError, "cannot compare matrices with different shapes");
+    }
+  }
+
   if (l->stype != r->stype) { // DIFFERENT STYPES
 
     if (l->stype == nm::DENSE_STORE)
