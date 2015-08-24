@@ -675,3 +675,67 @@
 
   * Fixed definition of NMatrix#asum for one-by-one
     matrices (by @andrewcsmith)
+
+=== 0.2.0 / 2015-08-24
+
+* 2 major enhancements:
+
+  * External libraries are now linked via optional plugins,
+    removing ATLAS dependencies (by @wlevine)
+
+  * Made it possible to use NMatrix together with NArray (by
+    @blackwinter)
+
+* 9 minor enhancements:
+
+  * Removed rational types (by @wlevine)
+
+  * Added block-diagonal matrix generation method,
+    NMatrix.block_diagonal (by @agisga)
+
+  * Added Kronecker product method #kron_prod (by @agisga)
+
+  * Made #permute_columns usage more intuitive (@agisga)
+
+  * Added #pow method to raise a matrix to an integer power
+    (by @v0dro)
+
+  * Added #meshgrid method (by @dilcom)
+
+  * Added #hessenberg method, for reducing matrices to upper
+    Hessenberg form (by @v0dro)
+
+  * Added calculation of correlation matrix with #corr and
+    covariance using #cov (by @v0dro)
+
+  * Added method for returning matrix diagonal, #diagonal
+    (by @v0dro)
+
+* 11 bug fixes:
+
+  * Fixed #== operator problems (by @wlevine)
+
+  * Fixed BLAS.gemv (by @wlevine)
+
+  * Fixed #asum for single element complex matrices (by
+    @wlevine)
+
+  * Fixed determinant calculation (by @wlevine)
+
+  * Fixed division by zero (by @spacewander)
+
+  * Fixed NMatrix#respond_to? so it would accept two
+    arguments properly (by @ktns)
+
+  * Fixed NMatrix#hermitian? (by @agisga)
+
+  * Fixed #gesdd, #gesvd (by @wlevine)
+
+  * Fixed #symmetric? (by @ktns)
+
+  * Made rdoc a development dependency to resolve dependency
+    conflicts (by @matt-liu)
+
+  * Fixed bug where Array#to_nm would alter the array (by
+    @andrewcsmith)
+
