@@ -1077,7 +1077,8 @@ protected
   end
 
 
-  # Function assumes the dimensions and such have already been tested.
+  # This function assumes that the shapes of the two matrices have already
+  # been tested and are the same.
   #
   # Called from inside NMatrix: nm_eqeq
   #
