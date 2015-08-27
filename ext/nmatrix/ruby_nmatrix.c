@@ -159,7 +159,6 @@ static VALUE nm_hessenberg(VALUE self, VALUE a);
 static VALUE nm_inverse(VALUE self, VALUE inverse, VALUE bang);
 static VALUE nm_inverse_exact(VALUE self, VALUE inverse, VALUE lda, VALUE ldb);
 static VALUE nm_complex_conjugate_bang(VALUE self);
-static VALUE nm_complex_conjugate(VALUE self);
 static VALUE nm_reshape_bang(VALUE self, VALUE arg);
 
 static nm::dtype_t	interpret_dtype(int argc, VALUE* argv, nm::stype_t stype);
@@ -265,7 +264,6 @@ void Init_nmatrix() {
 	rb_define_method(cNMatrix, "offset", (METHOD)nm_offset, 0);
 	rb_define_method(cNMatrix, "det_exact", (METHOD)nm_det_exact, 0);
   rb_define_method(cNMatrix, "complex_conjugate!", (METHOD)nm_complex_conjugate_bang, 0);
-  rb_define_method(cNMatrix, "complex_conjugate", (METHOD)nm_complex_conjugate, 0);
 
 	rb_define_protected_method(cNMatrix, "reshape_bang", (METHOD)nm_reshape_bang, 1);
 
@@ -1082,19 +1080,6 @@ static VALUE nm_complex_conjugate_bang(VALUE self) {
   }
   return self;
 }
-
-/*
- * call-seq:
- *     complex_conjugate -> NMatrix
- *
- * Transform the matrix (non-in-place) to its complex conjugate. Only works on complex matrices.
- *
- */
-static VALUE nm_complex_conjugate(VALUE self) {
-  VALUE copy;
-  return nm_complex_conjugate_bang(nm_init_copy(copy,self));
-}
-
 
 /*
  * call-seq:
