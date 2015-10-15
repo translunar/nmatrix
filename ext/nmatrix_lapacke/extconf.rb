@@ -165,6 +165,10 @@ end
 # that Dir.exists?(d) for each.
 ldefaults = {lapack: ["/usr/local/lib"].delete_if { |d| !Dir.exists?(d) } }
 
+# It is not clear how this variable should be defined, or if it is necessary at all. 
+# See issue https://github.com/SciRuby/nmatrix/issues/403
+idefaults = {lapack: [] }
+
 unless have_library("lapack")
   dir_config("lapack", idefaults[:lapack], ldefaults[:lapack])
 end
