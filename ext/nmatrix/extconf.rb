@@ -105,9 +105,6 @@ basenames = %w{nmatrix ruby_constants data/data util/io math util/sl_list storag
 $objs = basenames.map { |b| "#{b}.o"   }
 $srcs = basenames.map { |b| "#{b}.cpp" }
 
-#CONFIG['CXX'] = 'clang++'
-CONFIG['CXX'] = 'g++'
-
 def find_newer_gplusplus #:nodoc:
   print "checking for apparent GNU g++ binary with C++0x/C++11 support... "
   [9,8,7,6,5,4,3].each do |minor|
