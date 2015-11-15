@@ -608,7 +608,7 @@ extern "C" {
         size_t key = curr->key;
 
         if (recursions == 0) { // content is some kind of value
-          rb_hash_aset(h, INT2FIX(key), rubyobj_from_cval(curr->val, dtype).rval);
+          rb_hash_aset(h, INT2FIX(key), nm::rubyobj_from_cval(curr->val, dtype).rval);
         } else { // content is a list
           rb_hash_aset(h, INT2FIX(key), nm_list_copy_to_hash(reinterpret_cast<const LIST*>(curr->val), dtype, recursions-1, default_value));
         }

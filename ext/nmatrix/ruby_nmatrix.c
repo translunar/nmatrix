@@ -2266,7 +2266,7 @@ static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(const STORAGE*
       };
 
       if (NM_DTYPE(self) == nm::RUBYOBJ)  result = *reinterpret_cast<VALUE*>( ttable[NM_STYPE(self)](s, slice) );
-      else                                result = rubyobj_from_cval( ttable[NM_STYPE(self)](s, slice), NM_DTYPE(self) ).rval;
+      else                                result = nm::rubyobj_from_cval( ttable[NM_STYPE(self)](s, slice), NM_DTYPE(self) ).rval;
 
     } else {
 
@@ -3047,7 +3047,7 @@ static VALUE nm_det_exact(VALUE self) {
   if (dtype == nm::RUBYOBJ) {
     nm_register_values(reinterpret_cast<VALUE*>(result), 1);
   }
-  VALUE to_return = rubyobj_from_cval(result, NM_DTYPE(self)).rval;
+  VALUE to_return = nm::rubyobj_from_cval(result, NM_DTYPE(self)).rval;
   if (dtype == nm::RUBYOBJ) {
     nm_unregister_values(reinterpret_cast<VALUE*>(result), 1);
   }

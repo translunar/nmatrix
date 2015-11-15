@@ -289,7 +289,7 @@ LIST_STORAGE* create_from_dense_storage(const DENSE_STORAGE* rhs, dtype_t l_dtyp
 
   // need test default value for comparing to elements in dense matrix
   if (rhs->dtype == l_dtype || rhs->dtype != RUBYOBJ) *r_default_val = static_cast<RDType>(*l_default_val);
-  else                                                *r_default_val = rubyobj_from_cval(l_default_val, l_dtype);
+  else                                                *r_default_val = nm::rubyobj_from_cval(l_default_val, l_dtype);
 
 
   LIST_STORAGE* lhs = nm_list_storage_create(l_dtype, shape, rhs->dim, l_default_val);

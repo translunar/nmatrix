@@ -129,6 +129,8 @@ namespace nm {
       rb_raise(rb_eTypeError, "not sure how to convert this type of VALUE to a complex");
     }
   }
+
+  nm::RubyObject	rubyobj_from_cval(void* val, nm::dtype_t dtype);
 } // end of namespace nm
 
 /*
@@ -629,7 +631,6 @@ extern const nm::dtype_t Upcast[nm::NUM_DTYPES][nm::NUM_DTYPES];
 
 void*	    			rubyobj_to_cval(VALUE val, nm::dtype_t dtype);
 void  		  		rubyval_to_cval(VALUE val, nm::dtype_t dtype, void* loc);
-nm::RubyObject	rubyobj_from_cval(void* val, nm::dtype_t dtype);
 
 void nm_init_data();
 
