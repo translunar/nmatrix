@@ -114,20 +114,31 @@ namespace nm {
 
   template <typename Type>
   Complex<Type>::Complex(const RubyObject& other) {
+    *this = other;
+  }
+
+  template <typename Type>
+  Complex<Type>& Complex<Type>::operator=(const RubyObject& other) {
     switch(TYPE(other.rval)) {
     case T_COMPLEX:
-      r = NUM2DBL(rb_funcall(other.rval, rb_intern("real"), 0));
-      i = NUM2DBL(rb_funcall(other.rval, rb_intern("imag"), 0));
+      this->r = NUM2DBL(rb_funcall(other.rval, rb_intern("real"), 0));
+      this->i = NUM2DBL(rb_funcall(other.rval, rb_intern("imag"), 0));
       break;
     case T_FLOAT:
     case T_FIXNUM:
     case T_BIGNUM:
-      r = NUM2DBL(other.rval);
-      i = 0.0;
+      this->r = NUM2DBL(other.rval);
+      this->i = 0.0;
       break;
     default:
       rb_raise(rb_eTypeError, "not sure how to convert this type of VALUE to a complex");
     }
+    return *this;
+  }
+
+  template<typename Type>
+  Complex<Type>::operator RubyObject () const {
+    return RubyObject(*this);
   }
 
   nm::RubyObject	rubyobj_from_cval(void* val, nm::dtype_t dtype);
