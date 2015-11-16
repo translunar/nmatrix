@@ -103,6 +103,11 @@ class Complex {
     return Complex<Type>(conj.r / denom, conj.i / denom);
   }
 
+  // Negative operator
+  inline Complex<Type> operator-() const {
+    return Complex<Type>(-this->r, -this->i);
+  }
+
 
 
 	/*
