@@ -77,18 +77,18 @@ class Complex {
 	 */
 	inline Complex(Type real = 0, Type imaginary = 0) : r(real), i(imaginary) {}
 
-	/*
-	 * Copy constructors.
-	 */
-	template <typename ComplexType>
-	explicit inline Complex(const Complex<ComplexType>& other) : r(other.r), i(other.i) {}
+  /*
+   * Copy constructors.
+   */
+  template <typename ComplexType>
+  explicit inline Complex(const Complex<ComplexType>& other) : r(other.r), i(other.i) {}
 
-        template <typename ComplexType>
-        inline Complex<Type>& operator=(const Complex<ComplexType>& other) {
-          this->r = static_cast<Type>(other.r);
-          this->i = static_cast<Type>(other.i);
-          return *this;
-        }
+  template <typename ComplexType>
+  inline Complex<Type>& operator=(const Complex<ComplexType>& other) {
+    this->r = static_cast<Type>(other.r);
+    this->i = static_cast<Type>(other.i);
+    return *this;
+  }
 
   explicit Complex(const RubyObject& other);
 
@@ -288,7 +288,7 @@ class Complex {
 		return (NativeType)this->r;
 	}
 
-        operator RubyObject () const;
+  operator RubyObject () const;
 };
 
 ///////////////////////////////
