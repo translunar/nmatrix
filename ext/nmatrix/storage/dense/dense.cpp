@@ -390,9 +390,9 @@ VALUE nm_dense_map_pair(VALUE self, VALUE right) {
     size_t s_index = nm_dense_storage_pos(s, coords),
            t_index = nm_dense_storage_pos(t, coords);
 
-    VALUE sval = NM_DTYPE(self) == nm::RUBYOBJ ? reinterpret_cast<VALUE*>(s->elements)[s_index] : rubyobj_from_cval((char*)(s->elements) + s_index*DTYPE_SIZES[NM_DTYPE(self)], NM_DTYPE(self)).rval;
+    VALUE sval = NM_DTYPE(self) == nm::RUBYOBJ ? reinterpret_cast<VALUE*>(s->elements)[s_index] : nm::rubyobj_from_cval((char*)(s->elements) + s_index*DTYPE_SIZES[NM_DTYPE(self)], NM_DTYPE(self)).rval;
     nm_register_value(&sval);
-    VALUE tval = NM_DTYPE(right) == nm::RUBYOBJ ? reinterpret_cast<VALUE*>(t->elements)[t_index] : rubyobj_from_cval((char*)(t->elements) + t_index*DTYPE_SIZES[NM_DTYPE(right)], NM_DTYPE(right)).rval;
+    VALUE tval = NM_DTYPE(right) == nm::RUBYOBJ ? reinterpret_cast<VALUE*>(t->elements)[t_index] : nm::rubyobj_from_cval((char*)(t->elements) + t_index*DTYPE_SIZES[NM_DTYPE(right)], NM_DTYPE(right)).rval;
     result_elem[k] = rb_yield_values(2, sval, tval);
     nm_unregister_value(&sval);
   }
@@ -442,7 +442,7 @@ VALUE nm_dense_map(VALUE self) {
     nm_dense_storage_coords(result, k, coords);
     size_t s_index = nm_dense_storage_pos(s, coords);
 
-    result_elem[k] = rb_yield(NM_DTYPE(self) == nm::RUBYOBJ ? reinterpret_cast<VALUE*>(s->elements)[s_index] : rubyobj_from_cval((char*)(s->elements) + s_index*DTYPE_SIZES[NM_DTYPE(self)], NM_DTYPE(self)).rval);
+    result_elem[k] = rb_yield(NM_DTYPE(self) == nm::RUBYOBJ ? reinterpret_cast<VALUE*>(s->elements)[s_index] : nm::rubyobj_from_cval((char*)(s->elements) + s_index*DTYPE_SIZES[NM_DTYPE(self)], NM_DTYPE(self)).rval);
   }
 
   VALUE klass = CLASS_OF(self);
@@ -488,7 +488,7 @@ VALUE nm_dense_each_with_indices(VALUE nmatrix) {
     VALUE ary = rb_ary_new();
     nm_register_value(&ary);
     if (NM_DTYPE(nmatrix) == nm::RUBYOBJ) rb_ary_push(ary, reinterpret_cast<VALUE*>(s->elements)[slice_index]);
-    else rb_ary_push(ary, rubyobj_from_cval((char*)(s->elements) + slice_index*DTYPE_SIZES[NM_DTYPE(nmatrix)], NM_DTYPE(nmatrix)).rval);
+    else rb_ary_push(ary, nm::rubyobj_from_cval((char*)(s->elements) + slice_index*DTYPE_SIZES[NM_DTYPE(nmatrix)], NM_DTYPE(nmatrix)).rval);
 
     for (size_t p = 0; p < s->dim; ++p) {
       rb_ary_push(ary, INT2FIX(coords[p]));
@@ -547,7 +547,7 @@ VALUE nm_dense_each(VALUE nmatrix) {
     for (size_t i = 0; i < nm_storage_count_max_elements(s); ++i) {
       nm_dense_storage_coords(sliced_dummy, i, temp_coords);
       sliced_index = nm_dense_storage_pos(s, temp_coords);
-      VALUE v = rubyobj_from_cval((char*)(s->elements) + sliced_index*DTYPE_SIZES[NM_DTYPE(nmatrix)], NM_DTYPE(nmatrix)).rval;
+      VALUE v = nm::rubyobj_from_cval((char*)(s->elements) + sliced_index*DTYPE_SIZES[NM_DTYPE(nmatrix)], NM_DTYPE(nmatrix)).rval;
       rb_yield( v ); // yield to the copy we made
     }
   }

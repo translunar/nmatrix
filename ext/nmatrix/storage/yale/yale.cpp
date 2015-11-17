@@ -1336,7 +1336,7 @@ static void* default_value_ptr(const YALE_STORAGE* s) {
  */
 static VALUE obj_at(YALE_STORAGE* s, size_t k) {
   if (s->dtype == nm::RUBYOBJ)  return reinterpret_cast<VALUE*>(((YALE_STORAGE*)(s->src))->a)[k];
-  else  return rubyobj_from_cval(reinterpret_cast<void*>(reinterpret_cast<char*>(((YALE_STORAGE*)(s->src))->a) + k * DTYPE_SIZES[s->dtype]), s->dtype).rval;
+  else  return nm::rubyobj_from_cval(reinterpret_cast<void*>(reinterpret_cast<char*>(((YALE_STORAGE*)(s->src))->a) + k * DTYPE_SIZES[s->dtype]), s->dtype).rval;
 }
 
 
@@ -1345,7 +1345,7 @@ static VALUE obj_at(YALE_STORAGE* s, size_t k) {
  */
 static VALUE default_value(const YALE_STORAGE* s) {
   if (s->dtype == nm::RUBYOBJ) return *reinterpret_cast<VALUE*>(default_value_ptr(s));
-  else return rubyobj_from_cval(default_value_ptr(s), s->dtype).rval;
+  else return nm::rubyobj_from_cval(default_value_ptr(s), s->dtype).rval;
 }
 
 
@@ -1664,7 +1664,7 @@ static VALUE nm_a(int argc, VALUE* argv, VALUE self) {
       }
     } else {
       for (size_t i = 0; i < size; ++i) {
-        vals[i] = rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype]*i, s->dtype).rval;
+        vals[i] = nm::rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype]*i, s->dtype).rval;
       }
     }
     VALUE ary = rb_ary_new4(size, vals);
@@ -1681,7 +1681,7 @@ static VALUE nm_a(int argc, VALUE* argv, VALUE self) {
     NM_CONSERVATIVE(nm_unregister_value(&idx));
     NM_CONSERVATIVE(nm_unregister_value(&self));
     if (index >= size) rb_raise(rb_eRangeError, "out of range");
-    return rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype] * index, s->dtype).rval;
+    return nm::rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype] * index, s->dtype).rval;
   }
 }
 
@@ -1712,7 +1712,7 @@ static VALUE nm_d(int argc, VALUE* argv, VALUE self) {
       }
     } else {
       for (size_t i = 0; i < s->shape[0]; ++i) {
-        vals[i] = rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype]*i, s->dtype).rval;
+        vals[i] = nm::rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype]*i, s->dtype).rval;
       }
     }
     nm_unregister_values(vals, s->shape[0]);
@@ -1725,7 +1725,7 @@ static VALUE nm_d(int argc, VALUE* argv, VALUE self) {
     NM_CONSERVATIVE(nm_unregister_value(&idx));
     NM_CONSERVATIVE(nm_unregister_value(&self));
     if (index >= s->shape[0]) rb_raise(rb_eRangeError, "out of range");
-    return rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype] * index, s->dtype).rval;
+    return nm::rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype] * index, s->dtype).rval;
   }
 }
 
@@ -1752,7 +1752,7 @@ static VALUE nm_lu(VALUE self) {
     }
   } else {
     for (size_t i = 0; i < size - s->shape[0] - 1; ++i) {
-      vals[i] = rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype]*(s->shape[0] + 1 + i), s->dtype).rval;
+      vals[i] = nm::rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype]*(s->shape[0] + 1 + i), s->dtype).rval;
     }
   }
 
@@ -1927,7 +1927,7 @@ static VALUE nm_nd_row(int argc, VALUE* argv, VALUE self) {
     ret = rb_hash_new();
 
     for (size_t idx = pos; idx < nextpos; ++idx) {
-      rb_hash_aset(ret, INT2FIX(s->ija[idx]), rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype]*idx, s->dtype).rval);
+      rb_hash_aset(ret, INT2FIX(s->ija[idx]), nm::rubyobj_from_cval((char*)(s->a) + DTYPE_SIZES[s->dtype]*idx, s->dtype).rval);
     }
   }
   NM_CONSERVATIVE(nm_unregister_value(&as));

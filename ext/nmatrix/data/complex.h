@@ -77,13 +77,29 @@ class Complex {
 	 */
 	inline Complex(Type real = 0, Type imaginary = 0) : r(real), i(imaginary) {}
 
-	/*
-	 * Copy constructors.
-	 */
-	template <typename ComplexType>
-	inline Complex(const Complex<ComplexType>& other) : r(other.r), i(other.i) {}
+  /*
+   * Copy constructors.
+   */
+  template <typename ComplexType>
+  explicit inline Complex(const Complex<ComplexType>& other) : r(other.r), i(other.i) {}
 
-  Complex(const RubyObject& other);
+  template <typename ComplexType>
+  inline Complex<Type>& operator=(const Complex<ComplexType>& other) {
+    this->r = static_cast<Type>(other.r);
+    this->i = static_cast<Type>(other.i);
+    return *this;
+  }
+
+  explicit Complex(const RubyObject& other);
+
+  Complex<Type>& operator=(const RubyObject& other);
+
+  template<typename OtherType>
+  inline Complex<Type>& operator=(const OtherType& real) {
+    this->r = Type(real);
+    this->i = Type(0);
+    return *this;
+  }
 
   /*
    * Complex conjugate function -- creates a copy, but inverted.
@@ -101,6 +117,11 @@ class Complex {
     Complex<Type> conj = conjugate();
     Type denom = this->r * this->r + this->i * this->i;
     return Complex<Type>(conj.r / denom, conj.i / denom);
+  }
+
+  // Negative operator
+  inline Complex<Type> operator-() const {
+    return Complex<Type>(-this->r, -this->i);
   }
 
 
@@ -266,6 +287,8 @@ class Complex {
 	inline operator NativeType () const {
 		return (NativeType)this->r;
 	}
+
+  operator RubyObject () const;
 };
 
 ///////////////////////////////

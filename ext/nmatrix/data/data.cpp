@@ -91,6 +91,53 @@ namespace nm {
     "negate", "floor", "ceil", "round"
   };
 
+
+  /*
+   * Create a RubyObject from a regular C value (given a dtype). Does not return a VALUE! To get a VALUE, you need to
+   * look at the rval property of what this function returns.
+   */
+  nm::RubyObject rubyobj_from_cval(void* val, nm::dtype_t dtype) {
+    using namespace nm;
+    switch (dtype) {
+      case BYTE:
+        return RubyObject(*reinterpret_cast<uint8_t*>(val));
+
+      case INT8:
+        return RubyObject(*reinterpret_cast<int8_t*>(val));
+
+      case INT16:
+        return RubyObject(*reinterpret_cast<int16_t*>(val));
+
+      case INT32:
+        return RubyObject(*reinterpret_cast<int32_t*>(val));
+
+      case INT64:
+        return RubyObject(*reinterpret_cast<int64_t*>(val));
+
+      case FLOAT32:
+        return RubyObject(*reinterpret_cast<float32_t*>(val));
+
+      case FLOAT64:
+        return RubyObject(*reinterpret_cast<float64_t*>(val));
+
+      case COMPLEX64:
+        return RubyObject(*reinterpret_cast<Complex64*>(val));
+
+      case COMPLEX128:
+        return RubyObject(*reinterpret_cast<Complex128*>(val));
+
+      default:
+        try {
+          throw std::logic_error("Cannot create ruby object");
+        }
+        catch (std::logic_error err) {
+          printf("%s\n", err.what());
+        }
+
+        rb_raise(nm_eDataTypeError, "Conversion to RubyObject requested from unknown/invalid data type (did you try to convert from a VALUE?)");
+    }
+    return Qnil;
+  }
 } // end of namespace nm
 
 extern "C" {
@@ -198,52 +245,6 @@ void rubyval_to_cval(VALUE val, nm::dtype_t dtype, void* loc) {
 	}
 }
 
-/*
- * Create a RubyObject from a regular C value (given a dtype). Does not return a VALUE! To get a VALUE, you need to
- * look at the rval property of what this function returns.
- */
-nm::RubyObject rubyobj_from_cval(void* val, nm::dtype_t dtype) {
-  using namespace nm;
-	switch (dtype) {
-		case BYTE:
-			return RubyObject(*reinterpret_cast<uint8_t*>(val));
-
-		case INT8:
-			return RubyObject(*reinterpret_cast<int8_t*>(val));
-
-		case INT16:
-			return RubyObject(*reinterpret_cast<int16_t*>(val));
-
-		case INT32:
-			return RubyObject(*reinterpret_cast<int32_t*>(val));
-
-		case INT64:
-			return RubyObject(*reinterpret_cast<int64_t*>(val));
-
-		case FLOAT32:
-			return RubyObject(*reinterpret_cast<float32_t*>(val));
-
-		case FLOAT64:
-			return RubyObject(*reinterpret_cast<float64_t*>(val));
-
-		case COMPLEX64:
-			return RubyObject(*reinterpret_cast<Complex64*>(val));
-
-		case COMPLEX128:
-			return RubyObject(*reinterpret_cast<Complex128*>(val));
-			
-	  default:
-	  	try {
-	  		throw std::logic_error("Cannot create ruby object");
-	  	}
-	  	catch (std::logic_error err) {
-	  		printf("%s\n", err.what());
-	  	}
-
-	    rb_raise(nm_eDataTypeError, "Conversion to RubyObject requested from unknown/invalid data type (did you try to convert from a VALUE?)");
-	}
-	return Qnil;
-}
 
 
 
