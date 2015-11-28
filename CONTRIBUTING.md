@@ -102,6 +102,12 @@ features, write it as a wiki page and send an e-mail on the [mailing list][1]. W
 If you aren't familiar with RDoc syntax,
 [this is the official documentation](http://docs.seattlerb.org/rdoc/RDoc/Markup.html).
 
+## Making new nmatrix extensions
+
+From version 0.2, nmatrix supports extensions, all of which can be hosted from the main nmatrix repo.
+
+Refer to [this blog post ](http://wlevine.github.io/2015/06/15/releasing-multiple-gems-with-c-extensions-from-the-same-repository.html) to see how to do that in case you want to write your own extension for nmatrix.
+
 ## Conclusion
 
 This guide was heavily based on the
