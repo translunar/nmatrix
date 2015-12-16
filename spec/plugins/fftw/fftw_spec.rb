@@ -63,7 +63,7 @@ describe NMatrix::FFTW, focus: true do
                              56.42,
                              -32.1])
       complex = NMatrix.zeros([6], dtype: :complex128)
-      fftw = FFTW.r2c_one(n, complex)
+      fftw = NMatrix::FFTW.r2c_one(n, complex)
       expect(n.size).to eq(fftw.size)
     end
   end
