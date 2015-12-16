@@ -27,14 +27,14 @@
 //
 
 #include <ruby.h>
-
+#include <fftw3.h>
 #include "nmatrix.h"
-
-#include "data/data.h"
+// #include "data/data.h"
 
 extern "C" {
   void Init_nmatrix_fftw() 
   {
-    
+    VALUE cNMatrix = rb_define_class("NMatrix", rb_cObject);
+    VALUE cNMatrix_mFFTW = rb_define_module_under(cNMatrix, "FFTW");
   }
 }

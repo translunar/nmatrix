@@ -28,7 +28,7 @@
 require 'spec_helper'
 require "./lib/nmatrix/fftw"
 
-describe NMatrix::FFTW do
+describe NMatrix::FFTW, focus: true do
   context ".r2c_one" do
     it "computes correct FFTW" do
       n = NMatrix.new([4], [3.10, 1.73, 1.04, 2.83])

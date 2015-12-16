@@ -138,3 +138,12 @@ end
 def integer_dtype? dtype
   [:byte,:int8,:int16,:int32,:int64].include?(dtype)
 end
+
+# If a focus: true option is supplied to any test, running `rake spec focus=true`
+# will run only the focused tests and nothing else.
+if ENV["focus"] == "true"
+  RSpec.configure do |c|
+    c.filter_run :focus => true
+  end
+end
+
