@@ -600,12 +600,14 @@ class NMatrix
   #   - A copy of the matrix, but transposed.
   #
   def transpose(permute = nil)
-    if self.dim == 1
-      return self.clone
-    elsif self.dim == 2
-      new_shape = [self.shape[1], self.shape[0]]
-    elsif permute.nil?
-      raise(ArgumentError, "need permutation array of size #{self.dim}")
+    if permute.nil?
+      if self.dim == 1
+        return self.clone
+      elsif self.dim == 2
+        new_shape = [self.shape[1], self.shape[0]]
+      else
+        raise(ArgumentError, "need permutation array of size #{self.dim}")
+      end
     elsif permute.sort.uniq != (0...self.dim).to_a
       raise(ArgumentError, "invalid permutation array")
     else
