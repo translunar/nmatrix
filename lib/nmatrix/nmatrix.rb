@@ -1030,7 +1030,7 @@ protected
     ary << "shape:[#{shape.join(',')}]" << "dtype:#{dtype}" << "stype:#{stype}"
 
     if stype == :yale
-      ary <<	"capacity:#{capacity}"
+      ary << "capacity:#{capacity}"
 
       # These are enabled by the DEBUG_YALE compiler flag in extconf.rb.
       if respond_to?(:__yale_a__)
