@@ -124,6 +124,14 @@ the nmatrix-lapacke gem to be installed. These can be accessed by using <tt>requ
 or <tt>require 'nmatrix/lapacke'</tt>. If you don't care which of the two gems is installed,
 use <tt>require 'nmatrix/lapack_plugin'</tt>, which will require whichever one of the two is available.
 
+== Plugin Details
+
+=== **FFTW**
+
+This is plugin for interfacing with the {FFTW library}[http://www.fftw.org]. It has been tested with FFTW 3.3.4.
+
+It works reliably only with 64 bit numbers (or the NMatrix `:float64` or `:complex128` data type).
+
 == NArray Compatibility
 
 When NArray[http://masa16.github.io/narray/] is installed alongside NMatrix, <tt>require 'nmatrix'</tt>
