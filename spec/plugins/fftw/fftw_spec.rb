@@ -28,9 +28,9 @@
 require 'spec_helper'
 require "./lib/nmatrix/fftw"
 
-describe NMatrix::FFTW, focus: true do
+describe NMatrix::FFTW do
   describe NMatrix::FFTW::Plan do
-    context ".new" do
+    context ".new", focus: true do
       it "creates a new plan for default DFT (complex input/complex output)" do
         plan = NMatrix::FFTW::Plan.new(10)
 

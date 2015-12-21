@@ -28,6 +28,7 @@
 #++
 
 require 'nmatrix/nmatrix.rb'
+require "nmatrix_fftw.so"
 
 class NMatrix
   module FFTW
@@ -50,8 +51,9 @@ class NMatrix
         input  = NMatrix.new(shape, dtype: :complex128, stype: :dense)
         output = NMatrix.new(shape, dtype: :complex128, stype: :dense)
 
-        __create_plan__(shape, input, output, 
-          opts[:dim], opts[:direction], opts[:flag], opts[:type])
+        _create_plan_
+        # _create_plan_(shape, input, output, 
+        #   opts[:dim], opts[:direction], opts[:flag], opts[:type])
       end
 
       # Set input for the DFT
@@ -80,4 +82,3 @@ class NMatrix
   end
 end
 
-require "nmatrix_fftw.so"
