@@ -608,7 +608,7 @@ class NMatrix
       else
         raise(ArgumentError, "need permutation array of size #{self.dim}")
       end
-    elsif permute.sort.uniq != (0...self.dim).to_a
+    elsif !permute.is_a?(Array) || permute.sort.uniq != (0...self.dim).to_a
       raise(ArgumentError, "invalid permutation array")
     else
       # Figure out the new shape based on the permutation given as an argument.
