@@ -21,11 +21,51 @@
 #
 # * https://github.com/SciRuby/sciruby/wiki/Contributor-Agreement
 #
-# == atlas.rb
+# == fftw.rb
 #
-# ruby file for the nmatrix-atlas gem. Loads the C extension and defines
-# nice ruby interfaces for ATLAS functions.
+# ruby file for the nmatrix-fftw gem. Loads the C extension and defines
+# nice ruby interfaces for FFTW functions.
 #++
 
 require 'nmatrix/nmatrix.rb'
 require "nmatrix_fftw.so"
+
+class NMatrix
+  module FFTW
+    
+    # Human friendly DSL for computing FFTs
+    def self.compute &block
+      
+    end
+
+    class Plan
+      # Create a plan for DFT
+      def initialize size, opts={}
+        
+      end
+
+      # Set input for the DFT
+      def set_input ip
+        
+      end
+
+      # Execute DFT with the set plan
+      def execute
+        
+      end
+
+      # Destroy the plan
+      def destroy
+        
+      end
+
+      def input
+        
+      end
+
+      def output
+        
+      end
+    end
+  end
+end
