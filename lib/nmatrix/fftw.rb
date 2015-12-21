@@ -28,11 +28,10 @@
 #++
 
 require 'nmatrix/nmatrix.rb'
-require "nmatrix_fftw.so"
 
 class NMatrix
   module FFTW
-    
+
     # Human friendly DSL for computing FFTs
     def self.compute &block
       
@@ -40,8 +39,19 @@ class NMatrix
 
     class Plan
       # Create a plan for DFT
-      def initialize size, opts={}
-        
+      def initialize shape, opts={}
+        opts = {
+          dim: 1,
+          flag: :estimate,
+          direction: :forward,
+          type: :c2c
+        }.merge(opts)
+        shape  = [shape] if shape.is_a?(Fixnum)
+        input  = NMatrix.new(shape, dtype: :complex128, stype: :dense)
+        output = NMatrix.new(shape, dtype: :complex128, stype: :dense)
+
+        __create_plan__(shape, input, output, 
+          opts[:dim], opts[:direction], opts[:flag], opts[:type])
       end
 
       # Set input for the DFT
@@ -69,3 +79,5 @@ class NMatrix
     end
   end
 end
+
+require "nmatrix_fftw.so"
