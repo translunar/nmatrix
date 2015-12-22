@@ -29,6 +29,7 @@
 #include <ruby.h>
 #include <complex.h>
 #include <fftw3.h>
+#include "storage/common.cpp"
 #include "nmatrix.h"
 #include "nm_memory.h"
 #include "data/complex.h"
@@ -36,7 +37,7 @@
 #include <iostream>
 using namespace std;
 
-static VALUE cNMatrix_FFTW_Plan;
+static VALUE cNMatrix_FFTW_Plan_Data;
 
 struct fftw_data {
   fftw_complex *input, *output;
@@ -53,14 +54,23 @@ static void nm_fftw_cleanup(fftw_data* d)
 
 static VALUE nm_fftw_create_plan(VALUE self, VALUE shape)
 { 
-  fftw_data *data = new fftw_data;
+  fftw_data *data = ALLOC(fftw_data);
 
   data->input = ALLOC_N(fftw_complex, FIX2INT(shape));
   data->output = ALLOC_N(fftw_complex, FIX2INT(shape));
   data->plan = fftw_plan_dft_1d(FIX2INT(shape), 
     data->input, data->output, FFTW_FORWARD, FFTW_ESTIMATE);
 
-  Data_Wrap_Struct(cNMatrix_FFTW_Plan, NULL, nm_fftw_cleanup, data);
+  return Data_Wrap_Struct(cNMatrix_FFTW_Plan_Data, NULL, nm_fftw_cleanup, data);
+}
+
+static VALUE nm_fftw_set_input(VALUE self, VALUE nmatrix, VALUE pd)
+{
+  fftw_data *data;
+
+  Data_Get_Struct(pd, fftw_data, data);
+  memcpy(data->input, NM_DENSE_ELEMENTS(nmatrix), 
+    sizeof(fftw_complex)*NM_DENSE_COUNT(nmatrix));
 
   return self;
 }
@@ -71,8 +81,12 @@ extern "C" {
     VALUE cNMatrix = rb_define_class("NMatrix", rb_cObject);
     VALUE cNMatrix_FFTW = rb_define_module_under(cNMatrix, "FFTW");
     VALUE cNMatrix_FFTW_Plan = rb_define_class_under(cNMatrix_FFTW, "Plan", rb_cObject);
+    VALUE cNMatrix_FFTW_Plan_Data = rb_define_class_under(
+      cNMatrix_FFTW_Plan, "Data", rb_cObject);
 
     rb_define_private_method(cNMatrix_FFTW_Plan, "__create_plan__", 
       (METHOD)nm_fftw_create_plan, 1);
+    rb_define_private_method(cNMatrix_FFTW_Plan, "__set_input__",
+      (METHOD)nm_fftw_set_input, 2);
   }
 }

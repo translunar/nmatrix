@@ -62,26 +62,28 @@ class NMatrix
         # @shape     = shape.is_a?(Array) ? shape : [shape]
         # @size      = @shape.inject(:*)
 
-        __create_plan__(shape)
+        @plan_data = __create_plan__(shape)
       end
 
       # Set input for the DFT
       def set_input ip
+        raise ArgumentError, "stype must be dense." if ip.stype != :dense
+
         case @type
         when :c2c
-          raise ArgumentError, "dtype must be complex128" if ip.dtype != :complex128
+          raise ArgumentError, "dtype must be complex128." if ip.dtype != :complex128
         when :r2c
           raise NotImplementedError
         when :c2r
           raise NotImplementedError
         end
 
-        __set_input__(ip)
+        __set_input__(ip, @plan_data)
       end
 
       # Execute DFT with the set plan
       def execute
-        
+        __execute__(@plan_data)
       end
 
       # Destroy the plan
