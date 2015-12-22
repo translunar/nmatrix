@@ -39,6 +39,13 @@ class NMatrix
     end
 
     class Plan
+      attr_reader :shape
+      attr_reader :size
+      attr_reader :type
+      attr_reader :direction
+      attr_reader :flag
+      attr_reader :dim
+
       # Create a plan for DFT
       def initialize shape, opts={}
         opts = {
@@ -47,18 +54,29 @@ class NMatrix
           direction: :forward,
           type: :c2c
         }.merge(opts)
-        shape  = [shape] if shape.is_a?(Fixnum)
-        input  = NMatrix.new(shape, dtype: :complex128, stype: :dense)
-        output = NMatrix.new(shape, dtype: :complex128, stype: :dense)
 
-        _create_plan_
-        # _create_plan_(shape, input, output, 
-        #   opts[:dim], opts[:direction], opts[:flag], opts[:type])
+        @type      = opts[:type]
+        @dim       = opts[:dim]
+        @flag      = opts[:flag]
+        @direction = opts[:direction]
+        # @shape     = shape.is_a?(Array) ? shape : [shape]
+        # @size      = @shape.inject(:*)
+
+        __create_plan__(shape)
       end
 
       # Set input for the DFT
       def set_input ip
-        
+        case @type
+        when :c2c
+          raise ArgumentError, "dtype must be complex128" if ip.dtype != :complex128
+        when :r2c
+          raise NotImplementedError
+        when :c2r
+          raise NotImplementedError
+        end
+
+        __set_input__(ip)
       end
 
       # Execute DFT with the set plan

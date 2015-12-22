@@ -30,29 +30,26 @@ require "./lib/nmatrix/fftw"
 
 describe NMatrix::FFTW do
   describe NMatrix::FFTW::Plan do
-    context ".new", focus: true do
-      it "creates a new plan for default DFT (complex input/complex output)" do
-        plan = NMatrix::FFTW::Plan.new(10)
-
-        expect(plan.input.class).to eq(NMatrix)
-        expect(plan.output.class).to eq(NMatrix)
-        expect(plan.input.size).to eq(10)
-        expect(plan.output.size).to eq(10)
-
-        plan.destroy
+    context ".new" do
+      it "creates a new plan for default DFT (complex input/complex output)", focus: true do
+        plan = NMatrix::FFTW::Plan.new(4)
+        # TODO: Figure a way to test internal C data structures.
+        # expect(plan.shape)    .to eq([4])
+        # expect(plan.size)     .to eq(4)
+        expect(plan.dim)      .to eq(1)
+        expect(plan.flag)     .to eq(:estimate)
+        expect(plan.direction).to eq(:forward)
       end
 
       it "creates a new plan for multi dimensional DFT with options" do
-        plan = NMatrix::FFTW::Plan.new([10,5,8], 
-          direction: :forward, flag: :estimate, dim: 3)
+        plan = NMatrix::FFTW::Plan.new([10,5,8],
+          direction: :backward, flag: :exhaustive, dim: 3)
 
-        expect(plan.input.class).to eq(NMatrix)
-        expect(plan.output.class).to eq(NMatrix)
-        expect(plan.input.size).to eq(10*5*8)
-        expect(plan.output.size).to eq(10*5*8)
-        expect(plan.dim).to eq(3)
-
-        plan.destroy
+        expect(plan.shape)    .to eq([10,5,8])
+        expect(plan.size)     .to eq(10*5*8)
+        expect(plan.dim)      .to eq(3)
+        expect(plan.flag)     .to eq(:exhaustive)
+        expect(plan.direction).to eq(:backward)
       end
 
       it "creates a new plan for real input/complex output" do
@@ -79,28 +76,8 @@ describe NMatrix::FFTW do
       end
     end
 
-    context "#destroy" do
-      it "destroys the plan" do
-        plan = NMatrix::FFTW::Plan.new(10)
-        input = NMatrix.new([10], [5]*10, dtype: :complex128)
-        plan.set_input input
-        plan.execute
-        plan.destroy
-
-        expect(plan.execute).to eq(false)
-
-        expect {
-          plan.input
-        }.to raise_error(FFTWPlanDestroyedError)
-
-        expect {
-          plan.output
-        }.to raise_error(FFTWPlanDestroyedError)
-      end
-    end
-
     context "#execute" do
-      it "calculates a basic 1D DFT" do
+      it "calculates a basic 1D DFT", focus: true do
         input = NMatrix.new([10],
           [
             Complex(9.32,0),

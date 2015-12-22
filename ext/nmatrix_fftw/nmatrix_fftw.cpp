@@ -27,73 +27,42 @@
 //
 
 #include <ruby.h>
+#include <complex.h>
 #include <fftw3.h>
 #include "nmatrix.h"
+#include "nm_memory.h"
 #include "data/complex.h"
-#include "data/data.h"
-#include "storage/storage.h"
 
 #include <iostream>
 using namespace std;
 
-void nm_fftw_delete(NMATRIX* mat) {
-  static void (*ttable[nm::NUM_STYPES])(STORAGE*) = {
-    nm_dense_storage_delete,
-    nm_list_storage_delete,
-    nm_yale_storage_delete
-  };
-  ttable[mat->stype](mat->storage);
+static VALUE cNMatrix_FFTW_Plan;
 
-  fftw_free(mat);
+struct fftw_data {
+  fftw_complex *input, *output;
+  fftw_plan plan;
+};
+typedef struct fftw_data fftw_data;
+
+static void nm_fftw_cleanup(fftw_data* d)
+{
+  fftw_destroy_plan(d->plan);
+  xfree(d->input);
+  xfree(d->output);
 }
 
-/*
- * Create an nmatrix. Used by NMatrix extensions for creating NMatrix objects
- * in C. This function offers greater control over data than rb_nmatrix_dense_create
- * and does not force copying of data.
- *
- * Returns a properly-wrapped Ruby object as a VALUE.
- */
-VALUE nm_fftw_create_nmatrix(
-  nm::dtype_t dtype, size_t* shape, size_t dim, void* elements, size_t length) 
-{
-  NMATRIX* nm;
-  size_t nm_dim;
-  size_t* shape_copy;
+static VALUE nm_fftw_create_plan(VALUE self, VALUE shape)
+{ 
+  fftw_data *data = new fftw_data;
 
-  // Do not allow a dim of 1. Treat it as a column or row matrix.
-  if (dim == 1) {
-    nm_dim        = 2;
-    shape_copy    = NM_ALLOC_N(size_t, nm_dim);
-    shape_copy[0] = shape[0];
-    shape_copy[1] = 1;
+  data->input = ALLOC_N(fftw_complex, FIX2INT(shape));
+  data->output = ALLOC_N(fftw_complex, FIX2INT(shape));
+  data->plan = fftw_plan_dft_1d(FIX2INT(shape), 
+    data->input, data->output, FFTW_FORWARD, FFTW_ESTIMATE);
 
-  } else {
-    nm_dim      = dim;
-    shape_copy  = NM_ALLOC_N(size_t, nm_dim);
-    memcpy(shape_copy, shape, sizeof(size_t)*nm_dim);
-  }
+  Data_Wrap_Struct(cNMatrix_FFTW_Plan, NULL, nm_fftw_cleanup, data);
 
-  // allocate and create the matrix and its storage
-  nm = nm_create(nm::DENSE_STORE, 
-    nm_dense_storage_create(dtype, shape_copy, dim, elements, length));
-
-  nm_register_nmatrix(nm);
-  VALUE to_return = Data_Wrap_Struct(cNMatrix, nm_mark, nm_fftw_delete, nm);
-  nm_unregister_nmatrix(nm);
-
-  // tell Ruby about the matrix and its storage, particularly how to garbage collect it.
-  return to_return;
-}
-
-VALUE nm_fftw_create_plan(VALUE self)
-{
-  // accept the dimension and shape of input and output.
-  // allocate fftw_complex arrays of the relevant length.
-  // create the plan and store it in a Ruby object with Data_Wrap_Struct.
-  // create an nmatrix with the relevant typecasting for input and output and store
-  // in instance variables @input and @output.
-  // return the wrapped plan object.
+  return self;
 }
 
 extern "C" {
@@ -103,7 +72,7 @@ extern "C" {
     VALUE cNMatrix_FFTW = rb_define_module_under(cNMatrix, "FFTW");
     VALUE cNMatrix_FFTW_Plan = rb_define_class_under(cNMatrix_FFTW, "Plan", rb_cObject);
 
-    rb_define_private_method(cNMatrix_FFTW_Plan, "_create_plan_", 
-      (METHOD)nm_fftw_create_plan, 0);
+    rb_define_private_method(cNMatrix_FFTW_Plan, "__create_plan__", 
+      (METHOD)nm_fftw_create_plan, 1);
   }
 }
