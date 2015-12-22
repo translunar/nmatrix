@@ -45,6 +45,8 @@ class NMatrix
       attr_reader :direction
       attr_reader :flag
       attr_reader :dim
+      attr_reader :input
+      attr_reader :output
 
       # Create a plan for DFT
       def initialize shape, opts={}
@@ -78,25 +80,14 @@ class NMatrix
           raise NotImplementedError
         end
 
+        @input = ip
         __set_input__(ip, @plan_data)
       end
 
       # Execute DFT with the set plan
       def execute
-        __execute__(@plan_data)
-      end
-
-      # Destroy the plan
-      def destroy
-        
-      end
-
-      def input
-        
-      end
-
-      def output
-        
+        @output = @input.clone_structure
+        __execute__(@plan_data, @output)
       end
     end
   end

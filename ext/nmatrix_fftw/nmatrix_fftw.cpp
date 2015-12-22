@@ -64,15 +64,27 @@ static VALUE nm_fftw_create_plan(VALUE self, VALUE shape)
   return Data_Wrap_Struct(cNMatrix_FFTW_Plan_Data, NULL, nm_fftw_cleanup, data);
 }
 
-static VALUE nm_fftw_set_input(VALUE self, VALUE nmatrix, VALUE pd)
+static VALUE nm_fftw_set_input(VALUE self, VALUE nmatrix, VALUE plan_data)
 {
   fftw_data *data;
 
-  Data_Get_Struct(pd, fftw_data, data);
+  Data_Get_Struct(plan_data, fftw_data, data);
   memcpy(data->input, NM_DENSE_ELEMENTS(nmatrix), 
     sizeof(fftw_complex)*NM_DENSE_COUNT(nmatrix));
 
   return self;
+}
+
+static VALUE nm_fftw_execute(VALUE self, VALUE plan_data, VALUE nmatrix)
+{
+  fftw_data *data;
+
+  Data_Get_Struct(plan_data, fftw_data, data);
+  fftw_execute(data->plan);
+  memcpy(NM_DENSE_ELEMENTS(nmatrix), data->output, 
+    sizeof(fftw_complex)*NM_DENSE_COUNT(nmatrix));
+
+  return Qtrue;
 }
 
 extern "C" {
@@ -88,5 +100,7 @@ extern "C" {
       (METHOD)nm_fftw_create_plan, 1);
     rb_define_private_method(cNMatrix_FFTW_Plan, "__set_input__",
       (METHOD)nm_fftw_set_input, 2);
+    rb_define_private_method(cNMatrix_FFTW_Plan, "__execute__",
+      (METHOD)nm_fftw_execute, 2);
   }
 }

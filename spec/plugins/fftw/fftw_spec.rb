@@ -95,12 +95,12 @@ describe NMatrix::FFTW do
         output = NMatrix.new([10],
           [
             Complex(330.3200,0.0000),
-            Complex(-8.4039  ,150.3269),
-            Complex(-99.4807 , 68.6579),
-            Complex(-143.6861, 20.4273),
+            Complex(-8.4039  ,-150.3269),
+            Complex(-99.4807 , -68.6579),
+            Complex(-143.6861, -20.4273),
             Complex(67.6207  ,  8.5236),
             Complex(130.7800 ,  0.0000),
-            Complex(67.6207  ,  8.5236),
+            Complex(67.6207  ,  -8.5236),
             Complex(-143.6861, 20.4273),
             Complex(-99.4807 , 68.6579),
             Complex(-8.4039  ,150.3269)
@@ -109,7 +109,7 @@ describe NMatrix::FFTW do
         plan = NMatrix::FFTW::Plan.new(10)
         plan.set_input input
         expect(plan.execute).to eq(true)
-        expect(plan.output).to eq(output)
+        expect(plan.output.round(4)).to eq(output)
       end
 
       it "calculates 2D DFT with options" do
