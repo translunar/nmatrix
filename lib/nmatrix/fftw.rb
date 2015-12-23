@@ -52,6 +52,8 @@ class NMatrix
         backward: 1
       }
 
+      VALID_OPTS = [:dim, :type, :direction, :flags]
+
       attr_reader :shape
       attr_reader :size
       attr_reader :type
@@ -63,6 +65,7 @@ class NMatrix
 
       # Create a plan for DFT
       def initialize shape, opts={}
+        verify_opts opts
         opts = {
           dim: 1,
           flags: :estimate,
@@ -112,6 +115,12 @@ class NMatrix
         end
 
         temp
+      end
+
+      def verify_opts opts
+        unless (opts.keys- VALID_OPTS).empty?
+          raise ArgumentError, "#{opts.keys- VALID_OPTS} are invalid opts."
+        end
       end
     end
   end

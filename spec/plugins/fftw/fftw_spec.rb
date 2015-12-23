@@ -44,12 +44,12 @@ describe NMatrix::FFTW, focus: true do
 
       it "creates a new plan for multi dimensional DFT with options" do
         plan = NMatrix::FFTW::Plan.new([10,5,8],
-          direction: :backward, flag: :exhaustive, dim: 3)
+          direction: :backward, flags: [:exhaustive, :estimate], dim: 3)
 
         expect(plan.shape)    .to eq([10,5,8])
         expect(plan.size)     .to eq(10*5*8)
         expect(plan.dim)      .to eq(3)
-        expect(plan.flag)     .to eq([:exhaustive, :estimate])
+        expect(plan.flags)    .to eq([:exhaustive, :estimate])
         expect(plan.direction).to eq(:backward)
       end
 
@@ -129,7 +129,7 @@ describe NMatrix::FFTW, focus: true do
         )
 
         plan = NMatrix::FFTW::Plan.new([2,2],
-          direction: :forward, flag: :estimate, dimension: 2)
+          direction: :forward, flags: :estimate, dim: 2)
         plan.set_input input
         expect(plan.execute).to eq(true)
         expect(plan.output).to eq(output)

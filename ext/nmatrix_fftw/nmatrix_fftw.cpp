@@ -59,6 +59,7 @@ static int* interpret_shape(VALUE rb_shape, const int dimension)
   int *shape = new int[dimension];
   VALUE *arr = RARRAY_PTR(rb_shape);
 
+  cout << "\n";
   for (int i = 0; i < RARRAY_LEN(rb_shape); ++i) {
     shape[i] = FIX2INT(arr[i]);
   }
