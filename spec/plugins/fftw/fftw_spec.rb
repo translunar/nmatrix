@@ -28,16 +28,17 @@
 require 'spec_helper'
 require "./lib/nmatrix/fftw"
 
-describe NMatrix::FFTW do
+describe NMatrix::FFTW, focus: true do
   describe NMatrix::FFTW::Plan do
     context ".new" do
-      it "creates a new plan for default DFT (complex input/complex output)", focus: true do
+      it "creates a new plan for default DFT (complex input/complex output)" do
         plan = NMatrix::FFTW::Plan.new(4)
         # TODO: Figure a way to test internal C data structures.
-        # expect(plan.shape)    .to eq([4])
-        # expect(plan.size)     .to eq(4)
+
+        expect(plan.shape)    .to eq([4])
+        expect(plan.size)     .to eq(4)
         expect(plan.dim)      .to eq(1)
-        expect(plan.flag)     .to eq(:estimate)
+        expect(plan.flags)     .to eq([:estimate])
         expect(plan.direction).to eq(:forward)
       end
 
@@ -48,7 +49,7 @@ describe NMatrix::FFTW do
         expect(plan.shape)    .to eq([10,5,8])
         expect(plan.size)     .to eq(10*5*8)
         expect(plan.dim)      .to eq(3)
-        expect(plan.flag)     .to eq(:exhaustive)
+        expect(plan.flag)     .to eq([:exhaustive, :estimate])
         expect(plan.direction).to eq(:backward)
       end
 
@@ -77,7 +78,7 @@ describe NMatrix::FFTW do
     end
 
     context "#execute" do
-      it "calculates a basic 1D DFT", focus: true do
+      it "calculates a basic 1D DFT" do
         input = NMatrix.new([10],
           [
             Complex(9.32,0),
@@ -132,8 +133,6 @@ describe NMatrix::FFTW do
         plan.set_input input
         expect(plan.execute).to eq(true)
         expect(plan.output).to eq(output)
-
-        plan.destroy
       end
 
       it "calculates ND DFT with options" do

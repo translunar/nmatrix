@@ -52,11 +52,11 @@ static void nm_fftw_cleanup(fftw_data* d)
   xfree(d->output);
 }
 
-static const int* interpret_shape(VALUE rb_shape, const int dimension)
+static int* interpret_shape(VALUE rb_shape, const int dimension)
 {
   Check_Type(rb_shape, T_ARRAY);
 
-  const int *shape = new const int[dimension];
+  int *shape = new int[dimension];
   VALUE *arr = RARRAY_PTR(rb_shape);
 
   for (int i = 0; i < RARRAY_LEN(rb_shape); ++i) {
@@ -66,50 +66,20 @@ static const int* interpret_shape(VALUE rb_shape, const int dimension)
   return shape;
 }
 
-static size_t interpret_size(int* shape, int dimension)
-{
-  size_t size = 1;
-
-  for (int i = 0; i < dimension; ++i) {
-    size *= shape[i]  
-  }
-
-  return size;
-}
-
-static int interpret_direction(VALUE rb_direction)
-{
-  switch(SYM2ID(rb_direction))
-  {
-    case rb_intern("forward"):
-      return FFTW_FORWARD;
-    case rb_intern("backward"):
-      return FFTW_BACKWARD;
-    default:
-  }
-}
-
-static unsigned interpret_flag(VALUE rb_flag)
-{
-
-}
-
-static VALUE nm_fftw_create_plan(VALUE self, VALUE rb_shape, 
-  VALUE rb_dim, VALUE rb_flag, VALUE rb_direction)
+static VALUE nm_fftw_create_plan(VALUE self, VALUE rb_shape, VALUE rb_size,
+  VALUE rb_dim, VALUE rb_flags, VALUE rb_direction)
 { 
-  fftw_data *data = ALLOC(fftw_data);
+  fftw_data *data     = ALLOC(fftw_data);
   const int dimension = FIX2INT(rb_dim);
-  const int* shape      = interpret_shape(rb_shape, dimension);
-  size_t size     = interpret_size(shape, dimension);
-  int sign        = interpret_direction(rb_direction);
-  unsigned flag   = interpret_flag(rb_flag);
-  // calculate size of the array to be allocated from the shape and dim
-  // figure out the flag from the flag arg
-  // figure out direction
+  const int* shape    = interpret_shape(rb_shape, dimension);
+  size_t size         = FIX2INT(rb_size);
+  int sign            = FIX2INT(rb_direction);
+  unsigned flags      = FIX2INT(rb_flags);
+
   data->input = ALLOC_N(fftw_complex, size);
   data->output = ALLOC_N(fftw_complex, size);
   data->plan = fftw_plan_dft(dimension, shape, data->input, data->output, 
-    sign, flag);
+    sign, flags);
 
   return Data_Wrap_Struct(cNMatrix_FFTW_Plan_Data, NULL, nm_fftw_cleanup, data);
 }
@@ -147,7 +117,7 @@ extern "C" {
       cNMatrix_FFTW_Plan, "Data", rb_cObject);
 
     rb_define_private_method(cNMatrix_FFTW_Plan, "__create_plan__", 
-      (METHOD)nm_fftw_create_plan, 4);
+      (METHOD)nm_fftw_create_plan, 5);
     rb_define_private_method(cNMatrix_FFTW_Plan, "__set_input__",
       (METHOD)nm_fftw_set_input, 2);
     rb_define_private_method(cNMatrix_FFTW_Plan, "__execute__",

@@ -39,11 +39,24 @@ class NMatrix
     end
 
     class Plan
+
+      FLAG_VALUE_HASH = {
+        estimate: 64,
+        measure: 0,
+        exhaustive: 8,
+        patient: 32
+      }
+
+      FFT_DIRECTION_HASH = {
+        forward: -1,
+        backward: 1
+      }
+
       attr_reader :shape
       attr_reader :size
       attr_reader :type
       attr_reader :direction
-      attr_reader :flag
+      attr_reader :flags
       attr_reader :dim
       attr_reader :input
       attr_reader :output
@@ -52,20 +65,20 @@ class NMatrix
       def initialize shape, opts={}
         opts = {
           dim: 1,
-          flag: :estimate,
+          flags: :estimate,
           direction: :forward,
           type: :c2c
         }.merge(opts)
 
         @type      = opts[:type]
         @dim       = opts[:dim]
-        @flag      = opts[:flag]
         @direction = opts[:direction]
-        # @shape     = shape.is_a?(Array) ? shape : [shape]
-        # @size      = @shape.inject(:*)
+        @shape     = shape.is_a?(Array) ? shape : [shape]
+        @size      = @shape.inject(:*)
+        @flags     = opts[:flags].is_a?(Array) ? opts[:flags] : [opts[:flags]]
 
-        @plan_data = __create_plan__(shape, 
-          opts[:dim], opts[:flag], opts[:direction])
+        @plan_data = __create_plan__(@shape, @size, @dim, 
+          combine_flags(@flags), FFT_DIRECTION_HASH[@direction])
       end
 
       # Set input for the DFT
@@ -89,6 +102,16 @@ class NMatrix
       def execute
         @output = @input.clone_structure
         __execute__(@plan_data, @output)
+      end
+     private
+
+      def combine_flags flgs
+        temp = 0
+        flgs.each do |f|
+          temp |= FLAG_VALUE_HASH[f]
+        end
+
+        temp
       end
     end
   end
