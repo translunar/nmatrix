@@ -64,7 +64,8 @@ class NMatrix
         # @shape     = shape.is_a?(Array) ? shape : [shape]
         # @size      = @shape.inject(:*)
 
-        @plan_data = __create_plan__(shape)
+        @plan_data = __create_plan__(shape, 
+          opts[:dim], opts[:flag], opts[:direction])
       end
 
       # Set input for the DFT
