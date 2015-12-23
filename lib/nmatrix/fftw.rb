@@ -52,6 +52,13 @@ class NMatrix
         backward: 1
       }
 
+      DATA_TYPE_HASH = {
+        complex_complex: 0,
+        real_complex:    1,
+        complex_real:    2,
+        real_real:       3
+      }
+
       VALID_OPTS = [:dim, :type, :direction, :flags]
 
       attr_reader :shape
@@ -70,7 +77,7 @@ class NMatrix
           dim: 1,
           flags: :estimate,
           direction: :forward,
-          type: :c2c
+          type: :complex_complex
         }.merge(opts)
 
         @type      = opts[:type]
@@ -81,7 +88,8 @@ class NMatrix
         @flags     = opts[:flags].is_a?(Array) ? opts[:flags] : [opts[:flags]]
 
         @plan_data = __create_plan__(@shape, @size, @dim, 
-          combine_flags(@flags), FFT_DIRECTION_HASH[@direction])
+          combine_flags(@flags), FFT_DIRECTION_HASH[@direction], 
+          DATA_TYPE_HASH[@type])
       end
 
       # Set input for the DFT
@@ -89,22 +97,24 @@ class NMatrix
         raise ArgumentError, "stype must be dense." if ip.stype != :dense
 
         case @type
-        when :c2c
+        when :complex_complex
           raise ArgumentError, "dtype must be complex128." if ip.dtype != :complex128
-        when :r2c
+        when :real_complex
+          raise ArgumentError, "dtype must be float64." if ip.dtype != :float64
+        when :complex_real
           raise NotImplementedError
-        when :c2r
-          raise NotImplementedError
+        else
+          raise "Invalid type #{@type}"
         end
 
         @input = ip
-        __set_input__(ip, @plan_data)
+        __set_input__(ip, @plan_data, @type)
       end
 
       # Execute DFT with the set plan
       def execute
         @output = @input.clone_structure
-        __execute__(@plan_data, @output)
+        __execute__(@plan_data, @output, @type)
       end
      private
 
@@ -125,4 +135,3 @@ class NMatrix
     end
   end
 end
-

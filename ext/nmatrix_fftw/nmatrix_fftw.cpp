@@ -37,6 +37,11 @@
 #include <iostream>
 using namespace std;
 
+#define TYPE_COMPLEX_COMPLEX 0
+#define TYPE_REAL_COMPLEX    1
+#define TYPE_COMPLEX_REAL    2
+#define TYPE_REAL_REAL       3
+
 static VALUE cNMatrix_FFTW_Plan_Data;
 
 struct fftw_data {
@@ -59,7 +64,6 @@ static int* interpret_shape(VALUE rb_shape, const int dimension)
   int *shape = new int[dimension];
   VALUE *arr = RARRAY_PTR(rb_shape);
 
-  cout << "\n";
   for (int i = 0; i < RARRAY_LEN(rb_shape); ++i) {
     shape[i] = FIX2INT(arr[i]);
   }
@@ -67,43 +71,101 @@ static int* interpret_shape(VALUE rb_shape, const int dimension)
   return shape;
 }
 
+static void nm_fftw_create_complex_complex_plan(fftw_data *data, size_t size, 
+  const int dimensions, const int* shape, int sign, unsigned flags)
+{
+  data->input = ALLOC_N(fftw_complex, size);
+  data->output = ALLOC_N(fftw_complex, size);
+  data->plan = fftw_plan_dft(dimensions, shape, data->input, data->output, 
+    sign, flags);
+}
+
+static void nm_fftw_create_real_complex_plan(fftw_data *data, size_t size, 
+  const int dimensions, const int* shape, int sign, unsigned flags)
+{
+  data->input = ALLOC_N(double, size);
+  data->output = ALLOC_N(fftw_complex, size/n + 1);
+  data->plan = fftw_plan_dft_r2c(dimensions, shape, data->input, data->output, 
+    sign, flags);
+}
+
 static VALUE nm_fftw_create_plan(VALUE self, VALUE rb_shape, VALUE rb_size,
-  VALUE rb_dim, VALUE rb_flags, VALUE rb_direction)
+  VALUE rb_dim, VALUE rb_flags, VALUE rb_direction, VALUE rb_type)
 { 
   fftw_data *data     = ALLOC(fftw_data);
-  const int dimension = FIX2INT(rb_dim);
-  const int* shape    = interpret_shape(rb_shape, dimension);
+  const int dimensions = FIX2INT(rb_dim);
+  const int* shape    = interpret_shape(rb_shape, dimensions);
   size_t size         = FIX2INT(rb_size);
   int sign            = FIX2INT(rb_direction);
   unsigned flags      = FIX2INT(rb_flags);
 
-  data->input = ALLOC_N(fftw_complex, size);
-  data->output = ALLOC_N(fftw_complex, size);
-  data->plan = fftw_plan_dft(dimension, shape, data->input, data->output, 
-    sign, flags);
+  switch (FIX2INT(rb_type))
+  {
+    case TYPE_COMPLEX_COMPLEX:
+      nm_fftw_create_complex_complex_plan(data, size, dimensions, shape, sign, flags);
+      break;
+    case TYPE_REAL_COMPLEX:
+      nm_fftw_create_real_complex_plan(data, size, dimensions, shape, sign, flags);
+      break;
+    case TYPE_COMPLEX_REAL:
+      break;
+    case TYPE_REAL_REAL:
+      break;
+    default:
+      rb_raise(rb_eArgError, "Invalid type of DFT.");
+  }
 
   return Data_Wrap_Struct(cNMatrix_FFTW_Plan_Data, NULL, nm_fftw_cleanup, data);
 }
 
-static VALUE nm_fftw_set_input(VALUE self, VALUE nmatrix, VALUE plan_data)
+static VALUE nm_fftw_set_input(VALUE self, VALUE nmatrix, VALUE plan_data, 
+  VALUE type)
 {
   fftw_data *data;
 
   Data_Get_Struct(plan_data, fftw_data, data);
-  memcpy(data->input, NM_DENSE_ELEMENTS(nmatrix), 
-    sizeof(fftw_complex)*NM_DENSE_COUNT(nmatrix));
+
+  switch(FIX2INT(type))
+  {
+    case TYPE_COMPLEX_COMPLEX:
+    case TYPE_COMPLEX_REAL:
+      memcpy(data->input, NM_DENSE_ELEMENTS(nmatrix), 
+        sizeof(fftw_complex)*NM_DENSE_COUNT(nmatrix));
+      break;
+    case TYPE_REAL_COMPLEX:
+    case TYPE_REAL_REAL:
+      memcpy(data->input, NM_DENSE_ELEMENTS(nmatrix), 
+        sizeof(double)*NM_DENSE_COUNT(nmatrix));
+      break;
+    default:
+      rb_raise(rb_eArgError, "Invalid type of DFT.");
+  }
+
 
   return self;
 }
 
-static VALUE nm_fftw_execute(VALUE self, VALUE plan_data, VALUE nmatrix)
+static VALUE nm_fftw_execute(VALUE self, VALUE plan_data, VALUE nmatrix, VALUE type)
 {
   fftw_data *data;
 
   Data_Get_Struct(plan_data, fftw_data, data);
   fftw_execute(data->plan);
-  memcpy(NM_DENSE_ELEMENTS(nmatrix), data->output, 
-    sizeof(fftw_complex)*NM_DENSE_COUNT(nmatrix));
+
+  switch(FIX2INT(type))
+  {
+    case TYPE_COMPLEX_COMPLEX:
+    case TYPE_REAL_COMPLEX:
+      memcpy(NM_DENSE_ELEMENTS(nmatrix), data->output, 
+        sizeof(fftw_complex)*NM_DENSE_COUNT(nmatrix));
+      break;
+    case TYPE_COMPLEX_REAL:
+    case TYPE_REAL_REAL:
+      cout << "Jaldi karneka implement.";
+      break;
+    default:
+      rb_raise(rb_eArgError, "Invalid type of DFT.");
+  }
 
   return Qtrue;
 }
@@ -118,10 +180,10 @@ extern "C" {
       cNMatrix_FFTW_Plan, "Data", rb_cObject);
 
     rb_define_private_method(cNMatrix_FFTW_Plan, "__create_plan__", 
-      (METHOD)nm_fftw_create_plan, 5);
+      (METHOD)nm_fftw_create_plan, 6);
     rb_define_private_method(cNMatrix_FFTW_Plan, "__set_input__",
-      (METHOD)nm_fftw_set_input, 2);
+      (METHOD)nm_fftw_set_input, 3);
     rb_define_private_method(cNMatrix_FFTW_Plan, "__execute__",
-      (METHOD)nm_fftw_execute, 2);
+      (METHOD)nm_fftw_execute, 3);
   }
 }

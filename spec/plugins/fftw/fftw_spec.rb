@@ -53,9 +53,17 @@ describe NMatrix::FFTW, focus: true do
         expect(plan.direction).to eq(:backward)
       end
 
-      it "creates a new plan for real input/complex output" do
-        pending "implement option :type => :r2c"
-      end
+      # it "creates a new plan for real input/complex output" do
+      #   plan = NMatrix::FFTW::Plan.new([50,20,31,4,2],
+      #     direction: :forward, flags: [:patient, :exhaustive], dim: 5, 
+      #     type: :real_complex)
+
+      #   expect(plan.shape) .to eq([50,20,31,4,2])
+      #   expect(plan.size)  .to eq(50*20*31*4*2)
+      #   expect(plan.dim)   .to eq(5)
+      #   expect(plan.flags) .to eq([:patient, :exhaustive])
+      #   expect(plan.type)  .to eq(:real_complex)
+      # end
 
       it "creates a new plan for real input/real output" do
         pending "implement option :type => :r2r"
@@ -75,6 +83,15 @@ describe NMatrix::FFTW, focus: true do
           plan.set_input(input)
         }.to raise_error(ArgumentError)
       end
+
+      # it "accepts nothing but float64 input for real_complex or real_real plan" do
+      #   plan = NMatrix::FFTW::Plan.new(4, type: :real_complex)
+      #   input = NMatrix.new([4], [1,2,3,4], dtype: :int32)
+
+      #   expect {
+      #     plan.set_input(input)
+      #   }.to raise_error(ArgumentError)
+      # end
     end
 
     context "#execute" do
@@ -138,6 +155,20 @@ describe NMatrix::FFTW, focus: true do
       it "calculates ND DFT with options" do
 
       end
+
+      # it "calculates 1D real input/complex output DFT" do
+      #   input  = NMatrix.new([4], [3.10, 1.73, 1.04, 2.83], dtype: :float64)
+      #   output = NMatrix.new([3], 
+      #     [Complex(8.70, 0), Complex(2.06, 1.1), Complex(-0.42, 0)])
+      #   plan = NMatrix::FFTW::Plan.new([4], type: :real_complex)
+      #   plan.set_input input
+      #   expect(plan.execute).to eq(true)
+      #   expect(plan.output).to eq(output)
+      # end
+
+      # it "calculates 2D real input/complex output DFT" do
+        
+      # end
     end
   end
 
@@ -147,17 +178,4 @@ describe NMatrix::FFTW, focus: true do
       pending "complete after rest of functions are done"
     end
   end
-
-  # context ".r2c_one" do
-  #   it "computes correct FFT" do
-  #     n = NMatrix.new([4], [3.10, 1.73, 1.04, 2.83])
-  #     complex = NMatrix.zeros([3], dtype: :complex128)
-  #     NMatrix::FFTW.r2c_one(n, complex)
-  #     # Expected results obtained from running SciPy's fft on the same Array
-  #     # However, FFTW only computes the first half + 1 element
-
-  #     exp = NMatrix.new([3], [Complex(8.70, 0), Complex(2.06, 1.1), Complex(-0.42, 0)])
-  #     expect(complex).to eq(exp)
-  #   end
-  # end
 end
