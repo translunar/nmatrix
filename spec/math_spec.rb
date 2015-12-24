@@ -591,20 +591,20 @@ describe "math" do
           b = NMatrix.new([3,1], [1,2,3], dtype: dtype)
           x = a.solve(b, form: :lower_tri)
           r = a.dot(x) - b
-          expect(r.max).to be_within(1e-6).of(0.0)
+          expect(r.abs.max).to be_within(1e-6).of(0.0)
         end
 
         it "solves a lower triangular linear system A * X = B with narrow B" do
           b = NMatrix.new([3,2], [1,2,3,4,5,6], dtype: dtype)
           x = a.solve(b, form: :lower_tri)
-          r = (a.dot(x) - b).to_flat_a
+          r = (a.dot(x) - b).abs.to_flat_a
           expect(r.max).to be_within(1e-6).of(0.0)
         end
 
         it "solves a lower triangular linear system A * X = B with wide B" do
           b = NMatrix.new([3,5], (1..15).to_a, dtype: dtype)
           x = a.solve(b, form: :lower_tri)
-          r = (a.dot(x) - b).to_flat_a
+          r = (a.dot(x) - b).abs.to_flat_a
           expect(r.max).to be_within(1e-6).of(0.0)
         end
       end
@@ -616,20 +616,20 @@ describe "math" do
           b = NMatrix.new([3,1], [1,2,3], dtype: dtype)
           x = a.solve(b, form: :upper_tri)
           r = a.dot(x) - b
-          expect(r.max).to be_within(1e-6).of(0.0)
+          expect(r.abs.max).to be_within(1e-6).of(0.0)
         end
 
         it "solves an upper triangular linear system A * X = B with narrow B" do
           b = NMatrix.new([3,2], [1,2,3,4,5,6], dtype: dtype)
           x = a.solve(b, form: :upper_tri)
-          r = (a.dot(x) - b).to_flat_a
+          r = (a.dot(x) - b).abs.to_flat_a
           expect(r.max).to be_within(1e-6).of(0.0)
         end
 
         it "solves an upper triangular linear system A * X = B with a wide B" do
           b = NMatrix.new([3,5], (1..15).to_a, dtype: dtype)
           x = a.solve(b, form: :upper_tri)
-          r = (a.dot(x) - b).to_flat_a
+          r = (a.dot(x) - b).abs.to_flat_a
           expect(r.max).to be_within(1e-6).of(0.0)
         end
       end

@@ -214,22 +214,22 @@ class NMatrix
       ipiv = NMatrix::LAPACK.lapacke_getrf(:row, n, n, clone, n)
       NMatrix::LAPACK.lapacke_getrs(:row, :no_transpose, n, nrhs, clone, n, ipiv, x, nrhs)
       x
-    when :upper_tri
+    when :upper_tri, :upper_triangular
       raise(ArgumentError, "upper triangular solver does not work with complex dtypes") if
         complex_dtype? or b.complex_dtype?
       NMatrix::BLAS::cblas_trsm(:row, :left, :upper, false, :nounit, n, nrhs, 1.0, self, n, x, nrhs)
       x
-    when :lower_tri
+    when :lower_tri, :lower_triangular
       raise(ArgumentError, "lower triangular solver does not work with complex dtypes") if
         complex_dtype? or b.complex_dtype?
       NMatrix::BLAS::cblas_trsm(:row, :left, :lower, false, :nounit, n, nrhs, 1.0, self, n, x, nrhs)
       x
-    when :pos_def
+    when :pos_def, :positive_definite
       u, l = self.factorize_cholesky
       z = l.solve(b, form: :lower_tri)
       u.solve(z, form: :upper_tri)
     else
-      raise(ArgumentError, "#{opts[:form]} is not a valid option")
+      raise(ArgumentError, "#{opts[:form]} is not a valid form option")
     end
   end
 end

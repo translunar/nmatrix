@@ -266,11 +266,14 @@ class NMatrix
   #
   # == Options
   #
-  # * +form+ - If not set then it defaults to +:general+, which uses an LU solver. 
-  #   Other possible values are +:lower_tri+, +:upper_tri+ and +:pos_def+. If +:lower_tri+
-  #   or +:upper_tri+ is set, then a specialized linear solver for linear systems AX=B
-  #   with a lower or upper triangular matrix A is used. If +:pos_def+ is chosen, then
-  #   the linear system is solved via the Cholesky factorization.
+  # * +form+ - Signifies the form of the matrix A in the linear system AX=B.
+  #   If not set then it defaults to +:general+, which uses an LU solver. 
+  #   Other possible values are +:lower_tri+, +:upper_tri+ and +:pos_def+ (alternatively,
+  #   non-abbreviated symbols +:lower_triangular+, +:upper_triangular+, 
+  #   and +:positive_definite+ can be used. 
+  #   If +:lower_tri+ or +:upper_tri+ is set, then a specialized linear solver for linear 
+  #   systems AX=B with a lower or upper triangular matrix A is used. If +:pos_def+ is chosen, 
+  #   then the linear system is solved via the Cholesky factorization.
   #   Note that when +:lower_tri+ or +:upper_tri+ is used, then the algorithm just assumes that
   #   all entries in the lower/upper triangle of the matrix are zeros without checking (which
   #   can be useful in certain applications).
@@ -283,6 +286,7 @@ class NMatrix
   #   a.solve(b)
   #
   #   # solve an upper triangular linear system more efficiently:
+  #   require 'benchmark'
   #   require 'nmatrix/lapacke'
   #   rand_mat = NMatrix.random([10000, 10000], dtype: :float64)
   #   a = rand_mat.triu
@@ -320,25 +324,25 @@ class NMatrix
       x = x.transpose
       NMatrix::LAPACK.clapack_getrs(:row, :no_transpose, n, nrhs, clone, n, ipiv, x, n)
       x.transpose
-    when :upper_tri
+    when :upper_tri, :upper_triangular
       raise(ArgumentError, "upper triangular solver does not work with complex dtypes") if
         complex_dtype? or b.complex_dtype?
       # this is the correct function call; see https://github.com/SciRuby/nmatrix/issues/374
       NMatrix::BLAS::cblas_trsm(:row, :left, :upper, false, :nounit, n, nrhs, 1.0, self, n, x, nrhs)
       x
-    when :lower_tri
+    when :lower_tri, :lower_triangular
       raise(ArgumentError, "lower triangular solver does not work with complex dtypes") if
         complex_dtype? or b.complex_dtype?
       # this is a workaround; see https://github.com/SciRuby/nmatrix/issues/422
       x = x.transpose
       NMatrix::BLAS::cblas_trsm(:row, :right, :lower, :transpose, :nounit, nrhs, n, 1.0, self, n, x, n)
       x.transpose
-    when :pos_def
+    when :pos_def, :positive_definite
       u, l = self.factorize_cholesky
       z = l.solve(b, form: :lower_tri)
       u.solve(z, form: :upper_tri)
     else
-      raise(ArgumentError, "#{opts[:form]} is not a valid option")
+      raise(ArgumentError, "#{opts[:form]} is not a valid form option")
     end
   end
 
