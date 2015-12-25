@@ -33,6 +33,7 @@
 #include "nmatrix.h"
 #include "nm_memory.h"
 #include "data/complex.h"
+#include <iostream>
 
 #define TYPE_COMPLEX_COMPLEX 0
 #define TYPE_REAL_COMPLEX 1
@@ -49,9 +50,10 @@ struct fftw_data {
 
 static void nm_fftw_cleanup(fftw_data* d)
 {
-  fftw_destroy_plan(d->plan);
   xfree(d->input);
   xfree(d->output);
+  fftw_destroy_plan(d->plan);
+  xfree(d);
 }
 
 static int* interpret_shape(VALUE rb_shape, const int dimension)
@@ -73,7 +75,7 @@ static void nm_fftw_actually_create_plan(fftw_data* data,
   size_t input_size, size_t output_size, const int dimensions, const int* shape, 
   int sign, unsigned flags, VALUE rb_type)
 {
-  data->input  = ALLOC_N(InputType, input_size);
+  data->input  = ALLOC_N(InputType,  input_size);
   data->output = ALLOC_N(OutputType, output_size);
   switch (FIX2INT(rb_type))
   {
@@ -86,7 +88,7 @@ static void nm_fftw_actually_create_plan(fftw_data* data,
         (fftw_complex*)data->output, flags);
       break;
     case TYPE_COMPLEX_REAL:
-      // pending
+      //
       break;
     case TYPE_REAL_REAL:
       // pending
@@ -114,8 +116,10 @@ static VALUE nm_fftw_create_plan(VALUE self, VALUE rb_shape, VALUE rb_size,
         size, size, dimensions, shape, sign, flags, rb_type);
       break;
     case TYPE_REAL_COMPLEX:
+      // FIXME: For some weird reason I'm getting a segfault when allocating 
+      // size/2 + 1 memory for the output array.
       nm_fftw_actually_create_plan <double, fftw_complex>(data, 
-        size, size/2 + 1, dimensions, shape, sign, flags, rb_type);
+        size, size, dimensions, shape, sign, flags, rb_type);
       break;
     case TYPE_COMPLEX_REAL:
       // pending
@@ -135,7 +139,7 @@ static void set(VALUE nmatrix, VALUE plan_data)
 {
   fftw_data* data;
   Data_Get_Struct(plan_data, fftw_data, data);
-  memcpy((InputType*)data->input, NM_DENSE_ELEMENTS(nmatrix), 
+  memcpy((InputType*)data->input, (InputType*)NM_DENSE_ELEMENTS(nmatrix), 
     sizeof(InputType)*NM_DENSE_COUNT(nmatrix));
 }
 
@@ -165,7 +169,7 @@ static void execute(VALUE nmatrix, VALUE plan_data)
   fftw_data *data;
   Data_Get_Struct(plan_data, fftw_data, data);
   fftw_execute(data->plan);
-  memcpy(NM_DENSE_ELEMENTS(nmatrix), data->output, 
+  memcpy((OutputType*)NM_DENSE_ELEMENTS(nmatrix), (OutputType*)data->output, 
     sizeof(OutputType)*NM_DENSE_COUNT(nmatrix));
 }
 
