@@ -28,7 +28,7 @@
 require 'spec_helper'
 require "./lib/nmatrix/fftw"
 
-describe NMatrix::FFTW do
+describe NMatrix::FFTW, focus: true do
   describe NMatrix::FFTW::Plan do
     context ".new" do
       it "creates a new plan for default DFT (complex input/complex output)" do
@@ -156,7 +156,7 @@ describe NMatrix::FFTW do
 
       end
 
-      it "calculates 1D real input/complex output DFT", focus: true do
+      it "calculates 1D real input/complex output DFT" do
         input  = NMatrix.new([4], [3.10, 1.73, 1.04, 2.83], dtype: :float64)
         output = NMatrix.new([3], 
           [Complex(8.70, 0), Complex(2.06, 1.1), Complex(-0.42, 0)])

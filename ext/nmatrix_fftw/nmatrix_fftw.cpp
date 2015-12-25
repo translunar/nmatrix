@@ -73,7 +73,7 @@ static void nm_fftw_actually_create_plan(fftw_data* data,
   size_t input_size, size_t output_size, const int dimensions, const int* shape, 
   int sign, unsigned flags, VALUE rb_type)
 {
-  data->input = ALLOC_N(InputType, input_size);
+  data->input  = ALLOC_N(InputType, input_size);
   data->output = ALLOC_N(OutputType, output_size);
   switch (FIX2INT(rb_type))
   {
@@ -85,15 +85,15 @@ static void nm_fftw_actually_create_plan(fftw_data* data,
       data->plan = fftw_plan_dft_r2c(dimensions, shape, (double*)data->input, 
         (fftw_complex*)data->output, flags);
       break;
-    // case TYPE_COMPLEX_REAL:
-    //   fftw_data<fftw_complex,double> *data = ALLOC(sizeof(fftw_data<fftw_complex, double>));
-    //   break;
-    // case TYPE_REAL_REAL:
-    //   break;
+    case TYPE_COMPLEX_REAL:
+      // pending
+      break;
+    case TYPE_REAL_REAL:
+      // pending
+      break;
     default:
       rb_raise(rb_eArgError, "Invalid type of DFT.");
   }
-
 }
 
 static VALUE nm_fftw_create_plan(VALUE self, VALUE rb_shape, VALUE rb_size,
@@ -101,29 +101,27 @@ static VALUE nm_fftw_create_plan(VALUE self, VALUE rb_shape, VALUE rb_size,
 { 
 
   const int dimensions = FIX2INT(rb_dim);
-  const int* shape    = interpret_shape(rb_shape, dimensions);
-  size_t size         = FIX2INT(rb_size);
-  int sign            = FIX2INT(rb_direction);
-  unsigned flags      = FIX2INT(rb_flags);
-        fftw_data *data = ALLOC(fftw_data);
+  const int* shape     = interpret_shape(rb_shape, dimensions);
+  size_t size          = FIX2INT(rb_size);
+  int sign             = FIX2INT(rb_direction);
+  unsigned flags       = FIX2INT(rb_flags);
+  fftw_data *data      = ALLOC(fftw_data);
 
   switch (FIX2INT(rb_type))
   {
     case TYPE_COMPLEX_COMPLEX:
-      // fftw_data *data = ALLOC(fftw_data);
       nm_fftw_actually_create_plan <fftw_complex,fftw_complex>(data, 
         size, size, dimensions, shape, sign, flags, rb_type);
       break;
     case TYPE_REAL_COMPLEX:
-
       nm_fftw_actually_create_plan <double, fftw_complex>(data, 
         size, size/2 + 1, dimensions, shape, sign, flags, rb_type);
       break;
     case TYPE_COMPLEX_REAL:
-      // fftw_data *data = ALLOC(fftw_data);
+      // pending
       break;
     case TYPE_REAL_REAL:
-      // fftw_data *data = ALLOC(fftw_data);
+      // pending
       break;
     default:
       rb_raise(rb_eArgError, "Invalid type of DFT.");
@@ -147,14 +145,10 @@ static VALUE nm_fftw_set_input(VALUE self, VALUE nmatrix, VALUE plan_data,
   switch(FIX2INT(type))
   {
     case TYPE_COMPLEX_COMPLEX:
-      set<fftw_complex>(nmatrix, plan_data);
-      break;
     case TYPE_COMPLEX_REAL:
       set<fftw_complex>(nmatrix, plan_data);
       break;
     case TYPE_REAL_COMPLEX:
-      set<double>(nmatrix, plan_data);
-      break;
     case TYPE_REAL_REAL:
       set<double>(nmatrix, plan_data);
       break;
@@ -180,14 +174,10 @@ static VALUE nm_fftw_execute(VALUE self, VALUE plan_data, VALUE nmatrix, VALUE t
   switch(FIX2INT(type))
   {
     case TYPE_COMPLEX_COMPLEX:
-      execute<fftw_complex>(nmatrix, plan_data);
-      break;
     case TYPE_REAL_COMPLEX:
       execute<fftw_complex>(nmatrix, plan_data);
       break;
     case TYPE_COMPLEX_REAL:
-      execute<double>(nmatrix, plan_data);
-      break;
     case TYPE_REAL_REAL:
       execute<double>(nmatrix, plan_data);
       break;

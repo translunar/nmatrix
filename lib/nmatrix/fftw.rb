@@ -111,11 +111,12 @@ class NMatrix
 
       # Execute DFT with the set plan
       def execute
+        @output = 
         case @type
         when :complex_complex
-          @output = @input.clone_structure        
+          @input.clone_structure        
         when :real_complex
-          @output = NMatrix.new([@input.size/2 + 1], dtype: :float64)
+          NMatrix.new([@input.size/2 + 1], dtype: :complex128)
         when :complex_real
           raise NotImplementedError
         else
