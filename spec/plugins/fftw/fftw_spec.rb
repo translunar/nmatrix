@@ -28,7 +28,7 @@
 require 'spec_helper'
 require "./lib/nmatrix/fftw"
 
-describe NMatrix::FFTW, focus: true do
+describe NMatrix::FFTW do
   describe NMatrix::FFTW::Plan do
     context ".new" do
       it "creates a new plan for default DFT (complex input/complex output)" do
@@ -84,14 +84,14 @@ describe NMatrix::FFTW, focus: true do
         }.to raise_error(ArgumentError)
       end
 
-      # it "accepts nothing but float64 input for real_complex or real_real plan" do
-      #   plan = NMatrix::FFTW::Plan.new(4, type: :real_complex)
-      #   input = NMatrix.new([4], [1,2,3,4], dtype: :int32)
+      it "accepts nothing but float64 input for real_complex or real_real plan" do
+        plan = NMatrix::FFTW::Plan.new(4, type: :real_complex)
+        input = NMatrix.new([4], [1,2,3,4], dtype: :int32)
 
-      #   expect {
-      #     plan.set_input(input)
-      #   }.to raise_error(ArgumentError)
-      # end
+        expect {
+          plan.set_input(input)
+        }.to raise_error(ArgumentError)
+      end
     end
 
     context "#execute" do
@@ -156,15 +156,16 @@ describe NMatrix::FFTW, focus: true do
 
       end
 
-      # it "calculates 1D real input/complex output DFT" do
-      #   input  = NMatrix.new([4], [3.10, 1.73, 1.04, 2.83], dtype: :float64)
-      #   output = NMatrix.new([3], 
-      #     [Complex(8.70, 0), Complex(2.06, 1.1), Complex(-0.42, 0)])
-      #   plan = NMatrix::FFTW::Plan.new([4], type: :real_complex)
-      #   plan.set_input input
-      #   expect(plan.execute).to eq(true)
-      #   expect(plan.output).to eq(output)
-      # end
+      it "calculates 1D real input/complex output DFT", focus: true do
+        input  = NMatrix.new([4], [3.10, 1.73, 1.04, 2.83], dtype: :float64)
+        output = NMatrix.new([3], 
+          [Complex(8.70, 0), Complex(2.06, 1.1), Complex(-0.42, 0)])
+        plan = NMatrix::FFTW::Plan.new([4], type: :real_complex)
+        plan.set_input input
+        expect(plan.execute).to eq(true)
+        puts plan.output
+        expect(plan.output).to eq(output)
+      end
 
       # it "calculates 2D real input/complex output DFT" do
         

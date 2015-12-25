@@ -97,24 +97,32 @@ class NMatrix
         raise ArgumentError, "stype must be dense." if ip.stype != :dense
 
         case @type
-        when :complex_complex
+        when :complex_complex, :complex_real
           raise ArgumentError, "dtype must be complex128." if ip.dtype != :complex128
-        when :real_complex
+        when :real_complex, :real_real
           raise ArgumentError, "dtype must be float64." if ip.dtype != :float64
+        else
+          raise "Invalid type #{@type}"
+        end
+
+        @input = ip
+        __set_input__(ip, @plan_data, DATA_TYPE_HASH[@type])
+      end
+
+      # Execute DFT with the set plan
+      def execute
+        case @type
+        when :complex_complex
+          @output = @input.clone_structure        
+        when :real_complex
+          @output = NMatrix.new([@input.size/2 + 1], dtype: :float64)
         when :complex_real
           raise NotImplementedError
         else
           raise "Invalid type #{@type}"
         end
 
-        @input = ip
-        __set_input__(ip, @plan_data, @type)
-      end
-
-      # Execute DFT with the set plan
-      def execute
-        @output = @input.clone_structure
-        __execute__(@plan_data, @output, @type)
+        __execute__(@plan_data, @output, DATA_TYPE_HASH[@type])
       end
      private
 
