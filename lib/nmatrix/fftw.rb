@@ -40,6 +40,17 @@ class NMatrix
 
     class Plan
 
+      REAL_REAL_FFT_KINDS_HASH = {
+        redft00: 3,
+        redft01: 4,
+        redft10: 5,
+        redft11: 6,
+        rodft00: 7,
+        rodft01: 9,
+        rodft10: 8,
+        rodft11: 10
+      }
+
       FLAG_VALUE_HASH = {
         estimate: 64,
         measure: 0,
@@ -86,13 +97,11 @@ class NMatrix
         @shape     = shape.is_a?(Array) ? shape : [shape]
         @size      = @shape.inject(:*)
         @flags     = opts[:flags].is_a?(Array) ? opts[:flags] : [opts[:flags]]
-
-        raise ArgumentError, "Shape must be compatible with dimension." if 
-          @shape.size != @dim
+        @rrkind    = opts[:rrkind]
 
         @plan_data = __create_plan__(@shape, @size, @dim, 
           combine_flags(@flags), FFT_DIRECTION_HASH[@direction], 
-          DATA_TYPE_HASH[@type])
+          DATA_TYPE_HASH[@type], encoded_rr_kind)
       end
 
       # Set input for the DFT
@@ -143,6 +152,10 @@ class NMatrix
         unless (opts.keys- VALID_OPTS).empty?
           raise ArgumentError, "#{opts.keys- VALID_OPTS} are invalid opts."
         end
+      end
+
+      def encode_rr_kind
+        return @rrkind.map { |e| REAL_REAL_FFT_KINDS_HASH[e] } if @rrkind
       end
     end
   end

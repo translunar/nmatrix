@@ -72,21 +72,39 @@ describe NMatrix::FFTW, focus: true do
       end
 
       it "creates a new plan for real input/real output" do
-        pending "implement option :type => :r2r"
+        plan = NMatrix::FFTW::Plan.new([30,30], type: :real_real, 
+          rrkind: [:rodft00, :redft10], dim: 2)
+
+        expect(plan.shape).to eq([30,30])
+        expect(plan.size) .to eq(30*30)
+        expect(plan.dim)  .to eq(2)
+        expect(plan.flags).to eq([:estimate])
+        expect(plan.type) .to eq(:real_real)
       end
 
       it "creates a new plan for complex input/real output" do
-        pending "implement option :type => :c2r"
+        plan = NMatrix::FFTW::Plan.new([30,400], type: :complex_real, 
+          dim: 2, flags: [:patient, :exhaustive])
+
+        expect(plan.shape).to eq([30,400])
+        expect(plan.size) .to eq(30*400)
+        expect(plan.dim)  .to eq(2)
+        expect(plan.flags).to eq([:patient, :exhaustive])
+        expect(plan.type) .to eq(:complex_real)
       end
     end
 
     context "#set_input" do
-      it "accepts nothing but complex128 input for the default plan" do
-        plan = NMatrix::FFTW::Plan.new(4)
+      it "accepts nothing but complex128 input for the default or complex_real plan" do
+        plan  = NMatrix::FFTW::Plan.new(4)
         input = NMatrix.new([4], [23.54,52.34,52.345,64], dtype: :float64)
-
         expect {
           plan.set_input(input)
+        }.to raise_error(ArgumentError)
+
+        plan = NMatrix::FFTW::Plan.new(4, type: :complex_real)
+        expect {
+          plan.set_input input
         }.to raise_error(ArgumentError)
       end
 
@@ -244,6 +262,9 @@ describe NMatrix::FFTW, focus: true do
         expect(plan.execute).to eq(true)
         expect(plan.output.round(2)) .to eq(output)
       end
+    end
+
+    it "calculates basic 1D real input/real output DFT" do
     end
   end
 

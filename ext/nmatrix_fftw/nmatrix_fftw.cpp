@@ -56,23 +56,37 @@ static void nm_fftw_cleanup(fftw_data* d)
   xfree(d);
 }
 
-static int* interpret_shape(VALUE rb_shape, const int dimension)
+static int* interpret_shape(VALUE rb_shape, const int dimensions)
 {
   Check_Type(rb_shape, T_ARRAY);
 
-  int *shape = new int[dimension];
+  int *shape = new int[dimensions];
   VALUE *arr = RARRAY_PTR(rb_shape);
 
-  for (int i = 0; i < RARRAY_LEN(rb_shape); ++i) {
+  for (int i = 0; i < dimensions; ++i) {
     shape[i] = FIX2INT(arr[i]);
   }
 
   return shape;
 }
 
+static fftw_r2r_kind*
+encode_rr_kind(VALUE rr_kind, fftw_r2r_kind *r2r_kinds)
+{
+  int size = RARRAY_LEN(rr_kind);
+  VALUE *a = RARRAY_PTR(rr_kind);
+  r2r_kinds = ALLOC_N(fftw_r2r_kind, size);
+  for (int i = 0; i < size; ++i)
+  {
+    r2r_kinds[i] = a[i];
+  }
+
+  return r2r_kinds;
+}
+
 static void nm_fftw_actually_create_plan(fftw_data* data, 
   size_t input_size, size_t output_size, const int dimensions, const int* shape, 
-  int sign, unsigned flags, VALUE rb_type)
+  int sign, unsigned flags, VALUE rb_type, VALUE rr_kind)
 {
   switch (FIX2INT(rb_type))
   {
@@ -95,7 +109,12 @@ static void nm_fftw_actually_create_plan(fftw_data* data,
         (double*)data->output, flags);
       break;
     case TYPE_REAL_REAL:
-      // pending
+      fftw_r2r_kind* r2r_kinds;
+      data->input  = ALLOC_N(double,  input_size);
+      data->output = ALLOC_N(double, output_size);
+      data->plan = fftw_plan_r2r(dimensions, shape, (double*)data->input, 
+        (double*)data->output, encode_rr_kind(rr_kind, r2r_kinds), flags);
+      xfree(r2r_kinds);
       break;
     default:
       rb_raise(rb_eArgError, "Invalid type of DFT.");
@@ -103,7 +122,7 @@ static void nm_fftw_actually_create_plan(fftw_data* data,
 }
 
 static VALUE nm_fftw_create_plan(VALUE self, VALUE rb_shape, VALUE rb_size,
-  VALUE rb_dim, VALUE rb_flags, VALUE rb_direction, VALUE rb_type)
+  VALUE rb_dim, VALUE rb_flags, VALUE rb_direction, VALUE rb_type, VALUE rb_rrkind)
 { 
 
   const int dimensions = FIX2INT(rb_dim);
@@ -114,7 +133,7 @@ static VALUE nm_fftw_create_plan(VALUE self, VALUE rb_shape, VALUE rb_size,
   fftw_data *data      = ALLOC(fftw_data);
 
   nm_fftw_actually_create_plan(data, size, size, dimensions, shape, 
-    sign, flags, rb_type);
+    sign, flags, rb_type, rr_kind);
 
   return Data_Wrap_Struct(cNMatrix_FFTW_Plan_Data, NULL, nm_fftw_cleanup, data);
 }
@@ -187,7 +206,7 @@ extern "C" {
       cNMatrix_FFTW_Plan, "Data", rb_cObject);
 
     rb_define_private_method(cNMatrix_FFTW_Plan, "__create_plan__", 
-      (METHOD)nm_fftw_create_plan, 6);
+      (METHOD)nm_fftw_create_plan, 7);
     rb_define_private_method(cNMatrix_FFTW_Plan, "__set_input__",
       (METHOD)nm_fftw_set_input, 3);
     rb_define_private_method(cNMatrix_FFTW_Plan, "__execute__",
