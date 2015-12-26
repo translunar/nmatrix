@@ -41,6 +41,9 @@ class NMatrix
     class Plan
 
       REAL_REAL_FFT_KINDS_HASH = {
+        r2hc:    0,
+        hc2r:    1,
+        dht:     2,
         redft00: 3,
         redft01: 4,
         redft10: 5,
@@ -70,7 +73,7 @@ class NMatrix
         real_real:       3
       }
 
-      VALID_OPTS = [:dim, :type, :direction, :flags]
+      VALID_OPTS = [:dim, :type, :direction, :flags, :rrkind]
 
       attr_reader :shape
       attr_reader :size
@@ -80,6 +83,7 @@ class NMatrix
       attr_reader :dim
       attr_reader :input
       attr_reader :output
+      attr_reader :rrkind
 
       # Create a plan for DFT
       def initialize shape, opts={}
@@ -98,6 +102,9 @@ class NMatrix
         @size      = @shape.inject(:*)
         @flags     = opts[:flags].is_a?(Array) ? opts[:flags] : [opts[:flags]]
         @rrkind    = opts[:rrkind]
+
+        raise ArgumentError, "dim (#{@dim}) cannot be more than size of shape #{@shape.size}" if
+          @dim > @shape.size
 
         @plan_data = __create_plan__(@shape, @size, @dim, 
           combine_flags(@flags), FFT_DIRECTION_HASH[@direction], 
@@ -129,7 +136,7 @@ class NMatrix
           @input.clone_structure        
         when :real_complex
           NMatrix.new([@input.size/2 + 1], dtype: :complex128)
-        when :complex_real
+        when :complex_real, :real_real
           NMatrix.new([@input.size], dtype: :float64)
         else
           raise "Invalid type #{@type}"
@@ -154,7 +161,7 @@ class NMatrix
         end
       end
 
-      def encode_rr_kind
+      def encoded_rr_kind
         return @rrkind.map { |e| REAL_REAL_FFT_KINDS_HASH[e] } if @rrkind
       end
     end

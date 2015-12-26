@@ -70,18 +70,15 @@ static int* interpret_shape(VALUE rb_shape, const int dimensions)
   return shape;
 }
 
-static fftw_r2r_kind*
-encode_rr_kind(VALUE rr_kind, fftw_r2r_kind *r2r_kinds)
+static void
+encode_rr_kind(VALUE rr_kind, int *r2r_kinds)
 {
   int size = RARRAY_LEN(rr_kind);
   VALUE *a = RARRAY_PTR(rr_kind);
-  r2r_kinds = ALLOC_N(fftw_r2r_kind, size);
-  for (int i = 0; i < size; ++i)
-  {
-    r2r_kinds[i] = a[i];
+  for (int i = 0; i < size; ++i) 
+  { 
+    r2r_kinds[i] = FIX2INT(a[i]); 
   }
-
-  return r2r_kinds;
 }
 
 static void nm_fftw_actually_create_plan(fftw_data* data, 
@@ -109,20 +106,19 @@ static void nm_fftw_actually_create_plan(fftw_data* data,
         (double*)data->output, flags);
       break;
     case TYPE_REAL_REAL:
-      fftw_r2r_kind* r2r_kinds;
+      int* r2r_kinds = ALLOC_N(int, FIX2INT(rr_kind));
+      encode_rr_kind(rr_kind, r2r_kinds);
       data->input  = ALLOC_N(double,  input_size);
       data->output = ALLOC_N(double, output_size);
       data->plan = fftw_plan_r2r(dimensions, shape, (double*)data->input, 
-        (double*)data->output, encode_rr_kind(rr_kind, r2r_kinds), flags);
+        (double*)data->output, (fftw_r2r_kind*)r2r_kinds, flags);
       xfree(r2r_kinds);
       break;
-    default:
-      rb_raise(rb_eArgError, "Invalid type of DFT.");
   }
 }
 
 static VALUE nm_fftw_create_plan(VALUE self, VALUE rb_shape, VALUE rb_size,
-  VALUE rb_dim, VALUE rb_flags, VALUE rb_direction, VALUE rb_type, VALUE rb_rrkind)
+  VALUE rb_dim, VALUE rb_flags, VALUE rb_direction, VALUE rb_type, VALUE rb_rr_kind)
 { 
 
   const int dimensions = FIX2INT(rb_dim);
@@ -133,7 +129,7 @@ static VALUE nm_fftw_create_plan(VALUE self, VALUE rb_shape, VALUE rb_size,
   fftw_data *data      = ALLOC(fftw_data);
 
   nm_fftw_actually_create_plan(data, size, size, dimensions, shape, 
-    sign, flags, rb_type, rr_kind);
+    sign, flags, rb_type, rb_rr_kind);
 
   return Data_Wrap_Struct(cNMatrix_FFTW_Plan_Data, NULL, nm_fftw_cleanup, data);
 }

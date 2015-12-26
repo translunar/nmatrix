@@ -262,9 +262,31 @@ describe NMatrix::FFTW, focus: true do
         expect(plan.execute).to eq(true)
         expect(plan.output.round(2)) .to eq(output)
       end
-    end
 
-    it "calculates basic 1D real input/real output DFT" do
+      it "calculates basic 1D real input/real output DFT of kind RODFT00" do
+        input = NMatrix.new([9],
+          [9.32,43.00,3.20,4.00,5.32,3.20,4.00,5.32,45.32], dtype: :float64)
+        output = NMatrix.new([9],
+          [126.56,28.77,165.67,-24.76,105.52,-110.31,-1.23,-116.45,-14.44],
+          dtype: :float64)
+        plan = NMatrix::FFTW::Plan.new([9], type: :real_real, rrkind: [:rodft00])
+        plan.set_input input
+        expect(plan.execute).to eq(true)
+        expect(plan.output.round(2)).to eq(output)
+      end
+
+      it "calculates basic 1D real input/real output DFT of kind REDFT10" do
+        input = NMatrix.new([9],
+          [9.32,43.00,3.20,4.00,5.32,3.20,4.00,5.32,45.32], dtype: :float64)
+        output = NMatrix.new([9],
+          [245.36,-6.12,126.84,-62.35,35.00,-109.42,-38.24,-92.49,-21.20], 
+          dtype: :float64)
+
+        plan = NMatrix::FFTW::Plan.new([9], type: :real_real, rrkind: [:redft10])
+        plan.set_input input
+        expect(plan.execute).to eq(true)
+        expect(plan.output.round(2)).to eq(output)
+      end
     end
   end
 
