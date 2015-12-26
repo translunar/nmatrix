@@ -287,6 +287,20 @@ describe NMatrix::FFTW, focus: true do
         expect(plan.execute).to eq(true)
         expect(plan.output.round(2)).to eq(output)
       end
+
+      it "calculates 2D DFT for real input/real output of kind REDFT10, REDFT11" do
+        input = NMatrix.new([9],
+          [9.32,43.00,3.20,4.00,5.32,3.20,4.00,5.32,45.32], dtype: :float64)
+        output = NMatrix.new([9],
+          [272.181,-249.015,66.045,72.334,23.907,-228.463,85.368,-105.331,30.836],
+          dtype: :float64)
+
+        plan = NMatrix::FFTW::Plan.new([3,3], type: :real_real, 
+          rrkind: [:redft10, :redft11], dim: 2)
+        plan.set_input input
+        expect(plan.execute).to eq(true)
+        expect(plan.output.round(3)) .to eq(output)
+      end
     end
   end
 
