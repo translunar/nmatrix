@@ -87,6 +87,9 @@ class NMatrix
         @size      = @shape.inject(:*)
         @flags     = opts[:flags].is_a?(Array) ? opts[:flags] : [opts[:flags]]
 
+        raise ArgumentError, "Shape must be compatible with dimension." if 
+          @shape.size != @dim
+
         @plan_data = __create_plan__(@shape, @size, @dim, 
           combine_flags(@flags), FFT_DIRECTION_HASH[@direction], 
           DATA_TYPE_HASH[@type])
@@ -118,7 +121,7 @@ class NMatrix
         when :real_complex
           NMatrix.new([@input.size/2 + 1], dtype: :complex128)
         when :complex_real
-          raise NotImplementedError
+          NMatrix.new([@input.size], dtype: :float64)
         else
           raise "Invalid type #{@type}"
         end

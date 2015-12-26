@@ -70,25 +70,29 @@ static int* interpret_shape(VALUE rb_shape, const int dimension)
   return shape;
 }
 
-template <typename InputType, typename OutputType>
 static void nm_fftw_actually_create_plan(fftw_data* data, 
   size_t input_size, size_t output_size, const int dimensions, const int* shape, 
   int sign, unsigned flags, VALUE rb_type)
 {
-  data->input  = ALLOC_N(InputType,  input_size);
-  data->output = ALLOC_N(OutputType, output_size);
   switch (FIX2INT(rb_type))
   {
     case TYPE_COMPLEX_COMPLEX:
+      data->input  = ALLOC_N(fftw_complex,  input_size);
+      data->output = ALLOC_N(fftw_complex, output_size);
       data->plan = fftw_plan_dft(dimensions, shape, (fftw_complex*)data->input, 
         (fftw_complex*)data->output, sign, flags);
       break;
     case TYPE_REAL_COMPLEX:
+      data->input  = ALLOC_N(double,  input_size);
+      data->output = ALLOC_N(fftw_complex, output_size);
       data->plan = fftw_plan_dft_r2c(dimensions, shape, (double*)data->input, 
         (fftw_complex*)data->output, flags);
       break;
     case TYPE_COMPLEX_REAL:
-      //
+      data->input  = ALLOC_N(fftw_complex,  input_size);
+      data->output = ALLOC_N(double, output_size);
+      data->plan = fftw_plan_dft_c2r(dimensions, shape, (fftw_complex*)data->input, 
+        (double*)data->output, flags);
       break;
     case TYPE_REAL_REAL:
       // pending
@@ -109,27 +113,8 @@ static VALUE nm_fftw_create_plan(VALUE self, VALUE rb_shape, VALUE rb_size,
   unsigned flags       = FIX2INT(rb_flags);
   fftw_data *data      = ALLOC(fftw_data);
 
-  switch (FIX2INT(rb_type))
-  {
-    case TYPE_COMPLEX_COMPLEX:
-      nm_fftw_actually_create_plan <fftw_complex,fftw_complex>(data, 
-        size, size, dimensions, shape, sign, flags, rb_type);
-      break;
-    case TYPE_REAL_COMPLEX:
-      // FIXME: For some weird reason I'm getting a segfault when allocating 
-      // size/2 + 1 memory for the output array.
-      nm_fftw_actually_create_plan <double, fftw_complex>(data, 
-        size, size, dimensions, shape, sign, flags, rb_type);
-      break;
-    case TYPE_COMPLEX_REAL:
-      // pending
-      break;
-    case TYPE_REAL_REAL:
-      // pending
-      break;
-    default:
-      rb_raise(rb_eArgError, "Invalid type of DFT.");
-  }
+  nm_fftw_actually_create_plan(data, size, size, dimensions, shape, 
+    sign, flags, rb_type);
 
   return Data_Wrap_Struct(cNMatrix_FFTW_Plan_Data, NULL, nm_fftw_cleanup, data);
 }

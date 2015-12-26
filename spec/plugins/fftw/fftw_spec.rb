@@ -54,15 +54,21 @@ describe NMatrix::FFTW, focus: true do
       end
 
       it "creates a new plan for real input/complex output" do
-        plan = NMatrix::FFTW::Plan.new([50,20,31,4,2],
+        plan = NMatrix::FFTW::Plan.new([5,20,10,4,2],
           direction: :forward, flags: [:patient, :exhaustive], dim: 5, 
           type: :real_complex)
 
-        expect(plan.shape) .to eq([50,20,31,4,2])
-        expect(plan.size)  .to eq(50*20*31*4*2)
+        expect(plan.shape) .to eq([5,20,10,4,2])
+        expect(plan.size)  .to eq(5*20*10*4*2)
         expect(plan.dim)   .to eq(5)
         expect(plan.flags) .to eq([:patient, :exhaustive])
         expect(plan.type)  .to eq(:real_complex)
+      end
+
+      it "raises error for plan with incompatible shape and dimension" do
+        expect {
+          NMatrix::FFTW::Plan.new([9], dim: 2, type: :real_complex)
+        }.to raise_error(ArgumentError)
       end
 
       it "creates a new plan for real input/real output" do
@@ -191,6 +197,52 @@ describe NMatrix::FFTW, focus: true do
         plan.set_input input
         expect(plan.execute).to eq(true)
         expect(plan.output).to eq(output)
+      end
+
+      it "calculates 1D complex input/real output DFT" do
+        input = NMatrix.new([8],
+          [
+            Complex(9.32,0),
+            Complex(43.0,0),
+            Complex(3.20,0),
+            Complex(4.00,0),
+            Complex(5.32,0),
+            Complex(3.20,0),
+            Complex(4.00,0),
+            Complex(5.32,0)
+          ], dtype: :complex128)
+
+        output = NMatrix.new([8], [
+            115.04,59.1543,8.24,-51.1543,-72.96,-51.1543,8.24,59.1543
+          ], dtype: :float64)
+
+        plan = NMatrix::FFTW::Plan.new([8], type: :complex_real)
+        plan.set_input input
+        expect(plan.execute).to eq(true)
+        expect(plan.output.round(4)).to eq(output)
+      end
+
+      it "calculates 2D complex input/real output DFT" do
+        input = NMatrix.new([9],
+          [
+            Complex(9.32,0),
+            Complex(43.0,0),
+            Complex(3.20,0),
+            Complex(4.00,0),
+            Complex(5.32,0),
+            Complex(3.20,0),
+            Complex(4.00,0),
+            Complex(5.32,0),
+            Complex(45.32,0)
+          ], dtype: :complex128)
+        output = NMatrix.new([9], [
+            118.24,-32.36,-32.36,83.86,-35.54,-33.14,83.86,-33.14,-35.54
+          ], dtype: :float64)
+
+        plan = NMatrix::FFTW::Plan.new([3,3], type: :complex_real, dim: 2)
+        plan.set_input input
+        expect(plan.execute).to eq(true)
+        expect(plan.output.round(2)) .to eq(output)
       end
     end
   end
