@@ -31,6 +31,24 @@ require 'nmatrix/nmatrix.rb'
 require "nmatrix_fftw.so"
 
 class NMatrix
+
+  def fft
+    input = self.dtype == :complex128 ? self : self.cast(dtype: :complex128)
+    plan = NMatrix::FFTW::Plan.new([self.size])
+    plan.set_input input
+    plan.execute
+    plan.output
+  end
+
+  def fft2
+    raise ShapeError, "Shape must be 2 (is #{self.shape})" if self.shape.size != 2
+    input = self.dtype == :complex128 ? self : self.cast(dtype: :complex128)
+    plan = NMatrix::FFTW::Plan.new(self.shape, dim: 2)
+    plan.set_input input
+    plan.execute
+    plan.output
+  end
+
   module FFTW
 
     # Human friendly DSL for computing FFTs

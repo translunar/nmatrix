@@ -28,6 +28,48 @@
 require 'spec_helper'
 require "./lib/nmatrix/fftw"
 
+describe NMatrix, focus: true do
+  context "#fft" do
+    before do
+      @answer = NMatrix.new([10],
+        [ 
+          Complex(330.3200,0.0000)   , Complex(-8.4039  ,-150.3269),
+          Complex(-99.4807,-68.6579) , Complex(-143.6861, -20.4273),
+          Complex(67.6207  ,  8.5236), Complex(130.7800 ,  0.0000),
+          Complex(67.6207 ,  -8.5236), Complex(-143.6861, 20.4273),
+          Complex(-99.4807 , 68.6579), Complex(-8.4039  ,150.3269)
+        ], dtype: :complex128)      
+    end
+
+    it "computes an FFT of a complex NMatrix" do
+      nm = NMatrix.new([10],
+        [
+          Complex(9.32,0), Complex(44,0), Complex(125,0), Complex(34,0),
+          Complex(31,0),   Complex(44,0), Complex(12,0),  Complex(1,0),
+          Complex(53.23,0),Complex(-23.23,0)], dtype: :complex128)
+      expect(nm.fft.round(4)).to eq(@answer)
+    end
+  end
+
+  context "#fft2" do
+    it "computes 2D FFT if NMatrix has such shape" do
+      input = NMatrix.new([2,2],
+        [
+          Complex(9.3200,0), Complex(43.0000,0),
+          Complex(3.2000,0), Complex(4.0000,0)
+        ], dtype: :complex128
+      )
+      output = NMatrix.new([2,2],
+        [
+          Complex(59.520,0), Complex(-34.480,0),
+          Complex(45.120,0),  Complex(-32.880,0),
+        ], dtype: :complex128
+      )
+      expect(input.fft2.round(4)).to eq(output)   
+    end
+  end
+end
+
 describe NMatrix::FFTW, focus: true do
   describe NMatrix::FFTW::Plan do
     context ".new" do
@@ -306,8 +348,7 @@ describe NMatrix::FFTW, focus: true do
 
   context ".compute" do
     it "provides a DSL for neatly computing FFTs" do
-      # DSL should take care of destruction of plan etc.
-      pending "complete after rest of functions are done"
+
     end
   end
 end
