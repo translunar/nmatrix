@@ -263,12 +263,12 @@ class NMatrix
           @rrkind.nil? and @type == :real_real
 
         raise ArgumentError, "Specify kind of transform of each axis of input." if
-          @rrkind.size != @dim
+          @rrkind and @rrkind.size != @dim
 
         raise ArgumentError, "dim (#{@dim}) cannot be more than size of shape #{@shape.size}" if
           @dim > @shape.size
 
-        @plan_data = __create_plan__(@shape, @size, @dim, 
+        @plan_data = c_create_plan(@shape, @size, @dim, 
           combine_flags(@flags), FFT_DIRECTION_HASH[@direction], 
           DATA_TYPE_HASH[@type], encoded_rr_kind)
       end
@@ -296,7 +296,7 @@ class NMatrix
         end
 
         @input = ip
-        __set_input__(ip, @plan_data, DATA_TYPE_HASH[@type])
+        c_set_input(ip, @plan_data, DATA_TYPE_HASH[@type])
       end
 
       # Execute the DFT with the set plan.
@@ -316,7 +316,7 @@ class NMatrix
           raise TypeError, "Invalid type #{@type}"
         end
 
-        __execute__(@plan_data, @output, DATA_TYPE_HASH[@type])
+        c_execute(@output, @plan_data, DATA_TYPE_HASH[@type])
       end
      private
 
@@ -325,13 +325,12 @@ class NMatrix
         flgs.each do |f|
           temp |= FLAG_VALUE_HASH[f]
         end
-
         temp
       end
 
       def verify_opts opts
         unless (opts.keys - VALID_OPTS).empty?
-          raise ArgumentError, "#{opts.keys- VALID_OPTS} are invalid opts."
+          raise ArgumentError, "#{opts.keys - VALID_OPTS} are invalid opts."
         end
       end
 

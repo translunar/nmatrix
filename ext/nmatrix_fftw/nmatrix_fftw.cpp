@@ -89,8 +89,7 @@ nm_fftw_interpret_rr_kind(VALUE rr_kind, int *r2r_kinds)
 {
   int size = RARRAY_LEN(rr_kind);
   VALUE *a = RARRAY_PTR(rr_kind);
-  for (int i = 0; i < size; ++i) 
-  { 
+  for (int i = 0; i < size; ++i) { 
     r2r_kinds[i] = FIX2INT(a[i]); 
   }
 }
@@ -99,35 +98,35 @@ nm_fftw_interpret_rr_kind(VALUE rr_kind, int *r2r_kinds)
 // Actually calls the FFTW planner routines based on the input/output and the
 //   type of routine selected. Also allocates memory for input and output pointers.
 static void nm_fftw_actually_create_plan(fftw_data* data, 
-  size_t input_size, size_t output_size, const int dimensions, const int* shape, 
-  int sign, unsigned flags, VALUE rb_type, VALUE rr_kind)
+  size_t size, const int dimensions, const int* shape, int sign, unsigned flags, 
+  VALUE rb_type, VALUE rr_kind)
 {
   switch (FIX2INT(rb_type))
   {
     case TYPE_COMPLEX_COMPLEX:
-      data->input  = ALLOC_N(fftw_complex,  input_size);
-      data->output = ALLOC_N(fftw_complex, output_size);
-      data->plan = fftw_plan_dft(dimensions, shape, (fftw_complex*)data->input, 
+      data->input  = ALLOC_N(fftw_complex, size);
+      data->output = ALLOC_N(fftw_complex, size);
+      data->plan   = fftw_plan_dft(dimensions, shape, (fftw_complex*)data->input, 
         (fftw_complex*)data->output, sign, flags);
       break;
     case TYPE_REAL_COMPLEX:
-      data->input  = ALLOC_N(double,  input_size);
-      data->output = ALLOC_N(fftw_complex, output_size);
-      data->plan = fftw_plan_dft_r2c(dimensions, shape, (double*)data->input, 
+      data->input  = ALLOC_N(double      , size);
+      data->output = ALLOC_N(fftw_complex, size);
+      data->plan   = fftw_plan_dft_r2c(dimensions, shape, (double*)data->input, 
         (fftw_complex*)data->output, flags);
       break;
     case TYPE_COMPLEX_REAL:
-      data->input  = ALLOC_N(fftw_complex,  input_size);
-      data->output = ALLOC_N(double, output_size);
-      data->plan = fftw_plan_dft_c2r(dimensions, shape, (fftw_complex*)data->input, 
+      data->input  = ALLOC_N(fftw_complex,  size);
+      data->output = ALLOC_N(double      ,  size);
+      data->plan   = fftw_plan_dft_c2r(dimensions, shape, (fftw_complex*)data->input, 
         (double*)data->output, flags);
       break;
     case TYPE_REAL_REAL:
       int* r2r_kinds = ALLOC_N(int, FIX2INT(rr_kind));
       nm_fftw_interpret_rr_kind(rr_kind, r2r_kinds);
-      data->input  = ALLOC_N(double,  input_size);
-      data->output = ALLOC_N(double, output_size);
-      data->plan = fftw_plan_r2r(dimensions, shape, (double*)data->input, 
+      data->input  = ALLOC_N(double, size);
+      data->output = ALLOC_N(double, size);
+      data->plan   = fftw_plan_r2r(dimensions, shape, (double*)data->input, 
         (double*)data->output, (fftw_r2r_kind*)r2r_kinds, flags);
       xfree(r2r_kinds);
       break;
@@ -162,9 +161,9 @@ static VALUE nm_fftw_create_plan(VALUE self, VALUE rb_shape, VALUE rb_size,
   unsigned flags       = FIX2INT(rb_flags);
   fftw_data *data      = ALLOC(fftw_data);
 
-  nm_fftw_actually_create_plan(data, size, size, dimensions, shape, 
+  nm_fftw_actually_create_plan(data, size, dimensions, shape, 
     sign, flags, rb_type, rb_rr_kind);
-
+  
   return Data_Wrap_Struct(cNMatrix_FFTW_Plan_Data, NULL, nm_fftw_cleanup, data);
 }
 
@@ -238,7 +237,7 @@ static void nm_fftw_actually_execute(VALUE nmatrix, VALUE plan_data)
  *
  * \returns TrueClass if computation completed without errors.
  */
-static VALUE nm_fftw_execute(VALUE self, VALUE plan_data, VALUE nmatrix, VALUE type)
+static VALUE nm_fftw_execute(VALUE self, VALUE nmatrix, VALUE plan_data, VALUE type)
 {
   switch(FIX2INT(type))
   {
@@ -260,17 +259,18 @@ static VALUE nm_fftw_execute(VALUE self, VALUE plan_data, VALUE nmatrix, VALUE t
 extern "C" {
   void Init_nmatrix_fftw() 
   {
-    VALUE cNMatrix = rb_define_class("NMatrix", rb_cObject);
-    VALUE cNMatrix_FFTW = rb_define_module_under(cNMatrix, "FFTW");
-    VALUE cNMatrix_FFTW_Plan = rb_define_class_under(cNMatrix_FFTW, "Plan", rb_cObject);
+    VALUE cNMatrix                = rb_define_class("NMatrix", rb_cObject);
+    VALUE cNMatrix_FFTW           = rb_define_module_under(cNMatrix, "FFTW");
+    VALUE cNMatrix_FFTW_Plan      = rb_define_class_under(cNMatrix_FFTW, "Plan", 
+      rb_cObject);
     VALUE cNMatrix_FFTW_Plan_Data = rb_define_class_under(
       cNMatrix_FFTW_Plan, "Data", rb_cObject);
 
-    rb_define_private_method(cNMatrix_FFTW_Plan, "__create_plan__", 
+    rb_define_private_method(cNMatrix_FFTW_Plan, "c_create_plan", 
       (METHOD)nm_fftw_create_plan, 7);
-    rb_define_private_method(cNMatrix_FFTW_Plan, "__set_input__",
+    rb_define_private_method(cNMatrix_FFTW_Plan, "c_set_input",
       (METHOD)nm_fftw_set_input, 3);
-    rb_define_private_method(cNMatrix_FFTW_Plan, "__execute__",
+    rb_define_private_method(cNMatrix_FFTW_Plan, "c_execute",
       (METHOD)nm_fftw_execute, 3);
   }
 }
