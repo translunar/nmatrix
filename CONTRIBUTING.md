@@ -71,10 +71,7 @@ Please go thorough this before you create any C accessors:
 * Perform all pre-computation error checking in Ruby. 
     - Since this is (mostly) a trivial computation, doing this in Ruby before calling the actual C code will save immensely on time needed to read and write code. Plus, one won't need to write obscure code for accessing NMatrix attributes in C code (`NM_SHAPE0(obj)` for example), saving both the readers' and writers' time.
 * Curate any extra data (cloned objects, trivial computations, etc.) in Ruby.
-* Every private/protected function name implemented in C _MUST_ start and end with double underscores, and this name must be _the same_ as the name of the Ruby function that will call the computation.
-    - For example, for `#solve`, you'll see a function `def solve .. end`; inside of which is a protected function implemented in C, which is called `__solve__`.
 * The corresponding extern "C" exposed function should have a name format `nm_#{function_name}`, this  function should call a C++ function which should follow a convention `nm_#{sub_namespace}_#{function_name}` and the C++ templated function that is called by this function should be inside a namespace `nm::#{sub_namespace}`.
-    - For example, the C accessor for `__solve__` is `nm_solve`, and the C++ templated function called by `nm_solve` is `nm::math::solve`.
 * Do _NOT_ resolve VALUE into constituent elements unless they reach the function where the elements are needed or it is absolutely necessary. Passing around a VALUE in the C/C++ core is much more convienient than passing around `void*` pointers which point to an array of matrix elements. 
     - If you'll look at [this line](https://github.com/v0dro/nmatrix/commit/b957c5fdbcef0bf1ebe78922f84f9ea37938b247#diff-55f2ba27400bce950282e78db97bfbcfR1791), you'll notice that matrix elements aren't resolved until the final step i.e. passing the elements into the `nm::math::solve` function for the actual computation.
 
@@ -84,7 +81,7 @@ If you have something more in mind, discuss it in the issue tracker or on [this]
 
 ## C/C++ style guide
 
-This section is a work in progress. Add stuff to it whenever you feel that something should be stated explicitly, but isn't.
+This section is a work in progress.
 
 * Single statements following a `if`/`while`/`for` etc. should be preferably on the same line and _enclosed within braces_.
 * Use camel_case notation for arguments. No upper case.
