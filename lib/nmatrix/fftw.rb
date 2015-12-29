@@ -62,12 +62,6 @@ class NMatrix
   end
 
   module FFTW
-
-    # Human friendly DSL for computing FFTs
-    def self.compute &block
-      
-    end
-
     class Plan
       # Hash which holds the numerical values of constants that determine
       # the kind of transform that will be computed for a real input/real

@@ -345,10 +345,4 @@ describe NMatrix::FFTW, focus: true do
       end
     end
   end
-
-  context ".compute" do
-    it "provides a DSL for neatly computing FFTs" do
-
-    end
-  end
 end

@@ -124,9 +124,11 @@ the nmatrix-lapacke gem to be installed. These can be accessed by using <tt>requ
 or <tt>require 'nmatrix/lapacke'</tt>. If you don't care which of the two gems is installed,
 use <tt>require 'nmatrix/lapack_plugin'</tt>, which will require whichever one of the two is available.
 
+Fast fourier transforms can be conducted with the nmatrix-fftw extension, which is an interface to the FFTW C library. Use <tt>require 'nmatrix/fftw'</tt> for using this plugin.
+
 == Plugin Details
 
-=== **FFTW**
+=== *FFTW*
 
 This is plugin for interfacing with the {FFTW library}[http://www.fftw.org]. It has been tested with FFTW 3.3.4.
 
