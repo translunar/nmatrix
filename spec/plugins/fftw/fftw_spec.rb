@@ -28,7 +28,7 @@
 require 'spec_helper'
 require "./lib/nmatrix/fftw"
 
-describe NMatrix, focus: true do
+describe NMatrix do
   context "#fft" do
     before do
       @answer = NMatrix.new([10],

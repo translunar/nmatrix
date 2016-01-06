@@ -36,8 +36,8 @@ then
   then
     # Need to put these commands on separate lines (rather than use &&)
     # so that bash set -e will work.
-    bundle exec rake compile nmatrix_plugins=all
-    bundle exec rake spec nmatrix_plugins=all
+    bundle exec rake compile nmatrix_plugins=atlas
+    bundle exec rake spec nmatrix_plugins=atlas
   fi
 
   if [ -n "$USE_OPENBLAS" ]
