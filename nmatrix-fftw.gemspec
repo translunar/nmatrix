@@ -9,8 +9,8 @@ Gem::Specification.new do |gem|
   gem.summary = "FFTW backend for nmatrix"
   gem.description = "NMatrix extension for using fuctions provided by FFTW"
   gem.homepage = 'http://sciruby.com'
-  gem.authors = ['John Woods', 'Chris Wailes', 'Aleksey Timin', 'Sameer Deshmukh', 'Magdalen Berns']
-  gem.email =  ['john.o.woods@gmail.com', 'sameer.deshmukh93@gmail.com']
+  gem.authors = ['Sameer Deshmukh', 'Magdalen Berns']
+  gem.email =  ['sameer.deshmukh93@gmail.com', 'm.berns@thismagpie.com']
   gem.license = 'BSD 3-clause'
 
   gem.files         = ["lib/nmatrix/fftw.rb"]

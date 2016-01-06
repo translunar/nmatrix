@@ -132,7 +132,7 @@ Fast fourier transforms can be conducted with the nmatrix-fftw extension, which 
 
 This is plugin for interfacing with the {FFTW library}[http://www.fftw.org]. It has been tested with FFTW 3.3.4.
 
-It works reliably only with 64 bit numbers (or the NMatrix `:float64` or `:complex128` data type).
+It works reliably only with 64 bit numbers (or the NMatrix `:float64` or `:complex128` data type). See the docs for more details.
 
 == NArray Compatibility
 
