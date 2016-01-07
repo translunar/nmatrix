@@ -8,6 +8,8 @@ rvm:
   - 2.0
   - 2.1
   - 2.2
+  - 2.3.0
+  - ruby-head
 before_install: ./travis.sh before_install
 script: ./travis.sh script
 
@@ -23,6 +25,14 @@ matrix:
     - rvm: 2.2
       env: USE_REF=1 # Installs reference implementations of LAPACK and BLAS, builds and tests nmatrix, nmatrix-lapacke
     - rvm: 2.2
+      env: NO_EXTERNAL_LIB=1 # No external libraries installed, only nmatrix
+    - rvm: 2.3.0
+      env: USE_REF=1 # Installs reference implementations of LAPACK and BLAS, builds and tests nmatrix, nmatrix-lapacke
+    - rvm: 2.3.0
+      env: NO_EXTERNAL_LIB=1 # No external libraries installed, only nmatrix
+    - rvm: ruby-head
+      env: USE_REF=1 # Installs reference implementations of LAPACK and BLAS, builds and tests nmatrix, nmatrix-lapacke
+    - rvm: ruby-head
       env: NO_EXTERNAL_LIB=1 # No external libraries installed, only nmatrix
 notifications:
   irc: "chat.freenode.net#sciruby"
