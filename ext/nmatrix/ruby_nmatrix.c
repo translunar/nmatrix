@@ -2636,7 +2636,7 @@ nm::dtype_t nm_dtype_guess(VALUE v) {
      * TODO: Look at entire array for most specific type.
      */
 
-    return nm_dtype_guess(RARRAY_PTR(v)[0]);
+    return nm_dtype_guess(RARRAY_AREF(v, 0));
 
   default:
     RB_P(v);
@@ -2798,7 +2798,7 @@ static void* interpret_initial_value(VALUE arg, nm::dtype_t dtype) {
     init_val = NM_ALLOC_N(char, DTYPE_SIZES[dtype] * RARRAY_LEN(arg));
     NM_CHECK_ALLOC(init_val);
     for (index = 0; index < RARRAY_LEN(arg); ++index) {
-      rubyval_to_cval(RARRAY_PTR(arg)[index], dtype, (char*)init_val + (index * DTYPE_SIZES[dtype]));
+      rubyval_to_cval(RARRAY_AREF(arg, index), dtype, (char*)init_val + (index * DTYPE_SIZES[dtype]));
     }
 
   } else {
@@ -2825,7 +2825,7 @@ static size_t* interpret_shape(VALUE arg, size_t* dim) {
     shape = NM_ALLOC_N(size_t, *dim);
 
     for (size_t index = 0; index < *dim; ++index) {
-      shape[index] = FIX2UINT( RARRAY_PTR(arg)[index] );
+      shape[index] = FIX2UINT( RARRAY_AREF(arg, index) );
     }
 
   } else if (FIXNUM_P(arg)) {

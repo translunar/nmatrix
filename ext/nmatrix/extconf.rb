@@ -164,6 +164,11 @@ CONFIG['warnflags'].gsub!('-Wshorten-64-to-32', '') # doesn't work except in Mac
 CONFIG['warnflags'].gsub!('-Wdeclaration-after-statement', '')
 CONFIG['warnflags'].gsub!('-Wimplicit-function-declaration', '')
 
+have_func("rb_array_const_ptr", "ruby.h")
+have_macro("FIX_CONST_VALUE_PTR", "ruby.h")
+have_macro("RARRAY_CONST_PTR", "ruby.h")
+have_macro("RARRAY_AREF", "ruby.h")
+
 create_conf_h("nmatrix_config.h")
 create_makefile("nmatrix")
 
