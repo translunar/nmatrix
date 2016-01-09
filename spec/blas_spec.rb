@@ -69,6 +69,18 @@ describe NMatrix::BLAS do
         expect(b[0]).to eq(-15.0/2)
         expect(b[1]).to eq(5)
         expect(b[2]).to eq(-13)
+        
+        NMatrix::BLAS::cblas_trsm(:row, :left, :lower, :transpose, :nounit, 3, 1, 1.0, a, 3, b, 1)
+
+        expect(b[0]).to eq(307.0/8)
+        expect(b[1]).to eq(57.0/2)
+        expect(b[2]).to eq(26.0)
+        
+        NMatrix::BLAS::cblas_trsm(:row, :left, :upper, :transpose, :unit, 3, 1, 1.0, a, 3, b, 1)
+
+        expect(b[0]).to eq(307.0/8)
+        expect(b[1]).to eq(763.0/16)
+        expect(b[2]).to eq(4269.0/64)        
       end
 
       # trmm multiplies two matrices, where one of the two is required to be
