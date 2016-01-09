@@ -107,9 +107,6 @@ basenames = %w{nmatrix_atlas math_atlas}
 $objs = basenames.map { |b| "#{b}.o"   }
 $srcs = basenames.map { |b| "#{b}.cpp" }
 
-#CONFIG['CXX'] = 'clang++'
-CONFIG['CXX'] = 'g++'
-
 def find_newer_gplusplus #:nodoc:
   print "checking for apparent GNU g++ binary with C++0x/C++11 support... "
   [9,8,7,6,5,4,3].each do |minor|
@@ -137,7 +134,7 @@ end
 
 
 if CONFIG['CXX'] == 'clang++'
-  $CPP_STANDARD = 'c++11'
+  $CXX_STANDARD = 'c++11'
 
 else
   version = gplusplus_version
@@ -149,11 +146,11 @@ else
   end
 
   if version < '4.7.0'
-    $CPP_STANDARD = 'c++0x'
+    $CXX_STANDARD = 'c++0x'
   else
-    $CPP_STANDARD = 'c++11'
+    $CXX_STANDARD = 'c++11'
   end
-  puts "using C++ standard... #{$CPP_STANDARD}"
+  puts "using C++ standard... #{$CXX_STANDARD}"
   puts "g++ reports version... " + `#{CONFIG['CXX']} --version|head -n 1|cut -f 3 -d " "`
 end
 
@@ -233,8 +230,8 @@ $libs += " -llapack -lcblas -latlas "
 # For release, these next two should both be changed to -O3.
 $CFLAGS += " -O3" #" -O0 -g "
 #$CFLAGS += " -static -O0 -g "
-$CPPFLAGS += " -O3 -std=#{$CPP_STANDARD}" #" -O0 -g -std=#{$CPP_STANDARD} " #-fmax-errors=10 -save-temps
-#$CPPFLAGS += " -static -O0 -g -std=#{$CPP_STANDARD} "
+$CXXFLAGS += " -O3 -std=#{$CXX_STANDARD}" #" -O0 -g -std=#{$CXX_STANDARD} " #-fmax-errors=10 -save-temps
+#$CPPFLAGS += " -static -O0 -g -std=#{$CXX_STANDARD} "
 
 CONFIG['warnflags'].gsub!('-Wshorten-64-to-32', '') # doesn't work except in Mac-patched gcc (4.2)
 CONFIG['warnflags'].gsub!('-Wdeclaration-after-statement', '')
