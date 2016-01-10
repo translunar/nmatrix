@@ -32,6 +32,7 @@
  * Standard Includes
  */
 
+#include <ruby.h>
 #include <cmath> // pow().
 
 /*

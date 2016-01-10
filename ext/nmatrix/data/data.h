@@ -31,6 +31,8 @@
 /*
  * Standard Includes
  */
+
+#include <ruby.h>
 #include <string>
 
 /*
