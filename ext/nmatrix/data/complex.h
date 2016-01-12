@@ -32,6 +32,7 @@
  * Standard Includes
  */
 
+#include <ruby.h>
 #include <type_traits>
 #include <iostream>
 #include <cmath>

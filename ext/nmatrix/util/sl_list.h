@@ -33,6 +33,7 @@
  * Standard Includes
  */
 
+#include <ruby.h>
 #include <type_traits>
 #include <cstdlib>
 

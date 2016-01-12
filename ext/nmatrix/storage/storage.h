@@ -34,6 +34,7 @@
  * Standard Includes
  */
 
+#include <ruby.h>
 #include <cstdlib>
 
 /*

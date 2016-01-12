@@ -42,6 +42,7 @@
  * Standard Includes
  */
 
+#include <ruby.h>
 #include <limits> // for std::numeric_limits<T>::max()
 #include <stdexcept>
 

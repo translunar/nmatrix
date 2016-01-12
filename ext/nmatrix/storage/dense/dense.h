@@ -32,7 +32,8 @@
  * Standard Includes
  */
 
-#include <stdlib.h>
+#include <ruby.h>
+#include <cstdlib>
 
 /*
  * Project Includes

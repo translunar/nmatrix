@@ -59,7 +59,7 @@ template<typename T, typename U>
 struct made_from_same_template : std::false_type {}; 
  
 template<template<typename> class Templ, typename Arg1, typename Arg2>
-struct made_from_same_template<Templ<Arg1>, Templ<Arg2>> : std::true_type {};
+struct made_from_same_template<Templ<Arg1>, Templ<Arg2> > : std::true_type {};
 
 class RubyObject {
   public:

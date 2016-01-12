@@ -126,6 +126,7 @@
  */
 
 
+#include <ruby.h>
 #include <algorithm>
 #include <limits>
 #include <cmath>
