@@ -29,10 +29,8 @@
 #include <ruby.h>
 #include <complex.h>
 #include <fftw3.h>
-#include "storage/common.cpp"
+#include "storage/common.h"
 #include "nmatrix.h"
-#include "nm_memory.h"
-#include "data/complex.h"
 #include <iostream>
 
 #define TYPE_COMPLEX_COMPLEX 0

@@ -102,7 +102,7 @@ then
   then
     # Need to put these commands on separate lines (rather than use &&)
     # so that bash set -e will work.
-    nmatrix_plugins_opt='nmatrix_plugins=all'
+    nmatrix_plugins_opt='nmatrix_plugins=atlas'
   fi
 
   if [ -n "$USE_OPENBLAS" ]
