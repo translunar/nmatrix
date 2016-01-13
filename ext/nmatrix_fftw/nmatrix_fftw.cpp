@@ -72,7 +72,7 @@ static int* nm_fftw_interpret_shape(VALUE rb_shape, const int dimensions)
   Check_Type(rb_shape, T_ARRAY);
 
   int *shape = new int[dimensions];
-  VALUE *arr = RARRAY_PTR(rb_shape);
+  const VALUE *arr = RARRAY_CONST_PTR(rb_shape);
 
   for (int i = 0; i < dimensions; ++i) {
     shape[i] = FIX2INT(arr[i]);
@@ -85,10 +85,10 @@ static int* nm_fftw_interpret_shape(VALUE rb_shape, const int dimensions)
 // Convert values passed in Ruby Array containing kinds of real-real transforms 
 //   to a C array of ints. 
 static void
-nm_fftw_interpret_rr_kind(VALUE rr_kind, int *r2r_kinds)
+nm_fftw_interpret_real_real_kind(VALUE real_real_kind, int *r2r_kinds)
 {
-  int size = RARRAY_LEN(rr_kind);
-  VALUE *a = RARRAY_PTR(rr_kind);
+  int size = RARRAY_LEN(real_real_kind);
+  const VALUE *a = RARRAY_CONST_PTR(real_real_kind);
   for (int i = 0; i < size; ++i) { 
     r2r_kinds[i] = FIX2INT(a[i]); 
   }
@@ -99,7 +99,7 @@ nm_fftw_interpret_rr_kind(VALUE rr_kind, int *r2r_kinds)
 //   type of routine selected. Also allocates memory for input and output pointers.
 static void nm_fftw_actually_create_plan(fftw_data* data, 
   size_t size, const int dimensions, const int* shape, int sign, unsigned flags, 
-  VALUE rb_type, VALUE rr_kind)
+  VALUE rb_type, VALUE real_real_kind)
 {
   switch (FIX2INT(rb_type))
   {
@@ -122,8 +122,8 @@ static void nm_fftw_actually_create_plan(fftw_data* data,
         (double*)data->output, flags);
       break;
     case TYPE_REAL_REAL:
-      int* r2r_kinds = ALLOC_N(int, FIX2INT(rr_kind));
-      nm_fftw_interpret_rr_kind(rr_kind, r2r_kinds);
+      int* r2r_kinds = ALLOC_N(int, FIX2INT(real_real_kind));
+      nm_fftw_interpret_real_real_kind(real_real_kind, r2r_kinds);
       data->input  = ALLOC_N(double, size);
       data->output = ALLOC_N(double, size);
       data->plan   = fftw_plan_r2r(dimensions, shape, (double*)data->input, 
@@ -145,14 +145,14 @@ static void nm_fftw_actually_create_plan(fftw_data* data,
  *   sign of the exponent.
  * @param[in] rb_type       Number specifying the type of FFT being planned (one
  *    of :complex_complex, :complex_real, :real_complex and :real_real)
- * @param[in] rb_rr_kind    Ruby Array specifying the kind of DFT to perform over
+ * @param[in] rb_real_real_kind    Ruby Array specifying the kind of DFT to perform over
  *   each axis in case of a real input/real output FFT.
  *
  * \returns An object of type NMatrix::FFTW::Plan::Data that encapsulates the
  * plan and relevant input/output arrays.
  */
 static VALUE nm_fftw_create_plan(VALUE self, VALUE rb_shape, VALUE rb_size,
-  VALUE rb_dim, VALUE rb_flags, VALUE rb_direction, VALUE rb_type, VALUE rb_rr_kind)
+  VALUE rb_dim, VALUE rb_flags, VALUE rb_direction, VALUE rb_type, VALUE rb_real_real_kind)
 { 
   const int dimensions = FIX2INT(rb_dim);
   const int* shape     = nm_fftw_interpret_shape(rb_shape, dimensions);
@@ -162,7 +162,7 @@ static VALUE nm_fftw_create_plan(VALUE self, VALUE rb_shape, VALUE rb_size,
   fftw_data *data      = ALLOC(fftw_data);
 
   nm_fftw_actually_create_plan(data, size, dimensions, shape, 
-    sign, flags, rb_type, rb_rr_kind);
+    sign, flags, rb_type, rb_real_real_kind);
   
   return Data_Wrap_Struct(cNMatrix_FFTW_Plan_Data, NULL, nm_fftw_cleanup, data);
 }

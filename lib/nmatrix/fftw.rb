@@ -138,7 +138,7 @@ class NMatrix
 
       # Array holding valid options that can be passed into NMatrix::FFTW::Plan
       # so that invalid options aren't passed.
-      VALID_OPTS = [:dim, :type, :direction, :flags, :rrkind]
+      VALID_OPTS = [:dim, :type, :direction, :flags, :real_real_kind]
 
       # @!attribute [r] shape
       #   @return [Array] Shape of the plan. Sequence of Fixnums.
@@ -180,19 +180,20 @@ class NMatrix
       #   NMatrix::FFTW::Plan#execute method has been called.
       attr_reader :output
 
-      # @!attribute [r] rrkind
+      # @!attribute [r] real_real_kind
       #   @return [Symbol] Specifies the kind of real to real FFT being performed.
       #   This is a symbol from REAL_REAL_FFT_KINDS_HASH. Only valid when type
       #   of transform is of type :real_real.
       #   @see REAL_REAL_FFT_KINDS_HASH
       #   @see http://www.fftw.org/fftw3_doc/Real_002dto_002dReal-Transform-Kinds.html#Real_002dto_002dReal-Transform-Kinds
-      attr_reader :rrkind
+      attr_reader :real_real_kind
 
       # Create a plan for a DFT. The FFTW library requires that you first create
       # a plan for performing a DFT, so that FFTW can optimize its algorithms
       # according to your computer's hardware and various user supplied options.
       # 
-      # @see <link> For a comprehensive explanation of the FFTW planner.
+      # @see http://www.fftw.org/doc/Using-Plans.html 
+      #   For a comprehensive explanation of the FFTW planner.
       # @param shape [Array, Fixnum] Specify the shape of the plan. For 1D
       #   fourier transforms this can be a single number specifying the length of 
       #   the input. For multi-dimensional transforms, specify an Array containing
@@ -218,10 +219,10 @@ class NMatrix
       #   type :complex_complex. Technically, it is the sign of the exponent in 
       #   the transform. :forward corresponds to -1 and :backward to +1.
       #   @see FFT_DIRECTION_HASH
-      # @option opts [Array] :rrkind When the type of transform is :real_real,
+      # @option opts [Array] :real_real_kind When the type of transform is :real_real,
       #   specify the kind of transform that should be performed FOR EACH AXIS
       #   of input. The position of the symbol in the Array corresponds to the 
-      #   axis of the input. The number of elements in :rrkind must be equal to
+      #   axis of the input. The number of elements in :real_real_kind must be equal to
       #   :dim. Can accept one of the inputs specified in REAL_REAL_FFT_KINDS_HASH.
       #   @see REAL_REAL_FFT_KINDS_HASH
       #   @see http://www.fftw.org/fftw3_doc/Real_002dto_002dReal-Transform-Kinds.html#Real_002dto_002dReal-Transform-Kinds
@@ -251,13 +252,13 @@ class NMatrix
         @shape     = shape.is_a?(Array) ? shape : [shape]
         @size      = @shape[0...@dim].inject(:*)
         @flags     = opts[:flags].is_a?(Array) ? opts[:flags] : [opts[:flags]]
-        @rrkind    = opts[:rrkind]
+        @real_real_kind    = opts[:real_real_kind]
 
-        raise ArgumentError, ":rrkind option must be specified for :real_real type transforms" if
-          @rrkind.nil? and @type == :real_real
+        raise ArgumentError, ":real_real_kind option must be specified for :real_real type transforms" if
+          @real_real_kind.nil? and @type == :real_real
 
         raise ArgumentError, "Specify kind of transform of each axis of input." if
-          @rrkind and @rrkind.size != @dim
+          @real_real_kind and @real_real_kind.size != @dim
 
         raise ArgumentError, "dim (#{@dim}) cannot be more than size of shape #{@shape.size}" if
           @dim > @shape.size
@@ -314,6 +315,9 @@ class NMatrix
       end
      private
 
+      # Combine flags received from the user (Symbols) into their respective
+      # numeric equivalents and then 'OR' (|) all of them so the resulting number
+      # can be passed directly to the FFTW planner function.
       def combine_flags flgs
         temp = 0
         flgs.each do |f|
@@ -322,14 +326,17 @@ class NMatrix
         temp
       end
 
+      # Verify options passed into the constructor to make sure that no invalid
+      # options have been passed.
       def verify_opts opts
         unless (opts.keys - VALID_OPTS).empty?
           raise ArgumentError, "#{opts.keys - VALID_OPTS} are invalid opts."
         end
       end
 
+      # Get the numerical equivalents of the kind of real-real FFT to be computed.
       def encoded_rr_kind
-        return @rrkind.map { |e| REAL_REAL_FFT_KINDS_HASH[e] } if @rrkind
+        return @real_real_kind.map { |e| REAL_REAL_FFT_KINDS_HASH[e] } if @real_real_kind
       end
     end
   end

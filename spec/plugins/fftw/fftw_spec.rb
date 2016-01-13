@@ -115,7 +115,7 @@ describe NMatrix::FFTW, focus: true do
 
       it "creates a new plan for real input/real output" do
         plan = NMatrix::FFTW::Plan.new([30,30], type: :real_real, 
-          rrkind: [:rodft00, :redft10], dim: 2)
+          real_real_kind: [:rodft00, :redft10], dim: 2)
 
         expect(plan.shape).to eq([30,30])
         expect(plan.size) .to eq(30*30)
@@ -311,7 +311,7 @@ describe NMatrix::FFTW, focus: true do
         output = NMatrix.new([9],
           [126.56,28.77,165.67,-24.76,105.52,-110.31,-1.23,-116.45,-14.44],
           dtype: :float64)
-        plan = NMatrix::FFTW::Plan.new([9], type: :real_real, rrkind: [:rodft00])
+        plan = NMatrix::FFTW::Plan.new([9], type: :real_real, real_real_kind: [:rodft00])
         plan.set_input input
         expect(plan.execute).to eq(true)
         expect(plan.output.round(2)).to eq(output)
@@ -324,7 +324,7 @@ describe NMatrix::FFTW, focus: true do
           [245.36,-6.12,126.84,-62.35,35.00,-109.42,-38.24,-92.49,-21.20], 
           dtype: :float64)
 
-        plan = NMatrix::FFTW::Plan.new([9], type: :real_real, rrkind: [:redft10])
+        plan = NMatrix::FFTW::Plan.new([9], type: :real_real, real_real_kind: [:redft10])
         plan.set_input input
         expect(plan.execute).to eq(true)
         expect(plan.output.round(2)).to eq(output)
@@ -338,7 +338,7 @@ describe NMatrix::FFTW, focus: true do
           dtype: :float64)
 
         plan = NMatrix::FFTW::Plan.new([3,3], type: :real_real, 
-          rrkind: [:redft10, :redft11], dim: 2)
+          real_real_kind: [:redft10, :redft11], dim: 2)
         plan.set_input input
         expect(plan.execute).to eq(true)
         expect(plan.output.round(3)) .to eq(output)
