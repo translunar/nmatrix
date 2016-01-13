@@ -91,9 +91,9 @@ class NMatrix
     #
     # SYNTAX COMPARISON:
     #
-    #   MATLAB:		a = [ [1 2 3] ; [4 5 6] ]   or  [ 1 2 3 ; 4 5 6 ]
-    #   IDL:			a = [ [1,2,3] , [4,5,6] ]
-    #   NumPy:		a = array( [1,2,3], [4,5,6] )
+    #   MATLAB:  a = [ [1 2 3] ; [4 5 6] ]   or  [ 1 2 3 ; 4 5 6 ]
+    #   IDL:   a = [ [1,2,3] , [4,5,6] ]
+    #   NumPy:  a = array( [1,2,3], [4,5,6] )
     #
     #   SciRuby:      a = NMatrix[ [1,2,3], [4,5,6] ]
     #   Ruby array:   a =  [ [1,2,3], [4,5,6] ]

@@ -652,7 +652,7 @@ static VALUE nm_lapacke_lapacke_getri(VALUE self, VALUE order, VALUE n, VALUE a,
   } else {
     ipiv_ = NM_ALLOCA_N(int, RARRAY_LEN(ipiv));
     for (int index = 0; index < RARRAY_LEN(ipiv); ++index) {
-      ipiv_[index] = FIX2INT( RARRAY_PTR(ipiv)[index] );
+      ipiv_[index] = FIX2INT( RARRAY_AREF(ipiv, index) );
     }
   }
 
@@ -744,7 +744,7 @@ static VALUE nm_lapacke_lapacke_getrs(VALUE self, VALUE order, VALUE trans, VALU
   } else {
     ipiv_ = NM_ALLOCA_N(int, RARRAY_LEN(ipiv));
     for (int index = 0; index < RARRAY_LEN(ipiv); ++index) {
-      ipiv_[index] = FIX2INT( RARRAY_PTR(ipiv)[index] );
+      ipiv_[index] = FIX2INT( RARRAY_AREF(ipiv, index) );
     }
   }
 

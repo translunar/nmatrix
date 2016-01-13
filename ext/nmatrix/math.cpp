@@ -126,6 +126,7 @@
  */
 
 
+#include <ruby.h>
 #include <algorithm>
 #include <limits>
 #include <cmath>
@@ -232,8 +233,8 @@ namespace nm {
     template <typename DType>
     void inverse(const int M, void* a_elements) {
       DType* matrix   = reinterpret_cast<DType*>(a_elements);
-      int* row_index = new int[M]; // arrays for keeping track of column scrambling
-      int* col_index = new int[M];
+      int row_index[M]; // arrays for keeping track of column scrambling
+      int col_index[M];
 
       for (int k = 0;k < M; ++k) {
         DType akk = std::abs( matrix[k * (M + 1)] ) ; // diagonal element
@@ -294,9 +295,6 @@ namespace nm {
           }
         }
       }
-
-      delete[] row_index;
-      delete[] col_index;
     }
 
     /*
@@ -1005,7 +1003,7 @@ static VALUE nm_clapack_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VAL
   } else {
     ipiv_ = NM_ALLOCA_N(int, RARRAY_LEN(ipiv));
     for (int index = 0; index < RARRAY_LEN(ipiv); ++index) {
-      ipiv_[index] = FIX2INT( RARRAY_PTR(ipiv)[index] );
+      ipiv_[index] = FIX2INT( RARRAY_AREF(ipiv, index) );
     }
   }
 
@@ -1057,7 +1055,7 @@ static VALUE nm_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1,
   } else {
     ipiv_ = NM_ALLOCA_N(int, RARRAY_LEN(ipiv));
     for (int index = 0; index < RARRAY_LEN(ipiv); ++index) {
-      ipiv_[index] = FIX2INT( RARRAY_PTR(ipiv)[index] );
+      ipiv_[index] = FIX2INT( RARRAY_AREF(ipiv, index) );
     }
   }
 

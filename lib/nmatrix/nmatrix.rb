@@ -600,13 +600,15 @@ class NMatrix
   #   - A copy of the matrix, but transposed.
   #
   def transpose(permute = nil)
-    if self.dim == 1
-      return self.clone
-    elsif self.dim == 2
-      new_shape = [self.shape[1], self.shape[0]]
-    elsif permute.nil?
-      raise(ArgumentError, "need permutation array of size #{self.dim}")
-    elsif permute.sort.uniq != (0...self.dim).to_a
+    if permute.nil?
+      if self.dim == 1
+        return self.clone
+      elsif self.dim == 2
+        new_shape = [self.shape[1], self.shape[0]]
+      else
+        raise(ArgumentError, "need permutation array of size #{self.dim}")
+      end
+    elsif !permute.is_a?(Array) || permute.sort.uniq != (0...self.dim).to_a
       raise(ArgumentError, "invalid permutation array")
     else
       # Figure out the new shape based on the permutation given as an argument.
@@ -1030,7 +1032,7 @@ protected
     ary << "shape:[#{shape.join(',')}]" << "dtype:#{dtype}" << "stype:#{stype}"
 
     if stype == :yale
-      ary <<	"capacity:#{capacity}"
+      ary << "capacity:#{capacity}"
 
       # These are enabled by the DEBUG_YALE compiler flag in extconf.rb.
       if respond_to?(:__yale_a__)
