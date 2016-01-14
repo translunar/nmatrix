@@ -350,7 +350,10 @@ NM_DEF_STRUCT_POST(NM_GC_HOLDER);       // };
 #define NM_SHAPE1(val)          (NM_STORAGE(val)->shape[1])
 #define NM_DEFAULT_VAL(val)     (NM_STORAGE_LIST(val)->default_val)
 
+// Number of elements in a dense nmatrix.
 #define NM_DENSE_COUNT(val)     (nm_storage_count_max_elements(NM_STORAGE_DENSE(val)))
+
+// Get a pointer to the array that stores elements in a dense matrix.
 #define NM_DENSE_ELEMENTS(val)  (NM_STORAGE_DENSE(val)->elements)
 #define NM_SIZEOF_DTYPE(val)    (DTYPE_SIZES[NM_DTYPE(val)])
 #define NM_REF(val,slice)       (RefFuncs[NM_STYPE(val)]( NM_STORAGE(val), slice, NM_SIZEOF_DTYPE(val) ))
