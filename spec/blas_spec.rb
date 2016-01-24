@@ -186,9 +186,15 @@ describe NMatrix::BLAS do
 
       it "exposes nrm2" do
         pending("broken for :object") if dtype == :object
-        pending("Temporarily disable because the internal implementation of nrm2 is broken -WL 2015-05-17") if dtype == :complex64 || dtype == :complex128
 
-        x = NMatrix.new([4,1], [2,-4,3,5], dtype: dtype)
+        if dtype =~ /complex/
+          x = NMatrix.new([3,1], [Complex(1,2),Complex(3,4),Complex(0,6)], dtype: dtype)
+          nrm2 = 8.12403840463596
+        else
+          x = NMatrix.new([4,1], [2,-4,3,5], dtype: dtype)
+          nrm2 = 5.385164807134504
+        end
+        
         err = case dtype
                 when :float32, :complex64
                   1e-6
@@ -197,7 +203,8 @@ describe NMatrix::BLAS do
                 else
                   1e-14
               end
-        expect(NMatrix::BLAS.nrm2(x, 1, 3)).to be_within(err).of(5.385164807134504)
+
+        expect(NMatrix::BLAS.nrm2(x, 1, 3)).to be_within(err).of(nrm2)
       end
 
     end
