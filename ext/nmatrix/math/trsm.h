@@ -81,10 +81,14 @@ inline void trsm_nothrow(const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
   // (row-major) trsm: left upper trans nonunit m=3 n=1 1/1 a 3 b 3
 
   if (m == 0 || n == 0) return; /* Quick return if possible. */
+  
+  // Apply necessary offset
+  a -= 1 + lda;
+  b -= 1 + ldb;
 
   if (alpha == 0) { // Handle alpha == 0
-    for (int j = 0; j < n; ++j) {
-      for (int i = 0; i < m; ++i) {
+    for (int j = 1; j <= n; ++j) {
+      for (int i = 1; i <= m; ++i) {
         b[i + j * ldb] = 0;
       }
     }
@@ -96,37 +100,37 @@ inline void trsm_nothrow(const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
 
       /* Form  B := alpha*inv( A )*B. */
       if (uplo == CblasUpper) {
-        for (int j = 0; j < n; ++j) {
+        for (int j = 1; j <= n; ++j) {
           if (alpha != 1) {
-            for (int i = 0; i < m; ++i) {
+            for (int i = 1; i <= m; ++i) {
               b[i + j * ldb] = alpha * b[i + j * ldb];
             }
           }
-          for (int k = m-1; k >= 0; --k) {
+          for (int k = m; k >= 1; --k) {
             if (b[k + j * ldb] != 0) {
               if (diag == CblasNonUnit) {
                 b[k + j * ldb] /= a[k + k * lda];
               }
 
-              for (int i = 0; i < k-1; ++i) {
+              for (int i = 1; i <= k-1; ++i) {
                 b[i + j * ldb] -= b[k + j * ldb] * a[i + k * lda];
               }
             }
           }
         }
       } else {
-        for (int j = 0; j < n; ++j) {
+        for (int j = 1; j <= n; ++j) {
           if (alpha != 1) {
-            for (int i = 0; i < m; ++i) {
+            for (int i = 1; i <= m; ++i) {
               b[i + j * ldb] = alpha * b[i + j * ldb];
             }
           }
-          for (int k = 0; k < m; ++k) {
+          for (int k = 1; k <= m; ++k) {
             if (b[k + j * ldb] != 0.) {
               if (diag == CblasNonUnit) {
                 b[k + j * ldb] /= a[k + k * lda];
               }
-              for (int i = k+1; i < m; ++i) {
+              for (int i = k+1; i <= m; ++i) {
                 b[i + j * ldb] -= b[k + j * ldb] * a[i + k * lda];
               }
             }
@@ -137,10 +141,10 @@ inline void trsm_nothrow(const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
 
       /*           Form  B := alpha*inv( A**T )*B. */
       if (uplo == CblasUpper) {
-        for (int j = 0; j < n; ++j) {
-          for (int i = 0; i < m; ++i) {
+        for (int j = 1; j <= n; ++j) {
+          for (int i = 1; i <= m; ++i) {
             DType temp = alpha * b[i + j * ldb];
-            for (int k = 0; k < i; ++k) { // limit was i-1. Lots of similar bugs in this code, probably.
+            for (int k = 1; k <= i-1; ++k) { // limit was i-1. Lots of similar bugs in this code, probably.
               temp -= a[k + i * lda] * b[k + j * ldb];
             }
             if (diag == CblasNonUnit) {
@@ -150,10 +154,10 @@ inline void trsm_nothrow(const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
           }
         }
       } else {
-        for (int j = 0; j < n; ++j) {
-          for (int i = m-1; i >= 0; --i) {
+        for (int j = 1; j <= n; ++j) {
+          for (int i = m; i >= 1; --i) {
             DType temp= alpha * b[i + j * ldb];
-            for (int k = i+1; k < m; ++k) {
+            for (int k = i+1; k <= m; ++k) {
               temp -= a[k + i * lda] * b[k + j * ldb];
             }
             if (diag == CblasNonUnit) {
@@ -171,37 +175,37 @@ inline void trsm_nothrow(const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
       /*           Form  B := alpha*B*inv( A ). */
 
       if (uplo == CblasUpper) {
-        for (int j = 0; j < n; ++j) {
+        for (int j = 1; j <= n; ++j) {
           if (alpha != 1) {
-            for (int i = 0; i < m; ++i) {
+            for (int i = 1; i <= m; ++i) {
               b[i + j * ldb] = alpha * b[i + j * ldb];
             }
           }
-          for (int k = 0; k < j-1; ++k) {
+          for (int k = 1; k <= j-1; ++k) {
             if (a[k + j * lda] != 0) {
-              for (int i = 0; i < m; ++i) {
+              for (int i = 1; i <= m; ++i) {
                 b[i + j * ldb] -= a[k + j * lda] * b[i + k * ldb];
               }
             }
           }
           if (diag == CblasNonUnit) {
             DType temp = 1 / a[j + j * lda];
-            for (int i = 0; i < m; ++i) {
+            for (int i = 1; i <= m; ++i) {
               b[i + j * ldb] = temp * b[i + j * ldb];
             }
           }
         }
       } else {
-        for (int j = n-1; j >= 0; --j) {
+        for (int j = n; j >= 1; --j) {
           if (alpha != 1) {
-            for (int i = 0; i < m; ++i) {
+            for (int i = 1; i <= m; ++i) {
               b[i + j * ldb] = alpha * b[i + j * ldb];
             }
           }
 
-          for (int k = j+1; k < n; ++k) {
+          for (int k = j+1; k <= n; ++k) {
             if (a[k + j * lda] != 0.) {
-              for (int i = 0; i < m; ++i) {
+              for (int i = 1; i <= m; ++i) {
                 b[i + j * ldb] -= a[k + j * lda] * b[i + k * ldb];
               }
             }
@@ -209,7 +213,7 @@ inline void trsm_nothrow(const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
           if (diag == CblasNonUnit) {
             DType temp = 1 / a[j + j * lda];
 
-            for (int i = 0; i < m; ++i) {
+            for (int i = 1; i <= m; ++i) {
               b[i + j * ldb] = temp * b[i + j * ldb];
             }
           }
@@ -220,45 +224,45 @@ inline void trsm_nothrow(const enum CBLAS_SIDE side, const enum CBLAS_UPLO uplo,
       /*           Form  B := alpha*B*inv( A**T ). */
 
       if (uplo == CblasUpper) {
-        for (int k = n-1; k >= 0; --k) {
+        for (int k = n; k >= 1; --k) {
           if (diag == CblasNonUnit) {
             DType temp= 1 / a[k + k * lda];
-            for (int i = 0; i < m; ++i) {
+            for (int i = 1; i <= m; ++i) {
               b[i + k * ldb] = temp * b[i + k * ldb];
             }
           }
-          for (int j = 0; j < k-1; ++j) {
+          for (int j = 1; j <= k-1; ++j) {
             if (a[j + k * lda] != 0.) {
               DType temp= a[j + k * lda];
-              for (int i = 0; i < m; ++i) {
+              for (int i = 1; i <= m; ++i) {
                 b[i + j * ldb] -= temp * b[i + k *  ldb];
               }
             }
           }
           if (alpha != 1) {
-            for (int i = 0; i < m; ++i) {
+            for (int i = 1; i <= m; ++i) {
               b[i + k * ldb] = alpha * b[i + k * ldb];
             }
           }
         }
       } else {
-        for (int k = 0; k < n; ++k) {
+        for (int k = 1; k <= n; ++k) {
           if (diag == CblasNonUnit) {
             DType temp = 1 / a[k + k * lda];
-            for (int i = 0; i < m; ++i) {
+            for (int i = 1; i <= m; ++i) {
               b[i + k * ldb] = temp * b[i + k * ldb];
             }
           }
-          for (int j = k+1; j < n; ++j) {
+          for (int j = k+1; j <= n; ++j) {
             if (a[j + k * lda] != 0.) {
               DType temp = a[j + k * lda];
-              for (int i = 0; i < m; ++i) {
+              for (int i = 1; i <= m; ++i) {
                 b[i + j * ldb] -= temp * b[i + k * ldb];
               }
             }
           }
           if (alpha != 1) {
-            for (int i = 0; i < m; ++i) {
+            for (int i = 1; i <= m; ++i) {
               b[i + k * ldb] = alpha * b[i + k * ldb];
             }
           }
