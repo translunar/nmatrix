@@ -1106,6 +1106,9 @@ static VALUE nm_reshape_bang(VALUE self, VALUE arg){
     if (size == new_size){
       s->shape = shape;
       s->dim = dim;
+      NM_FREE(s->offset);
+      s->offset = NM_ALLOC_N(size_t, dim);
+      memset(s->offset, 0, sizeof(size_t)*dim);
       size_t i, j;
       size_t* stride = NM_ALLOC_N(size_t, dim);
       for (i = 0; i < dim; ++i) {
@@ -1113,8 +1116,9 @@ static VALUE nm_reshape_bang(VALUE self, VALUE arg){
         for (j = i+1; j < dim; ++j) {
           stride[i] *= shape[j];
         }
-        s->stride = stride;
       }
+      NM_FREE(s->stride);
+      s->stride = stride;
       return self;
      }
      else
