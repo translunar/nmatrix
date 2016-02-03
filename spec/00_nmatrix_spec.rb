@@ -424,6 +424,13 @@ describe 'NMatrix' do
       expect(n.reshape!([8,2]).eql?(n)).to eq(true) # because n itself changes
     end
 
+    it "should do the reshape operation in place, changing dimension" do
+      n = NMatrix.seq(4)
+      a = n.reshape!([4,2,2])
+      expect(n).to eq(NMatrix.seq([4,2,2]))
+      expect(a).to eq(NMatrix.seq([4,2,2]))
+    end
+
     it "reshape and reshape! must produce same result" do
       n = NMatrix.seq(4)+1
       a = NMatrix.seq(4)+1
@@ -432,7 +439,7 @@ describe 'NMatrix' do
 
     it "should prevent a resize in place" do
       n = NMatrix.seq(4)+1
-      expect { n.reshape([5,2]) }.to raise_error(ArgumentError)
+      expect { n.reshape!([5,2]) }.to raise_error(ArgumentError)
     end
   end
 
