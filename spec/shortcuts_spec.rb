@@ -50,6 +50,41 @@ describe NMatrix do
     expect(m).to eq identity3
   end
 
+  it "hilbert() creates an hilbert matrix" do
+    m = NMatrix.hilbert(8)
+    expect(m[4, 0]).to be_within(0.000001).of(0.2)
+    expect(m[4, 1]).to be_within(0.000001).of(0.16666666666666666)
+    expect(m[4, 2]).to be_within(0.000001).of(0.14285714285714285)
+    expect(m[4, 3]).to be_within(0.000001).of(0.125)
+
+    m = NMatrix.hilbert(3)
+    hilbert3 = NMatrix.new([3, 3], [1.0, 0.5, 0.3333333333333333,\
+     0.5, 0.3333333333333333, 0.25, 0.3333333333333333, 0.25, 0.2])
+    expect(m).to eq hilbert3
+    0.upto(2) do |i|
+      0.upto(2) do |j|
+        expect(m[i, j]).to be_within(0.000001).of(hilbert3[i,j])
+      end
+    end
+  end
+
+  it "inv_hilbert() creates an inverse hilbert matrix" do
+    m = NMatrix.inv_hilbert(6)
+    inv_hilbert6 = [3360.0,  -88200.0,   564480.0, -1411200.0]
+    expect(m[2,0]).to be_within(0.000001).of(inv_hilbert6[0])
+    expect(m[2,1]).to be_within(0.000001).of(inv_hilbert6[1])
+    expect(m[2,2]).to be_within(0.000001).of(inv_hilbert6[2])
+    expect(m[2,3]).to be_within(0.000001).of(inv_hilbert6[3])
+
+    m = NMatrix.inv_hilbert(3)
+    inv_hilbert3 = NMatrix.new([3, 3], [  9.0,  -36.0,   30.0, -36.0,  192.0, -180.0, 30.0, -180.0,  180.0] )
+    0.upto(2) do |i|
+      0.upto(2) do |j|
+        expect(m[i, j]).to be_within(0.000001).of(inv_hilbert3[i,j])
+      end
+    end
+  end
+
   it "diag() creates a matrix with pre-supplied diagonal" do
     arr = [1,2,3,4]
     m = NMatrix.diag(arr)
@@ -123,6 +158,83 @@ describe NMatrix do
       expect { NMatrix.random("not an array or integer") }.to raise_error
     end
   end
+  
+  context "::linspace" do
+    it "creates a row vector when given only one shape parameter" do
+      v = NMatrix.linspace(1, 10, 4)
+      #Expect a row vector only
+      expect(v.shape.length).to eq(1)
+      
+      ans = [1.0,4.0,7.0,10.0]
+
+      expect(v[0]).to be_within(0.000001).of(ans[0])
+      expect(v[1]).to be_within(0.000001).of(ans[1])
+      expect(v[2]).to be_within(0.000001).of(ans[2])
+      expect(v[3]).to be_within(0.000001).of(ans[3])
+    end
+    
+    it "creates a matrix of input shape with each entry linearly spaced in row major order" do
+      v = NMatrix.linspace(1, Math::PI, [2,2])
+      expect(v.dtype).to eq(:float64)
+
+      ans = [1.0, 1.7138642072677612, 2.4277284145355225, 3.1415927410125732]
+      
+      expect(v[0,0]).to be_within(0.000001).of(ans[0])
+      expect(v[0,1]).to be_within(0.000001).of(ans[1])
+      expect(v[1,0]).to be_within(0.000001).of(ans[2])
+      expect(v[1,1]).to be_within(0.000001).of(ans[3])
+    end
+  end
+
+  context "::logspace" do
+    it "creates a logarithmically spaced vector" do
+      v = NMatrix.logspace(1, 2, 10)
+      
+      expect(v.shape.length).to eq(1)
+      
+      #Unit test taken from Matlab R2015b output of logspace(1,2,10)
+      ans = [10.0000, 12.9155, 16.6810, 21.5443, 27.8256, 35.9381, 46.4159, 59.9484, 77.4264, 100.0000]
+      
+      expect(v[0].round(4)).to be_within(0.000001).of(ans[0])
+      expect(v[1].round(4)).to be_within(0.000001).of(ans[1])
+      expect(v[2].round(4)).to be_within(0.000001).of(ans[2])
+      expect(v[3].round(4)).to be_within(0.000001).of(ans[3])
+      expect(v[4].round(4)).to be_within(0.000001).of(ans[4])
+      expect(v[5].round(4)).to be_within(0.000001).of(ans[5])
+      expect(v[6].round(4)).to be_within(0.000001).of(ans[6])
+      expect(v[7].round(4)).to be_within(0.000001).of(ans[7])
+      expect(v[8].round(4)).to be_within(0.000001).of(ans[8])
+      expect(v[9].round(4)).to be_within(0.000001).of(ans[9])
+    end
+    
+    it "creates a logarithmically spaced vector bounded by Math::PI if :pi is pre-supplied" do
+      v = NMatrix.logspace(1, :pi, 7)
+                 
+      #Unit test taken from Matlab R2015b output of logspace(1,pi,10)
+      ans = [10.0000, 8.2450, 6.7980, 5.6050, 4.6213, 3.8103, 3.1416]
+      
+      expect(v[0].round(4)).to be_within(0.000001).of(ans[0])
+      expect(v[1].round(4)).to be_within(0.000001).of(ans[1])
+      expect(v[2].round(4)).to be_within(0.000001).of(ans[2])
+      expect(v[3].round(4)).to be_within(0.000001).of(ans[3])
+      expect(v[4].round(4)).to be_within(0.000001).of(ans[4])
+      expect(v[5].round(4)).to be_within(0.000001).of(ans[5])
+      expect(v[6].round(4)).to be_within(0.000001).of(ans[6])
+    end    
+
+    it "creates a matrix of input shape with each entry logarithmically spaced in row major order" do
+      v = NMatrix.logspace(1, 2, [3,2])
+      
+      ans = [10.0, 15.8489, 25.1189, 39.8107, 63.0957, 100.0]
+      
+      expect(v[0,0].round(4)).to be_within(0.000001).of(ans[0])
+      expect(v[0,1].round(4)).to be_within(0.000001).of(ans[1])
+      expect(v[1,0].round(4)).to be_within(0.000001).of(ans[2])
+      expect(v[1,1].round(4)).to be_within(0.000001).of(ans[3])
+      expect(v[2,0].round(4)).to be_within(0.000001).of(ans[4])
+      expect(v[2,1].round(4)).to be_within(0.000001).of(ans[5])
+    end
+  end
 
   it "seq() creates a matrix of integers, sequentially" do
     m = NMatrix.seq(2) # 2x2 matrix.
@@ -135,7 +247,6 @@ describe NMatrix do
       end
     end
   end
-
 
   it "indgen() creates a matrix of integers as well as seq()" do
     m = NMatrix.indgen(2) # 2x2 matrix.
