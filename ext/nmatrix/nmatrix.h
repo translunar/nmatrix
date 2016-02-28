@@ -33,6 +33,7 @@
  */
 
 #include <ruby.h>
+#include "ruby_constants.h"
 
 #ifdef __cplusplus
   #include <cmath>
