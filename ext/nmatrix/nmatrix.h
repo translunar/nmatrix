@@ -343,11 +343,25 @@ NM_DEF_STRUCT_POST(NM_GC_HOLDER);       // };
 
 #define NM_SRC(val)             (NM_STORAGE(val)->src)
 #define NM_DIM(val)             (NM_STORAGE(val)->dim)
+
+// Returns an int corresponding the data type of the nmatrix. See the dtype_t
+// enum for a list of possible data types.
 #define NM_DTYPE(val)           (NM_STORAGE(val)->dtype)
+
+// Returns a number corresponding the storage type of the nmatrix. See the stype_t
+// enum for a list of possible storage types.
 #define NM_STYPE(val)           (NM_STRUCT(val)->stype)
+
+// Get the shape of the ith dimension (int)
 #define NM_SHAPE(val,i)         (NM_STORAGE(val)->shape[(i)])
+
+// Get the shape of the 0th dimension (int)
 #define NM_SHAPE0(val)          (NM_STORAGE(val)->shape[0])
+
+// Get the shape of the 1st dimenension (int)
 #define NM_SHAPE1(val)          (NM_STORAGE(val)->shape[1])
+
+// Get the default value assigned to the nmatrix.
 #define NM_DEFAULT_VAL(val)     (NM_STORAGE_LIST(val)->default_val)
 
 // Number of elements in a dense nmatrix.
