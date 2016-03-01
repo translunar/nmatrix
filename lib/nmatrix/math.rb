@@ -155,6 +155,104 @@ class NMatrix
 
   #
   # call-seq:
+  #     geqrf! -> shape.min x 1 NMatrix 
+  #
+  # QR factorization of a general M-by-N matrix +A+. 
+  #
+  # The QR factorization is A = QR, where Q is orthogonal and R is Upper Triangular
+  # +A+ is overwritten with the elements of R and Q with Q being represented by the 
+  # elements below A's diagonal and an array of scalar factors in the output NMatrix. 
+  #
+  # The matrix Q is represented as a product of elementary reflectors
+  #     Q = H(1) H(2) . . . H(k), where k = min(m,n).
+  #
+  # Each H(i) has the form
+  #
+  #     H(i) = I - tau * v * v'
+  #
+  # http://www.netlib.org/lapack/explore-html/d3/d69/dgeqrf_8f.html
+  # 
+  # Only works for dense matrices.
+  #
+  # * *Returns* :
+  #   - Vector TAU. Q and R are stored in A. Q is represented by TAU and A
+  # * *Raises* :
+  #   - +StorageTypeError+ -> LAPACK functions only work on dense matrices.
+  #
+  def geqrf!
+    # The real implementation is in lib/nmatrix/lapacke.rb
+    raise(NotImplementedError, "geqrf! requires the nmatrix-lapacke gem")
+  end
+  
+  #
+  # call-seq:
+  #     ormqr(tau) -> NMatrix
+  #     ormqr(tau, side, transpose, c) -> NMatrix
+  #
+  # Returns the product Q * c or c * Q after a call to geqrf! used in QR factorization. 
+  # +c+ is overwritten with the elements of the result NMatrix if supplied. Q is the orthogonal matrix 
+  # represented by tau and the calling NMatrix
+  # 
+  # Only works on float types, use unmqr for complex types.
+  #
+  # == Arguments
+  #
+  # * +tau+ - vector containing scalar factors of elementary reflectors
+  # * +side+ - direction of multiplication [:left, :right]
+  # * +transpose+ - apply Q with or without transpose [false, :transpose] 
+  # * +c+ - NMatrix multplication argument that is overwritten, no argument assumes c = identity
+  #
+  # * *Returns* :
+  #
+  #   - Q * c or c * Q Where Q may be transposed before multiplication. 
+  #    
+  #
+  # * *Raises* :
+  #   - +StorageTypeError+ -> LAPACK functions only work on dense matrices.
+  #   - +TypeError+ -> Works only on floating point matrices, use unmqr for complex types
+  #   - +TypeError+ -> c must have the same dtype as the calling NMatrix
+  #
+  def ormqr(tau, side=:left, transpose=false, c=nil)
+    # The real implementation is in lib/nmatrix/lapacke.rb
+    raise(NotImplementedError, "ormqr requires the nmatrix-lapacke gem")
+  
+  end
+
+  #
+  # call-seq:
+  #     unmqr(tau) -> NMatrix
+  #     unmqr(tau, side, transpose, c) -> NMatrix
+  #
+  # Returns the product Q * c or c * Q after a call to geqrf! used in QR factorization. 
+  # +c+ is overwritten with the elements of the result NMatrix if it is supplied. Q is the orthogonal matrix 
+  # represented by tau and the calling NMatrix
+  # 
+  # Only works on complex types, use ormqr for float types.
+  #
+  # == Arguments
+  #
+  # * +tau+ - vector containing scalar factors of elementary reflectors
+  # * +side+ - direction of multiplication [:left, :right]
+  # * +transpose+ - apply Q as Q or its complex conjugate [false, :complex_conjugate] 
+  # * +c+ - NMatrix multplication argument that is overwritten, no argument assumes c = identity
+  #
+  # * *Returns* :
+  #
+  #   - Q * c or c * Q Where Q may be transformed to its complex conjugate before multiplication. 
+  #    
+  #
+  # * *Raises* :
+  #   - +StorageTypeError+ -> LAPACK functions only work on dense matrices.
+  #   - +TypeError+ -> Works only on floating point matrices, use unmqr for complex types
+  #   - +TypeError+ -> c must have the same dtype as the calling NMatrix
+  #
+  def unmqr(tau, side=:left, transpose=false, c=nil)
+    # The real implementation is in lib/nmatrix/lapacke.rb
+    raise(NotImplementedError, "unmqr requires the nmatrix-lapacke gem")
+  end
+
+  #
+  # call-seq:
   #     potrf!(upper_or_lower) -> NMatrix
   #
   # Cholesky factorization of a symmetric positive-definite matrix -- or, if complex,
@@ -230,6 +328,46 @@ class NMatrix
     return t unless with_permutation_matrix
 
     [t, FactorizeLUMethods.permutation_matrix_from(pivot)]
+  end
+
+  #
+  # call-seq:
+  #     factorize_qr -> [Q,R]
+  #
+  # QR factorization of a matrix without column pivoting. 
+  # Q is orthogonal and R is upper triangular if input is square or upper trapezoidal if 
+  # input is rectangular.  
+  #
+  # Only works for dense matrices.
+  #
+  # * *Returns* :
+  #   - Array containing Q and R matrices
+  #
+  # * *Raises* :
+  #   - +StorageTypeError+ -> only implemented for desnse storage.
+  #   - +ShapeError+ -> Input must be a 2-dimensional matrix to have a QR decomposition.
+  #
+  def factorize_qr
+    raise(NotImplementedError, "only implemented for dense storage") unless self.stype == :dense
+    raise(ShapeError, "Input must be a 2-dimensional matrix to have a QR decomposition") unless self.dim == 2
+
+    rows, columns = self.shape
+    r = self.clone
+    tau =  r.geqrf!
+    
+    #Obtain Q 
+    q = self.complex_dtype? ? r.unmqr(tau) : r.ormqr(tau)
+    
+    #Obtain R    
+    if rows <= columns
+      r.upper_triangle!
+    #Need to account for upper trapezoidal structure if R is a tall rectangle (rows > columns)
+    else
+      r[0...columns, 0...columns].upper_triangle!
+      r[columns...rows, 0...columns] = 0
+    end
+
+    [q,r]
   end
 
   # Reduce self to upper hessenberg form using householder transforms.
