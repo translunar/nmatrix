@@ -638,6 +638,23 @@ describe 'NMatrix' do
     end
   end
 
+  context "#last" do
+    it "returns the last element of a 1-dimensional NMatrix" do
+      n = NMatrix.new([1,4], [1,2,3,4])
+      expect(n.last).to eq(4)
+    end
+
+    it "returns the last element of a 2-dimensional NMatrix" do
+      n = NMatrix.new([2,2], [4,8,12,16])
+      expect(n.last).to eq(16)
+    end
+
+    it "returns the last element of a 3-dimensional NMatrix" do
+      n = NMatrix.new([2,2,2], [1,2,3,4,5,6,7,8])
+      expect(n.last).to eq(8)
+    end
+  end
+
   context "#diagonal" do
     ALL_DTYPES.each do |dtype|
       before do 

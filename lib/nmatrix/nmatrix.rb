@@ -534,6 +534,16 @@ class NMatrix
     rank(0, row_number, get_by)
   end
 
+  #
+  # call-seq:
+  #     last -> Element of self.dtype
+  #
+  # Returns the last element stored in an NMatrix
+  #
+  def last
+    self[*Array.new(self.dim, -1)]
+  end
+
 
   #
   # call-seq:
