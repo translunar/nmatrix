@@ -349,21 +349,12 @@ NM_DEF_STRUCT_POST(NM_GC_HOLDER);       // };
 // enum for a list of possible data types.
 #define NM_DTYPE(val)           (NM_STORAGE(val)->dtype)
 
-// Check if the dtype of val is :float32
-#define NM_DTYPE_IS_FLOAT32(val)    (NM_STORAGE(val)->dtype == FLOAT32)
-
-// Check if the dtype of val is :float64
-#define NM_DTYPE_IS_FLOAT64(val)    (NM_STORAGE(val)->dtype == FLOAT64)
-
 // Returns a number corresponding the storage type of the nmatrix. See the stype_t
 // enum for a list of possible storage types.
 #define NM_STYPE(val)           (NM_STRUCT(val)->stype)
 
 // Get the shape of the ith dimension (int)
 #define NM_SHAPE(val,i)         (NM_STORAGE(val)->shape[(i)])
-
-// Get the shape array (unsigned int*)
-#define NM_SHAPE_ARRY(val)      (NM_STORAGE(val)->shape)
 
 // Get the shape of the 0th dimension (int)
 #define NM_SHAPE0(val)          (NM_STORAGE(val)->shape[0])
