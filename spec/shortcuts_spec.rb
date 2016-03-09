@@ -159,6 +159,35 @@ describe NMatrix do
     end
   end
   
+  context "::magic" do
+    
+    ALL_DTYPES.each do |dtype|
+      context dtype do
+        it "creates a matrix with numbers from 1 to n^n(n squared)" do
+          a = NMatrix.magic(3, dtype: dtype)
+          magic3 = NMatrix.new([3,3], [4, 9, 2, 3, 5, 7, 8, 1, 6], dtype: dtype)	
+          expect(a).to eq magic3
+      
+          b = NMatrix.magic(4, dtype: dtype)
+          magic4 = NMatrix.new([4,4], [1, 15, 14,  4, 12,  6,  7, 9, 8, 10, 11, 5, 13, 3, 2, 16], dtype: dtype)
+          expect(b).to eq magic4
+      
+          c = NMatrix.magic(6, dtype: dtype)
+          magic6 = NMatrix.new([6,6], [31, 9, 2, 22, 27, 20, 3, 32, 7, 21, 23, 25, 35, 1, 6, 26, 19, 24, 4, 36, 29, 13, 18, 11, 30, 5, 34, 12, 14, 16, 8, 28, 33, 17, 10, 15], dtype: dtype)
+          expect(c).to eq magic6  
+        end
+      end
+    end
+    
+    it "shape of two is not allowed" do
+      expect { NMatrix.magic(2) }.to raise_error(ArgumentError)
+    end
+    
+    it "Only accepts an integer as dimension" do 
+      expect { NMatrix.magic(3.0) }.to raise_error(ArgumentError)
+    end
+  end
+  
   context "::linspace" do
     it "creates a row vector when given only one shape parameter" do
       v = NMatrix.linspace(1, 10, 4)
