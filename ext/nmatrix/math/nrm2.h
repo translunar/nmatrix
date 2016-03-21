@@ -89,7 +89,8 @@ ReturnDType nrm2(const int N, const DType* X, const int incX) {
       temp  = scale / absxi;
       scale = absxi;
       ssq   = ONE + ssq * (temp * temp);
-    } else {
+    }
+    else if(scale != 0) {
       temp = absxi / scale;
       ssq += temp * temp;
     }
@@ -106,7 +107,8 @@ static inline void nrm2_complex_helper(const FloatDType& xr, const FloatDType& x
     double temp  = scale / absx;
     scale = absx;
     ssq   = 1.0 + ssq * (temp * temp);
-  } else {
+  }
+  else if(scale != 0)  {
     double temp = absx / scale;
     ssq += temp * temp;
   }
@@ -116,7 +118,8 @@ static inline void nrm2_complex_helper(const FloatDType& xr, const FloatDType& x
     double temp  = scale / absx;
     scale = absx;
     ssq   = 1.0 + ssq * (temp * temp);
-  } else {
+  }
+  else if(scale != 0)  {
     double temp = absx / scale;
     ssq += temp * temp;
   }

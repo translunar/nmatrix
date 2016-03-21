@@ -189,9 +189,11 @@ describe NMatrix::BLAS do
 
         if dtype =~ /complex/
           x = NMatrix.new([3,1], [Complex(1,2),Complex(3,4),Complex(0,6)], dtype: dtype)
+          y = NMatrix.new([3,1], [Complex(0,0),Complex(0,0),Complex(0,0)], dtype: dtype)
           nrm2 = 8.12403840463596
         else
           x = NMatrix.new([4,1], [2,-4,3,5], dtype: dtype)
+          y = NMatrix.new([3,1], [0,0,0], dtype: dtype)
           nrm2 = 5.385164807134504
         end
         
@@ -205,6 +207,7 @@ describe NMatrix::BLAS do
               end
 
         expect(NMatrix::BLAS.nrm2(x, 1, 3)).to be_within(err).of(nrm2)
+        expect(NMatrix::BLAS.nrm2(y, 1, 3)).to be_within(err).of(0)
       end
 
     end
