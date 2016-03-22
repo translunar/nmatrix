@@ -34,6 +34,7 @@
 
 #include <ruby.h>
 #include <cmath> // pow().
+#include <type_traits>
 
 /*
  * Project Includes
@@ -44,6 +45,11 @@
 /*
  * Macros
  */
+
+#define u_int8_t static_assert(false, "Please use uint8_t for cross-platform support and consistency."); uint8_t
+#define u_int16_t static_assert(false, "Please use uint16_t for cross-platform support and consistency."); uint16_t
+#define u_int32_t static_assert(false, "Please use uint32_t for cross-platform support and consistency."); uint32_t
+#define u_int64_t static_assert(false, "Please use uint64_t for cross-platform support and consistency."); uint64_t
 
 extern "C" {
 
@@ -152,7 +158,7 @@ namespace nm {
   EWOP_INT_INT_DIV(int16_t, int32_t)
   EWOP_INT_INT_DIV(int16_t, int64_t)
   EWOP_INT_INT_DIV(int8_t, int8_t)
-  EWOP_INT_UINT_DIV(int8_t, u_int8_t)
+  EWOP_INT_UINT_DIV(int8_t, uint8_t)
   EWOP_INT_INT_DIV(int8_t, int16_t)
   EWOP_INT_INT_DIV(int8_t, int32_t)
   EWOP_INT_INT_DIV(int8_t, int64_t)
@@ -162,12 +168,12 @@ namespace nm {
   EWOP_UINT_INT_DIV(uint8_t, int32_t)
   EWOP_UINT_INT_DIV(uint8_t, int64_t)
   EWOP_FLOAT_INT_DIV(float, int8_t)
-  EWOP_FLOAT_INT_DIV(float, u_int8_t)
+  EWOP_FLOAT_INT_DIV(float, uint8_t)
   EWOP_FLOAT_INT_DIV(float, int16_t)
   EWOP_FLOAT_INT_DIV(float, int32_t)
   EWOP_FLOAT_INT_DIV(float, int64_t)
   EWOP_FLOAT_INT_DIV(double, int8_t)
-  EWOP_FLOAT_INT_DIV(double, u_int8_t)
+  EWOP_FLOAT_INT_DIV(double, uint8_t)
   EWOP_FLOAT_INT_DIV(double, int16_t)
   EWOP_FLOAT_INT_DIV(double, int32_t)
   EWOP_FLOAT_INT_DIV(double, int64_t)
