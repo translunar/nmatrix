@@ -85,7 +85,13 @@ end
 if RUBY_VERSION < '1.9'
   raise(NotImplementedError, "Sorry, you need at least Ruby 1.9!")
 else
-  $INSTALLFILES = [['nmatrix.h', '$(archdir)'], ['nmatrix.hpp', '$(archdir)'], ['nmatrix_config.h', '$(archdir)'], ['nm_memory.h', '$(archdir)']]
+  $INSTALLFILES = [
+    ['nmatrix.h'       , '$(archdir)'], 
+    ['nmatrix.hpp'     , '$(archdir)'],
+    ['nmatrix_config.h', '$(archdir)'], 
+    ['nm_memory.h'     , '$(archdir)'],
+    ['ruby_constants.h', '$(archdir)']
+  ]
   if /cygwin|mingw/ =~ RUBY_PLATFORM
     $INSTALLFILES << ['libnmatrix.a', '$(archdir)']
   end
@@ -104,9 +110,6 @@ $CPPFLAGS = ["-Wall -Werror=return-type",$CPPFLAGS].join(" ")
 basenames = %w{nmatrix ruby_constants data/data util/io math util/sl_list storage/common storage/storage storage/dense/dense storage/yale/yale storage/list/list}
 $objs = basenames.map { |b| "#{b}.o"   }
 $srcs = basenames.map { |b| "#{b}.cpp" }
-
-#CONFIG['CXX'] = 'clang++'
-CONFIG['CXX'] = 'g++'
 
 def find_newer_gplusplus #:nodoc:
   print "checking for apparent GNU g++ binary with C++0x/C++11 support... "
@@ -135,7 +138,7 @@ end
 
 
 if CONFIG['CXX'] == 'clang++'
-  $CPP_STANDARD = 'c++11'
+  $CXX_STANDARD = 'c++11'
 
 else
   version = gplusplus_version
@@ -147,25 +150,30 @@ else
   end
 
   if version < '4.7.0'
-    $CPP_STANDARD = 'c++0x'
+    $CXX_STANDARD = 'c++0x'
   else
-    $CPP_STANDARD = 'c++11'
+    $CXX_STANDARD = 'c++11'
   end
-  puts "using C++ standard... #{$CPP_STANDARD}"
+  puts "using C++ standard... #{$CXX_STANDARD}"
   puts "g++ reports version... " + `#{CONFIG['CXX']} --version|head -n 1|cut -f 3 -d " "`
 end
 
 #$libs += " -lprofiler "
 
 # For release, these next two should both be changed to -O3.
-$CFLAGS += " -O0 -g "
+$CFLAGS += " -O3 "
 #$CFLAGS += " -static -O0 -g "
-$CPPFLAGS += " -O0 -g -std=#{$CPP_STANDARD} " #-fmax-errors=10 -save-temps
-#$CPPFLAGS += " -static -O0 -g -std=#{$CPP_STANDARD} "
+$CXXFLAGS += " -O3 -std=#{$CXX_STANDARD} " #-fmax-errors=10 -save-temps
+#$CXXFLAGS += " -static -O0 -g -std=#{$CXX_STANDARD} "
 
 CONFIG['warnflags'].gsub!('-Wshorten-64-to-32', '') # doesn't work except in Mac-patched gcc (4.2)
 CONFIG['warnflags'].gsub!('-Wdeclaration-after-statement', '')
 CONFIG['warnflags'].gsub!('-Wimplicit-function-declaration', '')
+
+have_func("rb_array_const_ptr", "ruby.h")
+have_macro("FIX_CONST_VALUE_PTR", "ruby.h")
+have_macro("RARRAY_CONST_PTR", "ruby.h")
+have_macro("RARRAY_AREF", "ruby.h")
 
 create_conf_h("nmatrix_config.h")
 create_makefile("nmatrix")

@@ -89,7 +89,8 @@ ReturnDType nrm2(const int N, const DType* X, const int incX) {
       temp  = scale / absxi;
       scale = absxi;
       ssq   = ONE + ssq * (temp * temp);
-    } else {
+    }
+    else if(scale != 0) {
       temp = absxi / scale;
       ssq += temp * temp;
     }
@@ -106,7 +107,8 @@ static inline void nrm2_complex_helper(const FloatDType& xr, const FloatDType& x
     double temp  = scale / absx;
     scale = absx;
     ssq   = 1.0 + ssq * (temp * temp);
-  } else {
+  }
+  else if(scale != 0)  {
     double temp = absx / scale;
     ssq += temp * temp;
   }
@@ -116,7 +118,8 @@ static inline void nrm2_complex_helper(const FloatDType& xr, const FloatDType& x
     double temp  = scale / absx;
     scale = absx;
     ssq   = 1.0 + ssq * (temp * temp);
-  } else {
+  }
+  else if(scale != 0)  {
     double temp = absx / scale;
     ssq += temp * temp;
   }
@@ -124,12 +127,12 @@ static inline void nrm2_complex_helper(const FloatDType& xr, const FloatDType& x
 
 template <>
 float nrm2(const int N, const Complex64* X, const int incX) {
-  double scale = 0, ssq = 1, temp;
+  double scale = 0, ssq = 1;
 
   if ((N < 1) || (incX < 1))    return 0.0;
 
   for (int i = 0; i < N; ++i) {
-    nrm2_complex_helper<float>(X[i*incX].r, X[i*incX].i, scale, temp);
+    nrm2_complex_helper<float>(X[i*incX].r, X[i*incX].i, scale, ssq);
   }
 
   return scale * std::sqrt( ssq );
@@ -137,12 +140,12 @@ float nrm2(const int N, const Complex64* X, const int incX) {
 
 template <>
 double nrm2(const int N, const Complex128* X, const int incX) {
-  double scale = 0, ssq = 1, temp;
+  double scale = 0, ssq = 1;
 
   if ((N < 1) || (incX < 1))    return 0.0;
 
   for (int i = 0; i < N; ++i) {
-    nrm2_complex_helper<double>(X[i*incX].r, X[i*incX].i, scale, temp);
+    nrm2_complex_helper<double>(X[i*incX].r, X[i*incX].i, scale, ssq);
   }
 
   return scale * std::sqrt( ssq );

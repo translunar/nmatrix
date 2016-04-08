@@ -9,8 +9,8 @@
 //
 // == Copyright Information
 //
-// SciRuby is Copyright (c) 2010 - 2014, Ruby Science Foundation
-// NMatrix is Copyright (c) 2012 - 2014, John Woods and the Ruby Science Foundation
+// SciRuby is Copyright (c) 2010 - present, Ruby Science Foundation
+// NMatrix is Copyright (c) 2012 - present, John Woods and the Ruby Science Foundation
 //
 // Please see LICENSE.txt for additional copyright notices.
 //
@@ -126,6 +126,7 @@
  */
 
 
+#include <ruby.h>
 #include <algorithm>
 #include <limits>
 #include <cmath>
@@ -133,6 +134,7 @@
 #include "math/cblas_enums.h"
 
 #include "data/data.h"
+#include "math/magnitude.h"
 #include "math/imax.h"
 #include "math/scal.h"
 #include "math/laswp.h"
@@ -232,15 +234,18 @@ namespace nm {
     template <typename DType>
     void inverse(const int M, void* a_elements) {
       DType* matrix   = reinterpret_cast<DType*>(a_elements);
-      int* row_index = new int[M]; // arrays for keeping track of column scrambling
-      int* col_index = new int[M];
+      int row_index[M]; // arrays for keeping track of column scrambling
+      int col_index[M];
 
       for (int k = 0;k < M; ++k) {
-        DType akk = std::abs( matrix[k * (M + 1)] ) ; // diagonal element
+        typename MagnitudeDType<DType>::type akk;
+        akk = magnitude( matrix[k * (M + 1)] ); // diagonal element
+
         int interchange = k;
 
         for (int row = k + 1; row < M; ++row) {
-          DType big = std::abs( matrix[M*row + k] ); // element below the temp pivot
+          typename MagnitudeDType<DType>::type big;
+          big = magnitude( matrix[M*row + k] ); // element below the temp pivot
           
           if ( big > akk ) {
             interchange = row;
@@ -294,9 +299,6 @@ namespace nm {
           }
         }
       }
-
-      delete[] row_index;
-      delete[] col_index;
     }
 
     /*
@@ -599,8 +601,8 @@ static VALUE nm_cblas_rotg(VALUE self, VALUE ab) {
       rb_ary_store(result, 0, *reinterpret_cast<VALUE*>(pC));
       rb_ary_store(result, 1, *reinterpret_cast<VALUE*>(pS));
     } else {
-      rb_ary_store(result, 0, rubyobj_from_cval(pC, dtype).rval);
-      rb_ary_store(result, 1, rubyobj_from_cval(pS, dtype).rval);
+      rb_ary_store(result, 0, nm::rubyobj_from_cval(pC, dtype).rval);
+      rb_ary_store(result, 1, nm::rubyobj_from_cval(pS, dtype).rval);
     }
     NM_CONSERVATIVE(nm_unregister_value(&ab));
     NM_CONSERVATIVE(nm_unregister_value(&self));
@@ -724,7 +726,7 @@ static VALUE nm_cblas_nrm2(VALUE self, VALUE n, VALUE x, VALUE incx) {
 
     ttable[dtype](FIX2INT(n), NM_STORAGE_DENSE(x)->elements, FIX2INT(incx), Result);
 
-    return rubyobj_from_cval(Result, rdtype).rval;
+    return nm::rubyobj_from_cval(Result, rdtype).rval;
   }
 }
 
@@ -750,16 +752,16 @@ static VALUE nm_cblas_nrm2(VALUE self, VALUE n, VALUE x, VALUE incx) {
 static VALUE nm_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx) {
 
   static void (*ttable[nm::NUM_DTYPES])(const int N, const void* X, const int incX, void* sum) = {
-      nm::math::cblas_asum<uint8_t,uint8_t>,
-      nm::math::cblas_asum<int8_t,int8_t>,
-      nm::math::cblas_asum<int16_t,int16_t>,
-      nm::math::cblas_asum<int32_t,int32_t>,
-      nm::math::cblas_asum<int64_t,int64_t>,
-      nm::math::cblas_asum<float32_t,float32_t>,
-      nm::math::cblas_asum<float64_t,float64_t>,
-      nm::math::cblas_asum<float32_t,nm::Complex64>,
-      nm::math::cblas_asum<float64_t,nm::Complex128>,
-      nm::math::cblas_asum<nm::RubyObject,nm::RubyObject>
+      nm::math::cblas_asum<uint8_t>,
+      nm::math::cblas_asum<int8_t>,
+      nm::math::cblas_asum<int16_t>,
+      nm::math::cblas_asum<int32_t>,
+      nm::math::cblas_asum<int64_t>,
+      nm::math::cblas_asum<float32_t>,
+      nm::math::cblas_asum<float64_t>,
+      nm::math::cblas_asum<nm::Complex64>,
+      nm::math::cblas_asum<nm::Complex128>,
+      nm::math::cblas_asum<nm::RubyObject>
   };
 
   nm::dtype_t dtype  = NM_DTYPE(x);
@@ -773,7 +775,7 @@ static VALUE nm_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx) {
 
   ttable[dtype](FIX2INT(n), NM_STORAGE_DENSE(x)->elements, FIX2INT(incx), Result);
 
-  return rubyobj_from_cval(Result, rdtype).rval;
+  return nm::rubyobj_from_cval(Result, rdtype).rval;
 }
 
 /*
@@ -1005,7 +1007,7 @@ static VALUE nm_clapack_getrs(VALUE self, VALUE order, VALUE trans, VALUE n, VAL
   } else {
     ipiv_ = NM_ALLOCA_N(int, RARRAY_LEN(ipiv));
     for (int index = 0; index < RARRAY_LEN(ipiv); ++index) {
-      ipiv_[index] = FIX2INT( RARRAY_PTR(ipiv)[index] );
+      ipiv_[index] = FIX2INT( RARRAY_AREF(ipiv, index) );
     }
   }
 
@@ -1057,7 +1059,7 @@ static VALUE nm_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VALUE k1,
   } else {
     ipiv_ = NM_ALLOCA_N(int, RARRAY_LEN(ipiv));
     for (int index = 0; index < RARRAY_LEN(ipiv); ++index) {
-      ipiv_[index] = FIX2INT( RARRAY_PTR(ipiv)[index] );
+      ipiv_[index] = FIX2INT( RARRAY_AREF(ipiv, index) );
     }
   }
 

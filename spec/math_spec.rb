@@ -285,6 +285,152 @@ describe "math" do
     end
   end
 
+  NON_INTEGER_DTYPES.each do |dtype|
+    next if dtype == :object
+    context dtype do
+      
+      it "calculates QR decomposition using factorize_qr for a square matrix" do
+
+        a = NMatrix.new(3, [12.0, -51.0,   4.0, 
+                             6.0, 167.0, -68.0, 
+                            -4.0,  24.0, -41.0] , dtype: dtype)
+        
+        q_solution = NMatrix.new([3,3], Q_SOLUTION_ARRAY_2, dtype: dtype)
+
+        r_solution = NMatrix.new([3,3], [-14.0, -21.0, 14, 
+                                           0.0,  -175, 70, 
+                                           0.0, 0.0,  -35] , dtype: dtype)
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-4
+                when :float64, :complex128
+                  1e-13
+              end
+        
+        begin
+          q,r = a.factorize_qr
+          
+          expect(q).to be_within(err).of(q_solution)
+          expect(r).to be_within(err).of(r_solution)
+        
+        rescue NotImplementedError
+          pending "Suppressing a NotImplementedError when the lapacke plugin is not available"
+        end
+      end
+
+      it "calculates QR decomposition using factorize_qr for a tall and narrow rectangular matrix" do
+
+        a = NMatrix.new([4,2], [34.0, 21.0, 
+                                23.0, 53.0, 
+                                26.0, 346.0, 
+                                23.0, 121.0] , dtype: dtype)
+        
+        q_solution = NMatrix.new([4,4], Q_SOLUTION_ARRAY_1, dtype: dtype)
+
+        r_solution = NMatrix.new([4,2], [-53.75872022286244, -255.06559574252242, 
+                                                        0.0,  269.34836526051555, 
+                                                        0.0,                 0.0, 
+                                                        0.0,                 0.0] , dtype: dtype)
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-4
+                when :float64, :complex128
+                  1e-13
+              end
+        
+        begin
+          q,r = a.factorize_qr
+          
+          expect(q).to be_within(err).of(q_solution)
+          expect(r).to be_within(err).of(r_solution)
+        
+        rescue NotImplementedError
+          pending "Suppressing a NotImplementedError when the lapacke plugin is not available"
+        end
+      end
+
+      it "calculates QR decomposition using factorize_qr for a short and wide rectangular matrix" do
+          
+        a = NMatrix.new([3,4], [123,31,57,81,92,14,17,36,42,34,11,28], dtype: dtype)
+        
+        q_solution = NMatrix.new([3,3], Q_SOLUTION_ARRAY_3, dtype: dtype)
+
+        r_solution = NMatrix.new([3,4], R_SOLUTION_ARRAY, dtype: dtype)
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-4
+                when :float64, :complex128
+                  1e-13
+              end
+        
+        begin
+          q,r = a.factorize_qr
+          
+          expect(q).to be_within(err).of(q_solution)
+          expect(r).to be_within(err).of(r_solution)
+        
+        rescue NotImplementedError
+          pending "Suppressing a NotImplementedError when the lapacke plugin is not available"
+        end
+      end
+      
+      it "calculates QR decomposition such that A - QR ~ 0" do
+
+        a = NMatrix.new([3,3], [ 9.0,  0.0, 26.0, 
+                                12.0,  0.0, -7.0,  
+                                 0.0,  4.0,  0.0] , dtype: dtype)
+        
+        err = case dtype
+                when :float32, :complex64
+                  1e-4
+                when :float64, :complex128
+                  1e-13
+              end
+        
+        begin
+          q,r = a.factorize_qr
+          a_expected = q.dot(r)  
+          
+          expect(a_expected).to be_within(err).of(a)
+               
+        rescue NotImplementedError
+          pending "Suppressing a NotImplementedError when the lapacke plugin is not available"
+        end
+      end
+
+
+      it "calculates the orthogonal matrix Q in QR decomposition" do
+
+        a = N.new([2,2], [34.0, 21, 23, 53] , dtype: dtype)
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-4
+                when :float64, :complex128
+                  1e-13
+              end
+        
+        begin
+          q,r = a.factorize_qr
+          
+          #Q is orthogonal if Q x Q.transpose = I
+          product = q.dot(q.transpose)
+
+          expect(product[0,0]).to be_within(err).of(1)
+          expect(product[1,0]).to be_within(err).of(0)
+          expect(product[0,1]).to be_within(err).of(0)
+          expect(product[1,1]).to be_within(err).of(1)
+
+        rescue NotImplementedError
+          pending "Suppressing a NotImplementedError when the lapacke plugin is not available"
+        end
+      end
+    end
+  end
+
   ALL_DTYPES.each do |dtype|
     next if dtype == :byte #doesn't work for unsigned types
     next if dtype == :object
@@ -553,6 +699,7 @@ describe "math" do
   context "#solve" do
     NON_INTEGER_DTYPES.each do |dtype|
       next if dtype == :object # LU factorization doesnt work for :object yet
+
       it "solves linear equation for dtype #{dtype}" do
         a = NMatrix.new [2,2], [3,1,1,2], dtype: dtype
         b = NMatrix.new [2,1], [9,8], dtype: dtype
@@ -579,6 +726,82 @@ describe "math" do
         b = NMatrix.new [3,2], [1,0, 1,2, 4,2], dtype: dtype
 
         expect(a.solve(b)).to eq(NMatrix.new [3,2], [1,0, 0,0, 2,2], dtype: dtype)
+      end
+    end
+
+    FLOAT_DTYPES.each do |dtype|
+      context "when form: :lower_tri" do
+        let(:a) { NMatrix.new([3,3], [1, 0, 0, 2, 0.5, 0, 3, 3, 9], dtype: dtype) }
+
+        it "solves a lower triangular linear system A * x = b with vector b" do
+          b = NMatrix.new([3,1], [1,2,3], dtype: dtype)
+          x = a.solve(b, form: :lower_tri)
+          r = a.dot(x) - b
+          expect(r.abs.max).to be_within(1e-6).of(0.0)
+        end
+
+        it "solves a lower triangular linear system A * X = B with narrow B" do
+          b = NMatrix.new([3,2], [1,2,3,4,5,6], dtype: dtype)
+          x = a.solve(b, form: :lower_tri)
+          r = (a.dot(x) - b).abs.to_flat_a
+          expect(r.max).to be_within(1e-6).of(0.0)
+        end
+
+        it "solves a lower triangular linear system A * X = B with wide B" do
+          b = NMatrix.new([3,5], (1..15).to_a, dtype: dtype)
+          x = a.solve(b, form: :lower_tri)
+          r = (a.dot(x) - b).abs.to_flat_a
+          expect(r.max).to be_within(1e-6).of(0.0)
+        end
+      end
+
+      context "when form: :upper_tri" do
+        let(:a) { NMatrix.new([3,3], [3, 2, 1, 0, 2, 0.5, 0, 0, 9], dtype: dtype) }
+
+        it "solves an upper triangular linear system A * x = b with vector b" do
+          b = NMatrix.new([3,1], [1,2,3], dtype: dtype)
+          x = a.solve(b, form: :upper_tri)
+          r = a.dot(x) - b
+          expect(r.abs.max).to be_within(1e-6).of(0.0)
+        end
+
+        it "solves an upper triangular linear system A * X = B with narrow B" do
+          b = NMatrix.new([3,2], [1,2,3,4,5,6], dtype: dtype)
+          x = a.solve(b, form: :upper_tri)
+          r = (a.dot(x) - b).abs.to_flat_a
+          expect(r.max).to be_within(1e-6).of(0.0)
+        end
+
+        it "solves an upper triangular linear system A * X = B with a wide B" do
+          b = NMatrix.new([3,5], (1..15).to_a, dtype: dtype)
+          x = a.solve(b, form: :upper_tri)
+          r = (a.dot(x) - b).abs.to_flat_a
+          expect(r.max).to be_within(1e-6).of(0.0)
+        end
+      end
+
+      context "when form: :pos_def" do
+        let(:a) { NMatrix.new([3,3], [4, 1, 2, 1, 5, 3, 2, 3, 6], dtype: dtype) }
+
+        it "solves a linear system A * X = b with positive definite A and vector b" do
+          b = NMatrix.new([3,1], [6,4,8], dtype: dtype)
+          begin
+            x = a.solve(b, form: :pos_def)
+            expect(x).to be_within(1e-6).of(NMatrix.new([3,1], [1,0,1], dtype: dtype))
+          rescue NotImplementedError
+            "Suppressing a NotImplementedError when the lapacke or atlas plugin is not available"
+          end
+        end
+      
+        it "solves a linear system A * X = B with positive definite A and matrix B" do
+          b = NMatrix.new([3,2], [8,3,14,13,14,19], dtype: dtype)
+          begin
+            x = a.solve(b, form: :pos_def)
+            expect(x).to be_within(1e-6).of(NMatrix.new([3,2], [1,-1,2,1,1,3], dtype: dtype))
+          rescue NotImplementedError
+            "Suppressing a NotImplementedError when the lapacke or atlas plugin is not available"
+          end
+        end
       end
     end
   end

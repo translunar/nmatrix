@@ -298,6 +298,193 @@ describe "NMatrix::LAPACK functions implemented with LAPACKE interface" do
         expect(vr).to be_within(err).of(vr_true)
         expect(vl).to be_within(err).of(vl_true)
       end
+      
+      it "exposes lapacke_geqrf" do
+        a = NMatrix.new(3, [12.0, -51.0,   4.0, 
+                             6.0, 167.0, -68.0, 
+                            -4.0,  24.0, -41.0] , dtype: dtype)
+
+        b = NMatrix.new([3,1], 0, dtype: dtype)
+
+        NMatrix::LAPACK::lapacke_geqrf(:row, a.shape[0], a.shape[1], a, a.shape[1], b)
+
+        x = NMatrix.new([3,1], TAU_SOLUTION_ARRAY, dtype: dtype)
+     
+        y = NMatrix.new([3,3], GEQRF_SOLUTION_ARRAY, dtype: dtype)
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-4
+                when :float64, :complex128
+                  1e-14
+              end
+        
+        expect(b).to be_within(err).of(x)
+        expect(a).to be_within(err).of(y)      
+      end
+
+      it "calculates QR decomposition in a compressed format using geqrf!" do
+        a = NMatrix.new(3, [12.0, -51.0,   4.0, 
+                             6.0, 167.0, -68.0, 
+                            -4.0,  24.0, -41.0] , dtype: dtype)
+
+        tau = a.geqrf!
+    
+        x = NMatrix.new([3,1], TAU_SOLUTION_ARRAY, dtype: dtype)
+     
+        y = NMatrix.new([3,3], GEQRF_SOLUTION_ARRAY, dtype: dtype)
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-4
+                when :float64, :complex128
+                  1e-14
+              end
+        
+        expect(tau).to be_within(err).of(x)
+        expect(a).to be_within(err).of(y)      
+      end
+
+      it "exposes lapacke_ormqr and lapacke_unmqr" do
+        a = NMatrix.new([4,2], [34.0,  21.0, 
+                                23.0,  53.0, 
+                                26.0, 346.0, 
+                                23.0, 121.0] , dtype: dtype)
+
+        tau = NMatrix.new([2,1], dtype: dtype)
+        result = NMatrix.identity(4, dtype: dtype)
+        
+        # get tau from geqrf, use for ormqr  
+        NMatrix::LAPACK::lapacke_geqrf(:row, a.shape[0], a.shape[1], a, a.shape[1], tau)
+
+        #Q is stored in result 
+        a.complex_dtype? ?
+          NMatrix::LAPACK::lapacke_unmqr(:row, :left, false, result.shape[0], result.shape[1], tau.shape[0], 
+                                                                a, a.shape[1], tau, result, result.shape[1])
+          :
+
+          NMatrix::LAPACK::lapacke_ormqr(:row, :left, false, result.shape[0], result.shape[1], tau.shape[0], 
+                                                                a, a.shape[1], tau, result, result.shape[1])
+
+        x = NMatrix.new([4,4], Q_SOLUTION_ARRAY_1, dtype: dtype)
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-4
+                when :float64, :complex128
+                  1e-14
+              end
+
+        expect(result).to be_within(err).of(x)      
+      end
+
+      it "calculates the product of the orthogonal matrix with an arbitrary matrix" do
+        a = N.new([2,2], [34.0, 21, 23, 53] , dtype: dtype)
+
+        tau = NMatrix.new([2,1], dtype: dtype)
+        
+        #Result is the multiplicand that gets overriden : result = Q * result
+        result   = NMatrix.new([2,2], [2,0,0,2], dtype: dtype)
+        
+        # get tau from geqrf, use for ormqr  
+        NMatrix::LAPACK::lapacke_geqrf(:row, a.shape[0], a.shape[1], a, a.shape[1], tau)
+
+        #Q is stored in result 
+        a.complex_dtype? ?
+          NMatrix::LAPACK::lapacke_unmqr(:row, :left, false, result.shape[0], result.shape[1], tau.shape[0], 
+                                                                a, a.shape[1], tau, result, result.shape[1])
+          :
+
+          NMatrix::LAPACK::lapacke_ormqr(:row, :left, false, result.shape[0], result.shape[1], tau.shape[0], 
+                                                                a, a.shape[1], tau, result, result.shape[1])
+
+        x = NMatrix.new([2,2], [-1.6565668262559257 , -1.1206187354084205, 
+                                -1.1206187354084205 , 1.6565668262559263], dtype: dtype)
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-4
+                when :float64, :complex128
+                  1e-14
+              end
+
+        expect(result).to be_within(err).of(x)      
+      end
+      
+      it "calculates the orthogonal matrix Q using ormqr/unmqr after geqrf!" do
+        a = NMatrix.new([4,2], [34.0,  21.0, 
+                                23.0,  53.0, 
+                                26.0, 346.0, 
+                                23.0, 121.0] , dtype: dtype)
+        
+        # get tau from geqrf, use for ormqr  
+        tau = a.geqrf!
+
+        #Q is stored in result 
+        result = a.complex_dtype? ? a.unmqr(tau) : a.ormqr(tau)
+          
+
+        x = NMatrix.new([4,4], Q_SOLUTION_ARRAY_1, dtype: dtype)
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-4
+                when :float64, :complex128
+                  1e-14
+              end
+
+        expect(result).to be_within(err).of(x)      
+      end
+    end
+    
+    it "calculates the transpose of Q using ormqr/unmqr after geqrf!" do
+        a = NMatrix.new([4,2], [34.0,  21.0, 
+                                23.0,  53.0, 
+                                26.0, 346.0, 
+                                23.0, 121.0] , dtype: dtype)
+        
+        # get tau from geqrf, use for ormqr  
+        tau = a.geqrf!
+
+        #Q is stored in result 
+        result = a.complex_dtype? ? a.unmqr(tau, :left, :complex_conjugate) : a.ormqr(tau, :left, :transpose)
+          
+
+        x = NMatrix.new([4,4], Q_SOLUTION_ARRAY_1, dtype: dtype)
+        x = x.transpose
+
+        err = case dtype
+                when :float32, :complex64
+                  1e-4
+                when :float64, :complex128
+                  1e-14
+              end
+
+        expect(result).to be_within(err).of(x)      
+    end
+
+    it "calculates the multiplication c * Q using ormqr/unmqr after geqrf!" do
+        a = NMatrix.new(3, [12.0, -51.0,   4.0, 
+                             6.0, 167.0, -68.0, 
+                            -4.0,  24.0, -41.0] , dtype: dtype)
+        
+        # get tau from geqrf, use for ormqr  
+        tau = a.geqrf!
+        c = NMatrix.new([2,3], [1,0,1,0,0,1], dtype: dtype)
+
+        #Q is stored in result 
+        result = a.complex_dtype? ? a.unmqr(tau, :right, false, c) : a.ormqr(tau, :right, false, c)
+          
+        solution = NMatrix.new([2,3], [-0.5714285714285714,   0.2228571428571429, 1.2742857142857142,
+                                        0.28571428571428575, -0.1714285714285714, 0.9428571428571428] , dtype: dtype)
+        err = case dtype
+                when :float32, :complex64
+                  1e-4
+                when :float64, :complex128
+                  1e-14
+              end
+
+        expect(result).to be_within(err).of(solution)      
     end
   end
 end

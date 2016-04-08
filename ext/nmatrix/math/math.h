@@ -72,6 +72,7 @@
 
 #include <algorithm> // std::min, std::max
 #include <limits> // std::numeric_limits
+#include <memory> // std::unique_ptr
 
 /*
  * Project Includes
@@ -123,8 +124,8 @@ template <typename DType>
 inline void numbmm(const unsigned int n, const unsigned int m, const unsigned int l, const IType* ia, const IType* ja, const DType* a, const bool diaga,
             const IType* ib, const IType* jb, const DType* b, const bool diagb, IType* ic, IType* jc, DType* c, const bool diagc) {
   const unsigned int max_lmn = std::max(std::max(m, n), l);
-  IType next[max_lmn];
-  DType sums[max_lmn];
+  std::unique_ptr<IType[]> next(new IType[max_lmn]);
+  std::unique_ptr<DType[]> sums(new DType[max_lmn]);
 
   DType v;
 

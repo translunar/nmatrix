@@ -33,6 +33,7 @@
  */
 
 #include <ruby.h>
+#include "ruby_constants.h"
 
 #ifdef __cplusplus
   #include <cmath>
@@ -55,6 +56,33 @@
 
 #ifdef __cplusplus
   #include "nm_memory.h"
+#endif
+
+#ifndef FIX_CONST_VALUE_PTR
+# if defined(__fcc__) || defined(__fcc_version) || \
+    defined(__FCC__) || defined(__FCC_VERSION)
+/* workaround for old version of Fujitsu C Compiler (fcc) */
+#  define FIX_CONST_VALUE_PTR(x) ((const VALUE *)(x))
+# else
+#  define FIX_CONST_VALUE_PTR(x) (x)
+# endif
+#endif
+
+#ifndef HAVE_RB_ARRAY_CONST_PTR
+static inline const VALUE *
+rb_array_const_ptr(VALUE a)
+{
+  return FIX_CONST_VALUE_PTR((RBASIC(a)->flags & RARRAY_EMBED_FLAG) ?
+    RARRAY(a)->as.ary : RARRAY(a)->as.heap.ptr);
+}
+#endif
+
+#ifndef RARRAY_CONST_PTR
+# define RARRAY_CONST_PTR(a) rb_array_const_ptr(a)
+#endif
+
+#ifndef RARRAY_AREF
+# define RARRAY_AREF(a, i) (RARRAY_CONST_PTR(a)[i])
 #endif
 
 /*
@@ -316,14 +344,31 @@ NM_DEF_STRUCT_POST(NM_GC_HOLDER);       // };
 
 #define NM_SRC(val)             (NM_STORAGE(val)->src)
 #define NM_DIM(val)             (NM_STORAGE(val)->dim)
+
+// Returns an int corresponding the data type of the nmatrix. See the dtype_t
+// enum for a list of possible data types.
 #define NM_DTYPE(val)           (NM_STORAGE(val)->dtype)
+
+// Returns a number corresponding the storage type of the nmatrix. See the stype_t
+// enum for a list of possible storage types.
 #define NM_STYPE(val)           (NM_STRUCT(val)->stype)
+
+// Get the shape of the ith dimension (int)
 #define NM_SHAPE(val,i)         (NM_STORAGE(val)->shape[(i)])
+
+// Get the shape of the 0th dimension (int)
 #define NM_SHAPE0(val)          (NM_STORAGE(val)->shape[0])
+
+// Get the shape of the 1st dimenension (int)
 #define NM_SHAPE1(val)          (NM_STORAGE(val)->shape[1])
+
+// Get the default value assigned to the nmatrix.
 #define NM_DEFAULT_VAL(val)     (NM_STORAGE_LIST(val)->default_val)
 
+// Number of elements in a dense nmatrix.
 #define NM_DENSE_COUNT(val)     (nm_storage_count_max_elements(NM_STORAGE_DENSE(val)))
+
+// Get a pointer to the array that stores elements in a dense matrix.
 #define NM_DENSE_ELEMENTS(val)  (NM_STORAGE_DENSE(val)->elements)
 #define NM_SIZEOF_DTYPE(val)    (DTYPE_SIZES[NM_DTYPE(val)])
 #define NM_REF(val,slice)       (RefFuncs[NM_STYPE(val)]( NM_STORAGE(val), slice, NM_SIZEOF_DTYPE(val) ))
