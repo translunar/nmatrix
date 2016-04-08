@@ -9,8 +9,8 @@
 //
 // == Copyright Information
 //
-// SciRuby is Copyright (c) 2010 - 2014, Ruby Science Foundation
-// NMatrix is Copyright (c) 2012 - 2014, John Woods and the Ruby Science Foundation
+// SciRuby is Copyright (c) 2010 - present, Ruby Science Foundation
+// NMatrix is Copyright (c) 2012 - present, John Woods and the Ruby Science Foundation
 //
 // Please see LICENSE.txt for additional copyright notices.
 //
@@ -59,6 +59,7 @@
 #ifndef GETRF_H
 #define GETRF_H
 
+#include "math/reciprocal.h"
 #include "math/laswp.h"
 #include "math/math.h"
 #include "math/trsm.h"
@@ -67,14 +68,6 @@
 #include "math/scal.h"
 
 namespace nm { namespace math {
-
-/* Numeric inverse -- usually just 1 / f, but a little more complicated for complex. */
-template <typename DType>
-inline DType numeric_inverse(const DType& n) {
-  return n.inverse();
-}
-template <> inline float numeric_inverse(const float& n) { return 1 / n; }
-template <> inline double numeric_inverse(const double& n) { return 1 / n; }
 
 /*
  * Templated version of row-order and column-order getrf, derived from ATL_getrfR.c (from ATLAS 3.8.0).
@@ -170,7 +163,7 @@ inline int getrf_nothrow(const int M, const int N, DType* A, const int lda, int*
     DType tmp = A[i];
     if (tmp != 0) {
 
-      nm::math::scal<DType>((RowMajor ? N : M), nm::math::numeric_inverse(tmp), A, 1);
+      nm::math::scal<DType>((RowMajor ? N : M), nm::math::reciprocal(tmp), A, 1);
       A[i] = *A;
       *A   = tmp;
 

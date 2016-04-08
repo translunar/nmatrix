@@ -130,10 +130,10 @@ class NMatrix
   # * *Returns* :
   #   - The IPIV vector. The L and U matrices are stored in A.
   # * *Raises* :
-  #   - +StorageTypeError+ -> ATLAS functions only work on dense matrices.
+  #   - +StorageTypeError+ -> LAPACK functions only work on dense matrices.
   #
   def getrf!
-    raise(StorageTypeError, "ATLAS functions only work on dense matrices") unless self.dense?
+    raise(StorageTypeError, "LAPACK functions only work on dense matrices") unless self.dense?
 
     #For row-major matrices, clapack_getrf uses a different convention than
     #described above (U has unit diagonal elements instead of L and columns
@@ -270,7 +270,7 @@ class NMatrix
   # * *Returns* :
   #   the triangular portion specified by the parameter
   # * *Raises* :
-  #   - +StorageTypeError+ -> ATLAS functions only work on dense matrices.
+  #   - +StorageTypeError+ -> LAPACK functions only work on dense matrices.
   #   - +ShapeError+ -> Must be square.
   #   - +NotImplementedError+ -> If called without nmatrix-atlas or nmatrix-lapacke gem
   #
@@ -568,7 +568,7 @@ class NMatrix
   # * +:covention+ - Possible values are +:lapack+ and +:intuitive+. Default is +:intuitive+. See above for details.
   #
   def laswp!(ary, opts={})
-    raise(StorageTypeError, "ATLAS functions only work on dense matrices") unless self.dense?
+    raise(StorageTypeError, "LAPACK functions only work on dense matrices") unless self.dense?
     opts = { convention: :intuitive }.merge(opts)
     
     if opts[:convention] == :intuitive

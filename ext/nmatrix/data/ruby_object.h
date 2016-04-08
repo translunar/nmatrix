@@ -125,10 +125,19 @@ class RubyObject {
   inline RubyObject(const RubyObject& other) : rval(other.rval) {}
 
   /*
-   * Inverse operator.
+   * Quotient operator (typically for rational divisions)
    */
-  inline RubyObject inverse() const {
-    rb_raise(rb_eNotImpError, "RubyObject#inverse needs to be implemented");
+  inline RubyObject quo(const RubyObject& other) const {
+    return RubyObject(rb_funcall(this->rval, nm_rb_quo, 1, other.rval));
+  }
+  
+  /*
+   * Numeric inverse (reciprocal) operator, usually used for matrix
+   * operations like getrf. For this to work, Fixnum.quo(this) must not
+   * return a TypeError.
+   */
+  inline RubyObject reciprocal() const {
+    return RubyObject(rb_funcall(INT2FIX(1), nm_rb_quo, 1, this->rval));
   }
 
   /*

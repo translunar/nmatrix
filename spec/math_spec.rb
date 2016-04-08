@@ -903,7 +903,7 @@ describe "math" do
 
   context "determinants" do
     ALL_DTYPES.each do |dtype|
-      next if dtype == :object
+      #next if dtype == :object
       context dtype do
         before do
           @a = NMatrix.new([2,2], [1,2,

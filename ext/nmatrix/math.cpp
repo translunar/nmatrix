@@ -207,7 +207,7 @@ namespace nm {
       } else if (M == 3) {
         x = A[lda+1] * A[2*lda+2] - A[lda+2] * A[2*lda+1]; // ei - fh
         y = A[lda] * A[2*lda+2] -   A[lda+2] * A[2*lda];   // fg - di
-        x = A[0]*x - A[1]*y ; // a*(ei-fh) - b*(fg-di)
+        x = A[0]*x - A[1]*y; // a*(ei-fh) - b*(fg-di)
 
         y = A[lda] * A[2*lda+1] - A[lda+1] * A[2*lda];    // dh - eg
         *result = A[2]*y + x; // c*(dh-eg) + _
