@@ -142,15 +142,28 @@ class NMatrix
     #and after calling clapack_getrf.
     #Unfortunately, this is not a very good way, uses a lot of memory.
     temp = self.transpose
-    ipiv = NMatrix::LAPACK::clapack_getrf(:col, self.shape[0], self.shape[1], temp, self.shape[0])
-    temp = temp.transpose
-    self[0...self.shape[0], 0...self.shape[1]] = temp
+    begin
+      ipiv = NMatrix::LAPACK::clapack_getrf(:col, self.shape[0], self.shape[1], temp, self.shape[0])
+      temp = temp.transpose
+      self[0...self.shape[0], 0...self.shape[1]] = temp
 
-    #for some reason, in clapack_getrf, the indices in ipiv start from 0
-    #instead of 1 as in LAPACK.
-    ipiv.each_index { |i| ipiv[i]+=1 }
+      #for some reason, in clapack_getrf, the indices in ipiv start from 0
+      #instead of 1 as in LAPACK.
+      ipiv.each_index { |i| ipiv[i]+=1 }
 
-    return ipiv
+      return ipiv
+    rescue NoMethodError => e
+      if e.message =~ /abs/ || e.message =~ /reciprocal/
+        raise(NoMethodError, "getrf! requires #abs and #reciprocal methods to be defined on the Ruby object stored in the matrix (or, instead of #reciprocal, 1.quo(object) must work)")
+      else
+        raise(e)
+      end
+    rescue TypeError => e
+      if e.message =~ /coerced/
+        STDERR.puts "Error: matrix content class can't be coerced into a numeric type; you probably need to re-define the math operators on your numeric classes"
+      end
+      raise(e)
+    end
   end
 
   #

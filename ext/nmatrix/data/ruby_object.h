@@ -54,6 +54,12 @@
  * Classes and Functions
  */
 
+extern "C" {
+  inline VALUE quo_reciprocal(const VALUE rval) {
+    return rb_funcall(INT2FIX(1), nm_rb_quo, 1, rval);
+  }
+}
+
 namespace nm {
 template<typename T, typename U>
 struct made_from_same_template : std::false_type {}; 
@@ -137,7 +143,20 @@ class RubyObject {
    * return a TypeError.
    */
   inline RubyObject reciprocal() const {
-    return RubyObject(rb_funcall(INT2FIX(1), nm_rb_quo, 1, this->rval));
+    int exception;
+
+    // Attempt to call 1.quo(this).
+    VALUE result = rb_protect(quo_reciprocal, this->rval, &exception);
+    if (exception) {
+      ID rb_reciprocal = rb_intern("reciprocal");
+      // quo failed, so let's see if the object has a reciprocal method.
+      if (rb_respond_to(this->rval, rb_reciprocal)) {
+	return RubyObject(rb_funcall(this->rval, rb_reciprocal, 0));
+      } else {
+	rb_raise(rb_eNoMethodError, "expected reciprocal method, since 1.quo(object) raises an error");
+      }
+    }
+    return result;
   }
 
   /*

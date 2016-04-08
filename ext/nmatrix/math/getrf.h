@@ -125,10 +125,8 @@ inline int getrf_nothrow(const int M, const int N, DType* A, const int lda, int*
       An = &(Ar[N_ul]);
 
       nm::math::laswp<DType>(N_dr, Ar, lda, 0, N_ul, ipiv, 1);
-
       nm::math::trsm<DType>(CblasRowMajor, CblasRight, CblasUpper, CblasNoTrans, CblasUnit, N_dr, N_ul, one, A, lda, Ar, lda);
       nm::math::gemm<DType>(CblasRowMajor, CblasNoTrans, CblasNoTrans, N_dr, N-N_ul, N_ul, &neg_one, Ar, lda, Ac, lda, &one, An, lda);
-
       i = getrf_nothrow<true,DType>(N_dr, N-N_ul, An, lda, ipiv+N_ul);
     } else {
       Ar = NULL;
@@ -136,10 +134,8 @@ inline int getrf_nothrow(const int M, const int N, DType* A, const int lda, int*
       An = &(Ac[N_ul]);
 
       nm::math::laswp<DType>(N_dr, Ac, lda, 0, N_ul, ipiv, 1);
-
       nm::math::trsm<DType>(CblasColMajor, CblasLeft, CblasLower, CblasNoTrans, CblasUnit, N_ul, N_dr, one, A, lda, Ac, lda);
       nm::math::gemm<DType>(CblasColMajor, CblasNoTrans, CblasNoTrans, M-N_ul, N_dr, N_ul, &neg_one, &(A[N_ul]), lda, Ac, lda, &one, An, lda);
-
       i = getrf_nothrow<false,DType>(M-N_ul, N_dr, An, lda, ipiv+N_ul);
     }
 
@@ -150,7 +146,6 @@ inline int getrf_nothrow(const int M, const int N, DType* A, const int lda, int*
     }
 
     nm::math::laswp<DType>(N_ul, A, lda, N_ul, MN, ipiv, 1);  /* apply pivots */
-
   } else if (MN == 1) { // there's another case for the colmajor version, but it doesn't seem to be necessary.
 
     int i;
@@ -170,6 +165,7 @@ inline int getrf_nothrow(const int M, const int N, DType* A, const int lda, int*
     } else ierr = 1;
 
   }
+
   return(ierr);
 }
 
