@@ -270,8 +270,8 @@ static VALUE nm_atlas_cblas_rotg(VALUE self, VALUE ab) {
       rb_ary_store(result, 0, *reinterpret_cast<VALUE*>(pC));
       rb_ary_store(result, 1, *reinterpret_cast<VALUE*>(pS));
     } else {
-      rb_ary_store(result, 0, rubyobj_from_cval(pC, dtype).rval);
-      rb_ary_store(result, 1, rubyobj_from_cval(pS, dtype).rval);
+      rb_ary_store(result, 0, nm::rubyobj_from_cval(pC, dtype).rval);
+      rb_ary_store(result, 1, nm::rubyobj_from_cval(pS, dtype).rval);
     }
     NM_CONSERVATIVE(nm_unregister_value(&ab));
     NM_CONSERVATIVE(nm_unregister_value(&self));
@@ -391,7 +391,7 @@ static VALUE nm_atlas_cblas_nrm2(VALUE self, VALUE n, VALUE x, VALUE incx) {
 
     ttable[dtype](FIX2INT(n), NM_STORAGE_DENSE(x)->elements, FIX2INT(incx), Result);
 
-    return rubyobj_from_cval(Result, rdtype).rval;
+    return nm::rubyobj_from_cval(Result, rdtype).rval;
   }
 }
 
@@ -440,7 +440,7 @@ static VALUE nm_atlas_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx) {
 
   ttable[dtype](FIX2INT(n), NM_STORAGE_DENSE(x)->elements, FIX2INT(incx), Result);
 
-  return rubyobj_from_cval(Result, rdtype).rval;
+  return nm::rubyobj_from_cval(Result, rdtype).rval;
 }
 
 /*
@@ -1019,7 +1019,7 @@ static VALUE nm_atlas_clapack_getrs(VALUE self, VALUE order, VALUE trans, VALUE 
   } else {
     ipiv_ = NM_ALLOCA_N(int, RARRAY_LEN(ipiv));
     for (int index = 0; index < RARRAY_LEN(ipiv); ++index) {
-      ipiv_[index] = FIX2INT( RARRAY_PTR(ipiv)[index] );
+      ipiv_[index] = FIX2INT( RARRAY_AREF(ipiv, index) );
     }
   }
 
@@ -1104,7 +1104,7 @@ static VALUE nm_atlas_clapack_getri(VALUE self, VALUE order, VALUE n, VALUE a, V
   } else {
     ipiv_ = NM_ALLOCA_N(int, RARRAY_LEN(ipiv));
     for (int index = 0; index < RARRAY_LEN(ipiv); ++index) {
-      ipiv_[index] = FIX2INT( RARRAY_PTR(ipiv)[index] );
+      ipiv_[index] = FIX2INT( RARRAY_AREF(ipiv, index) );
     }
   }
 
@@ -1191,7 +1191,7 @@ static VALUE nm_atlas_clapack_laswp(VALUE self, VALUE n, VALUE a, VALUE lda, VAL
   } else {
     ipiv_ = NM_ALLOCA_N(int, RARRAY_LEN(ipiv));
     for (int index = 0; index < RARRAY_LEN(ipiv); ++index) {
-      ipiv_[index] = FIX2INT( RARRAY_PTR(ipiv)[index] );
+      ipiv_[index] = FIX2INT( RARRAY_AREF(ipiv, index) );
     }
   }
 

@@ -71,6 +71,20 @@ static inline enum CBLAS_SIDE blas_side_sym(VALUE op) {
 }
 
 /*
+ * Interprets the LAPACK side argument which could be :left or :right
+ * 
+ * Related to obtaining Q in QR factorization after calling lapack_geqrf
+ */
+
+static inline char lapacke_side_sym(VALUE op) {
+  ID op_id = rb_to_id(op);
+  if (op_id == nm_rb_left)  return 'L';
+  if (op_id == nm_rb_right) return 'R';
+  else rb_raise(rb_eArgError, "Expected :left or :right for side argument");
+  return 'L';
+}
+
+/*
  * Interprets cblas argument which could be :upper or :lower
  *
  * Called by nm_cblas_trsm -- basically inline

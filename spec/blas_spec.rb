@@ -69,6 +69,18 @@ describe NMatrix::BLAS do
         expect(b[0]).to eq(-15.0/2)
         expect(b[1]).to eq(5)
         expect(b[2]).to eq(-13)
+        
+        NMatrix::BLAS::cblas_trsm(:row, :left, :lower, :transpose, :nounit, 3, 1, 1.0, a, 3, b, 1)
+
+        expect(b[0]).to eq(307.0/8)
+        expect(b[1]).to eq(57.0/2)
+        expect(b[2]).to eq(26.0)
+        
+        NMatrix::BLAS::cblas_trsm(:row, :left, :upper, :transpose, :unit, 3, 1, 1.0, a, 3, b, 1)
+
+        expect(b[0]).to eq(307.0/8)
+        expect(b[1]).to eq(763.0/16)
+        expect(b[2]).to eq(4269.0/64)        
       end
 
       # trmm multiplies two matrices, where one of the two is required to be
@@ -174,9 +186,17 @@ describe NMatrix::BLAS do
 
       it "exposes nrm2" do
         pending("broken for :object") if dtype == :object
-        pending("Temporarily disable because the internal implementation of nrm2 is broken -WL 2015-05-17") if dtype == :complex64 || dtype == :complex128
 
-        x = NMatrix.new([4,1], [2,-4,3,5], dtype: dtype)
+        if dtype =~ /complex/
+          x = NMatrix.new([3,1], [Complex(1,2),Complex(3,4),Complex(0,6)], dtype: dtype)
+          y = NMatrix.new([3,1], [Complex(0,0),Complex(0,0),Complex(0,0)], dtype: dtype)
+          nrm2 = 8.12403840463596
+        else
+          x = NMatrix.new([4,1], [2,-4,3,5], dtype: dtype)
+          y = NMatrix.new([3,1], [0,0,0], dtype: dtype)
+          nrm2 = 5.385164807134504
+        end
+        
         err = case dtype
                 when :float32, :complex64
                   1e-6
@@ -185,7 +205,9 @@ describe NMatrix::BLAS do
                 else
                   1e-14
               end
-        expect(NMatrix::BLAS.nrm2(x, 1, 3)).to be_within(err).of(5.385164807134504)
+
+        expect(NMatrix::BLAS.nrm2(x, 1, 3)).to be_within(err).of(nrm2)
+        expect(NMatrix::BLAS.nrm2(y, 1, 3)).to be_within(err).of(0)
       end
 
     end

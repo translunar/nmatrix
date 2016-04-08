@@ -155,6 +155,104 @@ class NMatrix
 
   #
   # call-seq:
+  #     geqrf! -> shape.min x 1 NMatrix 
+  #
+  # QR factorization of a general M-by-N matrix +A+. 
+  #
+  # The QR factorization is A = QR, where Q is orthogonal and R is Upper Triangular
+  # +A+ is overwritten with the elements of R and Q with Q being represented by the 
+  # elements below A's diagonal and an array of scalar factors in the output NMatrix. 
+  #
+  # The matrix Q is represented as a product of elementary reflectors
+  #     Q = H(1) H(2) . . . H(k), where k = min(m,n).
+  #
+  # Each H(i) has the form
+  #
+  #     H(i) = I - tau * v * v'
+  #
+  # http://www.netlib.org/lapack/explore-html/d3/d69/dgeqrf_8f.html
+  # 
+  # Only works for dense matrices.
+  #
+  # * *Returns* :
+  #   - Vector TAU. Q and R are stored in A. Q is represented by TAU and A
+  # * *Raises* :
+  #   - +StorageTypeError+ -> LAPACK functions only work on dense matrices.
+  #
+  def geqrf!
+    # The real implementation is in lib/nmatrix/lapacke.rb
+    raise(NotImplementedError, "geqrf! requires the nmatrix-lapacke gem")
+  end
+  
+  #
+  # call-seq:
+  #     ormqr(tau) -> NMatrix
+  #     ormqr(tau, side, transpose, c) -> NMatrix
+  #
+  # Returns the product Q * c or c * Q after a call to geqrf! used in QR factorization. 
+  # +c+ is overwritten with the elements of the result NMatrix if supplied. Q is the orthogonal matrix 
+  # represented by tau and the calling NMatrix
+  # 
+  # Only works on float types, use unmqr for complex types.
+  #
+  # == Arguments
+  #
+  # * +tau+ - vector containing scalar factors of elementary reflectors
+  # * +side+ - direction of multiplication [:left, :right]
+  # * +transpose+ - apply Q with or without transpose [false, :transpose] 
+  # * +c+ - NMatrix multplication argument that is overwritten, no argument assumes c = identity
+  #
+  # * *Returns* :
+  #
+  #   - Q * c or c * Q Where Q may be transposed before multiplication. 
+  #    
+  #
+  # * *Raises* :
+  #   - +StorageTypeError+ -> LAPACK functions only work on dense matrices.
+  #   - +TypeError+ -> Works only on floating point matrices, use unmqr for complex types
+  #   - +TypeError+ -> c must have the same dtype as the calling NMatrix
+  #
+  def ormqr(tau, side=:left, transpose=false, c=nil)
+    # The real implementation is in lib/nmatrix/lapacke.rb
+    raise(NotImplementedError, "ormqr requires the nmatrix-lapacke gem")
+  
+  end
+
+  #
+  # call-seq:
+  #     unmqr(tau) -> NMatrix
+  #     unmqr(tau, side, transpose, c) -> NMatrix
+  #
+  # Returns the product Q * c or c * Q after a call to geqrf! used in QR factorization. 
+  # +c+ is overwritten with the elements of the result NMatrix if it is supplied. Q is the orthogonal matrix 
+  # represented by tau and the calling NMatrix
+  # 
+  # Only works on complex types, use ormqr for float types.
+  #
+  # == Arguments
+  #
+  # * +tau+ - vector containing scalar factors of elementary reflectors
+  # * +side+ - direction of multiplication [:left, :right]
+  # * +transpose+ - apply Q as Q or its complex conjugate [false, :complex_conjugate] 
+  # * +c+ - NMatrix multplication argument that is overwritten, no argument assumes c = identity
+  #
+  # * *Returns* :
+  #
+  #   - Q * c or c * Q Where Q may be transformed to its complex conjugate before multiplication. 
+  #    
+  #
+  # * *Raises* :
+  #   - +StorageTypeError+ -> LAPACK functions only work on dense matrices.
+  #   - +TypeError+ -> Works only on floating point matrices, use unmqr for complex types
+  #   - +TypeError+ -> c must have the same dtype as the calling NMatrix
+  #
+  def unmqr(tau, side=:left, transpose=false, c=nil)
+    # The real implementation is in lib/nmatrix/lapacke.rb
+    raise(NotImplementedError, "unmqr requires the nmatrix-lapacke gem")
+  end
+
+  #
+  # call-seq:
   #     potrf!(upper_or_lower) -> NMatrix
   #
   # Cholesky factorization of a symmetric positive-definite matrix -- or, if complex,
@@ -232,6 +330,46 @@ class NMatrix
     [t, FactorizeLUMethods.permutation_matrix_from(pivot)]
   end
 
+  #
+  # call-seq:
+  #     factorize_qr -> [Q,R]
+  #
+  # QR factorization of a matrix without column pivoting. 
+  # Q is orthogonal and R is upper triangular if input is square or upper trapezoidal if 
+  # input is rectangular.  
+  #
+  # Only works for dense matrices.
+  #
+  # * *Returns* :
+  #   - Array containing Q and R matrices
+  #
+  # * *Raises* :
+  #   - +StorageTypeError+ -> only implemented for desnse storage.
+  #   - +ShapeError+ -> Input must be a 2-dimensional matrix to have a QR decomposition.
+  #
+  def factorize_qr
+    raise(NotImplementedError, "only implemented for dense storage") unless self.stype == :dense
+    raise(ShapeError, "Input must be a 2-dimensional matrix to have a QR decomposition") unless self.dim == 2
+
+    rows, columns = self.shape
+    r = self.clone
+    tau =  r.geqrf!
+    
+    #Obtain Q 
+    q = self.complex_dtype? ? r.unmqr(tau) : r.ormqr(tau)
+    
+    #Obtain R    
+    if rows <= columns
+      r.upper_triangle!
+    #Need to account for upper trapezoidal structure if R is a tall rectangle (rows > columns)
+    else
+      r[0...columns, 0...columns].upper_triangle!
+      r[columns...rows, 0...columns] = 0
+    end
+
+    [q,r]
+  end
+
   # Reduce self to upper hessenberg form using householder transforms.
   # 
   # == References
@@ -258,36 +396,90 @@ class NMatrix
 
   # Solve the matrix equation AX = B, where A is +self+, B is the first
   # argument, and X is returned. A must be a nxn square matrix, while B must be
-  # nxm. Only works with dense
-  # matrices and non-integer, non-object data types.
+  # nxm. Only works with dense matrices and non-integer, non-object data types.
   # 
+  # == Arguments
+  #
+  # * +b+ - the right hand side
+  #
+  # == Options
+  #
+  # * +form+ - Signifies the form of the matrix A in the linear system AX=B.
+  #   If not set then it defaults to +:general+, which uses an LU solver. 
+  #   Other possible values are +:lower_tri+, +:upper_tri+ and +:pos_def+ (alternatively,
+  #   non-abbreviated symbols +:lower_triangular+, +:upper_triangular+, 
+  #   and +:positive_definite+ can be used. 
+  #   If +:lower_tri+ or +:upper_tri+ is set, then a specialized linear solver for linear 
+  #   systems AX=B with a lower or upper triangular matrix A is used. If +:pos_def+ is chosen, 
+  #   then the linear system is solved via the Cholesky factorization.
+  #   Note that when +:lower_tri+ or +:upper_tri+ is used, then the algorithm just assumes that
+  #   all entries in the lower/upper triangle of the matrix are zeros without checking (which
+  #   can be useful in certain applications).
+  #     
+  #
   # == Usage
   # 
   #   a = NMatrix.new [2,2], [3,1,1,2], dtype: dtype
   #   b = NMatrix.new [2,1], [9,8], dtype: dtype
   #   a.solve(b)
-  def solve b
+  #
+  #   # solve an upper triangular linear system more efficiently:
+  #   require 'benchmark'
+  #   require 'nmatrix/lapacke'
+  #   rand_mat = NMatrix.random([10000, 10000], dtype: :float64)
+  #   a = rand_mat.triu
+  #   b = NMatrix.random([10000, 10], dtype: :float64)
+  #   Benchmark.bm(10) do |bm|
+  #     bm.report('general') { a.solve(b) }
+  #     bm.report('upper_tri') { a.solve(b, form: :upper_tri) }
+  #   end
+  #   #                   user     system      total        real
+  #   #  general     73.170000   0.670000  73.840000 ( 73.810086)
+  #   #  upper_tri    0.180000   0.000000   0.180000 (  0.182491)
+  #
+  def solve(b, opts = {})
     raise(ShapeError, "Must be called on square matrix") unless self.dim == 2 && self.shape[0] == self.shape[1]
     raise(ShapeError, "number of rows of b must equal number of cols of self") if 
       self.shape[1] != b.shape[0]
-    raise ArgumentError, "only works with dense matrices" if self.stype != :dense
-    raise ArgumentError, "only works for non-integer, non-object dtypes" if 
+    raise(ArgumentError, "only works with dense matrices") if self.stype != :dense
+    raise(ArgumentError, "only works for non-integer, non-object dtypes") if 
       integer_dtype? or object_dtype? or b.integer_dtype? or b.object_dtype?
 
-    x     = b.clone
-    clone = self.clone
-    n = self.shape[0]
+    opts = { form: :general }.merge(opts)
+    x    = b.clone
+    n    = self.shape[0]
     nrhs = b.shape[1]
 
-    ipiv = NMatrix::LAPACK.clapack_getrf(:row, n, n, clone, n)
-    # When we call clapack_getrs with :row, actually only the first matrix
-    # (i.e. clone) is interpreted as row-major, while the other matrix (x)
-    # is interpreted as column-major. See here: http://math-atlas.sourceforge.net/faq.html#RowSolve
-    # So we must transpose x before and after
-    # calling it.
-    x = x.transpose
-    NMatrix::LAPACK.clapack_getrs(:row, :no_transpose, n, nrhs, clone, n, ipiv, x, n)
-    x.transpose
+    case opts[:form] 
+    when :general
+      clone = self.clone
+      ipiv = NMatrix::LAPACK.clapack_getrf(:row, n, n, clone, n)
+      # When we call clapack_getrs with :row, actually only the first matrix
+      # (i.e. clone) is interpreted as row-major, while the other matrix (x)
+      # is interpreted as column-major. See here: http://math-atlas.sourceforge.net/faq.html#RowSolve
+      # So we must transpose x before and after
+      # calling it.
+      x = x.transpose
+      NMatrix::LAPACK.clapack_getrs(:row, :no_transpose, n, nrhs, clone, n, ipiv, x, n)
+      x.transpose
+    when :upper_tri, :upper_triangular
+      raise(ArgumentError, "upper triangular solver does not work with complex dtypes") if
+        complex_dtype? or b.complex_dtype?
+      # this is the correct function call; see https://github.com/SciRuby/nmatrix/issues/374
+      NMatrix::BLAS::cblas_trsm(:row, :left, :upper, false, :nounit, n, nrhs, 1.0, self, n, x, nrhs)
+      x
+    when :lower_tri, :lower_triangular
+      raise(ArgumentError, "lower triangular solver does not work with complex dtypes") if
+        complex_dtype? or b.complex_dtype?
+      NMatrix::BLAS::cblas_trsm(:row, :left, :lower, false, :nounit, n, nrhs, 1.0, self, n, x, nrhs)
+      x
+    when :pos_def, :positive_definite
+      u, l = self.factorize_cholesky
+      z = l.solve(b, form: :lower_tri)
+      u.solve(z, form: :upper_tri)
+    else
+      raise(ArgumentError, "#{opts[:form]} is not a valid form option")
+    end
   end
 
   #

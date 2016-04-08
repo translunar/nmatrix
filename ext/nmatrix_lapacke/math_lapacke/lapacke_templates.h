@@ -64,6 +64,82 @@ inline int lapacke_getrf(const enum CBLAS_ORDER order, const int m, const int n,
   return getrf<DType>(order, m, n, static_cast<DType*>(a), lda, ipiv);
 }
 
+//geqrf
+template <typename DType>
+inline int geqrf(const enum CBLAS_ORDER order, const int m, const int n, DType* a, const int lda, DType* tau) {
+  rb_raise(rb_eNotImpError, "lapacke_geqrf not implemented for non_BLAS dtypes.");
+  return 0;
+}
+
+template <>
+inline int geqrf(const enum CBLAS_ORDER order, const int m, const int n, float* a, const int lda, float* tau) {
+  return LAPACKE_sgeqrf(order, m, n, a, lda, tau);
+}
+
+template < > 
+inline int geqrf(const enum CBLAS_ORDER order, const int m, const int n, double* a, const int lda, double* tau) {
+  return LAPACKE_dgeqrf(order, m, n, a, lda, tau);
+}
+
+template <>
+inline int geqrf(const enum CBLAS_ORDER order, const int m, const int n, Complex64* a, const int lda, Complex64* tau) {
+  return LAPACKE_cgeqrf(order, m, n, a, lda, tau);
+}
+
+template <>
+inline int geqrf(const enum CBLAS_ORDER order, const int m, const int n, Complex128* a, const int lda, Complex128* tau) {
+  return LAPACKE_zgeqrf(order, m, n, a, lda, tau);
+}
+
+template <typename DType>
+inline int lapacke_geqrf(const enum CBLAS_ORDER order, const int m, const int n, void* a, const int lda, void* tau) {
+  return geqrf<DType>(order, m, n, static_cast<DType*>(a), lda, static_cast<DType*>(tau));
+}
+
+//ormqr
+template <typename DType>
+inline int ormqr(const enum CBLAS_ORDER order, char side, char trans, const int m, const int n, const int k, DType* a, const int lda, DType* tau, DType* c, const int ldc) {
+  rb_raise(rb_eNotImpError, "lapacke_ormqr not implemented for non_BLAS dtypes.");
+  return 0;
+}
+
+template <>
+inline int ormqr(const enum CBLAS_ORDER order, char side, char trans, const int m, const int n, const int k, float* a, const int lda, float* tau, float* c, const int ldc) {
+  return LAPACKE_sormqr(order, side, trans, m, n, k, a, lda, tau, c, ldc);
+}
+
+template <> 
+inline int ormqr(const enum CBLAS_ORDER order, char side, char trans, const int m, const int n, const int k, double* a, const int lda, double* tau, double* c, const int ldc) {
+  return LAPACKE_dormqr(order, side, trans, m, n, k, a, lda, tau, c, ldc);
+}
+
+template <typename DType>
+inline int lapacke_ormqr(const enum CBLAS_ORDER order, char side, char trans, const int m, const int n, const int k, void* a, const int lda, void* tau, void* c, const int ldc) {
+  return ormqr<DType>(order, side, trans, m, n, k, static_cast<DType*>(a), lda, static_cast<DType*>(tau), static_cast<DType*>(c), ldc);
+}
+
+//unmqr
+template <typename DType>
+inline int unmqr(const enum CBLAS_ORDER order, char side, char trans, const int m, const int n, const int k, DType* a, const int lda, DType* tau, DType* c, const int ldc) {
+  rb_raise(rb_eNotImpError, "lapacke_unmqr not implemented for non complex dtypes.");
+  return 0;
+}
+
+template <>
+inline int unmqr(const enum CBLAS_ORDER order, char side, char trans, const int m, const int n, const int k, Complex64* a, const int lda, Complex64* tau, Complex64* c, const int ldc) {
+  return LAPACKE_cunmqr(order, side, trans, m, n, k, a, lda, tau, c, ldc);
+}
+
+template <> 
+inline int unmqr(const enum CBLAS_ORDER order, char side, char trans, const int m, const int n, const int k, Complex128* a, const int lda, Complex128* tau, Complex128* c, const int ldc) {
+  return LAPACKE_zunmqr(order, side, trans, m, n, k, a, lda, tau, c, ldc);
+}
+
+template <typename DType>
+inline int lapacke_unmqr(const enum CBLAS_ORDER order, char side, char trans, const int m, const int n, const int k, void* a, const int lda, void* tau, void* c, const int ldc) {
+  return unmqr<DType>(order, side, trans, m, n, k, static_cast<DType*>(a), lda, static_cast<DType*>(tau), static_cast<DType*>(c), ldc);
+}
+
 //getri
 template <typename DType>
 inline int getri(const enum CBLAS_ORDER order, const int n, DType* a, const int lda, const int* ipiv) {

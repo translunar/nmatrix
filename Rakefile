@@ -82,6 +82,8 @@ namespace :spec do
   task :all => spec_tasks
 end
 
+
+
 task :spec => "spec:all"
 
 BASEDIR = Pathname( __FILE__ ).dirname.relative_path_from( Pathname.pwd )
@@ -269,6 +271,30 @@ RDoc::Task.new do |rdoc|
   rdoc.options << "--exclude=ext/nmatrix_atlas/extconf.rb"
   rdoc.options << "--exclude=ext/nmatrix/ttable_helper.rb"
   rdoc.options << "--exclude=lib/nmatrix/rspec.rb"
+end
+
+namespace :travis do
+  task :env do
+    puts "\n# Build environment:"
+    %w[
+      CC CXX
+      USE_ATLAS USE_OPENBLAS USE_REF NO_EXTERNAL_LIB
+      TRAVIS_OS_NAME TRAVIS_BRANCH TRAVIS_COMMIT TRAVIS_PULL_REQUEST
+    ].each do |name|
+      puts "- #{name}: #{ENV[name]}"
+    end
+
+    require 'rbconfig'
+    puts "\n# RbConfig::MAKEFILE_CONFIG values:"
+    %w[
+      CC CXX CPPFLAGS CFLAGS CXXFLAGS
+    ].each do |name|
+      puts "- #{name}: #{RbConfig::MAKEFILE_CONFIG[name]}"
+    end
+
+    cc = RbConfig::MAKEFILE_CONFIG['CC']
+    puts "\n$ #{cc} -v\n#{`#{cc} -v 2>&1`}"
+  end
 end
 
 # vim: syntax=ruby
