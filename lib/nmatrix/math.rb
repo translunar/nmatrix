@@ -114,6 +114,55 @@ class NMatrix
 
   #
   # call-seq:
+  #     adjugate! -> NMatrix
+  #
+  # Calculate the adjugate of the matrix (in-place). 
+  # Only works on dense matrices. 
+  #
+  # * *Raises* :
+  #   - +StorageTypeError+ -> only implemented on dense matrices.
+  #   - +ShapeError+ -> matrix must be square.
+  #   - +DataTypeError+ -> cannot calculate adjugate of an integer matrix in-place.
+  #
+  def adjugate!
+    raise(StorageTypeError, "adjugate only works on dense matrices currently") unless self.dense?
+    raise(ShapeError, "Cannot calculate adjugate of a non-square matrix") unless self.dim == 2 && self.shape[0] == self.shape[1]
+    raise(DataTypeError, "Cannot calculate adjugate of an integer matrix in-place") if self.integer_dtype?
+    d = self.det
+    self.invert!
+    self.map! { |e| e * d } 
+    self
+  end
+  alias :adjoint! :adjugate!
+
+  #
+  # call-seq:
+  #     adjugate -> NMatrix
+  #
+  # Make a copy of the matrix and calculate the adjugate of the matrix. 
+  # Only works on dense matrices. 
+  #
+  # * *Returns* :
+  #   - A dense NMatrix. Will be the same type as the input NMatrix,
+  #   except if the input is an integral dtype, in which case it will be a
+  #   :float64 NMatrix. 
+  #
+  # * *Raises* :
+  #   - +StorageTypeError+ -> only implemented on dense matrices.
+  #   - +ShapeError+ -> matrix must be square.
+  #
+  def adjugate
+    raise(StorageTypeError, "adjugate only works on dense matrices currently") unless self.dense?
+    raise(ShapeError, "Cannot calculate adjugate of a non-square matrix") unless self.dim == 2 && self.shape[0] == self.shape[1]
+    d = self.det
+    mat = self.invert
+    mat.map! { |e| e * d }    
+    mat 
+  end
+  alias :adjoint :adjugate
+
+  #
+  # call-seq:
   #     getrf! -> Array
   #
   # LU factorization of a general M-by-N matrix +A+ using partial pivoting with
