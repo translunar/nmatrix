@@ -478,6 +478,49 @@ describe "math" do
     end
   end
 
+  ALL_DTYPES.each do |dtype|
+    next if dtype == :byte #doesn't work for unsigned types
+    next if dtype == :object
+
+    context dtype do
+      err = case dtype
+              when :float32, :complex64
+                1e-4
+              else #integer matrices will return :float64
+                1e-13
+            end
+
+      it "should correctly find adjugate a matrix in place (bang)" do
+        a = NMatrix.new(:dense, 2, [2, 3, 3, 5], dtype)
+        b = NMatrix.new(:dense, 2, [5, -3, -3, 2], dtype)
+
+        if a.integer_dtype?
+          expect{a.adjugate!}.to raise_error(DataTypeError)
+        else
+          #should return adjugate as well as modifying a
+          r = a.adjugate!
+          expect(a).to be_within(err).of(b)
+          expect(r).to be_within(err).of(b)
+        end
+      end
+
+
+      it "should correctly find adjugate of a matrix out-of-place" do
+        a = NMatrix.new(:dense, 3, [-3, 2, -5, -1, 0, -2, 3, -4, 1], dtype)
+
+        if a.integer_dtype?
+          b = NMatrix.new(:dense, 3, [-8, 18, -4, -5, 12, -1, 4, -6, 2], :float64)
+        else
+          b = NMatrix.new(:dense, 3, [-8, 18, -4, -5, 12, -1, 4, -6, 2], dtype)
+        end
+
+        expect(a.adjoint).to be_within(err).of(b)
+        expect(a.adjugate).to be_within(err).of(b)
+      end
+
+    end
+  end
+
   # TODO: Get it working with ROBJ too
   [:byte,:int8,:int16,:int32,:int64,:float32,:float64].each do |left_dtype|
     [:byte,:int8,:int16,:int32,:int64,:float32,:float64].each do |right_dtype|
