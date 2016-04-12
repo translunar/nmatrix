@@ -9,8 +9,8 @@
 //
 // == Copyright Information
 //
-// SciRuby is Copyright (c) 2010 - 2014, Ruby Science Foundation
-// NMatrix is Copyright (c) 2012 - 2014, John Woods and the Ruby Science Foundation
+// SciRuby is Copyright (c) 2010 - present, Ruby Science Foundation
+// NMatrix is Copyright (c) 2012 - present, John Woods and the Ruby Science Foundation
 //
 // Please see LICENSE.txt for additional copyright notices.
 //
@@ -74,8 +74,8 @@ namespace nm { namespace math {
  *    complex64 -> float or double
  *    complex128 -> double
  */
-template <typename ReturnDType, typename DType>
-ReturnDType nrm2(const int N, const DType* X, const int incX) {
+template <typename DType, typename MDType = typename MagnitudeDType<DType>::type>
+MDType nrm2(const int N, const DType* X, const int incX) {
   const DType ONE = 1, ZERO = 0;
   typename LongDType<DType>::type scale = 0, ssq = 1, absxi, temp;
 
@@ -96,7 +96,7 @@ ReturnDType nrm2(const int N, const DType* X, const int incX) {
     }
   }
 
-  return scale * std::sqrt( ssq );
+  return (MDType)(scale * std::sqrt( ssq ));
 }
 
 
@@ -138,6 +138,8 @@ float nrm2(const int N, const Complex64* X, const int incX) {
   return scale * std::sqrt( ssq );
 }
 
+// FIXME: Function above is duplicated here, should be writeable as a template using
+// FIXME: xMagnitudeDType.
 template <>
 double nrm2(const int N, const Complex128* X, const int incX) {
   double scale = 0, ssq = 1;
@@ -151,9 +153,9 @@ double nrm2(const int N, const Complex128* X, const int incX) {
   return scale * std::sqrt( ssq );
 }
 
-template <typename ReturnDType, typename DType>
+template <typename DType, typename MDType = typename MagnitudeDType<DType>::type>
 inline void cblas_nrm2(const int N, const void* X, const int incX, void* result) {
-  *reinterpret_cast<ReturnDType*>( result ) = nrm2<ReturnDType, DType>( N, reinterpret_cast<const DType*>(X), incX );
+  *reinterpret_cast<MDType*>( result ) = nrm2<DType, MDType>( N, reinterpret_cast<const DType*>(X), incX );
 }
 
 
