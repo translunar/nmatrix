@@ -287,6 +287,30 @@ module NMatrix::BLAS
       ::NMatrix::BLAS.cblas_nrm2(n, x, incx)
     end
 
+    #
+    # call-seq:
+    #     scal(alpha, vector, incx, n)
+    #
+    # Scale a matrix by a given scaling factor
+    #
+    # * *Arguments* :
+    #   - +alpha+ -> a scaling factor
+    #   - +vector+ -> an NMatrix
+    #   - +incx+ -> the skip size (defaults to 1)
+    #   - +n+ -> the size of +x+ (defaults to +x.size / incx+)
+    # * *Returns* :
+    #   - The scaling result
+    # * *Raises* :
+    #   - +ArgumentError+ -> Expected dense NMatrix for arg 0
+    #   - +RangeError+ -> n out of range
+    #
+    def scal(alpha, vector, incx=1, n=nil)
+      n ||= vector.size / incx
+      raise(ArgumentError, "Expected dense NMatrix for arg 0") unless vector.is_a?(NMatrix)
+      raise(RangeError, "n out of range") if n*incx > vector.size || n*incx <= 0 || n <= 0
+      ::NMatrix::BLAS.cblas_scal(n, alpha, vector, incx)
+    end
+
     # The following are functions that used to be implemented in C, but
     # now require nmatrix-atlas or nmatrix-lapcke to run properly, so we can just
     # implemented their stubs in Ruby.
