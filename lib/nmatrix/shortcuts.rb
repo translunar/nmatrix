@@ -703,6 +703,106 @@ class NMatrix
 
     #
     # call-seq:
+    #     linspace(base, limit) -> 1x100 NMatrix
+    #     linspace(base, limit, *shape) -> NMatrix
+    #
+    # Returns an NMatrix with +[shape[0] x shape[1] x .. x shape[dim-1]]+ values of dtype +:float64+ equally spaced from
+    # +base+ to +limit+, inclusive.
+    #
+    # See: http://www.mathworks.com/help/matlab/ref/linspace.html
+    #
+    # * *Arguments* :
+    #   - +base+ -> The first value in the sequence.
+    #   - +limit+ -> The last value in the sequence.
+    #   - +shape+ -> Desired output shape. Default returns a 1x100 row vector.
+    # * *Returns* :
+    #   - NMatrix with +:float64+ values.
+    #
+    # Examples :-
+    #
+    #   NMatrix.linspace(1,Math::PI, 6)
+    #     =>[1.0,
+    #        1.4283185005187988,
+    #        1.8566370010375977,
+    #        2.2849555015563965,
+    #        2.7132740020751953,
+    #        3.1415927410125732
+    #       ]
+    #
+    #   NMatrix.linspace(1,10, [3,2])
+    #     =>[
+    #         [              1.0, 2.799999952316284]
+    #         [4.599999904632568, 6.400000095367432]
+    #         [8.199999809265137,              10.0]
+    #       ]
+    #
+    def linspace(base, limit, shape = [100])
+      
+      # Convert shape to array format 
+      shape = [shape] if shape.is_a? Integer 
+      
+      #Calculate number of elements 
+      count = shape.inject(:*)
+            
+      # Linear spacing between elements calculated in step
+      #   step = limit - base / (count - 1)
+      #   [Result Sequence] = [0->N sequence] * step + [Base]
+      step = (limit - base) * (1.0 / (count - 1))
+      result = NMatrix.seq(shape, {:dtype => :float64}) * step
+      result += NMatrix.new(shape, base)
+      result
+    end
+
+    # call-seq:
+    #     logspace(base, limit) -> 1x50 NMatrix with exponent_base = 10 
+    #     logspace(base, limit, shape , exponent_base:) -> NMatrix
+    #     logspace(base, :pi, n) -> 1xn NMatrix with interval [10 ^ base, Math::PI]
+    #
+    # Returns an NMatrix with +[shape[0] x shape[1] x .. x shape[dim-1]]+ values of dtype +:float64+ logarithmically spaced from
+    # +exponent_base ^ base+ to +exponent_base ^ limit+, inclusive.
+    #
+    # See: http://www.mathworks.com/help/matlab/ref/logspace.html
+    #
+    # * *Arguments* :
+    #   - +base+ -> exponent_base ** base is the first value in the sequence
+    #   - +limit+ -> exponent_base ** limit is the last value in the sequence.
+    #   - +shape+ -> Desired output shape. Default returns a 1x50 row vector.
+    # * *Returns* :
+    #   - NMatrix with +:float64+ values.
+    #
+    # Examples :-
+    #
+    #   NMatrix.logspace(1,:pi,7)
+    #     =>[
+    #         10.0000, 
+    #         8.2450, 
+    #         6.7980, 
+    #         5.6050, 
+    #         4.6213, 
+    #         3.8103, 
+    #         3.1416
+    #       ]
+    #
+    #   NMatrix.logspace(1,2,[3,2])
+    #     =>[
+    #         [10.0, 15.8489]
+    #         [25.1189, 39.8107]
+    #         [63.0957, 100.0]
+    #       ]
+    #
+    def logspace(base, limit, shape = [50], exponent_base: 10)
+
+      #Calculate limit for [10 ^ base ... Math::PI] if limit = :pi
+      limit = Math.log(Math::PI, exponent_base = 10) if limit == :pi 
+      shape = [shape] if shape.is_a? Integer
+
+      #[base...limit]  -> [exponent_base ** base ... exponent_base ** limit]
+      result = NMatrix.linspace(base, limit, shape)
+      result.map {|element| exponent_base ** element}
+    end
+
+    #
+    # call-seq:
     #     seq(shape) -> NMatrix
     #     seq(shape, options) -> NMatrix
     #     bindgen(shape) -> NMatrix of :byte
