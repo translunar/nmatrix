@@ -30,21 +30,30 @@
 #++
 
 # For some reason nmatrix.so ends up in a different place during gem build.
-if File.exist?("lib/nmatrix/nmatrix.so") #|| File.exist?("lib/nmatrix/nmatrix.bundle")
-  # Development
-  require "nmatrix/nmatrix.so"
-else
-  # Gem
-  require "nmatrix.so"
+
+# Detect java
+def java?
+  /java/ === RUBY_PLATFORM
 end
 
-require_relative './io/mat_reader'
-require_relative './io/mat5_reader'
-require_relative './io/market'
-require_relative './io/point_cloud'
+if java?
+  require '../ext/nmatrix_java/vendor/commons-math3-3.6.1.jar'
+else
+  if File.exist?("lib/nmatrix/nmatrix.so") #|| File.exist?("lib/nmatrix/nmatrix.bundle")
+    # Development
+    require "nmatrix/nmatrix.so"
+  else
+    # Gem
+    require "nmatrix.so"
+  end
+end
+# require_relative './io/mat_reader'
+# require_relative './io/mat5_reader'
+# require_relative './io/market'
+# require_relative './io/point_cloud'
 
-require_relative './lapack_core.rb'
-require_relative './yale_functions.rb'
+# require_relative './lapack_core.rb'
+# require_relative './yale_functions.rb'
 require_relative './monkeys'
 
 # NMatrix is a matrix class that supports both multidimensional arrays
@@ -401,8 +410,8 @@ class NMatrix
   #
   def to_flat_array
     ary = Array.new(self.size)
-    self.each.with_index { |v,i| ary[i] = v }
-    ary
+    # self.each.with_index { |v,i| ary[i] = v }
+    ary= eachtemp
   end
   alias :to_flat_a :to_flat_array
 
@@ -1143,4 +1152,4 @@ require_relative './math.rb'
 require_relative './enumerate.rb'
 
 require_relative './version.rb'
-require_relative './blas.rb'
+# require_relative './blas.rb'
