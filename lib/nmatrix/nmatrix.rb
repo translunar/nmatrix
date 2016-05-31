@@ -38,6 +38,7 @@ end
 
 if java?
   require '../ext/nmatrix_java/vendor/commons-math3-3.6.1.jar'
+  require '../ext/nmatrix_java/target/nmatrix.jar'
 else
   if File.exist?("lib/nmatrix/nmatrix.so") #|| File.exist?("lib/nmatrix/nmatrix.bundle")
     # Development
@@ -410,8 +411,8 @@ class NMatrix
   #
   def to_flat_array
     ary = Array.new(self.size)
-    # self.each.with_index { |v,i| ary[i] = v }
-    ary= eachtemp
+    ary = self.each
+    ary
   end
   alias :to_flat_a :to_flat_array
 

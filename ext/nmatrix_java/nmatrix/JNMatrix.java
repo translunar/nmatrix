@@ -4,7 +4,7 @@ import org.apache.commons.math3.linear.ArrayRealVector;
 import org.apache.commons.math3.linear.RealVector;
 import org.apache.commons.math3.linear.FieldVector;
 
-public class NMatrix{
+public class JNMatrix{
 
 	private int shape;
 	public ArrayRealVector realArray;
@@ -21,88 +21,89 @@ public class NMatrix{
   private Stype stype;
   private Dtype dtype;
 
-	// NMatrix(shape, elements, dtype, stype)
-	public NMatrix(int shape, double[] elements, Dtype dtype, Stype stype){
+	// JNMatrix(shape, elements, dtype, stype)
+	public JNMatrix(int shape, double[] elements, String dtype_string, String stype_string){
 		this.shape = shape;
 		this.realArray = new ArrayRealVector(elements);
 		this.dtype = dtype;
-
+		this.stype_string = dtype_string;
+		this.dtype_string = dtype_string;
 		// if(this.checkVectorDimensions(2)){
 		// 	//we have a double matrix
 		// }
 
-		switch(stype){
-			case DENSE_STORE:
-				this.stype_string = "dense";
-				// (int dim, int[] shape, String dtype, int offset, int count, double[] elements)
-				// this.storage = new Dense_Storage( 2,new int[]{2,3}, "int", 1, 4, elements);
-				break;
-			case LIST_STORE:
-				this.stype_string = "list";
-				break;
-			case YALE_STORE:
-				this.stype_string = "yale";
-				break;
-			default:
-				this.stype_string ="stype could not be determined";
-				break;
-		}
+		// switch(stype){
+		// 	case DENSE_STORE:
+		// 		this.stype_string = "dense";
+		// 		// (int dim, int[] shape, String dtype, int offset, int count, double[] elements)
+		// 		// this.storage = new Dense_Storage( 2,new int[]{2,3}, "int", 1, 4, elements);
+		// 		break;
+		// 	case LIST_STORE:
+		// 		this.stype_string = "list";
+		// 		break;
+		// 	case YALE_STORE:
+		// 		this.stype_string = "yale";
+		// 		break;
+		// 	default:
+		// 		this.stype_string ="stype could not be determined";
+		// 		break;
+		// }
 
-		switch(dtype){
-			case BYTE:
-				this.dtype_string = "BYTE";
-				break;
-			case INT8:
-				this.dtype_string = "INT8";
-				break;
-			case INT16:
-				this.dtype_string = "INT16";
-				break;
-			case INT32:
-				this.dtype_string = "INT32";
-				break;
-			case INT64:
-				this.dtype_string = "INT64";
-				break;
-			case FLOAT32:
-				this.dtype_string = "FLOAT32";
-				break;
-			case FLOAT64:
-				this.dtype_string = "FLOAT64";
-				break;
-			case COMPLEX64:
-				this.dtype_string = "COMPLEX64";
-				break;
-			case COMPLEX128:
-				this.dtype_string = "COMPLEX128";
-				break;
-			case RUBYOBJ:
-				this.dtype_string = "RUBYOBJ";
-				break;
-		}
+		// switch(dtype){
+		// 	case BYTE:
+		// 		this.dtype_string = "BYTE";
+		// 		break;
+		// 	case INT8:
+		// 		this.dtype_string = "INT8";
+		// 		break;
+		// 	case INT16:
+		// 		this.dtype_string = "INT16";
+		// 		break;
+		// 	case INT32:
+		// 		this.dtype_string = "INT32";
+		// 		break;
+		// 	case INT64:
+		// 		this.dtype_string = "INT64";
+		// 		break;
+		// 	case FLOAT32:
+		// 		this.dtype_string = "FLOAT32";
+		// 		break;
+		// 	case FLOAT64:
+		// 		this.dtype_string = "FLOAT64";
+		// 		break;
+		// 	case COMPLEX64:
+		// 		this.dtype_string = "COMPLEX64";
+		// 		break;
+		// 	case COMPLEX128:
+		// 		this.dtype_string = "COMPLEX128";
+		// 		break;
+		// 	case RUBYOBJ:
+		// 		this.dtype_string = "RUBYOBJ";
+		// 		break;
+		// }
 	}
 
-	// public NMatrix(int shape, double[] elements, Dtype dtype){
-	// 	this(shape, elements, dtype, Stype.DENSE_STORE);
+	// public JNMatrix(int shape, double[] elements, Dtype dtype){
+	// 	this(shape, elements, dtype, "DENSE_STORE");
 	// }
 
-	// public NMatrix(int shape, double[] elements){
-	// 	this(shape, elements,  Dtype.FLOAT32, Stype.DENSE_STORE);
+	// public JNMatrix(int shape, double[] elements){
+	// 	this(shape, elements,  "FLOAT32", "DENSE_STORE");
 	// }
 
 	
 
 
-	public static NMatrix aret(NMatrix a){
+	public static JNMatrix aret(JNMatrix a){
 			return a;
 	}
 
 	// ArrayRealVector add(RealVector v)
 	// Compute the sum of this vector and v.
 
-	public NMatrix add(NMatrix n){
+	public JNMatrix add(JNMatrix n){
 		ArrayRealVector resRealArray =  this.realArray.add(n.realArray);
-		NMatrix res = new NMatrix(2, resRealArray.toArray(), Dtype.FLOAT32, Stype.DENSE_STORE);
+		JNMatrix res = new JNMatrix(2, resRealArray.toArray(), "FLOAT32", "DENSE_STORE");
 		return res;
 	}
 
@@ -117,9 +118,9 @@ public class NMatrix{
 	// ArrayRealVector	append(ArrayRealVector v)
 	// Construct a vector by appending a vector to this vector.
 
-	public NMatrix append(NMatrix n){
+	public JNMatrix append(JNMatrix n){
 		RealVector resRealArray =  this.realArray.append(n.realArray);
-		NMatrix res = new NMatrix(2, resRealArray.toArray(), Dtype.FLOAT32, Stype.DENSE_STORE);
+		JNMatrix res = new JNMatrix(2, resRealArray.toArray(), "FLOAT32", "DENSE_STORE");
 		return res;
 	}
 
@@ -127,9 +128,9 @@ public class NMatrix{
 	// RealVector	append(double in)
 	// Construct a new vector by appending a double to this vector.
 
-	public NMatrix append(double in){
+	public JNMatrix append(double in){
 		RealVector resRealArray =  this.realArray.append(in);
-		NMatrix res = new NMatrix(2, resRealArray.toArray(), Dtype.FLOAT32, Stype.DENSE_STORE);
+		JNMatrix res = new JNMatrix(2, resRealArray.toArray(), "FLOAT32", "DENSE_STORE");
 		return res;
 	}
 
@@ -142,7 +143,7 @@ public class NMatrix{
 	// protected void	checkVectorDimensions(int n)
 	// Check if instance dimension is equal to some expected value.
 
-		// protected void checkNMatrixDimensions(int n){
+		// protected void checkJNMatrixDimensions(int n){
 		// 	this.realArray.checkVectorDimensions(n);
 		// }
 
@@ -243,8 +244,8 @@ public class NMatrix{
 	// ArrayRealVector	map(UnivariateFunction function)
 	// Acts as if implemented as:
 
-		// public NMatrix map(UnivariateFunction function){
-		// 	// NMatrix res = new NMatrix(2, new double[]{2,3,4,5}, Dtype.FLOAT32, Stype.DENSE_STORE)
+		// public JNMatrix map(UnivariateFunction function){
+		// 	// JNMatrix res = new JNMatrix(2, new double[]{2,3,4,5}, "FLOAT32", "DENSE_STORE")
 		// }
 
 
@@ -312,8 +313,8 @@ public class NMatrix{
 	// ArrayRealVector	subtract(RealVector v)
 	// Subtract v from this vector.
 
-	// public NMatrix subtract(NMatrix N){
-	// 	// NMatrix res = NMatrix new(2, this.realArray.subtract(N.realArray), Dtype.FLOAT32, Stype.DENSE_STORE);
+	// public JNMatrix subtract(JNMatrix N){
+	// 	// JNMatrix res = JNMatrix new(2, this.realArray.subtract(N.realArray), "FLOAT32", "DENSE_STORE");
 	// }
 
 	// Convert the vector to an array of doubles.
