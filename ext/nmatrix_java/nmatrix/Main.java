@@ -7,9 +7,9 @@ public class Main{
 
 	public static void main(String[] args){
 		// System.out.println("Hello jnmatrix");
-		NMatrix a = new NMatrix(2, new double[]{2,3,4,5}, Dtype.FLOAT32, Stype.DENSE_STORE);
-		NMatrix b = new NMatrix(2, new double[]{2.2,3,4,5}, Dtype.FLOAT32, Stype.DENSE_STORE);
-		NMatrix c = a.add(b);
+		JNMatrix a = new JNMatrix(2, new double[]{2,3,4,5}, "FLOAT32", "DENSE_STORE");
+		JNMatrix b = new JNMatrix(2, new double[]{2.2,3,4,5}, "FLOAT32", "DENSE_STORE");
+		JNMatrix c = a.add(b);
 		// float[] abc = new float[4];
 		double[] abc = c.realArray.toArray();
 
