@@ -251,22 +251,35 @@ public class JNMatrix{
 
 	// RealVector	mapAddToSelf(double d)
 	// Add a value to each entry.
+	public JNMatrix mapAddToSelf(double d){
+		JNMatrix res;
+		return res;
+	}
 
 
 
 	// RealVector	mapDivideToSelf(double d)
 	// Divide each entry by the argument.
-
+	public JNMatrix mapDivideToSelf(double d){
+		JNMatrix res;
+		return res;
+	}
 
 
 	// RealVector	mapMultiplyToSelf(double d)
 	// Multiply each entry.
-
+	public JNMatrix mapMultiplyToSelf(double d){
+		JNMatrix res;
+		return res;
+	}
 
 
 	// RealVector	mapSubtractToSelf(double d)
 	// Subtract a value from each entry.
-
+	public JNMatrix mapSubtractToSelf(double d){
+		JNMatrix res;
+		return res;
+	}
 
 
 
@@ -279,11 +292,16 @@ public class JNMatrix{
 	// RealMatrix	outerProduct(RealVector v)
 	// Compute the outer product.
 
-
+	public JNMatrix outerProduct(JNMatrix n){
+		JNMatrix res;
+		return res;
+	}
 
 
 	// void	set(double value)
 	// Set all elements to a single value.
+
+	// will be used for NMatrix constructors(shortcuts)
 	public void set(double value){
 		this.realArray.set(value);
 	}
@@ -313,9 +331,10 @@ public class JNMatrix{
 	// ArrayRealVector	subtract(RealVector v)
 	// Subtract v from this vector.
 
-	// public JNMatrix subtract(JNMatrix N){
-	// 	// JNMatrix res = JNMatrix new(2, this.realArray.subtract(N.realArray), "FLOAT32", "DENSE_STORE");
-	// }
+	public JNMatrix subtract(JNMatrix N){
+		JNMatrix res = JNMatrix new(2, this.realArray.subtract(N.realArray), "FLOAT32", "DENSE_STORE");
+		return res;
+	}
 
 	// Convert the vector to an array of doubles.
 	// double[]	toArray()
