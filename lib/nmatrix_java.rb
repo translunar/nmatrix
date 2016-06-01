@@ -1,9 +1,11 @@
 require '../ext/nmatrix_java/vendor/commons-math3-3.6.1.jar'
 require '../ext/nmatrix_java/target/nmatrix.jar'
+
 java_import 'JNMatrix'
 java_import 'Dtype'
 java_import 'Stype'
 java_import 'Simple'
+
 class NMatrix
 	@JNMatrix
 	@shape
@@ -26,7 +28,7 @@ class NMatrix
 		@s['elements'] = elements
 		# Java enums are accessible from Ruby code as constants:
 		@q = Simple.new(2);
-		@j= JNMatrix.new( 2, [2,3,4,5] , "FLOAT32", "DENSE_STORE" )
+		@nmat= JNMatrix.new( 2, [2,3,4,5] , "FLOAT32", "DENSE_STORE" )
 	end
 	#  rb_define_method(cNMatrix, "dtype", (METHOD)nm_dtype, 0);
 	#  rb_define_method(cNMatrix, "stype", (METHOD)nm_stype, 0);
@@ -186,23 +188,23 @@ class NMatrix
 
 	def [] *args
 		# @s['elements'][args]
-		0
+		@nmat.getEntry(args)
 	end
 
-	def []=
-
+	def []=(*args)
+		@nmat.setEntry
 	end
 
 	def slice
-
+		@nmat.setSubVector(args)
 	end
 
 	def dimensions
-
+		@nmat.getDimensions
 	end
 
-	def effective_dimensions
-
+	def effective_dimensions(*args)
+		
 	end
 
 	#  rb_define_method(cNMatrix, "==",    (METHOD)nm_eqeq,        1);
@@ -214,32 +216,32 @@ class NMatrix
 	#  rb_define_method(cNMatrix, "**",    (METHOD)nm_ew_power,    1);
 	#  rb_define_method(cNMatrix, "%",     (METHOD)nm_ew_mod,      1);
 
-	def ==
-		
+	def ==(nmatrix)
+		@nmat.eqeq
 	end
 
-	def +
-		
+	def +(nmatrix)
+		@nmap.mapAddToSelf(d)
 	end
 
 	def -
-		
+		@nmap.mapSubtractToSelf(d)
 	end
 
 	def *
-		
+		@nmap.mapMultiplyToSelf(d)
 	end
 
 	def /
-		
+		@nmap.mapDivideToSelf(d)
 	end
 
 	def **
-		
+		@nmap.mapToSelf(univariate_function_power)
 	end
 
 	def %
-		
+		@nmap.mapToSelf(univariate_function_mod)
 	end
 
 	#  rb_define_method(cNMatrix, "atan2", (METHOD)nm_noncom_ew_atan2, -1);
@@ -247,15 +249,15 @@ class NMatrix
 	#  rb_define_method(cNMatrix, "hypot", (METHOD)nm_noncom_ew_hypot, -1);
 
 	def atan2
-		
+		@nmap.mapToSelf(univariate_function_atan2)
 	end
 
 	def ldexp
-
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def hypot
-
+		@nmap.mapToSelf(univariate_function_)
 	end
 	#  rb_define_method(cNMatrix, "sin",   (METHOD)nm_unary_sin,   0);
 	#  rb_define_method(cNMatrix, "cos",   (METHOD)nm_unary_cos,   0);
@@ -284,103 +286,103 @@ class NMatrix
 	#  rb_define_method(cNMatrix, "round", (METHOD)nm_unary_round, -1);
 
 	def sin
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def cos
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def tan
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def asin
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def acos
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def atan
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def sinh
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def cosh
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def tanh
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def asinh
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def acosh
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def atanh
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def exp
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def log2
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def log10
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def sqrt
-
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def erf
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def erfc
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def cbrt
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def gamma
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def log
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def -@
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def floor
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def ceil
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def round
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 #  rb_define_method(cNMatrix, "=~", (METHOD)nm_ew_eqeq, 1);
@@ -390,27 +392,27 @@ class NMatrix
 #  rb_define_method(cNMatrix, "<", (METHOD)nm_ew_lt, 1);
 #  rb_define_method(cNMatrix, ">", (METHOD)nm_ew_gt, 1);
 	def =~
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def !~
-
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def <=
-
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def >=
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def <
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 	def >
-		
+		@nmap.mapToSelf(univariate_function_)
 	end
 
 
