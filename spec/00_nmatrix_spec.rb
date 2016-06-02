@@ -25,7 +25,10 @@
 # Basic tests for NMatrix. These should load first, as they're
 # essential to NMatrix operation.
 #
-require 'spec_helper'
+require_relative 'spec_helper'
+
+m = NMatrix.new([2,2], [10,1,2,3], dtype: :int64)
+puts m
 
 describe NMatrix do
   it "creates a matrix with the new constructor" do
