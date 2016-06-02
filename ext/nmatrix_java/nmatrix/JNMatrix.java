@@ -6,7 +6,7 @@ import org.apache.commons.math3.linear.FieldVector;
 
 public class JNMatrix{
 
-	private int shape;
+	private int[] shape;
 	public ArrayRealVector realArray;
 	private String dtype_string;
 	private String stype_string;
@@ -22,7 +22,7 @@ public class JNMatrix{
   private Dtype dtype;
 
 	// JNMatrix(shape, elements, dtype, stype)
-	public JNMatrix(int shape, double[] elements, String dtype_string, String stype_string){
+	public JNMatrix(int[] shape, double[] elements, String dtype_string, String stype_string){
 		this.shape = shape;
 		this.realArray = new ArrayRealVector(elements);
 		this.dtype = dtype;
@@ -103,7 +103,7 @@ public class JNMatrix{
 
 	public JNMatrix add(JNMatrix n){
 		ArrayRealVector resRealArray =  this.realArray.add(n.realArray);
-		JNMatrix res = new JNMatrix(2, resRealArray.toArray(), "FLOAT32", "DENSE_STORE");
+		JNMatrix res = new JNMatrix(this.shape, resRealArray.toArray(), "FLOAT32", "DENSE_STORE");
 		return res;
 	}
 
@@ -120,7 +120,7 @@ public class JNMatrix{
 
 	public JNMatrix append(JNMatrix n){
 		RealVector resRealArray =  this.realArray.append(n.realArray);
-		JNMatrix res = new JNMatrix(2, resRealArray.toArray(), "FLOAT32", "DENSE_STORE");
+		JNMatrix res = new JNMatrix(this.shape, resRealArray.toArray(), "FLOAT32", "DENSE_STORE");
 		return res;
 	}
 
@@ -130,7 +130,7 @@ public class JNMatrix{
 
 	public JNMatrix append(double in){
 		RealVector resRealArray =  this.realArray.append(in);
-		JNMatrix res = new JNMatrix(2, resRealArray.toArray(), "FLOAT32", "DENSE_STORE");
+		JNMatrix res = new JNMatrix(this.shape, resRealArray.toArray(), "FLOAT32", "DENSE_STORE");
 		return res;
 	}
 
@@ -171,7 +171,7 @@ public class JNMatrix{
 	// double[]	getDataRef()
 	// Get a reference to the underlying data array.
 
-	// int	getDimension()
+	
 	// Returns the size of the vector.
 
 	public int getDimension(){
@@ -181,7 +181,7 @@ public class JNMatrix{
 	// double	getDistance(RealVector v)
 	// Distance between two vectors.
 
-	// double	getEntry(int index)
+
 	// Return the entry at the specified index.
 	public double getEntry(int index){
 		return this.realArray.getEntry(index);
@@ -252,7 +252,7 @@ public class JNMatrix{
 	// RealVector	mapAddToSelf(double d)
 	// Add a value to each entry.
 	public JNMatrix mapAddToSelf(double d){
-		JNMatrix res;
+		JNMatrix res= new JNMatrix(this.shape, this.realArray.toArray(), "FLOAT32", "DENSE_STORE");
 		return res;
 	}
 
@@ -261,7 +261,7 @@ public class JNMatrix{
 	// RealVector	mapDivideToSelf(double d)
 	// Divide each entry by the argument.
 	public JNMatrix mapDivideToSelf(double d){
-		JNMatrix res;
+		JNMatrix res= new JNMatrix(this.shape, this.realArray.toArray(), "FLOAT32", "DENSE_STORE");
 		return res;
 	}
 
@@ -269,7 +269,7 @@ public class JNMatrix{
 	// RealVector	mapMultiplyToSelf(double d)
 	// Multiply each entry.
 	public JNMatrix mapMultiplyToSelf(double d){
-		JNMatrix res;
+		JNMatrix res= new JNMatrix(this.shape, this.realArray.toArray(), "FLOAT32", "DENSE_STORE");
 		return res;
 	}
 
@@ -277,7 +277,7 @@ public class JNMatrix{
 	// RealVector	mapSubtractToSelf(double d)
 	// Subtract a value from each entry.
 	public JNMatrix mapSubtractToSelf(double d){
-		JNMatrix res;
+		JNMatrix res= new JNMatrix(this.shape, this.realArray.toArray(), "FLOAT32", "DENSE_STORE");
 		return res;
 	}
 
@@ -293,7 +293,7 @@ public class JNMatrix{
 	// Compute the outer product.
 
 	public JNMatrix outerProduct(JNMatrix n){
-		JNMatrix res;
+		JNMatrix res= new JNMatrix(this.shape, this.realArray.toArray(), "FLOAT32", "DENSE_STORE");
 		return res;
 	}
 
@@ -331,10 +331,10 @@ public class JNMatrix{
 	// ArrayRealVector	subtract(RealVector v)
 	// Subtract v from this vector.
 
-	public JNMatrix subtract(JNMatrix N){
-		JNMatrix res = JNMatrix new(2, this.realArray.subtract(N.realArray), "FLOAT32", "DENSE_STORE");
-		return res;
-	}
+	// public JNMatrix subtract(JNMatrix N){
+	// 	JNMatrix res = JNMatrix new(this.shape, this.realArray.subtract(N.realArray), "FLOAT32", "DENSE_STORE");
+	// 	return res;
+	// }
 
 	// Convert the vector to an array of doubles.
 	// double[]	toArray()
