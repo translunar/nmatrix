@@ -27,8 +27,16 @@
 #
 require_relative 'spec_helper'
 
-m = NMatrix.new([2,2], [10,1,2,3], dtype: :int64)
-puts m
+# m = NMatrix.new([2,2], [10,1,2,3], dtype: :int64)
+
+
+# m = NMatrix.new([2,2,2], [1,2,3,4,5,6,7,8], dtype: :int64)
+# puts m
+# puts m[0,0,0]
+# puts m[0,1,1]
+# puts m[1,0,1]
+# puts m[1,1,1]
+# puts m[2,2,2]
 
 describe NMatrix do
   it "creates a matrix with the new constructor" do
