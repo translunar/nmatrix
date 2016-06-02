@@ -29,8 +29,12 @@ require_relative 'spec_helper'
 
 m = NMatrix.new([2,2], [10,1,2,3], dtype: :int64)
 n = NMatrix.new([2,2], [10,1,2,13], dtype: :int64)
+puts m
 c = m==n
 puts c
+d= m+n
+# puts c
+puts d
 # m = NMatrix.new([2,2,2], [1,2,3,4,5,6,7,8], dtype: :int64)
 # puts m
 # puts m[0,0,0]

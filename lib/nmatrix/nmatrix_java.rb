@@ -357,8 +357,25 @@ class NMatrix
     result
   end
 
-  def +(nmatrix)
-    @nmap.mapAddToSelf(d)
+  def +(otherNmatrix)
+    result = nil
+    if (otherNmatrix.is_a?(NMatrix))
+      #check dimension
+      #check shape
+      if (@dim != otherNmatrix.dim)
+        raise Exception.new("cannot compare matrices with different dimension")
+      end
+      #check shape
+      (i=0...dim).each do |i|
+        if (@shape[i] != otherNmatrix.shape[i])
+          raise Exception.new("cannot compare matrices with different shapes");
+        end
+      end
+
+      resultArray = @nmat.add(otherNmatrix.nmat).to_a
+      result = NMatrix.new(shape, resultArray,  dtype: :int64)
+    end
+    result
   end
 
   def -
@@ -617,4 +634,9 @@ class NMatrix
   # rb_define_alias(cNMatrix, "dim", "dimensions");
   # rb_define_alias(cNMatrix, "effective_dim", "effective_dimensions");
   # rb_define_alias(cNMatrix, "equal?", "eql?");
+
+
+  def elementwise_op(op,left_val,right_val)
+
+  end
 end
