@@ -5,6 +5,7 @@ require_relative '../../ext/nmatrix_java/target/nmatrix.jar'
 java_import 'JNMatrix'
 java_import 'Dtype'
 java_import 'Stype'
+java_import 'org.apache.commons.math3.analysis.function.Sin'
 
 class NMatrix
   attr_accessor :shape , :dtype, :elements, :s, :dim, :nmat
@@ -411,7 +412,8 @@ class NMatrix
   end
 
   def sin
-    @nmap.mapToSelf(univariate_function_)
+    resultArray = @nmat.mapSinToSelf().to_a
+    result = NMatrix.new(shape, resultArray,  dtype: :int64)
   end
 
   def cos

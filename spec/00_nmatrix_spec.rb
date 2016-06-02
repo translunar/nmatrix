@@ -32,9 +32,11 @@ n = NMatrix.new([2,2], [10,1,2,13], dtype: :int64)
 puts m
 c = m==n
 puts c
-d= m+n
+d= m+n +m
 # puts c
 puts d
+q= m.sin()
+puts q
 # m = NMatrix.new([2,2,2], [1,2,3,4,5,6,7,8], dtype: :int64)
 # puts m
 # puts m[0,0,0]

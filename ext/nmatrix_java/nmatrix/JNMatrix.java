@@ -3,6 +3,8 @@ import org.apache.commons.math3.linear.ArrayFieldVector;
 import org.apache.commons.math3.linear.ArrayRealVector;
 import org.apache.commons.math3.linear.RealVector;
 import org.apache.commons.math3.linear.FieldVector;
+import org.apache.commons.math3.analysis.function.Sin;
+import org.apache.commons.math3.analysis.UnivariateFunction;
 
 public class JNMatrix{
 
@@ -289,8 +291,16 @@ public class JNMatrix{
   // ArrayRealVector  mapToSelf(UnivariateFunction function)
   // Acts as if it is implemented as:
 
+  // public double[] mapToSelf(Sin){
+  //   ArrayRealVector resRealArray =  this.realArray.mapToSelf(Sin);
+  //   return resRealArray.toArray();
+  // }
 
 
+  public double[] mapSinToSelf(){
+    ArrayRealVector resRealArray =  this.realArray.mapToSelf(new Sin());
+    return resRealArray.toArray();
+  }
 
   // RealMatrix outerProduct(RealVector v)
   // Compute the outer product.
