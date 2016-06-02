@@ -32,13 +32,12 @@
 # For some reason nmatrix.so ends up in a different place during gem build.
 
 # Detect java
-def java?
+def jruby?
   /java/ === RUBY_PLATFORM
 end
 
-if java?
-  require '../ext/nmatrix_java/vendor/commons-math3-3.6.1.jar'
-  require '../ext/nmatrix_java/target/nmatrix.jar'
+if jruby?
+  require_relative 'nmatrix_java'
 else
   if File.exist?("lib/nmatrix/nmatrix.so") #|| File.exist?("lib/nmatrix/nmatrix.bundle")
     # Development
