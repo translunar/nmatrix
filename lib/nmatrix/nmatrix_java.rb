@@ -335,8 +335,26 @@ class NMatrix
 
   public
 
-  def ==(nmatrix)
-    @nmat.eqeq
+  def == (otherNmatrix)
+    result = false
+    if (otherNmatrix.is_a?(NMatrix))
+      #check dimension
+      #check shape
+      if (@dim != otherNmatrix.dim)
+        raise Exception.new("cannot compare matrices with different dimension")
+      end
+      #check shape
+      (i=0...dim).each do |i|
+        if (@shape[i] != otherNmatrix.shape[i])
+          raise Exception.new("cannot compare matrices with different shapes");
+        end
+      end
+
+      #check the entries
+
+      result = @nmat.equals(otherNmatrix.nmat)
+    end
+    result
   end
 
   def +(nmatrix)
