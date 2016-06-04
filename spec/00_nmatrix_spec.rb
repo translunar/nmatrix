@@ -63,13 +63,24 @@ puts N.new(size, values.map{ |e| Math.send(:sin, e) },dtype: :float64, stype: :d
 # N.new(@size, @a.map { |e| Math.send(meth, 1, e) }
 
 # puts q
-# m = NMatrix.new([2,2,2], [1,2,3,4,5,6,7,8], dtype: :int64)
+m = NMatrix.new([2,2,2,2], [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16], dtype: :int64)
 # puts m
-# puts m[0,0,0]
-# puts m[0,1,1]
-# puts m[1,0,1]
-# puts m[1,1,1]
-# puts m[2,2,2]
+puts m[0,0,0,0]
+puts m[0,0,0,1]
+puts m[0,0,1,0]
+puts m[0,0,1,1]
+puts m[0,1,0,0]
+puts m[0,1,0,1]
+puts m[0,1,1,0]
+puts m[0,1,1,1]
+puts m[1,0,0,0]
+puts m[1,0,0,1]
+puts m[1,0,1,0]
+puts m[1,0,1,1]
+puts m[1,1,0,0]
+puts m[1,1,0,1]
+puts m[1,1,1,0]
+puts m[1,1,1,1]
 
 describe NMatrix do
   it "creates a matrix with the new constructor" do

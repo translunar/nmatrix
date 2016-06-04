@@ -102,23 +102,9 @@ class NMatrix
     return nm_xslice(args)
   end
 
-  def []=(*args)
-    @dim
-
-    to_return = nil;
-
-    if argc > @dim+1
-      raise Exception.new("wrong number of arguments (%d for %lu)", argc, self.effective_dimensions+1);
-    else
-      slice = get_slice(args)
-
-
-      # ttable[NM_STYPE(self)](self, slice, argv[argc-1]);
-
-      to_return = argv[argc-1];
-    end
-
-    return to_return;
+  def []=(args,arg2)
+    # pos = xslice(args)
+    # @nmat.setElement(pos, args[1])
   end
 
 
@@ -150,12 +136,12 @@ class NMatrix
       result = Array.new()
 
       slice = get_slice(@dim, args, @shape);
-
+      stride = get_stride
       if slice[:single]
         if (@dtype == "RUBYOBJ") 
           # result = *reinterpret_cast<VALUE*>( ttable[NM_STYPE(self)](s, slice) );
         else                                
-          result = slice
+          result = dense_storage_get(slice,stride)
         end 
       else
         # NMATRIX* mat  = NM_ALLOC(NMATRIX);
@@ -166,8 +152,47 @@ class NMatrix
       end
     end
 
-    return result
+    return @s[result]
   end
+
+  def dense_storage_get(slice,stride)
+    if slice[:single]
+      # return dense_storage_pos(slice[:coords],stride)
+    else
+      # nm_dense_storage_register(s);
+      # shape = Array.new()
+      # (0...@dim).each do |i|
+      #   shape[i]  = slice[:lengths][i];
+      # end
+
+      # DENSE_STORAGE* ns = nm_dense_storage_create(s->dtype, shape, s->dim, NULL, 0);
+
+      # slice_copy(ns,
+      #     reinterpret_cast<const DENSE_STORAGE*>(s->src),
+      #     slice->lengths,
+      #     0,
+      #     nm_dense_storage_pos(s, slice->coords),
+      #     0);
+
+      # return ns;
+    end
+    return dense_storage_pos(slice[:coords],stride)
+  end
+
+  def dense_storage_pos(coords,stride)
+    pos = 0;
+    offset = 0
+    (0...@dim).each do |i|
+      pos += coords[i]  * stride[i] + offset;
+    end
+    return pos
+  end
+
+  # def get_element
+  #   for (p = 0; p < dest->shape[n]; ++p) {
+  #       reinterpret_cast<LDType*>(dest->elements)[p+pdest] = reinterpret_cast<RDType*>(src->elements)[p+psrc];
+  #     }
+  # end
 
   def get_slice(dim, args, shape_array)
     slice = {}
@@ -218,6 +243,17 @@ class NMatrix
     end
 
     return slice
+  end
+
+  def get_stride
+    stride = Array.new()
+    (0...@dim).each do |i|
+      stride[i] = 1;
+      (i+1...dim).each do |j|
+        stride[i] *= @shape[j]
+      end
+    end
+    stride
   end
 
   
