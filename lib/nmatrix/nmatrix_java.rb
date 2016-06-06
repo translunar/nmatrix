@@ -21,7 +21,7 @@ class NMatrix
         hash = args[2]
       else
         elements = Array.new()
-        hash = args[1]
+        hash = args[1] unless args.length<1
       end
     end
 
@@ -136,7 +136,7 @@ class NMatrix
       result = Array.new()
 
       slice = get_slice(@dim, args, @shape);
-      stride = get_stride
+      stride = get_stride(self)
       if slice[:single]
         if (@dtype == "RUBYOBJ") 
           # result = *reinterpret_cast<VALUE*>( ttable[NM_STYPE(self)](s, slice) );
@@ -145,50 +145,58 @@ class NMatrix
         end 
       else
         result = dense_storage_get(slice,stride)
-        # NMATRIX* mat  = NM_ALLOC(NMATRIX);
-        # mat->stype    = NM_STYPE(self);
-        # mat->storage  = (STORAGE*)((*slice_func)( s, slice ));
-        # nm_register_nmatrix(mat);
-        # result        = Data_Wrap_Struct(CLASS_OF(self), nm_mark, delete_func, mat);
       end
     end
-
     return result
   end
 #its by ref
+
   def dense_storage_get(slice,stride)
     if slice[:single]
       return dense_storage_pos(slice[:coords],stride)
     else
-      ns={}
-      ns[:dim]        = @dim
-      ns[:dtype]      = @dtype
-      ns[:offset]     = []
-      ns[:shape]      = []
-      (0...ns[:dim]).each do |i|
-        ns[:offset][i] = slice[:coords][i] 
-        # + s[:offset][i]
-        ns[:shape][i]  = slice[:lengths][i]
+      shape = @shape.dup
+      (0...@dim).each do |i|
+        shape[i] = slice[:lengths][i]
       end
-
-      # ns[:stride]     = s[:stride];
-      ns[:elements]   = @s
-
-      # s[:src][:count] += 1
-      # ns[:src] = s[:src]
-
-      return ns;
+      psrc = dense_storage_pos(slice[:coords], stride)
+      src = {}
+      result = NMatrix.new(shape)
+      dest = {}
+      src[:stride] = get_stride(self)
+      src[:elements] = @s
+      dest[:stride] = get_stride(result)
+      dest[:shape] = shape
+      dest[:elements] = []
+      result.s = slice_copy(src, dest, slice[:lengths], 0, psrc,0);
+      return result
     end
-    # return dense_storage_pos(slice[:coords],stride)
+  end
+
+  def slice_copy(src, dest,lengths, pdest, psrc,n)
+    # p src
+    # p dest
+    
+    if @dim-n>1
+      (0...lengths[n]).each do |i|
+        slice_copy(src, dest, lengths,pdest+dest[:stride][n]*i,psrc+src[:stride][n]*i,n+1)
+      end
+    else
+      (0...dest[:shape][n]).each do |p|
+        dest[:elements][p+pdest] = src[:elements][p+psrc]
+
+      end
+    end
+    dest[:elements]
   end
 
   def dense_storage_pos(coords,stride)
     pos = 0;
     offset = 0
     (0...@dim).each do |i|
-      pos += coords[i]  * stride[i] + offset;
+      pos += coords[i]  * stride[i] ;
     end
-    return pos
+    return pos + offset;
   end
 
   # def get_element
@@ -253,12 +261,12 @@ class NMatrix
     return slice
   end
 
-  def get_stride
+  def get_stride(nmatrix)
     stride = Array.new()
-    (0...@dim).each do |i|
+    (0...nmatrix.dim).each do |i|
       stride[i] = 1;
       (i+1...dim).each do |j|
-        stride[i] *= @shape[j]
+        stride[i] *= nmatrix.shape[j]
       end
     end
     stride
