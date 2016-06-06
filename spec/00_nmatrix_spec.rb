@@ -81,6 +81,7 @@ puts m[1,1,0,0]
 puts m[1,1,0,1]
 puts m[1,1,1,0]
 puts m[1,1,1,1]
+puts m[0,0,0..1,0..1]
 
 describe NMatrix do
   it "creates a matrix with the new constructor" do
