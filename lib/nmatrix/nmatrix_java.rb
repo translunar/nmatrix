@@ -95,16 +95,33 @@ class NMatrix
   end
 
   def [] *args
-    return xslice(args);
+    return xslice(args)
   end
 
   def slice(*args)
     return nm_xslice(args)
   end
 
-  def []=(args,arg2)
-    # pos = xslice(args)
-    # @nmat.setElement(pos, args[1])
+  def []=(*args,value)
+
+    to_return = nil
+
+    if args.length > @dim+1
+      raise Exception.new("wrong number of arguments (%d for %lu)", args.length, effective_dim(@dim+1))
+    else
+      slice = get_slice(@dim, args, @shape)
+      stride = get_stride(self)
+      if(slice[:single])
+        pos = dense_storage_pos(slice[:coords],stride)
+        @s[pos] = value
+        @nmat.setEntry(pos, value)
+        to_return = value
+      else
+        raise Exception.new("not supported")
+      end
+    end
+
+    return to_return
   end
 
 
@@ -135,7 +152,7 @@ class NMatrix
     else
       result = Array.new()
 
-      slice = get_slice(@dim, args, @shape);
+      slice = get_slice(@dim, args, @shape)
       stride = get_stride(self)
       if slice[:single]
         if (@dtype == "RUBYOBJ") 
@@ -150,7 +167,7 @@ class NMatrix
     return result
   end
 #its by ref
-
+  
   def dense_storage_get(slice,stride)
     if slice[:single]
       return dense_storage_pos(slice[:coords],stride)

@@ -56,6 +56,7 @@ values =[0,1,2,3]
 p = NMatrix.seq(size, dtype: :int64, stype: :dense) +1
 puts p
 
+
 x=p.send(:sin)
 puts x
 
@@ -84,7 +85,8 @@ puts m[1,1,1,1]
 puts m[0,0,0..1,0..1]
 puts m[0,0...1,0,0..1]
 puts m[0,0..1,0,0..1]
-
+m[0,0,0,0]=21
+puts m
 
 
 describe NMatrix do
