@@ -4,11 +4,13 @@ import org.apache.commons.math3.linear.MatrixUtils;
 import org.apache.commons.math3.linear.ArrayRealVector;
 import org.apache.commons.math3.linear.RealVector;
 import org.apache.commons.math3.linear.MatrixUtils;
+import org.apache.commons.math3.linear.LUDecomposition;
 
 public class JNMatrixTwoD{
 	int rows, cols;
 	double[] elements;
 	RealMatrix nmat2d;
+	LUDecomposition solver;
 
 	public void set_rows(int rows){
 		this.rows = rows;
@@ -36,18 +38,61 @@ public class JNMatrixTwoD{
 		}
 		return twoDArray;
 	}
+
+	public double[] one_d_array_generator(int rows, int cols, double[][] twoDArray){
+		double[] oneDArray = new double[rows*cols];
+		for (int i=0,index=0; i < rows;i++ ){
+			for(int j=0; j< cols; j++){
+				oneDArray[index] = twoDArray[i][j];
+				index++;
+			}
+		}
+		return oneDArray;
+	}
 	
 
 	public JNMatrixTwoD(int[] shape, double[] oneDArray){
 		set_rows(shape[0]);
 		set_cols(shape[1]);
-		nmat2d = MatrixUtils.createRealMatrix(two_d_array_generator(shape, oneDArray));
+		this.nmat2d = MatrixUtils.createRealMatrix(this.two_d_array_generator(shape, oneDArray));
+		solver = new LUDecomposition(this.nmat2d);
 	}
 
 	public boolean isSymmetric(){
 		double eps = 0;
 		return MatrixUtils.isSymmetric(this.nmat2d, eps);
 	}
+
+	public double	getDeterminant(){
+		return this.solver.getDeterminant();
+	}
+
+	public RealMatrix	getL(){
+		return this.solver.getL();
+	}
+
+	public RealMatrix	getU(){
+		return this.solver.getL();
+	}
+
+	public RealMatrix	getP(){
+		return this.solver.getP();
+	}
+
+	public int[]	getPivot(){
+		return this.solver.getPivot();
+	}
+
+	// public DecompositionSolver	getSolver(){
+
+	// }
+
+
+	public double[] inverse(){
+		RealMatrix result = MatrixUtils.inverse(this.nmat2d);
+		return this.one_d_array_generator(rows, cols, result.getData());
+	}
+
 
 	// Methods derived from Array2dRealMatrix
 
