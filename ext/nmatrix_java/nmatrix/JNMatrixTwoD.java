@@ -3,6 +3,7 @@ import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.MatrixUtils;
 import org.apache.commons.math3.linear.ArrayRealVector;
 import org.apache.commons.math3.linear.RealVector;
+import org.apache.commons.math3.linear.MatrixUtils;
 
 public class JNMatrixTwoD{
 	int rows, cols;
@@ -43,6 +44,10 @@ public class JNMatrixTwoD{
 		nmat2d = MatrixUtils.createRealMatrix(two_d_array_generator(shape, oneDArray));
 	}
 
+	public boolean isSymmetric(){
+		double eps = 0;
+		return MatrixUtils.isSymmetric(this.nmat2d, eps);
+	}
 
 	// Methods derived from Array2dRealMatrix
 

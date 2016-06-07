@@ -13,6 +13,7 @@ public class JNMatrix{
   public ArrayRealVector realArray;
   private String dtype_string;
   private String stype_string;
+  public JNMatrixTwoD twoDMat;
 
   private Dense_Storage storage;
   
@@ -31,6 +32,9 @@ public class JNMatrix{
     this.dtype = dtype;
     this.stype_string = dtype_string;
     this.dtype_string = dtype_string;
+    if (shape.length == 2){
+      this.twoDMat = new JNMatrixTwoD(shape, elements);
+    }
     // if(this.checkVectorDimensions(2)){
     //  //we have a double matrix
     // }
