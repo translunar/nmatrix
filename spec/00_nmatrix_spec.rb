@@ -27,68 +27,6 @@
 #
 require_relative 'spec_helper'
 
-m = NMatrix.new([2,2], [10,1,2,3], dtype: :int64)
-n = NMatrix.new([2,2], [10,1,2,13], dtype: :int64)
-puts m
-puts n
-puts m + n
-puts m + n + 1
-puts m - n
-puts m - n - 1
-puts m * n
-puts m * n * 2
-puts m / n
-puts m / n / 2
-# c = m==n
-# puts c
-# d= m+n +m
-# # puts c
-# puts d
-
-# q= m.send(:sin)
-# meth = :sin
-
-# puts x
-size = [2,2]
-shape = [2,2]
-values =[0,1,2,3]
-# m =NMatrix.new(shape, values, {:stype => :dense}.merge( dtype: :int64))
-p = NMatrix.seq(size, dtype: :int64, stype: :dense) +1
-puts p
-
-
-x=p.send(:sin)
-puts x
-
-puts N.new(size, values.map{ |e| Math.send(:sin, e) },dtype: :float64, stype: :dense)
-# N.new(@size, @a.map { |e| Math.send(meth, 1, e) }
-
-# puts q
-m = NMatrix.new([2,2,2,2], [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16], dtype: :int64)
-# puts m
-puts m[0,0,0,0]
-puts m[0,0,0,1]
-puts m[0,0,1,0]
-puts m[0,0,1,1]
-puts m[0,1,0,0]
-puts m[0,1,0,1]
-puts m[0,1,1,0]
-puts m[0,1,1,1]
-puts m[1,0,0,0]
-puts m[1,0,0,1]
-puts m[1,0,1,0]
-puts m[1,0,1,1]
-puts m[1,1,0,0]
-puts m[1,1,0,1]
-puts m[1,1,1,0]
-puts m[1,1,1,1]
-puts m[0,0,0..1,0..1]
-puts m[0,0...1,0,0..1]
-puts m[0,0..1,0,0..1]
-m[0,0,0,0]=21
-puts m
-
-
 describe NMatrix do
   it "creates a matrix with the new constructor" do
     n = NMatrix.new([2,2], [0,1,2,3], dtype: :int64)
