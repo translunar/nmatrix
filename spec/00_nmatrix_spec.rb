@@ -28,7 +28,7 @@
 require_relative 'spec_helper'
 
 n = NMatrix.new([3,3],[4,0,0,0,4,0,0,0,4], dtype: :int64)
-puts n.invert
+puts n.dot(n)
 describe NMatrix do
   it "creates a matrix with the new constructor" do
     n = NMatrix.new([2,2], [0,1,2,3], dtype: :int64)

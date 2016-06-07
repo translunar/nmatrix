@@ -93,6 +93,10 @@ public class JNMatrixTwoD{
 		return this.one_d_array_generator(rows, cols, result.getData());
 	}
 
+	public double[] multiply(JNMatrixTwoD other){
+		RealMatrix result = this.nmat2d.multiply(other.nmat2d);
+		return this.one_d_array_generator(rows, cols, result.getData());
+	}
 
 	// Methods derived from Array2dRealMatrix
 
