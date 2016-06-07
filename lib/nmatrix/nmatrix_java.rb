@@ -698,20 +698,20 @@ class NMatrix
     
   end
 
-  def symmetric?(nmat)
-    return is_symmetric(nmat, false)
+  def symmetric?
+    return is_symmetric(false)
   end
 
-  def is_symmetric(nmat, hermitian)
+  def is_symmetric(hermitian)
     is_symmetric = false
 
-    if (nmat.shape[0] == nmat.shape[1] and nmat.dim == 2)
-      if nmat.stype == :DENSE_STORE
+    if (@shape[0] == @shape[1] and @dim == 2)
+      if @stype == :dense
         if (hermitian)
           # is_symmetric = nm_dense_storage_is_hermitian((DENSE_STORAGE*)(m->storage), m->storage->shape[0]);
 
         else
-          # is_symmetric = nmat.is_symmetric((DENSE_STORAGE*)(m->storage), m->storage->shape[0]);
+          is_symmetric = @nmat.twoDMat.is_symmetric
         end
 
       else
