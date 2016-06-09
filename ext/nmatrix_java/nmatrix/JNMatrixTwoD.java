@@ -5,11 +5,13 @@ import org.apache.commons.math3.linear.ArrayRealVector;
 import org.apache.commons.math3.linear.RealVector;
 import org.apache.commons.math3.linear.MatrixUtils;
 import org.apache.commons.math3.linear.LUDecomposition;
+import org.apache.commons.math3.linear.BlockRealMatrix;
 
 public class JNMatrixTwoD{
 	int rows, cols;
 	double[] elements;
 	RealMatrix nmat2d;
+	BlockRealMatrix nmat2dblock;
 	LUDecomposition solver;
 
 	public void set_rows(int rows){
@@ -55,7 +57,10 @@ public class JNMatrixTwoD{
 		set_rows(shape[0]);
 		set_cols(shape[1]);
 		this.nmat2d = MatrixUtils.createRealMatrix(this.two_d_array_generator(shape, oneDArray));
-		solver = new LUDecomposition(this.nmat2d);
+		this.nmat2dblock = new BlockRealMatrix(this.two_d_array_generator(shape, oneDArray));
+		if(shape[0]==shape[1]){
+			solver = new LUDecomposition(this.nmat2d);
+		}
 	}
 
 	public boolean isSymmetric(){
@@ -94,7 +99,7 @@ public class JNMatrixTwoD{
 	}
 
 	public double[] multiply(JNMatrixTwoD other){
-		RealMatrix result = this.nmat2d.multiply(other.nmat2d);
+		BlockRealMatrix result = this.nmat2dblock.multiply(other.nmat2d);
 		return this.one_d_array_generator(rows, cols, result.getData());
 	}
 
