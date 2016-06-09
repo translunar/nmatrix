@@ -431,7 +431,7 @@ class NMatrix
         raise Exception.new("cannot compare matrices with different dimension")
       end
       #check shape
-      (0...dim).each do |i|
+      (i=0...dim).each do |i|
         if (@shape[i] != otherNmatrix.shape[i])
           raise Exception.new("cannot compare matrices with different shapes");
         end
@@ -453,7 +453,7 @@ class NMatrix
         raise Exception.new("cannot add matrices with different dimension")
       end
       #check shape
-      (0...dim).each do |i|
+      (i=0...dim).each do |i|
         if (@shape[i] != other.shape[i])
           raise Exception.new("cannot add matrices with different shapes");
         end
@@ -476,7 +476,7 @@ class NMatrix
         raise Exception.new("cannot subtract matrices with different dimension")
       end
       #check shape
-      (0...dim).each do |i|
+      (i=0...dim).each do |i|
         if (@shape[i] != other.shape[i])
           raise Exception.new("cannot subtract matrices with different shapes");
         end
@@ -499,7 +499,7 @@ class NMatrix
         raise Exception.new("cannot multiply matrices with different dimension")
       end
       #check shape
-      (0...dim).each do |i|
+      (i=0...dim).each do |i|
         if (@shape[i] != other.shape[i])
           raise Exception.new("cannot multiply matrices with different shapes");
         end
@@ -522,7 +522,7 @@ class NMatrix
         raise Exception.new("cannot divide matrices with different dimension")
       end
       #check shape
-      (0...dim).each do |i|
+      (i=0...dim).each do |i|
         if (@shape[i] != other.shape[i])
           raise Exception.new("cannot divide matrices with different shapes");
         end
@@ -688,7 +688,7 @@ class NMatrix
         return nil
       end
       #check shape
-      (0...dim).each do |i|
+      (i=0...dim).each do |i|
         if (@shape[i] != other.shape[i])
           raise Exception.new("cannot compare matrices with different shapes");
           return nil
@@ -713,7 +713,7 @@ class NMatrix
         return nil
       end
       #check shape
-      (0...dim).each do |i|
+      (i=0...dim).each do |i|
         if (@shape[i] != other.shape[i])
           raise Exception.new("cannot compare matrices with different shapes");
           return nil
@@ -738,7 +738,7 @@ class NMatrix
         return nil
       end
       #check shape
-      (0...dim).each do |i|
+      (i=0...dim).each do |i|
         if (@shape[i] != other.shape[i])
           raise Exception.new("cannot compare matrices with different shapes");
           return nil
@@ -763,7 +763,7 @@ class NMatrix
         return nil
       end
       #check shape
-      (0...dim).each do |i|
+      (i=0...dim).each do |i|
         if (@shape[i] != other.shape[i])
           raise Exception.new("cannot compare matrices with different shapes");
           return nil
@@ -788,7 +788,7 @@ class NMatrix
         return nil
       end
       #check shape
-      (0...dim).each do |i|
+      (i=0...dim).each do |i|
         if (@shape[i] != other.shape[i])
           raise Exception.new("cannot compare matrices with different shapes");
           return nil
@@ -813,7 +813,7 @@ class NMatrix
         return nil
       end
       #check shape
-      (0...dim).each do |i|
+      (i=0...dim).each do |i|
         if (@shape[i] != other.shape[i])
           raise Exception.new("cannot compare matrices with different shapes");
           return nil
@@ -841,20 +841,14 @@ class NMatrix
     result = nil
     if (other.is_a?(NMatrix))
       #check dimension
-      #check shape
       if (@shape.length!=2 || other.shape.length!=2)
         raise Exception.new("please convert array to nx1 or 1xn NMatrix first")
         return nil
       end
+      #check shape
       if (@shape[1] != other.shape[0])
         raise Exception.new("incompatible dimensions")
         return nil
-      end
-      #check shape
-      (0...dim).each do |i|
-        if (@shape[i] != other.shape[i])
-          raise Exception.new("cannot add matrices with different shapes");
-        end
       end
       resultArray = @nmat.twoDMat.multiply(other.nmat.twoDMat).to_a
       newShape= [@shape[0],other.shape[1]]
