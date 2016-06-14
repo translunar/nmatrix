@@ -1,70 +1,80 @@
 require 'java'
 require_relative '../../ext/nmatrix_java/vendor/commons-math3-3.6.1.jar'
-require_relative '../../ext/nmatrix_java/target/nmatrix.jar'
+# require_relative '../../ext/nmatrix_java/target/nmatrix.jar'
 
-java_import 'JNMatrix'
-java_import 'Dtype'
-java_import 'Stype'
+# java_import 'JNMatrix'
+# java_import 'Dtype'
+# java_import 'Stype'
 java_import 'org.apache.commons.math3.analysis.function.Sin'
+java_import 'org.apache.commons.math3.linear.ArrayRealVector'
 
 class NMatrix
   attr_accessor :shape , :dtype, :elements, :s, :dim, :nmat
 
 
   def initialize(*args)
-    # puts args.length
-    # puts args
-    if (args.length <= 3)
-      @shape = args[0]
-      if args[1].is_a?(Array)
-        elements = args[1]
-        hash = args[2]
+    if args[-1] == :copy
+      @shape = [2,2]
+      @s = [0,0,0,0]
+      @dim = shape.is_a?(Array) ? shape.length : 2
+    else
+      if (args.length <= 3)
+        @shape = args[0]
+        if args[1].is_a?(Array)
+          elements = args[1]
+          hash = args[2]
+        else
+          elements = Array.new()
+          hash = args[1] unless args.length<1
+        end
+      end
+
+      
+      offset = 0
+
+      if (!args[0].is_a?(Symbol) && !args[0].is_a?(String))
+        @stype = :dense
       else
-        elements = Array.new()
-        hash = args[1] unless args.length<1
+        offset = 1
+        @stype = :dense
       end
-    end
 
-    
-    offset = 0
+      @shape = args[offset]
+      @shape = [shape,shape] unless shape.is_a?(Array)
+      elements = args[offset+1]
 
-    if (!args[0].is_a?(Symbol) && !args[0].is_a?(String))
-      @stype = :dense
-    else
-      offset = 1
-      @stype = :dense
-    end
+      # @dtype = interpret_dtype(argc-1-offset, argv+offset+1, stype);
 
-    @shape = args[offset]
-    @shape = [shape,shape] unless shape.is_a?(Array)
-    elements = args[offset+1]
+      # @dtype = args[:dtype] if args[:dtype]
+      @dtype_sym = nil
+      @stype_sym = nil
+      @default_val_num = nil
+      @capacity_num = nil
+      
+      
+      @size = (0...@shape.size).inject(1) { |x,i| x * @shape[i] }
 
-    # @dtype = interpret_dtype(argc-1-offset, argv+offset+1, stype);
-
-    # @dtype = args[:dtype] if args[:dtype]
-    @dtype_sym = nil
-    @stype_sym = nil
-    @default_val_num = nil
-    @capacity_num = nil
-    
-    
-    @size = (0...@shape.size).inject(1) { |x,i| x * @shape[i] }
-
-    j=0;
-    @elements = Array.new(size)
-    if size > elements.length
-      (0...size).each do |i|
-        j=0 unless j!=elements.length
-        @elements[i] = elements[j]
-        j+=1
+      j=0;
+      if (elements.is_a?(ArrayRealVector))
+        @s = elements
+      else
+        storage = Array.new(size)
+        if size > elements.length
+          (0...size).each do |i|
+            j=0 unless j!=elements.length
+            storage[i] = elements[j]
+            j+=1
+          end
+        else
+          storage = elements
+        end
+        @s = ArrayRealVector.new(storage.to_java Java::double)
       end
-    else
-      @elements = elements
+      @dim = shape.is_a?(Array) ? shape.length : 2
     end
-    @dim = shape.is_a?(Array) ? shape.length : 2
-    @s = @elements
+    # @s = @elements
     # Java enums are accessible from Ruby code as constants:
-    @nmat= JNMatrix.new(@shape, @elements , "FLOAT32", "DENSE_STORE" )
+    # @nmat= JNMatrix.new(@shape, @elements , "FLOAT32", "DENSE_STORE" )
   end
 
   def entries
@@ -384,7 +394,7 @@ class NMatrix
   protected
 
   def __dense_each__
-    @s
+    @s.toArray().to_a
   end
 
   def __dense_map__
@@ -431,7 +441,7 @@ class NMatrix
         raise Exception.new("cannot compare matrices with different dimension")
       end
       #check shape
-      (i=0...dim).each do |i|
+      (0...dim).each do |i|
         if (@shape[i] != otherNmatrix.shape[i])
           raise Exception.new("cannot compare matrices with different shapes");
         end
@@ -445,7 +455,8 @@ class NMatrix
   end
 
   def +(other)
-    result = nil
+    result = NMatrix.new(:copy)
+    result.shape = @shape
     if (other.is_a?(NMatrix))
       #check dimension
       #check shape
@@ -453,22 +464,21 @@ class NMatrix
         raise Exception.new("cannot add matrices with different dimension")
       end
       #check shape
-      (i=0...dim).each do |i|
+      (0...dim).each do |i|
         if (@shape[i] != other.shape[i])
           raise Exception.new("cannot add matrices with different shapes");
         end
       end
-      resultArray = @nmat.add(other.nmat).to_a
-      result = NMatrix.new(shape, resultArray,  dtype: :int64)
+      result.s = @s.add(other.s)
     else
-      resultArray = @nmat.mapAddToSelf(other).to_a
-      result = NMatrix.new(shape, resultArray,  dtype: :int64)
+      result.s = @s.mapAddToSelf(other)
     end
     result
   end
 
   def -(other)
-    result = nil
+    result = NMatrix.new(:copy)
+    result.shape = @shape
     if (other.is_a?(NMatrix))
       #check dimension
       #check shape
@@ -476,22 +486,21 @@ class NMatrix
         raise Exception.new("cannot subtract matrices with different dimension")
       end
       #check shape
-      (i=0...dim).each do |i|
+      (0...dim).each do |i|
         if (@shape[i] != other.shape[i])
           raise Exception.new("cannot subtract matrices with different shapes");
         end
       end
-      resultArray = @nmat.subtract(other.nmat).to_a
-      result = NMatrix.new(shape, resultArray,  dtype: :int64)
+      result.s = @s.subtract(other.s)
     else
-      resultArray = @nmat.mapSubtractToSelf(other).to_a
-      result = NMatrix.new(shape, resultArray,  dtype: :int64)
+      result.s = @s.mapSubtractToSelf(other)
     end
     result
   end
 
   def *(other)
-    result = nil
+    result = NMatrix.new(:copy)
+    result.shape = @shape
     if (other.is_a?(NMatrix))
       #check dimension
       #check shape
@@ -499,16 +508,14 @@ class NMatrix
         raise Exception.new("cannot multiply matrices with different dimension")
       end
       #check shape
-      (i=0...dim).each do |i|
+      (0...dim).each do |i|
         if (@shape[i] != other.shape[i])
           raise Exception.new("cannot multiply matrices with different shapes");
         end
       end
-      resultArray = @nmat.ebeMultiply(other.nmat).to_a
-      result = NMatrix.new(shape, resultArray,  dtype: :int64)
+      result.s = @s.ebeMultiply(other.s)
     else
-      resultArray = @nmat.mapMultiplyToSelf(other).to_a
-      result = NMatrix.new(shape, resultArray,  dtype: :int64)
+      result.s = @s.mapMultiplyToSelf(other)
     end
     result
   end
@@ -540,8 +547,8 @@ class NMatrix
     @nmap.mapToSelf(univariate_function_power)
   end
 
-  def %
-    @nmap.mapToSelf(univariate_function_mod)
+  def %(other)
+    raise Exception.new("modulus not supported in NMatrix-jruby")
   end
 
   def atan2
