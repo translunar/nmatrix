@@ -125,8 +125,7 @@ class NMatrix
       stride = get_stride(self)
       if(slice[:single])
         pos = dense_storage_pos(slice[:coords],stride)
-        @s[pos] = value
-        @nmat.setEntry(pos, value)
+        @s.setEntry(pos, value)
         to_return = value
       else
         raise Exception.new("not supported")
@@ -170,7 +169,7 @@ class NMatrix
         if (@dtype == "RUBYOBJ") 
           # result = *reinterpret_cast<VALUE*>( ttable[NM_STYPE(self)](s, slice) );
         else                                
-          result = @s[dense_storage_get(slice,stride)]
+          result = @s.getEntry(dense_storage_get(slice,stride))
         end 
       else
         result = dense_storage_get(slice,stride)
@@ -190,13 +189,15 @@ class NMatrix
       end
       psrc = dense_storage_pos(slice[:coords], stride)
       src = {}
-      result = NMatrix.new(shape)
+      result = NMatrix.new(:copy)
+      result.shape = @shape
       dest = {}
       src[:stride] = get_stride(self)
-      src[:elements] = @s
+      src[:elements] = @s.toArray().to_a
       dest[:stride] = get_stride(result)
       dest[:shape] = shape
       dest[:elements] = []
+      temp = []
       result.s = slice_copy(src, dest, slice[:lengths], 0, psrc,0);
       return result
     end
@@ -213,7 +214,6 @@ class NMatrix
     else
       (0...dest[:shape][n]).each do |p|
         dest[:elements][p+pdest] = src[:elements][p+psrc]
-
       end
     end
     dest[:elements]
