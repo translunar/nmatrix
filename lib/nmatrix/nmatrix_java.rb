@@ -5,10 +5,11 @@ require_relative '../../ext/nmatrix_java/vendor/commons-math3-3.6.1.jar'
 # java_import 'JNMatrix'
 # java_import 'Dtype'
 # java_import 'Stype'
-java_import 'org.apache.commons.math3.analysis.function.Sin'
 java_import 'org.apache.commons.math3.linear.ArrayRealVector'
 
+
 class NMatrix
+  include_package 'org.apache.commons.math3.analysis.function'
   attr_accessor :shape , :dtype, :elements, :s, :dim, :nmat
 
 
@@ -521,7 +522,8 @@ class NMatrix
   end
 
   def /(other)
-    result = nil
+    result = NMatrix.new(:copy)
+    result.shape = @shape
     if (other.is_a?(NMatrix))
       #check dimension
       #check shape
@@ -529,16 +531,14 @@ class NMatrix
         raise Exception.new("cannot divide matrices with different dimension")
       end
       #check shape
-      (i=0...dim).each do |i|
+      (0...dim).each do |i|
         if (@shape[i] != other.shape[i])
           raise Exception.new("cannot divide matrices with different shapes");
         end
       end
-      resultArray = @nmat.ebeDivide(other.nmat).to_a
-      result = NMatrix.new(shape, resultArray,  dtype: :int64)
+      result.s = @s.ebeDivide(other.s)
     else
-      resultArray = @nmat.mapDivideToSelf(other).to_a
-      result = NMatrix.new(shape, resultArray,  dtype: :int64)
+      result.s = @s.mapDivideToSelf(other)
     end
     result
   end
@@ -567,83 +567,115 @@ class NMatrix
   end
 
   def sin
-    resultArray = @nmat.mapSinToSelf().to_a
-    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
+    result = NMatrix.new(:copy)
+    result.shape = @shape
+    result.s = @s.mapToSelf(Sin.new())
+    result
   end
 
   def cos
-    resultArray = @nmat.mapCosToSelf().to_a
-    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
+    result = NMatrix.new(:copy)
+    result.shape = @shape
+    result.s = @s.mapToSelf(Cos.new())
+    result
   end
 
   def tan
-    resultArray = @nmat.mapTanToSelf().to_a
-    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
+    result = NMatrix.new(:copy)
+    result.shape = @shape
+    result.s = @s.mapToSelf(Tan.new())
+    result
   end
 
   def asin
-    resultArray = @nmat.mapAsinToSelf().to_a
-    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
+    result = NMatrix.new(:copy)
+    result.shape = @shape
+    result.s = @s.mapToSelf(Asin.new())
+    result
   end
 
   def acos
-    resultArray = @nmat.mapAcosToSelf().to_a
-    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
+    result = NMatrix.new(:copy)
+    result.shape = @shape
+    result.s = @s.mapToSelf(Acos.new())
+    result
   end
 
   def atan
-    resultArray = @nmat.mapAtanToSelf().to_a
-    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
+    result = NMatrix.new(:copy)
+    result.shape = @shape
+    result.s = @s.mapToSelf(Atan.new())
+    result
   end
 
   def sinh
-    resultArray = @nmat.mapSinhToSelf().to_a
-    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
+    result = NMatrix.new(:copy)
+    result.shape = @shape
+    result.s = @s.mapToSelf(Sinh.new())
+    result
   end
 
   def cosh
-    resultArray = @nmat.mapCoshToSelf().to_a
-    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
+    result = NMatrix.new(:copy)
+    result.shape = @shape
+    result.s = @s.mapToSelf(Cosh.new())
+    result
   end
 
   def tanh
-    resultArray = @nmat.mapTanhToSelf().to_a
-    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
+    result = NMatrix.new(:copy)
+    result.shape = @shape
+    result.s = @s.mapToSelf(Tanh.new())
+    result
   end
 
   def asinh
-    resultArray = @nmat.mapAsinhToSelf().to_a
-    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
+    result = NMatrix.new(:copy)
+    result.shape = @shape
+    result.s = @s.mapToSelf(Asinh.new())
+    result
   end
 
   def acosh
-    resultArray = @nmat.mapAcoshToSelf().to_a
-    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
+    result = NMatrix.new(:copy)
+    result.shape = @shape
+    result.s = @s.mapToSelf(Acosh.new())
+    result
   end
 
   def atanh
-    resultArray = @nmat.mapAtanhToSelf().to_a
-    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
+    result = NMatrix.new(:copy)
+    result.shape = @shape
+    result.s = @s.mapToSelf(Atanh.new())
+    result
   end
 
   def exp
-    resultArray = @nmat.mapExpToSelf().to_a
-    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
+    result = NMatrix.new(:copy)
+    result.shape = @shape
+    result.s = @s.mapToSelf(Exp.new())
+    result
   end
 
-  def log2
-    resultArray = @nmat.mapLog2ToSelf().to_a
-    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
+  def log
+    result = NMatrix.new(:copy)
+    result.shape = @shape
+    result.s = @s.mapToSelf(Log.new())
+    result
   end
 
   def log10
-    resultArray = @nmat.mapLog10ToSelf().to_a
-    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
+    result = NMatrix.new(:copy)
+    result.shape = @shape
+    result.s = @s.mapToSelf(Log10.new())
+    result
   end
 
   def sqrt
-    resultArray = @nmat.mapSqrtToSelf().to_a
-    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
+    result = NMatrix.new(:copy)
+    result.shape = @shape
+    result.s = @s.mapToSelf(Sqrt.new())
+    result
   end
 
   def erf
@@ -655,17 +687,14 @@ class NMatrix
   end
 
   def cbrt
-    resultArray = @nmat.mapCbrtToSelf().to_a
-    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
+    result = NMatrix.new(:copy)
+    result.shape = @shape
+    result.s = @s.mapToSelf(Cbrt.new())
+    result
   end
 
   def gamma
     # @nmap.mapToSelf(univariate_function_)
-  end
-
-  def log
-    resultArray = @nmat.mapLogToSelf().to_a
-    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
   end
 
   def -@
@@ -673,13 +702,17 @@ class NMatrix
   end
 
   def floor
-    resultArray = @nmat.mapFloorToSelf().to_a
-    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
+    result = NMatrix.new(:copy)
+    result.shape = @shape
+    result.s = @s.mapToSelf(Floor.new())
+    result
   end
 
   def ceil
-    resultArray = @nmat.mapCeilToSelf().to_a
-    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
+    result = NMatrix.new(:copy)
+    result.shape = @shape
+    result.s = @s.mapToSelf(Ceil.new())
+    result
   end
 
   def round
