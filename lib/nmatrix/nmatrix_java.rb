@@ -432,7 +432,7 @@ class NMatrix
 
   public
 
-  def == (otherNmatrix)
+  def ==(otherNmatrix)
     result = false
     if (otherNmatrix.is_a?(NMatrix))
       #check dimension
@@ -449,7 +449,7 @@ class NMatrix
 
       #check the entries
 
-      result = @nmat.equals(otherNmatrix.nmat)
+      result = @s.equals(otherNmatrix.s)
     end
     result
   end
@@ -687,7 +687,9 @@ class NMatrix
   end
 
   def =~ (other)
-    resultArray = Array.new(@s.length)
+    lha = @s.toArray.to_a
+    rha = other.s.toArray.to_a
+    resultArray = Array.new(lha.length)
     if (other.is_a?(NMatrix))
       #check dimension
       if (@dim != other.dim)
@@ -695,16 +697,15 @@ class NMatrix
         return nil
       end
       #check shape
-      (i=0...dim).each do |i|
+      (0...dim).each do |i|
         if (@shape[i] != other.shape[i])
           raise Exception.new("cannot compare matrices with different shapes");
           return nil
         end
       end
-
       #check the entries
-      (0...@s.length).each do |i|
-        resultArray[i] = @s[i] =~ other.s[i] ? true : false
+      (0...lha.length).each do |i|
+        resultArray[i] = lha[i] =~ rha[i] ? true : false
       end
       # result = NMatrix.new(@shape, resultArray, dtype: :int64)
     end
@@ -712,7 +713,9 @@ class NMatrix
   end
 
   def !~ (other)
-    resultArray = Array.new(@s.length)
+    lha = @s.toArray.to_a
+    rha = other.s.toArray.to_a
+    resultArray = Array.new(lha.length)
     if (other.is_a?(NMatrix))
       #check dimension
       if (@dim != other.dim)
@@ -720,16 +723,15 @@ class NMatrix
         return nil
       end
       #check shape
-      (i=0...dim).each do |i|
+      (0...dim).each do |i|
         if (@shape[i] != other.shape[i])
           raise Exception.new("cannot compare matrices with different shapes");
           return nil
         end
       end
-
       #check the entries
-      (0...@s.length).each do |i|
-        resultArray[i] = @s[i] !~ other.s[i] ? true : false
+      (0...lha.length).each do |i|
+        resultArray[i] = lha[i] !~ rha[i] ? true : false
       end
       # result = NMatrix.new(@shape, resultArray, dtype: :int64)
     end
@@ -737,7 +739,9 @@ class NMatrix
   end
 
   def <= (other)
-    resultArray = Array.new(@s.length)
+    lha = @s.toArray.to_a
+    rha = other.s.toArray.to_a
+    resultArray = Array.new(lha.length)
     if (other.is_a?(NMatrix))
       #check dimension
       if (@dim != other.dim)
@@ -745,16 +749,15 @@ class NMatrix
         return nil
       end
       #check shape
-      (i=0...dim).each do |i|
+      (0...dim).each do |i|
         if (@shape[i] != other.shape[i])
           raise Exception.new("cannot compare matrices with different shapes");
           return nil
         end
       end
-
       #check the entries
-      (0...@s.length).each do |i|
-        resultArray[i] = @s[i] <= other.s[i] ? true : false
+      (0...lha.length).each do |i|
+        resultArray[i] = lha[i] <= rha[i] ? true : false
       end
       # result = NMatrix.new(@shape, resultArray, dtype: :int64)
     end
@@ -762,7 +765,9 @@ class NMatrix
   end
 
   def >= (other)
-    resultArray = Array.new(@s.length)
+    lha = @s.toArray.to_a
+    rha = other.s.toArray.to_a
+    resultArray = Array.new(lha.length)
     if (other.is_a?(NMatrix))
       #check dimension
       if (@dim != other.dim)
@@ -770,16 +775,15 @@ class NMatrix
         return nil
       end
       #check shape
-      (i=0...dim).each do |i|
+      (0...dim).each do |i|
         if (@shape[i] != other.shape[i])
           raise Exception.new("cannot compare matrices with different shapes");
           return nil
         end
       end
-
       #check the entries
-      (0...@s.length).each do |i|
-        resultArray[i] = @s[i] >= other.s[i] ? true : false
+      (0...lha.length).each do |i|
+        resultArray[i] = lha[i] >= rha[i] ? true : false
       end
       # result = NMatrix.new(@shape, resultArray, dtype: :int64)
     end
@@ -787,7 +791,9 @@ class NMatrix
   end
 
   def < (other)
-    resultArray = Array.new(@s.length)
+    lha = @s.toArray.to_a
+    rha = other.s.toArray.to_a
+    resultArray = Array.new(lha.length)
     if (other.is_a?(NMatrix))
       #check dimension
       if (@dim != other.dim)
@@ -795,16 +801,15 @@ class NMatrix
         return nil
       end
       #check shape
-      (i=0...dim).each do |i|
+      (0...dim).each do |i|
         if (@shape[i] != other.shape[i])
           raise Exception.new("cannot compare matrices with different shapes");
           return nil
         end
       end
-
       #check the entries
-      (0...@s.length).each do |i|
-        resultArray[i] = @s[i] < other.s[i] ? true : false
+      (0...lha.length).each do |i|
+        resultArray[i] = lha[i] < rha[i] ? true : false
       end
       # result = NMatrix.new(@shape, resultArray, dtype: :int64)
     end
@@ -812,7 +817,9 @@ class NMatrix
   end
 
   def > (other)
-    resultArray = Array.new(@s.length)
+    lha = @s.toArray.to_a
+    rha = other.s.toArray.to_a
+    resultArray = Array.new(lha.length)
     if (other.is_a?(NMatrix))
       #check dimension
       if (@dim != other.dim)
@@ -820,16 +827,15 @@ class NMatrix
         return nil
       end
       #check shape
-      (i=0...dim).each do |i|
+      (0...dim).each do |i|
         if (@shape[i] != other.shape[i])
           raise Exception.new("cannot compare matrices with different shapes");
           return nil
         end
       end
-
       #check the entries
-      (0...@s.length).each do |i|
-        resultArray[i] = @s[i] > other.s[i] ? true : false
+      (0...lha.length).each do |i|
+        resultArray[i] = lha[i] > rha[i] ? true : false
       end
       # result = NMatrix.new(@shape, resultArray, dtype: :int64)
     end
