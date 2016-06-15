@@ -6,11 +6,13 @@ require_relative '../../ext/nmatrix_java/vendor/commons-math3-3.6.1.jar'
 # java_import 'Dtype'
 # java_import 'Stype'
 java_import 'org.apache.commons.math3.linear.ArrayRealVector'
+java_import 'org.apache.commons.math3.linear.RealMatrix'
+java_import 'org.apache.commons.math3.linear.MatrixUtils'
 
 
 class NMatrix
   include_package 'org.apache.commons.math3.analysis.function'
-  attr_accessor :shape , :dtype, :elements, :s, :dim, :nmat
+  attr_accessor :shape , :dtype, :elements, :s, :dim, :nmat, :twoDMat
 
 
   def initialize(*args)
@@ -72,6 +74,21 @@ class NMatrix
         @s = ArrayRealVector.new(storage.to_java Java::double)
       end
       @dim = shape.is_a?(Array) ? shape.length : 2
+
+      if(shape.length == 2 )
+        oneDArray = @s.toArray().to_a
+        twoDArray = Java::double[shape[0],shape[1]].new
+        index = 0
+        (0...shape[0]).each do |i|
+          (0...shape[1]).each do |j|
+            twoDArray[i][j] = oneDArray[index]
+            index+=1
+          end
+        end
+        @twoDMat = MatrixUtils.createRealMatrix(twoDArray)
+        # puts "inited"
+      end
+        
     end
     # @s = @elements
     # Java enums are accessible from Ruby code as constants:
@@ -883,6 +900,18 @@ class NMatrix
   # // Matrix Math Methods //
   # /////////////////////////
 
+  def get_oneDArray(shape,twoDArray)
+    oneDArray = Java::double[shape[0]*shape[1]].new
+    index = 0
+    (0...shape[0]).each do |i|
+      (0...shape[1]).each do |j|
+        oneDArray[index] = twoDArray[i][j]
+        index+=1
+      end
+    end
+    oneDArray
+  end
+
   def dot(other)
     result = nil
     if (other.is_a?(NMatrix))
@@ -896,9 +925,11 @@ class NMatrix
         raise Exception.new("incompatible dimensions")
         return nil
       end
-      resultArray = @nmat.twoDMat.multiply(other.nmat.twoDMat).to_a
-      newShape= [@shape[0],other.shape[1]]
-      result = NMatrix.new(newShape, resultArray,  dtype: :int64)
+      
+      result = NMatrix.new(:copy)
+      result.shape = @shape
+      result.twoDMat = @twoDMat.multiply(other.twoDMat)
+      result.s = ArrayRealVector.new(get_oneDArray(@shape, result.twoDMat.getData()))
     else
       raise Exception.new("cannot have dot product with a scalar");
     end
@@ -918,7 +949,8 @@ class NMatrix
           # is_symmetric = nm_dense_storage_is_hermitian((DENSE_STORAGE*)(m->storage), m->storage->shape[0]);
 
         else
-          is_symmetric = @nmat.twoDMat.is_symmetric
+          eps = 0
+          is_symmetric = MatrixUtils.isSymmetric(@twoDMat, eps)
         end
 
       else
