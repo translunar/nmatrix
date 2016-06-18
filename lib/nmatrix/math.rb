@@ -323,9 +323,20 @@ class NMatrix
   #   - +ShapeError+ -> Must be square.
   #   - +NotImplementedError+ -> If called without nmatrix-atlas or nmatrix-lapacke gem
   #
-  def potrf!(which)
+  def potrf!(which,relativeSymmetryThreshold, absolutePositivityThreshold)
     # The real implementation is in the plugin files.
-    raise(NotImplementedError, "potrf! requires either the nmatrix-atlas or nmatrix-lapacke gem")
+    if jruby?
+      cholesky = CholeskyDecomposition.new(@twoDMat,relativeSymmetryThreshold, absolutePositivityThreshold)
+      if which == :upper
+        # @twoDMat = 
+        return cholesky.getLT().getData.to_a
+      else
+        @twoDMat = cholesky.getLT()
+        return @twoDMat.toArray.to_a
+      end
+    else
+      raise(NotImplementedError, "potrf! requires either the nmatrix-atlas or nmatrix-lapacke gem")
+    end
   end
 
   def potrf_upper!

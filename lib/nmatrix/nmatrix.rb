@@ -410,7 +410,7 @@ class NMatrix
   #
   def to_flat_array
     ary = Array.new(self.size)
-    ary = self.each
+    self.each.with_index { |v,i| ary[i] = v }
     ary
   end
   alias :to_flat_a :to_flat_array

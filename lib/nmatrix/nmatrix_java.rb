@@ -12,7 +12,7 @@ java_import 'org.apache.commons.math3.linear.MatrixUtils'
 
 class NMatrix
   include_package 'org.apache.commons.math3.analysis.function'
-  attr_accessor :shape , :dtype, :elements, :s, :dim, :nmat, :twoDMat
+  attr_accessor :shape , :dtype, :elements, :s, :nmat, :twoDMat
 
 
   def initialize(*args)
@@ -158,11 +158,11 @@ class NMatrix
     
   end
 
-  def dimensions
-    @dim
+  def dim
+    shape.is_a?(Array) ? shape.length : 2
   end
 
-  def effective_dim
+  def effective_dim(s)
     d = 0
     (0...@dim).each do |i|
       d+=1 unless @shape[i] == 1
@@ -173,10 +173,10 @@ class NMatrix
   def xslice(args)
     result = nil
 
-    s = @elements
+    s = @s.toArray().to_a
 
     if @dim < args.length
-      raise Exception.new("wrong number of arguments (%d for %lu)", args, effective_dim(s))
+      raise Exception.new("wrong number of arguments (%d for %lu)", args, effective_dim(self))
     else
       result = Array.new()
 
@@ -215,7 +215,12 @@ class NMatrix
       dest[:shape] = shape
       dest[:elements] = []
       temp = []
-      result.s = slice_copy(src, dest, slice[:lengths], 0, psrc,0);
+      s = (slice_copy(src, dest, slice[:lengths], 0, psrc,0))
+      arr = Java::double[s.length].new
+      (0...s.length).each do |i|
+        arr[i] = s[i]
+      end
+      result.s = ArrayRealVector.new(arr)
       return result
     end
   end
@@ -412,7 +417,7 @@ class NMatrix
   protected
 
   def __dense_each__
-    @s.toArray().to_a
+    @s.toArray().to_a.to_enum
   end
 
   def __dense_map__
