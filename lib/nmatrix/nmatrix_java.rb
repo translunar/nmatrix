@@ -932,9 +932,9 @@ class NMatrix
       end
       
       result = NMatrix.new(:copy)
-      result.shape = @shape
+      result.shape = [shape[0],other.shape[1]]
       result.twoDMat = @twoDMat.multiply(other.twoDMat)
-      result.s = ArrayRealVector.new(get_oneDArray(@shape, result.twoDMat.getData()))
+      result.s = ArrayRealVector.new(get_oneDArray(result.shape, result.twoDMat.getData()))
     else
       raise Exception.new("cannot have dot product with a scalar");
     end
