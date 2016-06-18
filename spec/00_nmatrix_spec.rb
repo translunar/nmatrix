@@ -26,10 +26,8 @@
 # essential to NMatrix operation.
 #
 require_relative 'spec_helper'
-n = NMatrix.new(:dense, 2, [1,2,3,4], :int64)
-m = NMatrix.new([3,3],[4,0,3,0,4,0,0,0,4], dtype: :int64)
-n = NMatrix.new([3,3],[4,0,0,3,4,0,0,0,4], dtype: :int64)
-puts m !~ n
+m = NMatrix.new([4,1], [2,-4,3,5], dtype: :int64)
+puts m.nrm2
 q= NMatrix.new(:dense, [2,2], [-1, -2, 1, 0], :int64)
 describe NMatrix do
   it "creates a matrix with the new constructor" do
