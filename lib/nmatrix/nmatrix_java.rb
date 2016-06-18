@@ -207,7 +207,11 @@ class NMatrix
       psrc = dense_storage_pos(slice[:coords], stride)
       src = {}
       result = NMatrix.new(:copy)
-      result.shape = @shape
+      resultShape= Array.new(dim)
+      (0...dim).each do |i|
+        resultShape[i]  = slice[:lengths][i]
+      end
+      result.shape = resultShape
       dest = {}
       src[:stride] = get_stride(self)
       src[:elements] = @s.toArray().to_a
