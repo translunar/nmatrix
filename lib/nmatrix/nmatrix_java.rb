@@ -10,6 +10,7 @@ java_import 'org.apache.commons.math3.linear.RealMatrix'
 java_import 'org.apache.commons.math3.linear.MatrixUtils'
 java_import 'org.apache.commons.math3.linear.LUDecomposition'
 java_import 'org.apache.commons.math3.linear.QRDecomposition'
+java_import 'org.apache.commons.math3.linear.CholeskyDecomposition'
 
 class NMatrix
   include_package 'org.apache.commons.math3.analysis.function'
@@ -959,8 +960,9 @@ class NMatrix
     if (@shape[0] == @shape[1] and @dim == 2)
       if @stype == :dense
         if (hermitian)
-          # is_symmetric = nm_dense_storage_is_hermitian((DENSE_STORAGE*)(m->storage), m->storage->shape[0]);
-
+          #Currently, we are not dealing with complex matrices.
+          eps = 0
+          is_symmetric = MatrixUtils.isSymmetric(@twoDMat, eps)
         else
           eps = 0
           is_symmetric = MatrixUtils.isSymmetric(@twoDMat, eps)
@@ -975,7 +977,7 @@ class NMatrix
   end
 
   def hermitian?
-    
+    return is_symmetric(true)
   end
 
   def capacity
