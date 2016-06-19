@@ -341,9 +341,9 @@ class NMatrix
 
   public
 
-  # def shape
-    
-  # end
+  def shape
+    @shape
+  end
 
   def supershape
     
@@ -367,11 +367,13 @@ class NMatrix
     if (dtype == :RUBYOBJ)
       # to_return = *reinterpret_cast<VALUE*>(result);
     else
-      to_return = @nmat.twoDMat.getDeterminant()
+      to_return = LUDecomposition.new(twoDMat).getDeterminant()
     end
 
     return to_return
   end
+
+  alias :det :det_exact
 
   def complex_conjugate!
 
