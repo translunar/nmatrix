@@ -1138,7 +1138,11 @@ class NMatrix
 
   def scale!(alpha, incx=1, n=nil)
     if jruby?
-      @s = @s.mapMultiplyToSelf(alpha)
+      @s.mapMultiplyToSelf(alpha)
+      if dim == 2
+        @twoDMat.scalarMultiply(alpha)
+      end
+      return self
     else
       raise(DataTypeError, "Incompatible data type for the scaling factor") unless
           NMatrix::upcast(self.dtype, NMatrix::min_dtype(alpha)) == self.dtype
@@ -1146,6 +1150,7 @@ class NMatrix
       self.each_stored_with_indices do |e, *i|
         self[*i] = e*alpha
       end
+      return self
     end
   end
 
@@ -1161,7 +1166,17 @@ class NMatrix
   # Return the scaling result of the matrix. BLAS scal will be invoked if provided.
   
   def scale(alpha, incx=1, n=nil)
-    return self.clone.scale!(alpha, incx, n)
+    if jruby?
+      nmatrix = NMatrix.new :copy
+      nmatrix.shape = @shape.clone
+      nmatrix.s = ArrayRealVector.new(@s.toArray.clone).mapMultiplyToSelf(alpha)
+      if dim == 2
+        nmatrix.twoDMat = MatrixUtils.createMatrix(@s.getData.clone).scalarMultiply(alpha)
+      end
+      return nmatrix
+    else
+      return self.clone.scale!(alpha, incx, n)
+    end
   end
 
   alias :permute_columns  :laswp
