@@ -26,11 +26,27 @@
 # essential to NMatrix operation.
 #
 require_relative 'spec_helper'
-n = NMatrix.new(:dense, 2, [1,2,3,4], :int64)
-m = NMatrix.new([3,3],[4,0,3,0,4,0,0,0,4], dtype: :int64)
-n = NMatrix.new([3,3],[4,0,0,3,4,0,0,0,4], dtype: :int64)
-puts m.nrm2
-q= NMatrix.new(:dense, [2,2], [-1, -2, 1, 0], :int64)
+# n = NMatrix.new(:dense, 2, [1,2,3,4], :int64)
+# m = NMatrix.new([3,3],[4,0,3,0,4,0,0,0,4], dtype: :int64)
+n = NMatrix.new([3,3,3],[4,0,0,3,4,0,0,0,4], dtype: :int64)
+size = [2,2]
+dtype = :int64
+stype = :dense
+# m = NMatrix.seq(size, dtype: dtype, stype: stype)+1
+# puts m
+# a = m.to_a.flatten
+# puts a
+# N.new(@size, @a.map{ |e| Math.send(meth, e) },dtype: :float64, stype: stype)
+
+m = NMatrix.seq(size, dtype: dtype, stype: stype)/4
+a = m.to_a.flatten
+atf = :tan
+# [:asin, :acos, :atan, :atanh].each do |atf|
+puts m.send(atf)
+
+puts N.new(size, a.map { |e| Math.send(atf, e) }, dtype: dtype, stype: stype)
+
+# q= NMatrix.new(:dense, [2,2], [-1, -2, 1, 0], :int64)
 describe NMatrix do
   it "creates a matrix with the new constructor" do
     n = NMatrix.new([2,2], [0,1,2,3], dtype: :int64)

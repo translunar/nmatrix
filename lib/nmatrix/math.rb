@@ -182,24 +182,29 @@ class NMatrix
   #   - +StorageTypeError+ -> ATLAS functions only work on dense matrices.
   #
   def getrf!
-    raise(StorageTypeError, "ATLAS functions only work on dense matrices") unless self.dense?
+    if jruby?
+      ipiv = LUDecomposition.new(@twoDMat).getPivot.to_a
+      return ipiv
+    else
+      raise(StorageTypeError, "ATLAS functions only work on dense matrices") unless self.dense?
 
-    #For row-major matrices, clapack_getrf uses a different convention than
-    #described above (U has unit diagonal elements instead of L and columns
-    #are interchanged rather than rows). For column-major matrices, clapack
-    #uses the stanard conventions. So we just transpose the matrix before
-    #and after calling clapack_getrf.
-    #Unfortunately, this is not a very good way, uses a lot of memory.
-    temp = self.transpose
-    ipiv = NMatrix::LAPACK::clapack_getrf(:col, self.shape[0], self.shape[1], temp, self.shape[0])
-    temp = temp.transpose
-    self[0...self.shape[0], 0...self.shape[1]] = temp
+      #For row-major matrices, clapack_getrf uses a different convention than
+      #described above (U has unit diagonal elements instead of L and columns
+      #are interchanged rather than rows). For column-major matrices, clapack
+      #uses the stanard conventions. So we just transpose the matrix before
+      #and after calling clapack_getrf.
+      #Unfortunately, this is not a very good way, uses a lot of memory.
+      temp = self.transpose
+      ipiv = NMatrix::LAPACK::clapack_getrf(:col, self.shape[0], self.shape[1], temp, self.shape[0])
+      temp = temp.transpose
+      self[0...self.shape[0], 0...self.shape[1]] = temp
 
-    #for some reason, in clapack_getrf, the indices in ipiv start from 0
-    #instead of 1 as in LAPACK.
-    ipiv.each_index { |i| ipiv[i]+=1 }
+      #for some reason, in clapack_getrf, the indices in ipiv start from 0
+      #instead of 1 as in LAPACK.
+      ipiv.each_index { |i| ipiv[i]+=1 }
 
-    return ipiv
+      return ipiv
+    end
   end
 
   #
@@ -361,6 +366,7 @@ class NMatrix
   # sure it is positive-definite.
   def factorize_cholesky
     raise "Matrix must be symmetric/Hermitian for Cholesky factorization" unless self.hermitian?
+    
     l = self.clone.potrf_lower!.tril!
     u = l.conjugate_transpose
     [u,l]
@@ -382,12 +388,21 @@ class NMatrix
   def factorize_lu with_permutation_matrix=nil
     raise(NotImplementedError, "only implemented for dense storage") unless self.stype == :dense
     raise(NotImplementedError, "matrix is not 2-dimensional") unless self.dimensions == 2
+    if jruby?
+      t = self.clone
+      pivot = NMatrix.new(:copy)
+      pivot.shape = @shape
+      pivot.twoDMat = LUDecomposition.new(@twoDMat).getP
+      pivot.s = ArrayRealVector.new(get_oneDArray(@shape, pivot.twoDMat.getData))
+      return [t,pivot]
+    else
 
-    t     = self.clone
-    pivot = t.getrf!
-    return t unless with_permutation_matrix
+      t     = self.clone
+      pivot = t.getrf!
+      return t unless with_permutation_matrix
 
-    [t, FactorizeLUMethods.permutation_matrix_from(pivot)]
+      [t, FactorizeLUMethods.permutation_matrix_from(pivot)]
+    end
   end
 
   #
@@ -408,26 +423,40 @@ class NMatrix
   #   - +ShapeError+ -> Input must be a 2-dimensional matrix to have a QR decomposition.
   #
   def factorize_qr
+
     raise(NotImplementedError, "only implemented for dense storage") unless self.stype == :dense
     raise(ShapeError, "Input must be a 2-dimensional matrix to have a QR decomposition") unless self.dim == 2
-
-    rows, columns = self.shape
-    r = self.clone
-    tau =  r.geqrf!
-    
-    #Obtain Q 
-    q = self.complex_dtype? ? r.unmqr(tau) : r.ormqr(tau)
-    
-    #Obtain R    
-    if rows <= columns
-      r.upper_triangle!
-    #Need to account for upper trapezoidal structure if R is a tall rectangle (rows > columns)
+    if jruby?
+      qrdecomp = QRDecomposition.new(@twoDMat)
+      qmat = NMatrix.new(:copy)
+      qmat.shape = @shape
+      qmat.twoDMat = qrdecomp.getQ
+      qmat.s = ArrayRealVector.new(get_oneDArray(@shape, qmat.twoDMat.getData))
+      rmat = NMatrix.new(:copy)
+      rmat.shape = shape
+      rmat.twoDMat = qrdecomp.getR
+      rmat.s = ArrayRealVector.new(get_oneDArray(@shape, rmat.twoDMat.getData))
+      return [qmat,rmat]
     else
-      r[0...columns, 0...columns].upper_triangle!
-      r[columns...rows, 0...columns] = 0
+
+      rows, columns = self.shape
+      r = self.clone
+      tau =  r.geqrf!
+      
+      #Obtain Q 
+      q = self.complex_dtype? ? r.unmqr(tau) : r.ormqr(tau)
+      
+      #Obtain R    
+      if rows <= columns
+        r.upper_triangle!
+      #Need to account for upper trapezoidal structure if R is a tall rectangle (rows > columns)
+      else
+        r[0...columns, 0...columns].upper_triangle!
+        r[columns...rows, 0...columns] = 0
+      end
+      return [q,r]
     end
 
-    [q,r]
   end
 
   # Reduce self to upper hessenberg form using householder transforms.
