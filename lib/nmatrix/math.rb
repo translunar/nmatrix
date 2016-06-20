@@ -80,7 +80,11 @@ class NMatrix
     raise(DataTypeError, "Cannot invert an integer matrix in-place") if self.integer_dtype?
 
     #No internal implementation of getri, so use this other function
-    __inverse__(self, true)
+    if jruby?
+      __inverse__!
+    else
+      __inverse__(self, true)
+    end
   end
 
   #
@@ -102,12 +106,16 @@ class NMatrix
   def invert
     #write this in terms of invert! so plugins will only have to overwrite
     #invert! and not invert
-    if self.integer_dtype?
-      cloned = self.cast(dtype: :float64)
-      cloned.invert!
+    if jruby?
+      __inverse__
     else
-      cloned = self.clone
-      cloned.invert!
+      if self.integer_dtype?
+        cloned = self.cast(dtype: :float64)
+        cloned.invert!
+      else
+        cloned = self.clone
+        cloned.invert!
+      end
     end
   end
   alias :inverse :invert
