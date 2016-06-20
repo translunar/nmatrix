@@ -559,36 +559,54 @@ class NMatrix
     x    = b.clone
     n    = self.shape[0]
     nrhs = b.shape[1]
+    if jruby?
+      
+      case opts[:form] 
+      when :general
 
-    case opts[:form] 
-    when :general
-      clone = self.clone
-      ipiv = NMatrix::LAPACK.clapack_getrf(:row, n, n, clone, n)
-      # When we call clapack_getrs with :row, actually only the first matrix
-      # (i.e. clone) is interpreted as row-major, while the other matrix (x)
-      # is interpreted as column-major. See here: http://math-atlas.sourceforge.net/faq.html#RowSolve
-      # So we must transpose x before and after
-      # calling it.
-      x = x.transpose
-      NMatrix::LAPACK.clapack_getrs(:row, :no_transpose, n, nrhs, clone, n, ipiv, x, n)
-      x.transpose
-    when :upper_tri, :upper_triangular
-      raise(ArgumentError, "upper triangular solver does not work with complex dtypes") if
-        complex_dtype? or b.complex_dtype?
-      # this is the correct function call; see https://github.com/SciRuby/nmatrix/issues/374
-      NMatrix::BLAS::cblas_trsm(:row, :left, :upper, false, :nounit, n, nrhs, 1.0, self, n, x, nrhs)
-      x
-    when :lower_tri, :lower_triangular
-      raise(ArgumentError, "lower triangular solver does not work with complex dtypes") if
-        complex_dtype? or b.complex_dtype?
-      NMatrix::BLAS::cblas_trsm(:row, :left, :lower, false, :nounit, n, nrhs, 1.0, self, n, x, nrhs)
-      x
-    when :pos_def, :positive_definite
-      u, l = self.factorize_cholesky
-      z = l.solve(b, form: :lower_tri)
-      u.solve(z, form: :upper_tri)
+      when :upper_tri, :upper_triangular
+
+      when :lower_tri, :lower_triangular
+
+      when :pos_def, :positive_definite
+
+      else
+        raise(ArgumentError, "#{opts[:form]} is not a valid form option")
+      end
+
     else
-      raise(ArgumentError, "#{opts[:form]} is not a valid form option")
+
+      case opts[:form] 
+      when :general
+        clone = self.clone
+        ipiv = NMatrix::LAPACK.clapack_getrf(:row, n, n, clone, n)
+        # When we call clapack_getrs with :row, actually only the first matrix
+        # (i.e. clone) is interpreted as row-major, while the other matrix (x)
+        # is interpreted as column-major. See here: http://math-atlas.sourceforge.net/faq.html#RowSolve
+        # So we must transpose x before and after
+        # calling it.
+        x = x.transpose
+        NMatrix::LAPACK.clapack_getrs(:row, :no_transpose, n, nrhs, clone, n, ipiv, x, n)
+        x.transpose
+      when :upper_tri, :upper_triangular
+        raise(ArgumentError, "upper triangular solver does not work with complex dtypes") if
+          complex_dtype? or b.complex_dtype?
+        # this is the correct function call; see https://github.com/SciRuby/nmatrix/issues/374
+        NMatrix::BLAS::cblas_trsm(:row, :left, :upper, false, :nounit, n, nrhs, 1.0, self, n, x, nrhs)
+        x
+      when :lower_tri, :lower_triangular
+        raise(ArgumentError, "lower triangular solver does not work with complex dtypes") if
+          complex_dtype? or b.complex_dtype?
+        NMatrix::BLAS::cblas_trsm(:row, :left, :lower, false, :nounit, n, nrhs, 1.0, self, n, x, nrhs)
+        x
+      when :pos_def, :positive_definite
+        u, l = self.factorize_cholesky
+        z = l.solve(b, form: :lower_tri)
+        u.solve(z, form: :upper_tri)
+      else
+        raise(ArgumentError, "#{opts[:form]} is not a valid form option")
+      end
+
     end
   end
 
