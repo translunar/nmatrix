@@ -756,6 +756,9 @@ class NMatrix
   def det
     raise(ShapeError, "determinant can be calculated only for square matrices") unless self.dim == 2 && self.shape[0] == self.shape[1]
 
+    if jruby? 
+      return self.det_exact
+    end
     # Cast to a dtype for which getrf is implemented
     new_dtype = self.integer_dtype? ? :float64 : self.dtype
     copy = self.cast(:dense, new_dtype)

@@ -16,7 +16,6 @@ class NMatrix
   include_package 'org.apache.commons.math3.analysis.function'
   attr_accessor :shape , :dtype, :elements, :s, :nmat, :twoDMat
 
-
   def initialize(*args)
     if args[-1] == :copy
       @shape = [2,2]
@@ -250,6 +249,17 @@ class NMatrix
     dest[:elements]
   end
 
+  def dense_storage_coords(s, slice_pos, coords_out, stride, offset)  #array, int, array
+    temp_pos = slice_pos;
+
+    (0...dim).each do |i|
+      coords_out[i] = (temp_pos - temp_pos % stride[i])/stride[i] - offset[i];
+      temp_pos = temp_pos % stride[i]
+    end
+
+    return temp_pos
+  end
+
   def dense_storage_pos(coords,stride)
     pos = 0;
     offset = 0
@@ -390,30 +400,49 @@ class NMatrix
   public
 
   def each_with_indices
-    to_return = nil
+    # to_return = nil
 
-    case(@dtype)
-    when 'DENSE_STORE'
-      to_return = @s
-      break;
-    else
-      raise Exception.new(nm_eDataTypeError, "Not a proper storage type");
-    end
-    to_return
+    # case(@dtype)
+    # when 'DENSE_STORE'
+    #   to_return = @s
+    #   break;
+    # else
+    #   raise Exception.new(nm_eDataTypeError, "Not a proper storage type");
+    # end
+    # to_return
+    @s.toArray().to_a.to_enum
   end
 
 
   def each_stored_with_indices
-    to_return = nil
+  
+    nmatrix = NMatrix.new(:copy)
+    nmatrix.shape = @s
+    stride = get_stride(self)
+    offset = 0
+    #Create indices and initialize them to zero
+    coords = Array.new(dim){ 0 }
 
-    case(@dtype)
-    when 'DENSE_STORE'
-      to_return = @s
-      break;
-    else
-      raise Exception.new(nm_eDataTypeError, "Not a proper storage type");
+    shape_copy =  Array.new(dim)
+    (0...size).each do |k|
+      # nm_dense_storage_coords(sliced_dummy, k, coords);
+      dense_storage_coords(nmatrix, k, coords, stride, offset)
+      slice_index = dense_storage_pos(coords,stride)
+      ary = Array.new
+      # if (@dtype == RUBYOBJ) 
+      #   ary << @s[slice_index]
+      # else 
+        ary << self.s.toArray.to_a[slice_index]
+      # end
+      (0...dim).each do |p|
+        ary << coords[p]
+      end
+
+      # yield the array which now consists of the value and the indices
+      yield(ary)
     end
-    to_return;
+
+    return nmatrix
   end
 
   def map_stored
