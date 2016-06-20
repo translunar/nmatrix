@@ -1004,11 +1004,34 @@ class NMatrix
     if (dtype == :RUBYOBJ)
       # to_return = *reinterpret_cast<VALUE*>(result);
     else
-      elements = @nmat.twoDMat.inverse().to_a
-      to_return = NMatrix.new(@shape, elements, dtype: :int64)
+      to_return = NMatrix.new(:copy)
+      to_return.shape = @shape
+      to_return.twoDMat = MatrixUtils.inverse(@twoDMat)
+      to_return.s = ArrayRealVector.new(get_oneDArray(to_return.shape, to_return.twoDMat.getData()))
     end
 
     return to_return
+  end
+
+  def __inverse__!
+    # if (:stype != :dense)
+    #   raise Exception.new("needs exact determinant implementation for this matrix stype")
+    #   return nil
+    # end
+    
+    if (@dim != 2 || @shape[0] != @shape[1])
+      raise Exception.new("matrices must be square to have an inverse defined")
+      return nil
+    end
+    to_return = nil
+    if (dtype == :RUBYOBJ)
+      # to_return = *reinterpret_cast<VALUE*>(result);
+    else
+      @twoDMat = MatrixUtils.inverse(@twoDMat)
+      @s = ArrayRealVector.new(get_oneDArray(@shape, @twoDMat.getData()))
+    end
+
+    return self
   end
   
   def __inverse_exact__
@@ -1025,8 +1048,10 @@ class NMatrix
     if (dtype == :RUBYOBJ)
       # to_return = *reinterpret_cast<VALUE*>(result);
     else
-      elements = @nmat.twoDMat.inverse().to_a
-      to_return = NMatrix.new(@shape, elements, dtype: :int64)
+      to_return = NMatrix.new(:copy)
+      to_return.shape = @shape
+      to_return.twoDMat = MatrixUtils.inverse(@twoDMat)
+      to_return.s = ArrayRealVector.new(get_oneDArray(to_return.shape, to_return.twoDMat.getData()))
     end
 
     return to_return
