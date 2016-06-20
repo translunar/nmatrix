@@ -62,6 +62,7 @@ class NMatrix
         @s = elements
       else
         storage = Array.new(size)
+        elements = [elements,elements] unless elements.is_a?(Array)
         if size > elements.length
           (0...size).each do |i|
             j=0 unless j!=elements.length
