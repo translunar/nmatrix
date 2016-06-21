@@ -185,7 +185,7 @@ class NMatrix
     s = @s.toArray().to_a
 
     if @dim < args.length
-      raise Exception.new("wrong number of arguments (%d for %lu)", args, effective_dim(self))
+      raise(ArgumentError,"wrong number of arguments (#{args} for #{effective_dim(self)})")
     else
       result = Array.new()
 
@@ -325,11 +325,11 @@ class NMatrix
         slice[:single] = false
         t+=1
       else
-        raise Exception.new("expected Fixnum or Range for slice component instead of")
+        raise(ArgumentError, "expected Fixnum or Range for slice component instead of #{v.class}")
       end
 
       if (slice[:coords][r] > shape_array[r] || slice[:coords][r] + slice[:lengths][r] > shape_array[r])
-        raise Exception.new("slice is larger than matrix in dimension %lu (slice component %lu)", r, t);
+        raise(RangeError, "slice is larger than matrix in dimension #{r} (slice component #{t})")
       end
     end
 
