@@ -416,17 +416,34 @@ class NMatrix
   public
 
   def each_with_indices
-    # to_return = nil
+    
+    nmatrix = NMatrix.new(:copy)
+    nmatrix.shape = @s
+    stride = get_stride(self)
+    offset = 0
+    #Create indices and initialize them to zero
+    coords = Array.new(dim){ 0 }
 
-    # case(@dtype)
-    # when 'DENSE_STORE'
-    #   to_return = @s
-    #   break;
-    # else
-    #   raise Exception.new(nm_eDataTypeError, "Not a proper storage type");
-    # end
-    # to_return
-    @s.toArray().to_a.to_enum
+    shape_copy =  Array.new(dim)
+    (0...size).each do |k|
+      # nm_dense_storage_coords(sliced_dummy, k, coords);
+      dense_storage_coords(nmatrix, k, coords, stride, offset)
+      slice_index = dense_storage_pos(coords,stride)
+      ary = Array.new
+      # if (@dtype == RUBYOBJ) 
+      #   ary << @s[slice_index]
+      # else 
+        ary << self.s.toArray.to_a[slice_index]
+      # end
+      (0...dim).each do |p|
+        ary << coords[p]
+      end
+
+      # yield the array which now consists of the value and the indices
+      yield(ary)
+    end
+
+    return nmatrix
   end
 
 
@@ -473,7 +490,26 @@ class NMatrix
   protected
 
   def __dense_each__
-    @s.toArray().to_a.to_enum
+    nmatrix = NMatrix.new(:copy)
+    nmatrix.shape = @s
+    stride = get_stride(self)
+    offset = 0
+    #Create indices and initialize them to zero
+    coords = Array.new(dim){ 0 }
+
+    shape_copy =  Array.new(dim)
+    (0...size).each do |k|
+      if (@dtype == :RUBYOBJ)
+        dense_storage_coords(nmatrix, k, coords, stride, offset)
+        slice_index = dense_storage_pos(coords,stride)
+        yield self.s.toArray.to_a[slice_index]
+      else
+        dense_storage_coords(nmatrix, k, coords, stride, offset)
+        slice_index = dense_storage_pos(coords,stride)
+        yield self.s.toArray.to_a[slice_index]
+      end
+    end
+    return nmatrix
   end
 
   def __dense_map__
