@@ -312,9 +312,9 @@ class NMatrix
           slice[:coords][r]  = shape_array[r]+v_
         else
           slice[:coords][r]  = v_
-          slice[:lengths][r] = 1
-        t+=1
         end
+        slice[:lengths][r] = 1
+        t+=1
       elsif (v.is_a?(Symbol) && v.__id__ == "*")
         slice[:coords][r] = 0
         slice[:lengths][r] = shape_array[r]
