@@ -656,7 +656,15 @@ class NMatrix
       t
     else
       # Call C versions of Yale and List transpose, which do their own copies
-      self.clone_transpose
+      if jruby?
+        nmatrix = NMatrix.new :copy
+        nmatrix.shape = @shape
+        nmatrix.twoDMat = @twoDMat.transpose
+        nmatrix.s = ArrayRealVector.new(get_oneDArray(nmatrix.shape, nmatrix.twoDMat.getData()))
+        return nmatrix
+      else
+        self.clone_transpose
+      end
     end
   end
 

@@ -508,8 +508,8 @@ class NMatrix
         slice_index = dense_storage_pos(coords,stride)
         yield self.s.toArray.to_a[slice_index]
       end
-    end
-    return nmatrix
+    end if block_given?
+    return @s.toArray().to_a.to_enum
   end
 
   def __dense_map__
