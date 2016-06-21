@@ -27,9 +27,13 @@ class NMatrix
         if args[1].is_a?(Array)
           elements = args[1]
           hash = args[2]
+          @dtype = hash[:dtype]
+          @stype = hash[:stype]
         else
           elements = Array.new()
           hash = args[1] unless args.length<1
+          @dtype = hash[:dtype]
+          @stype = hash[:stype]
         end
       end
 
