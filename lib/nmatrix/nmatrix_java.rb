@@ -26,43 +26,52 @@ class NMatrix
         @shape = args[0]
         if args[1].is_a?(Array)
           elements = args[1]
-          hash = args[2]
-          @dtype = hash[:dtype]
-          @stype = hash[:stype]
+          if args.length > 2
+            hash = args[2]
+            @dtype = hash[:dtype]
+            @stype = hash[:stype]
+          end
         else
           # elements = Java::double[shape[0]*shape[1]].new{ Java::Double.NaN }
-          elements = Array.new(shape[0]*shape[1]) { 0 }
-          hash = args[1] unless args.length<1
-          @dtype = hash[:dtype]
-          @stype = hash[:stype]
+          if args.length > 1
+            if args[1].is_a?(Symbol)
+              hash = args[1]
+              @dtype = hash[:dtype]
+              @stype = hash[:stype]
+              elements = Array.new(shape[0]*shape[1]) { 0 }
+            else
+              elements = Array.new(shape[0]*shape[1]) { 0 }
+            end
+          end
         end
       else
 
-      
-      offset = 0
+        offset = 0
 
-      if (!args[0].is_a?(Symbol) && !args[0].is_a?(String))
-        @stype = :dense
-      else
-        offset = 1
-        @stype = :dense
+        if (!args[0].is_a?(Symbol) && !args[0].is_a?(String))
+          @stype = :dense
+        else
+          offset = 1
+          @stype = :dense
+        end
+
+        @shape = args[offset]
+        elements = args[offset+1]
+
       end
 
-      @shape = args[offset]
+
       @shape = [shape,shape] unless shape.is_a?(Array)
-      elements = args[offset+1]
-
       # @dtype = interpret_dtype(argc-1-offset, argv+offset+1, stype);
-
       # @dtype = args[:dtype] if args[:dtype]
       @dtype_sym = nil
       @stype_sym = nil
       @default_val_num = nil
       @capacity_num = nil
-      
       @size = (0...@shape.size).inject(1) { |x,i| x * @shape[i] }
-      end
-      j=0;
+
+      j=0
+
       if (elements.is_a?(ArrayRealVector))
         @s = elements
       # elsif elements.java_class.to_s == "[D"
@@ -81,9 +90,8 @@ class NMatrix
         end
         @s = ArrayRealVector.new(storage.to_java Java::double)
       end
-      @dim = shape.is_a?(Array) ? shape.length : 2
-
-      if(shape.length == 2 )
+      @dim = @shape.is_a?(Array) ? @shape.length : 2
+      if(@shape.length == 2 )
         oneDArray = @s.toArray().to_a
         twoDArray = Java::double[shape[0],shape[1]].new
         index = 0
