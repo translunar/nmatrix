@@ -71,7 +71,8 @@ class NMatrix
   #
   def map(&bl)
     return enum_for(:map) unless block_given?
-    cp = self.cast(dtype: :object)
+    cp = self.cast(dtype: :object) unless jruby?
+    cp = self if jruby?
     cp.map!(&bl)
     cp
   end
