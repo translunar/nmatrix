@@ -30,12 +30,13 @@ class NMatrix
           @dtype = hash[:dtype]
           @stype = hash[:stype]
         else
-          elements = Array.new()
+          # elements = Java::double[shape[0]*shape[1]].new{ Java::Double.NaN }
+          elements = Array.new(shape[0]*shape[1]) { 0 }
           hash = args[1] unless args.length<1
           @dtype = hash[:dtype]
           @stype = hash[:stype]
         end
-      end
+      else
 
       
       offset = 0
@@ -60,10 +61,12 @@ class NMatrix
       @capacity_num = nil
       
       @size = (0...@shape.size).inject(1) { |x,i| x * @shape[i] }
-
+      end
       j=0;
       if (elements.is_a?(ArrayRealVector))
         @s = elements
+      # elsif elements.java_class.to_s == "[D"
+      #   @s = ArrayRealVector.new(elements)
       else
         storage = Array.new(size)
         elements = [elements,elements] unless elements.is_a?(Array)
