@@ -147,28 +147,88 @@ class NMatrix
     return xslice(args)
   end
 
-  def []=(*args,value)
+  def []=(*args)
 
     to_return = nil
 
     if args.length > @dim+1
-      raise Exception.new("wrong number of arguments (%d for %lu)", args.length, effective_dim(@dim+1))
+      raise(ArgumentError, "wrong number of arguments (#{args.length} for #{effective_dim(dim+1)})" )
     else
       slice = get_slice(@dim, args, @shape)
-      stride = get_stride(self)
-      if(slice[:single])
-        pos = dense_storage_pos(slice[:coords],stride)
-        @s.setEntry(pos, value)
-        to_return = value
-      else
-        raise Exception.new("not supported")
-      end
+      
+      # puts args[-1]
+      dense_storage_set(slice, args[-1])
+
+      # ttable[NM_STYPE(self)](self, slice, argv[argc-1]);
+
+      to_return = args[-1];
+
     end
 
     return to_return
   end
 
+  def slice_set(dest, lengths, pdest, rank, v, v_size, v_offset)
+    if (dim - rank > 1)
+      (0...lengths[rank]).each do |i|
+        slice_set(dest, lengths, pdest + dest[:stride][rank] * i, rank + 1, v, v_size, v_offset);
+      end
+    else
+      (0...lengths[rank]).each do |p|
+        v_offset %= v_size if(v_offset >= v_size)
+        # elem = dest[:elements]
+        # elem[p + pdest] = v[v_offset]
+        @s.setEntry(p + pdest, v[v_offset])
+        v_offset += 1
+      end
+    end
+  end
 
+  def dense_storage_set(slice, right)
+    # s = NM_STORAGE_DENSE(left);
+
+    # std::pair<NMATRIX*,bool> nm_and_free =
+    #   interpret_arg_as_dense_nmatrix(right, s->dtype);
+
+    # Map the data onto D* v.
+    stride = get_stride(self)
+    v_size = 1
+
+    # if(nm_and_free.first) {
+    #   t = Array.new(size)
+    #   v_size = count_max_elements(t)
+    # els
+    if(right.is_a?(Array))    
+      v_size = right.length
+      v = right
+      if (dtype == :RUBYOBJ)
+        # nm_register_values(reinterpret_cast<VALUE*>(v), v_size)
+      end
+
+      (0...v_size).each do |m|
+        v[m] = right[m]
+      end
+    else 
+      v = [right]
+      if (@dtype == :RUBYOBJ)
+        # nm_register_values(reinterpret_cast<VALUE*>(v), v_size)
+      end
+    end
+    if(slice[:single])
+      # reinterpret_cast<D*>(s->elements)[nm_dense_storage_pos(s, slice->coords)] = v;
+      pos = dense_storage_pos(slice[:coords],stride)
+      @s.setEntry(pos, v[0])
+    else
+      v_offset = 0
+      dest = {}
+      dest[:stride] = get_stride(self)
+      dest[:shape] = shape
+      # dest[:elements] = @s.toArray().to_a
+      dense_pos = dense_storage_pos(slice[:coords],stride)
+      slice_set(dest, slice[:lengths], dense_pos, 0, v, v_size, v_offset)
+    end
+
+  end
 
   def is_ref?
     
