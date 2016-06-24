@@ -375,7 +375,7 @@ class NMatrix
         end
         slice[:lengths][r] = 1
         t+=1
-      elsif (v.is_a?(Symbol) && v.__id__ == "*")
+      elsif (v.is_a?(Symbol) && v == :*)
         slice[:coords][r] = 0
         slice[:lengths][r] = shape_array[r]
         slice[:single] = false
@@ -1080,7 +1080,7 @@ class NMatrix
     end
     twoDArray
   end
-  
+
   def dot(other)
     result = nil
     if (other.is_a?(NMatrix))
