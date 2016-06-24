@@ -542,7 +542,17 @@ class NMatrix
   #   - An NMatrix representing the requested row as a row vector.
   #
   def row(row_number, get_by = :copy)
-    rank(0, row_number, get_by)
+    rowElements = rank(0, row_number, get_by)
+    if jruby?
+      nmatrix = NMatrix.new :copy
+      nmatrix.shape = [1,@shape[1]]
+      nmatrix.s = rowElements
+      puts rowElements
+      nmatrix.twoDMat = MatrixUtils.createRealMatrix(get_twoDArray(nmatrix.shape, rowElements))
+      return nmatrix
+    else
+      rowElements
+    end
   end
 
   #
