@@ -1069,6 +1069,18 @@ class NMatrix
     oneDArray
   end
 
+  def get_twoDArray(shape,oneDArray)
+    twoDArray = Java::double[shape[0]][shape[1]].new
+    index = 0
+    (0...shape[0]).each do |i|
+      (0...shape[1]).each do |j|
+        twoDArray[i][j] = oneDArray[index]
+        index+=1
+      end
+    end
+    twoDArray
+  end
+  
   def dot(other)
     result = nil
     if (other.is_a?(NMatrix))
