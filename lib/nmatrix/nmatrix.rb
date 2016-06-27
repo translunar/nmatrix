@@ -525,7 +525,15 @@ class NMatrix
   #                     14
   #
   def column(column_number, get_by = :copy)
-    rank(1, column_number, get_by)
+    cols = rank(1, column_number, get_by)
+    if jruby?
+      nmatrix = NMatrix.new :copy
+      nmatrix.shape = cols.shape
+      nmatrix.s = cols.s
+      return nmatrix
+    else
+      cols
+    end
   end
 
   alias :col :column
@@ -545,10 +553,8 @@ class NMatrix
     rowElements = rank(0, row_number, get_by)
     if jruby?
       nmatrix = NMatrix.new :copy
-      nmatrix.shape = [1,@shape[1]]
-      nmatrix.s = rowElements
-      puts rowElements
-      nmatrix.twoDMat = MatrixUtils.createRealMatrix(get_twoDArray(nmatrix.shape, rowElements))
+      nmatrix.shape = rowElements.shape
+      nmatrix.s = rowElements.s
       return nmatrix
     else
       rowElements
@@ -896,7 +902,17 @@ class NMatrix
   #   - A NMatrix representing the requested layer as a layer vector.
   #
   def layer(layer_number, get_by = :copy)
-    rank(2, layer_number, get_by)
+    layer = rank(2, layer_number, get_by)
+
+    if jruby?
+      nmatrix = NMatrix.new :copy
+      nmatrix.shape = layer.shape
+      nmatrix.s = layer.s
+      return nmatrix
+    else
+      layer
+    end
+    
   end
 
 

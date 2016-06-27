@@ -67,6 +67,9 @@ class NMatrix
     stride
   end 
 
+# n[3,3]  # => 5.0
+# n[0..1,0..1] #=> matrix [2,2]
+
   def xslice(args)
     result = nil
 
