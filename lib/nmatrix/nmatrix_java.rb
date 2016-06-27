@@ -569,7 +569,7 @@ class NMatrix
 
       # yield the array which now consists of the value and the indices
       yield(ary)
-    end
+    end if block_given?
 
     return nmatrix
   end
@@ -601,7 +601,7 @@ class NMatrix
 
       # yield the array which now consists of the value and the indices
       yield(ary)
-    end
+    end if block_given?
 
     return nmatrix
   end
