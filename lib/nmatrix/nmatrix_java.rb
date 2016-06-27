@@ -38,9 +38,9 @@ class NMatrix
               hash = args[1]
               @dtype = hash[:dtype]
               @stype = hash[:stype]
-              elements = Array.new(shape[0]*shape[1]) { 0 } unless shape.length < 2
+              elements = Array.new(shape*shape) unless shape.is_a? Array
             else
-              elements = Array.new(shape[0]*shape[1]) { 0 } unless shape.length < 2
+              elements = Array.new(shape*shape) unless shape.is_a? Array
             end
           end
         end
