@@ -440,12 +440,24 @@ class NMatrix
     @shape
   end
 
-  def supershape
-    
+   def supershape s
+    if (s[:src] == @s)
+      return shape
+       # easy case (not a slice)
+    else
+      @s = s[:src]
+    end
+
+    new_shape = Array.new(dim)
+    (0...dim).each do |index|
+      new_shape[index] = shape[index]
+    end
+
+    return new_shape
   end
 
   def offset
-    
+    0
   end
 
   def det_exact
