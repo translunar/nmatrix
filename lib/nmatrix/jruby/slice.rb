@@ -197,10 +197,15 @@ class NMatrix
     stride = get_stride(self)
     v_size = 1
 
+    if right.is_a?(NMatrix)
+      right = right.s.toArray.to_a
+    end
+    
     # if(nm_and_free.first) {
     #   t = Array.new(size)
     #   v_size = count_max_elements(t)
     # els
+
     if(right.is_a?(Array))    
       v_size = right.length
       v = right
