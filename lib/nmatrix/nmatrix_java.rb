@@ -119,6 +119,11 @@ class NMatrix
     return @dtype
   end
 
+  #FIXME
+  def self.guess_dtype arg
+    :float32
+  end
+
   def stype
     @stype = :dense
   end
