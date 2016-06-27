@@ -360,61 +360,7 @@ class NMatrix
   #     }
   # end
 
-  def get_slice(dim, args, shape_array)
-    slice = {}
-    slice[:coords]=[]
-    slice[:lengths]=[]
-    slice[:single] = true
 
-    argc = args.length
-
-    t = 0
-    (0...dim).each do |r|
-      v = t == argc ? nil : args[t]
-
-      if(argc - t + r < dim && shape_array[r] ==1)
-        slice[:coords][r]  = 0
-        slice[:lengths][r] = 1
-      elsif v.is_a?(Fixnum)
-        v_ = v.to_i.to_int
-        if (v_ < 0) # checking for negative indexes
-          slice[:coords][r]  = shape_array[r]+v_
-        else
-          slice[:coords][r]  = v_
-        end
-        slice[:lengths][r] = 1
-        t+=1
-      elsif (v.is_a?(Symbol) && v == :*)
-        slice[:coords][r] = 0
-        slice[:lengths][r] = shape_array[r]
-        slice[:single] = false
-        t+=1
-      elsif v.is_a?(Range)
-        begin_ = v.begin
-        end_ = v.end
-        excl = v.exclude_end?
-        slice[:coords][r] = (begin_ < 0) ? shape[r] + begin_ : begin_
-      
-        # Exclude last element for a...b range
-        if (end_ < 0)
-          slice[:lengths][r] = shape_array[r] + end_ - slice[:coords][r] + (excl ? 0 : 1)
-        else
-          slice[:lengths][r] = end_ - slice[:coords][r] + (excl ? 0 : 1)
-        end
-
-        slice[:single] = false
-        t+=1
-      else
-        raise(ArgumentError, "expected Fixnum or Range for slice component instead of #{v.class}")
-      end
-
-      if (slice[:coords][r] > shape_array[r] || slice[:coords][r] + slice[:lengths][r] > shape_array[r])
-        raise(RangeError, "slice is larger than matrix in dimension #{r} (slice component #{t})")
-      end
-    end
-
-    return slice
-  end
 
   def get_stride(nmatrix)
     stride = Array.new()
@@ -526,7 +472,7 @@ class NMatrix
         shape[index] = shape_ary[index].to_i
       end
 
-    elsif (shape_ary.is_a?(FIXNUM)
+    elsif shape_ary.is_a?(FIXNUM)
       dim = 2
       shape = Array.new(dim)
 
@@ -534,7 +480,7 @@ class NMatrix
       shape[1] = shape_ary.to_i
 
     else
-      raise(ArgumentError, "Expected an array of numbers or a single Fixnum for matrix shape");
+      raise(ArgumentError, "Expected an array of numbers or a single Fixnum for matrix shape")
     end
 
     return shape
@@ -1310,3 +1256,5 @@ class NMatrix
 
   end
 end
+
+require_relative './jruby/slice.rb'
