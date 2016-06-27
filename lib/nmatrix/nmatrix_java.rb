@@ -489,8 +489,55 @@ class NMatrix
 
   protected
 
-  def reshape_bang
+  def count_max_elements
+    return size
+  end
 
+  def reshape_bang arg
+    if(@stype == :dense)
+      shape_ary = arg
+      size = count_max_elements
+      new_size = 1
+      shape = interpret_shape(shape_ary, dim)
+      
+      (0...dim).each do |index|
+        new_size *= shape[index]
+      end
+
+      if (size == new_size)
+        self.shape = shape
+        self.dim = dim
+        return self
+      else
+         raise(ArgumentError, "reshape cannot resize; size of new and old matrices must match")
+      end
+    else
+      raise(NotImplementedError, "reshape in place only for dense stype")
+    end
+  end
+
+  def interpret_shape(shape_ary, dim)
+    shape = []
+
+    if shape_ary.is_a?(Array)
+      dim = shape_ary.length
+     
+      (0...dim).each do |index|
+        shape[index] = shape_ary[index].to_i
+      end
+
+    elsif (shape_ary.is_a?(FIXNUM)
+      dim = 2
+      shape = Array.new(dim)
+
+      shape[0] = shape_ary.to_i
+      shape[1] = shape_ary.to_i
+
+    else
+      raise(ArgumentError, "Expected an array of numbers or a single Fixnum for matrix shape");
+    end
+
+    return shape
   end
 
 
