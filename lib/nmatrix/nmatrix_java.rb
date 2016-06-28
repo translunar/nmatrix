@@ -14,7 +14,7 @@ java_import 'org.apache.commons.math3.linear.CholeskyDecomposition'
 
 class NMatrix
   include_package 'org.apache.commons.math3.analysis.function'
-  attr_accessor :shape , :dtype, :elements, :s, :nmat, :twoDMat
+  attr_accessor :shape , :dtype, :elements, :s, :nmat, :twoDMat, :dim
 
   def initialize(*args)
     if args[-1] == :copy
@@ -186,9 +186,9 @@ class NMatrix
     
   end
 
-  def dim
-    shape.is_a?(Array) ? shape.length : 2
-  end
+  # def dim
+  #   shape.is_a?(Array) ? shape.length : 2
+  # end
 
   alias :dimensions :dim
 
