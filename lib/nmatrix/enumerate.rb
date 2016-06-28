@@ -221,7 +221,7 @@ class NMatrix
 
     return enum_for(:inject_rank, dimen, initial, dtype) unless block_given?
 
-    new_shape = shape
+    new_shape = shape.dup
     new_shape[dimen] = 1
 
     first_as_acc = false
