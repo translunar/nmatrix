@@ -677,6 +677,7 @@ class NMatrix
       
       result = NMatrix.new(:copy)
       result.shape = [shape[0],other.shape[1]]
+      result.dim = @dim
       result.twoDMat = @twoDMat.multiply(other.twoDMat)
       result.s = ArrayRealVector.new(get_oneDArray(result.shape, result.twoDMat.getData()))
     else
@@ -739,6 +740,7 @@ class NMatrix
     else
       to_return = NMatrix.new(:copy)
       to_return.shape = @shape
+      to_return.dim = @dim
       to_return.twoDMat = MatrixUtils.inverse(@twoDMat)
       to_return.s = ArrayRealVector.new(get_oneDArray(to_return.shape, to_return.twoDMat.getData()))
     end
