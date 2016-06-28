@@ -107,6 +107,7 @@ class NMatrix
       psrc = dense_storage_pos(slice[:coords], stride)
       src = {}
       result = NMatrix.new(:copy)
+      result.dim = dim
       resultShape= Array.new(dim)
       (0...dim).each do |i|
         resultShape[i]  = slice[:lengths][i]
@@ -116,7 +117,7 @@ class NMatrix
       src[:stride] = get_stride(self)
       src[:elements] = @s.toArray().to_a
       dest[:stride] = get_stride(result)
-      dest[:shape] = shape
+      dest[:shape] = resultShape
       dest[:elements] = []
       temp = []
       s = (slice_copy(src, dest, slice[:lengths], 0, psrc,0))
