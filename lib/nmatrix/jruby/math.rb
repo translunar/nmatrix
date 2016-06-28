@@ -25,6 +25,7 @@ class NMatrix
   def -(other)
     result = NMatrix.new(:copy)
     result.shape = @shape
+    result.dim = @dim
     if (other.is_a?(NMatrix))
       #check dimension
       #check shape
@@ -47,6 +48,7 @@ class NMatrix
   def *(other)
     result = NMatrix.new(:copy)
     result.shape = @shape
+    result.dim = @dim
     if (other.is_a?(NMatrix))
       #check dimension
       #check shape
@@ -69,6 +71,7 @@ class NMatrix
   def /(other)
     result = NMatrix.new(:copy)
     result.shape = @shape
+    result.dim = @dim
     if (other.is_a?(NMatrix))
       #check dimension
       #check shape
@@ -114,6 +117,7 @@ class NMatrix
   def sin
     result = NMatrix.new(:copy)
     result.shape = @shape
+    result.dim = @dim
     result.s = @s.mapToSelf(Sin.new())
     result
   end
@@ -121,6 +125,7 @@ class NMatrix
   def cos
     result = NMatrix.new(:copy)
     result.shape = @shape
+    result.dim = @dim
     result.s = @s.mapToSelf(Cos.new())
     result
   end
@@ -128,6 +133,7 @@ class NMatrix
   def tan
     result = NMatrix.new(:copy)
     result.shape = @shape
+    result.dim = @dim
     result.s = @s.mapToSelf(Tan.new())
     result
   end
@@ -135,6 +141,7 @@ class NMatrix
   def asin
     result = NMatrix.new(:copy)
     result.shape = @shape
+    result.dim = @dim
     result.s = @s.mapToSelf(Asin.new())
     result
   end
@@ -142,6 +149,7 @@ class NMatrix
   def acos
     result = NMatrix.new(:copy)
     result.shape = @shape
+    result.dim = @dim
     result.s = @s.mapToSelf(Acos.new())
     result
   end
@@ -149,6 +157,7 @@ class NMatrix
   def atan
     result = NMatrix.new(:copy)
     result.shape = @shape
+    result.dim = @dim
     result.s = @s.mapToSelf(Atan.new())
     result
   end
@@ -156,6 +165,7 @@ class NMatrix
   def sinh
     result = NMatrix.new(:copy)
     result.shape = @shape
+    result.dim = @dim
     result.s = @s.mapToSelf(Sinh.new())
     result
   end
@@ -163,6 +173,7 @@ class NMatrix
   def cosh
     result = NMatrix.new(:copy)
     result.shape = @shape
+    result.dim = @dim
     result.s = @s.mapToSelf(Cosh.new())
     result
   end
@@ -170,6 +181,7 @@ class NMatrix
   def tanh
     result = NMatrix.new(:copy)
     result.shape = @shape
+    result.dim = @dim
     result.s = @s.mapToSelf(Tanh.new())
     result
   end
@@ -177,6 +189,7 @@ class NMatrix
   def asinh
     result = NMatrix.new(:copy)
     result.shape = @shape
+    result.dim = @dim
     result.s = @s.mapToSelf(Asinh.new())
     result
   end
@@ -184,6 +197,7 @@ class NMatrix
   def acosh
     result = NMatrix.new(:copy)
     result.shape = @shape
+    result.dim = @dim
     result.s = @s.mapToSelf(Acosh.new())
     result
   end
@@ -191,6 +205,7 @@ class NMatrix
   def atanh
     result = NMatrix.new(:copy)
     result.shape = @shape
+    result.dim = @dim
     result.s = @s.mapToSelf(Atanh.new())
     result
   end
@@ -198,6 +213,7 @@ class NMatrix
   def exp
     result = NMatrix.new(:copy)
     result.shape = @shape
+    result.dim = @dim
     result.s = @s.mapToSelf(Exp.new())
     result
   end
@@ -205,6 +221,7 @@ class NMatrix
   def log2
     result = NMatrix.new(:copy)
     result.shape = @shape
+    result.dim = @dim
     result.s = @s.mapToSelf(Log.new())
     result
   end
@@ -212,6 +229,7 @@ class NMatrix
   def log10
     result = NMatrix.new(:copy)
     result.shape = @shape
+    result.dim = @dim
     result.s = @s.mapToSelf(Log10.new())
     result
   end
@@ -219,6 +237,7 @@ class NMatrix
   def sqrt
     result = NMatrix.new(:copy)
     result.shape = @shape
+    result.dim = @dim
     result.s = @s.mapToSelf(Sqrt.new())
     result
   end
@@ -234,6 +253,7 @@ class NMatrix
   def cbrt
     result = NMatrix.new(:copy)
     result.shape = @shape
+    result.dim = @dim
     result.s = @s.mapToSelf(Cbrt.new())
     result
   end
@@ -249,6 +269,7 @@ class NMatrix
   def floor
     result = NMatrix.new(:copy)
     result.shape = @shape
+    result.dim = @dim
     result.s = @s.mapToSelf(Floor.new())
     result
   end
@@ -256,6 +277,7 @@ class NMatrix
   def ceil
     result = NMatrix.new(:copy)
     result.shape = @shape
+    result.dim = @dim
     result.s = @s.mapToSelf(Ceil.new())
     result
   end
