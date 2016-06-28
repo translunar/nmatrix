@@ -1,6 +1,7 @@
 class NMatrix
   def +(other)
     result = NMatrix.new(:copy)
+    result.dim = @dim
     result.shape = @shape
     if (other.is_a?(NMatrix))
       #check dimension
