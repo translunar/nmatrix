@@ -560,14 +560,13 @@ class NMatrix
     n    = self.shape[0]
     nrhs = b.shape[1]
     if jruby?
-      
+      nmatrix = NMatrix.new :copy
+      nmatrix.dim = b.dim
+      nmatrix.shape = b.shape
       case opts[:form] 
       when :general
         #LU solver
         solver = LUDecomposition.new(@twoDMat).getSolver
-        nmatrix = NMatrix.new :copy
-        nmatrix.dim = b.dim
-        nmatrix.shape = b.shape
         nmatrix.s = solver.solve(b.s)
         return nmatrix
       when :upper_tri, :upper_triangular
@@ -575,7 +574,9 @@ class NMatrix
       when :lower_tri, :lower_triangular
 
       when :pos_def, :positive_definite
-
+        solver = Choleskyecomposition.new(@twoDMat).getSolver
+        nmatrix.s = solver.solve(b.s)
+        return nmatrix
       else
         raise(ArgumentError, "#{opts[:form]} is not a valid form option")
       end
