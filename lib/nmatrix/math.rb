@@ -563,7 +563,13 @@ class NMatrix
       
       case opts[:form] 
       when :general
-
+        #LU solver
+        solver = LUDecomposition.new(@twoDMat).getSolver
+        nmatrix = NMatrix.new :copy
+        nmatrix.dim = b.dim
+        nmatrix.shape = b.shape
+        nmatrix.s = solver.solve(b.s)
+        return nmatrix
       when :upper_tri, :upper_triangular
 
       when :lower_tri, :lower_triangular
