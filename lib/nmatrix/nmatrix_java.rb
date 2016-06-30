@@ -828,3 +828,4 @@ end
 
 require_relative './jruby/slice.rb'
 require_relative './jruby/math.rb'
+require_relative './jruby/decomposition.rb'
