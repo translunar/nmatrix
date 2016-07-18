@@ -9,6 +9,7 @@ if [ -n "$ruby_version" -a "$TRAVIS_OS_NAME" = "osx" ]; then
     eval "$(rbenv init -)"
   fi
   export RBENV_VERSION=$ruby_version
+  unset GEM_PATH GEM_HOME
 fi
 
 if [ "$1" = "install" ]
@@ -43,11 +44,13 @@ then
       CONFIGURE_OPTS="--disable-install-doc --with-out-ext=tk,tk/tkutil --with-opt-dir=/usr/local"
       rbenv install $ruby_version
     )
-    gem update --system
-    gem update
+
+    gem pristine --all
+    gem update --no-document --system
+    gem update --no-document
   fi
 
-  gem install bundler -v '~> 1.6'
+  gem install --no-document bundler -v '~> 1.6'
 
   if [ -n "$USE_ATLAS" ]
   then
