@@ -73,9 +73,7 @@ class NMatrix
   def xslice(args)
     result = nil
 
-    s = @s.toArray().to_a
-
-    if @dim < args.length
+    if self.dim < args.length
       raise(ArgumentError,"wrong number of arguments (#{args} for #{effective_dim(self)})")
     else
       result = Array.new()
@@ -83,9 +81,10 @@ class NMatrix
       slice = get_slice(@dim, args, @shape)
       stride = get_stride(self)
       if slice[:single]
-        if (@dtype == "RUBYOBJ") 
-          # result = *reinterpret_cast<VALUE*>( ttable[NM_STYPE(self)](s, slice) );
-        else                                
+        if (@dtype == :object) 
+          result = @s[dense_storage_get(slice,stride)]
+        else
+          s = @s.toArray().to_a                                
           result = @s.getEntry(dense_storage_get(slice,stride))
         end 
       else
@@ -108,6 +107,7 @@ class NMatrix
       src = {}
       result = NMatrix.new(:copy)
       result.dim = dim
+      result.dtype = @dtype
       resultShape= Array.new(dim)
       (0...dim).each do |i|
         resultShape[i]  = slice[:lengths][i]
@@ -115,17 +115,32 @@ class NMatrix
       result.shape = resultShape
       dest = {}
       src[:stride] = get_stride(self)
-      src[:elements] = @s.toArray().to_a
+      if (@dtype == :object) 
+        src[:elements] = @s
+      else
+        src[:elements] = @s.toArray().to_a
+      end
       dest[:stride] = get_stride(result)
       dest[:shape] = resultShape
       dest[:elements] = []
       temp = []
       s = (slice_copy(src, dest, slice[:lengths], 0, psrc,0))
-      arr = Java::double[s.length].new
+      # if 
+      # arr = Java::double[s.length].new
+      if (@dtype == :object) 
+        arr = Java::boolean[s.length].new
+      else
+        arr = Java::double[s.length].new
+      end
       (0...s.length).each do |i|
         arr[i] = s[i]
       end
-      result.s = ArrayRealVector.new(arr)
+      if (@dtype == :object) 
+        result.s = arr
+      else
+        result.s = ArrayRealVector.new(arr)
+      end
+      
       return result
     end
   end
