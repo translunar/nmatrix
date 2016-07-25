@@ -29,8 +29,12 @@ class NMatrix
           elements = args[1]
           if args.length > 2
             hash = args[2]
+            puts hash
             @dtype = hash[:dtype]
             @stype = hash[:stype]
+          else
+            @dtype = :double
+            @stype = :dense
           end
         else
           # elements = Java::double[shape[0]*shape[1]].new{ Java::Double.NaN }
@@ -48,12 +52,12 @@ class NMatrix
       else
 
         offset = 0
-
         if (!args[0].is_a?(Symbol) && !args[0].is_a?(String))
           @stype = :dense
         else
           offset = 1
           @stype = :dense
+          @dtype = :double
         end
 
         @shape = args[offset]
@@ -89,22 +93,27 @@ class NMatrix
         else
           storage = elements
         end
-        @s = ArrayRealVector.new(storage.to_java Java::double)
-      end
-      @dim = @shape.is_a?(Array) ? @shape.length : 2
-      if(@shape.length == 2 )
-        oneDArray = @s.toArray().to_a
-        twoDArray = Java::double[shape[0],shape[1]].new
-        index = 0
-        (0...shape[0]).each do |i|
-          (0...shape[1]).each do |j|
-            twoDArray[i][j] = oneDArray[index]
-            index+=1
+        if @dtype == :object
+          @s = storage
+        else
+          @s = ArrayRealVector.new(storage.to_java Java::double)
+          @dim = @shape.is_a?(Array) ? @shape.length : 2
+          if(@shape.length == 2 )
+            oneDArray = @s.toArray().to_a
+            twoDArray = Java::double[shape[0],shape[1]].new
+            index = 0
+            (0...shape[0]).each do |i|
+              (0...shape[1]).each do |j|
+                twoDArray[i][j] = oneDArray[index]
+                index+=1
+              end
+            end
+            @twoDMat = MatrixUtils.createRealMatrix(twoDArray)
+            # puts "inited"
           end
         end
-        @twoDMat = MatrixUtils.createRealMatrix(twoDArray)
-        # puts "inited"
       end
+      
         
     end
     # @s = @elements
