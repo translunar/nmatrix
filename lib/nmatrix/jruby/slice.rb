@@ -94,6 +94,29 @@ class NMatrix
     return result
   end
 #its by ref
+
+  def xslice_ref(args)
+    result = nil
+
+    if self.dim < args.length
+      raise(ArgumentError,"wrong number of arguments (#{args} for #{effective_dim(self)})")
+    else
+      result = Array.new()
+
+      slice = get_slice(@dim, args, @shape)
+      stride = get_stride(self)
+      if slice[:single]
+        if (@dtype == :object) 
+          result = @s[dense_storage_get(slice,stride)]
+        else                               
+          result = @s.getEntry(dense_storage_get(slice,stride))
+        end 
+      else
+        result = dense_storage_ref(slice,stride)
+      end
+    end
+    return result
+  end
   
   def dense_storage_get(slice,stride)
     if slice[:single]
@@ -144,6 +167,22 @@ class NMatrix
       return result
     end
   end
+
+  # def dense_storage_ref(slice,stride)
+  #   if slice[:single]
+  #     return dense_storage_pos(slice[:coords],stride)
+  #   else
+  #     shape = @shape.dup
+  #     resultShape= Array.new(dim)
+  #     (0...dim).each do |i|
+  #       resultShape[i]  = slice[:lengths][i]
+  #     end
+  #     result = self.clone
+  #     result.shape = resultShape
+  #     result.dtype = @dtype
+  #     return result
+  #   end
+  # end
 
   def slice_copy(src, dest,lengths, pdest, psrc,n)
     # p src
@@ -277,23 +316,4 @@ class NMatrix
   #   end
   # end
 
-  # def dense_storage_ref(const STORAGE* storage, SLICE* slice) {
-  #   DENSE_STORAGE* s = (DENSE_STORAGE*)storage;
-
-  #   if (slice->single)
-  #     return dense_storage_pos(slice[:coords])
-  #   else
-  #     ns = NMatrix.new :copy
-  #     ns.dim        = dim;
-  #     ns.dtype      = dtype
-  #     ns.shape      = Array.new dim
-
-  #     # replace by get_slice function
-  #     # (0...ns.dim).each do |i|
-  #     #   ns->offset[i] = slice->coords[i] + s->offset[i];
-  #     #   ns->shape[i]  = slice->lengths[i];
-  #     # end
-  #     return ns
-  #   end
-  # end
 end
