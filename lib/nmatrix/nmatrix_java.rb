@@ -333,7 +333,8 @@ class NMatrix
   def each_with_indices
     
     nmatrix = NMatrix.new(:copy)
-    nmatrix.shape = @s
+    nmatrix.shape = @shape
+    nmatrix.dtype = @dtype
     stride = get_stride(self)
     offset = 0
     #Create indices and initialize them to zero
@@ -345,11 +346,11 @@ class NMatrix
       dense_storage_coords(nmatrix, k, coords, stride, offset)
       slice_index = dense_storage_pos(coords,stride)
       ary = Array.new
-      # if (@dtype == RUBYOBJ) 
-      #   ary << @s[slice_index]
-      # else 
+      if (@dtype == :object) 
+        ary << self.s[slice_index]
+      else 
         ary << self.s.toArray.to_a[slice_index]
-      # end
+      end
       (0...dim).each do |p|
         ary << coords[p]
       end
@@ -365,7 +366,8 @@ class NMatrix
   def each_stored_with_indices
   
     nmatrix = NMatrix.new(:copy)
-    nmatrix.shape = @s
+    nmatrix.shape = @shape
+    nmatrix.dtype = @dtype
     stride = get_stride(self)
     offset = 0
     #Create indices and initialize them to zero
@@ -377,11 +379,11 @@ class NMatrix
       dense_storage_coords(nmatrix, k, coords, stride, offset)
       slice_index = dense_storage_pos(coords,stride)
       ary = Array.new
-      # if (@dtype == RUBYOBJ) 
-      #   ary << @s[slice_index]
-      # else 
+      if (@dtype == :object) 
+        ary << self.s[slice_index]
+      else 
         ary << self.s.toArray.to_a[slice_index]
-      # end
+      end
       (0...dim).each do |p|
         ary << coords[p]
       end
