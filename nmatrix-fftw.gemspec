@@ -6,12 +6,12 @@ require 'nmatrix/version'
 Gem::Specification.new do |gem|
   gem.name = "nmatrix-fftw"
   gem.version = NMatrix::VERSION::STRING
-  gem.summary = "FFTW backend for nmatrix"
+  gem.summary = "FFTW backend for NMatrix"
   gem.description = "NMatrix extension for using fuctions provided by FFTW"
   gem.homepage = 'http://sciruby.com'
   gem.authors = ['Sameer Deshmukh', 'Magdalen Berns']
   gem.email =  ['sameer.deshmukh93@gmail.com', 'm.berns@thismagpie.com']
-  gem.license = 'BSD 3-clause'
+  gem.license = 'BSD-3-Clause'
 
   gem.files         = ["lib/nmatrix/fftw.rb"]
   gem.files         += `git ls-files -- ext/nmatrix_fftw`.split("\n")
