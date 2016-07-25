@@ -485,8 +485,11 @@ class NMatrix
       end
 
       #check the entries
-
-      resultArray = @s.equals(otherNmatrix.s)
+      if dtype == :object
+        result = @s == otherNmatrix.s
+      else
+        result = @s.equals(otherNmatrix.s)
+      end
     end
     result
   end
