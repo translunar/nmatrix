@@ -97,7 +97,7 @@ class NMatrix
           @s = storage
         else
           @s = ArrayRealVector.new(storage.to_java Java::double)
-          @dim = @shape.is_a?(Array) ? @shape.length : 2
+          
           if(@shape.length == 2 )
             oneDArray = @s.toArray().to_a
             twoDArray = Java::double[shape[0],shape[1]].new
@@ -113,7 +113,8 @@ class NMatrix
           end
         end
       end
-      
+
+      @dim = @shape.is_a?(Array) ? @shape.length : 2
         
     end
     # @s = @elements
@@ -405,7 +406,8 @@ class NMatrix
 
   def __dense_each__
     nmatrix = NMatrix.new(:copy)
-    nmatrix.shape = @s
+    nmatrix.shape = @shape
+    nmatrix.dtype = @dtype
     stride = get_stride(self)
     offset = 0
     #Create indices and initialize them to zero
@@ -413,17 +415,21 @@ class NMatrix
 
     shape_copy =  Array.new(dim)
     (0...size).each do |k|
-      if (@dtype == :RUBYOBJ)
+      if (@dtype == :object)
         dense_storage_coords(nmatrix, k, coords, stride, offset)
         slice_index = dense_storage_pos(coords,stride)
-        yield self.s.toArray.to_a[slice_index]
+        yield self.s[slice_index]
       else
         dense_storage_coords(nmatrix, k, coords, stride, offset)
         slice_index = dense_storage_pos(coords,stride)
         yield self.s.toArray.to_a[slice_index]
       end
     end if block_given?
-    return @s.toArray().to_a.to_enum
+    if (@dtype == :object)
+      return @s.to_enum
+    else
+      return @s.toArray().to_a.to_enum
+    end
   end
 
   def __dense_map__
