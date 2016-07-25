@@ -29,7 +29,7 @@ class NMatrix
           elements = args[1]
           if args.length > 2
             hash = args[2]
-            puts hash
+            # puts hash
             @dtype = hash[:dtype]
             @stype = hash[:stype]
           else
