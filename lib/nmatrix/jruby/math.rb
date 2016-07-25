@@ -15,9 +15,9 @@ class NMatrix
           raise Exception.new("cannot add matrices with different shapes");
         end
       end
-      result.s = @s.add(other.s)
+      result.s = @s.copy.add(other.s)
     else
-      result.s = @s.mapAddToSelf(other)
+      result.s = @s.copy.mapAddToSelf(other)
     end
     result
   end
@@ -38,9 +38,9 @@ class NMatrix
           raise Exception.new("cannot subtract matrices with different shapes");
         end
       end
-      result.s = @s.subtract(other.s)
+      result.s = @s.copy.subtract(other.s)
     else
-      result.s = @s.mapSubtractToSelf(other)
+      result.s = @s.copy.mapSubtractToSelf(other)
     end
     result
   end
@@ -61,9 +61,9 @@ class NMatrix
           raise Exception.new("cannot multiply matrices with different shapes");
         end
       end
-      result.s = @s.ebeMultiply(other.s)
+      result.s = @s.copy.ebeMultiply(other.s)
     else
-      result.s = @s.mapMultiplyToSelf(other)
+      result.s = @s.copy.mapMultiplyToSelf(other)
     end
     result
   end
@@ -84,9 +84,9 @@ class NMatrix
           raise Exception.new("cannot divide matrices with different shapes");
         end
       end
-      result.s = @s.ebeDivide(other.s)
+      result.s = @s.copy.ebeDivide(other.s)
     else
-      result.s = @s.mapDivideToSelf(other)
+      result.s = @s.copy.mapDivideToSelf(other)
     end
     result
   end
@@ -118,7 +118,7 @@ class NMatrix
     result = NMatrix.new(:copy)
     result.shape = @shape
     result.dim = @dim
-    result.s = @s.mapToSelf(Sin.new())
+    result.s = @s.copy.mapToSelf(Sin.new())
     result
   end
 
@@ -126,7 +126,7 @@ class NMatrix
     result = NMatrix.new(:copy)
     result.shape = @shape
     result.dim = @dim
-    result.s = @s.mapToSelf(Cos.new())
+    result.s = @s.copy.mapToSelf(Cos.new())
     result
   end
 
@@ -134,7 +134,7 @@ class NMatrix
     result = NMatrix.new(:copy)
     result.shape = @shape
     result.dim = @dim
-    result.s = @s.mapToSelf(Tan.new())
+    result.s = @s.copy.mapToSelf(Tan.new())
     result
   end
 
@@ -142,7 +142,7 @@ class NMatrix
     result = NMatrix.new(:copy)
     result.shape = @shape
     result.dim = @dim
-    result.s = @s.mapToSelf(Asin.new())
+    result.s = @s.copy.mapToSelf(Asin.new())
     result
   end
 
@@ -150,7 +150,7 @@ class NMatrix
     result = NMatrix.new(:copy)
     result.shape = @shape
     result.dim = @dim
-    result.s = @s.mapToSelf(Acos.new())
+    result.s = @s.copy.mapToSelf(Acos.new())
     result
   end
 
@@ -158,7 +158,7 @@ class NMatrix
     result = NMatrix.new(:copy)
     result.shape = @shape
     result.dim = @dim
-    result.s = @s.mapToSelf(Atan.new())
+    result.s = @s.copy.mapToSelf(Atan.new())
     result
   end
 
@@ -166,7 +166,7 @@ class NMatrix
     result = NMatrix.new(:copy)
     result.shape = @shape
     result.dim = @dim
-    result.s = @s.mapToSelf(Sinh.new())
+    result.s = @s.copy.mapToSelf(Sinh.new())
     result
   end
 
@@ -174,7 +174,7 @@ class NMatrix
     result = NMatrix.new(:copy)
     result.shape = @shape
     result.dim = @dim
-    result.s = @s.mapToSelf(Cosh.new())
+    result.s = @s.copy.mapToSelf(Cosh.new())
     result
   end
 
@@ -182,7 +182,7 @@ class NMatrix
     result = NMatrix.new(:copy)
     result.shape = @shape
     result.dim = @dim
-    result.s = @s.mapToSelf(Tanh.new())
+    result.s = @s.copy.mapToSelf(Tanh.new())
     result
   end
 
@@ -190,7 +190,7 @@ class NMatrix
     result = NMatrix.new(:copy)
     result.shape = @shape
     result.dim = @dim
-    result.s = @s.mapToSelf(Asinh.new())
+    result.s = @s.copy.mapToSelf(Asinh.new())
     result
   end
 
@@ -198,7 +198,7 @@ class NMatrix
     result = NMatrix.new(:copy)
     result.shape = @shape
     result.dim = @dim
-    result.s = @s.mapToSelf(Acosh.new())
+    result.s = @s.copy.mapToSelf(Acosh.new())
     result
   end
 
@@ -206,7 +206,7 @@ class NMatrix
     result = NMatrix.new(:copy)
     result.shape = @shape
     result.dim = @dim
-    result.s = @s.mapToSelf(Atanh.new())
+    result.s = @s.copy.mapToSelf(Atanh.new())
     result
   end
 
@@ -214,7 +214,7 @@ class NMatrix
     result = NMatrix.new(:copy)
     result.shape = @shape
     result.dim = @dim
-    result.s = @s.mapToSelf(Exp.new())
+    result.s = @s.copy.mapToSelf(Exp.new())
     result
   end
 
@@ -222,7 +222,7 @@ class NMatrix
     result = NMatrix.new(:copy)
     result.shape = @shape
     result.dim = @dim
-    result.s = @s.mapToSelf(Log.new())
+    result.s = @s.copy.mapToSelf(Log.new())
     result
   end
 
@@ -230,7 +230,7 @@ class NMatrix
     result = NMatrix.new(:copy)
     result.shape = @shape
     result.dim = @dim
-    result.s = @s.mapToSelf(Log10.new())
+    result.s = @s.copy.mapToSelf(Log10.new())
     result
   end
 
@@ -238,7 +238,7 @@ class NMatrix
     result = NMatrix.new(:copy)
     result.shape = @shape
     result.dim = @dim
-    result.s = @s.mapToSelf(Sqrt.new())
+    result.s = @s.copy.mapToSelf(Sqrt.new())
     result
   end
 
@@ -254,7 +254,7 @@ class NMatrix
     result = NMatrix.new(:copy)
     result.shape = @shape
     result.dim = @dim
-    result.s = @s.mapToSelf(Cbrt.new())
+    result.s = @s.copy.mapToSelf(Cbrt.new())
     result
   end
 
@@ -270,7 +270,7 @@ class NMatrix
     result = NMatrix.new(:copy)
     result.shape = @shape
     result.dim = @dim
-    result.s = @s.mapToSelf(Floor.new())
+    result.s = @s.copy.mapToSelf(Floor.new())
     result
   end
 
@@ -278,7 +278,7 @@ class NMatrix
     result = NMatrix.new(:copy)
     result.shape = @shape
     result.dim = @dim
-    result.s = @s.mapToSelf(Ceil.new())
+    result.s = @s.copy.mapToSelf(Ceil.new())
     result
   end
 
