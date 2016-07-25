@@ -876,3 +876,15 @@
 
   * Fixed clang/clang++ compiler selection by forcing use of
     clang++ when clang is used (by @mrkn)
+
+=== 0.2.3 / 2016-07-25
+
+* No major enhancements.
+
+* No minor enhancements.
+
+* 1 bug fix:
+
+  * Fixed gem installation problem caused by mkmf
+    abstraction (by @mrkn)
+
