@@ -57,7 +57,7 @@ class NMatrix
         else
           offset = 1
           @stype = :dense
-          @dtype = :double
+          @dtype = args[-1]
         end
 
         @shape = args[offset]
@@ -486,7 +486,7 @@ class NMatrix
 
       #check the entries
 
-      result = @s.equals(otherNmatrix.s)
+      resultArray = @s.equals(otherNmatrix.s)
     end
     result
   end
@@ -512,9 +512,12 @@ class NMatrix
       (0...lha.length).each do |i|
         resultArray[i] = lha[i] =~ rha[i] ? true : false
       end
-      # result = NMatrix.new(@shape, resultArray, dtype: :int64)
+      result = NMatrix.new(:copy)
+      result.shape = @shape
+      result.dtype = :object
+      result.s = resultArray
     end
-    resultArray
+    result
   end
 
   def !~ (other)
@@ -538,9 +541,12 @@ class NMatrix
       (0...lha.length).each do |i|
         resultArray[i] = lha[i] !~ rha[i] ? true : false
       end
-      # result = NMatrix.new(@shape, resultArray, dtype: :int64)
+      result = NMatrix.new(:copy)
+      result.shape = @shape
+      result.dtype = :object
+      result.s = resultArray
     end
-    resultArray
+    result
   end
 
   def <= (other)
@@ -564,9 +570,12 @@ class NMatrix
       (0...lha.length).each do |i|
         resultArray[i] = lha[i] <= rha[i] ? true : false
       end
-      # result = NMatrix.new(@shape, resultArray, dtype: :int64)
+      result = NMatrix.new(:copy)
+      result.shape = @shape
+      result.dtype = :object
+      result.s = resultArray
     end
-    resultArray
+    result
   end
 
   def >= (other)
@@ -590,9 +599,12 @@ class NMatrix
       (0...lha.length).each do |i|
         resultArray[i] = lha[i] >= rha[i] ? true : false
       end
-      # result = NMatrix.new(@shape, resultArray, dtype: :int64)
+      result = NMatrix.new(:copy)
+      result.shape = @shape
+      result.dtype = :object
+      result.s = resultArray
     end
-    resultArray
+    result
   end
 
   def < (other)
@@ -616,9 +628,12 @@ class NMatrix
       (0...lha.length).each do |i|
         resultArray[i] = lha[i] < rha[i] ? true : false
       end
-      # result = NMatrix.new(@shape, resultArray, dtype: :int64)
+      result = NMatrix.new(:copy)
+      result.shape = @shape
+      result.dtype = :object
+      result.s = resultArray
     end
-    resultArray
+    result
   end
 
   def > (other)
@@ -642,9 +657,12 @@ class NMatrix
       (0...lha.length).each do |i|
         resultArray[i] = lha[i] > rha[i] ? true : false
       end
-      # result = NMatrix.new(@shape, resultArray, dtype: :int64)
+      result = NMatrix.new(:copy)
+      result.shape = @shape
+      result.dtype = :object
+      result.s = resultArray
     end
-    resultArray
+    result
   end
 
   # /////////////////////////////
