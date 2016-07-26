@@ -522,7 +522,7 @@ class NMatrix
       end
       #check the entries
       (0...lha.length).each do |i|
-        resultArray[i] = lha[i] =~ rha[i] ? true : false
+        resultArray[i] = lha[i] == rha[i] ? true : false
       end
       result = NMatrix.new(:copy)
       result.shape = @shape
@@ -551,7 +551,7 @@ class NMatrix
       end
       #check the entries
       (0...lha.length).each do |i|
-        resultArray[i] = lha[i] !~ rha[i] ? true : false
+        resultArray[i] = lha[i] != rha[i] ? true : false
       end
       result = NMatrix.new(:copy)
       result.shape = @shape
