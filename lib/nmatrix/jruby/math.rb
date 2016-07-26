@@ -91,8 +91,12 @@ class NMatrix
     result
   end
 
-  def **
-    @nmap.mapToSelf(univariate_function_power)
+  def ** val
+    result = NMatrix.new(:copy)
+    result.shape = @shape
+    result.dim = @dim
+    result.s = @s.copy.mapToSelf(Power.new(val))
+    result
   end
 
   def %(other)
