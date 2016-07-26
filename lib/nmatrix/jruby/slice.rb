@@ -236,7 +236,11 @@ class NMatrix
         v_offset %= v_size if(v_offset >= v_size)
         # elem = dest[:elements]
         # elem[p + pdest] = v[v_offset]
-        @s.setEntry(p + pdest, v[v_offset])
+        if @dtype == :object
+          @s[p + pdest] = v[v_offset]
+        else
+          @s.setEntry(p + pdest, v[v_offset])
+        end
         v_offset += 1
       end
     end
@@ -280,7 +284,11 @@ class NMatrix
     if(slice[:single])
       # reinterpret_cast<D*>(s->elements)[nm_dense_storage_pos(s, slice->coords)] = v;
       pos = dense_storage_pos(slice[:coords],stride)
-      @s.setEntry(pos, v[0])
+      if @dtype == :object
+        @s[pos] = v[0]
+      else
+        @s.setEntry(pos, v[0])
+      end
     else
       v_offset = 0
       dest = {}
