@@ -122,6 +122,15 @@ class NMatrix
     # @nmat= JNMatrix.new(@shape, @elements , "FLOAT32", "DENSE_STORE" )
   end
 
+  def clone
+    result = NMatrix.new(:copy)
+    result.shape = self.shape
+    result.dtype = self.dtype
+    result.dim = self.dim
+    result.s = @s.copy
+    return result
+  end
+
   def entries
     return @s.toArray.to_a
   end
