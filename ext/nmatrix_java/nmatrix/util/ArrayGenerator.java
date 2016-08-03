@@ -50,10 +50,9 @@ public class ArrayGenerator{
     float[] resultArray = new float[array.length];
     for (int i=0; i < array.length ; i++){
       array[i] = (float)array[i];
-      index++;
     }
 
-    return array;
+    return resultArray;
   }
 
   // typeCast end
