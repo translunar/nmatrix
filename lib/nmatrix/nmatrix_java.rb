@@ -1,6 +1,6 @@
 require 'java'
 require_relative '../../ext/nmatrix_java/vendor/commons-math3-3.6.1.jar'
-# require_relative '../../ext/nmatrix_java/target/nmatrix.jar'
+require_relative '../../ext/nmatrix_java/target/nmatrix.jar'
 
 # java_import 'JNMatrix'
 # java_import 'Dtype'
@@ -12,6 +12,7 @@ java_import 'org.apache.commons.math3.linear.DecompositionSolver'
 java_import 'org.apache.commons.math3.linear.LUDecomposition'
 java_import 'org.apache.commons.math3.linear.QRDecomposition'
 java_import 'org.apache.commons.math3.linear.CholeskyDecomposition'
+java_import 'MatrixGenerator'
 
 class NMatrix
   include_package 'org.apache.commons.math3.analysis.function'
@@ -133,6 +134,10 @@ class NMatrix
 
   def entries
     return @s.toArray.to_a
+  end
+
+  def twoDMat2
+    return MatrixUtils.createRealMatrix MatrixGenerator.getMatrixDouble(self.s.toArray, @shape[0], @shape[1])
   end
 
   def dtype
@@ -726,7 +731,7 @@ class NMatrix
       result = NMatrix.new(:copy)
       result.shape = [shape[0],other.shape[1]]
       result.dim = @dim
-      result.twoDMat = @twoDMat.multiply(other.twoDMat)
+      result.twoDMat = self.twoDMat2.multiply(other.twoDMat2)
       result.s = ArrayRealVector.new(get_oneDArray(result.shape, result.twoDMat.getData()))
     else
       raise Exception.new("cannot have dot product with a scalar");
