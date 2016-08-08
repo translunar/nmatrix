@@ -103,9 +103,12 @@ class NMatrix
     raise Exception.new("modulus not supported in NMatrix-jruby")
   end
 
-  def atan2
-    # resultArray = @nmat.mapAtan2ToSelf().to_a
-    # result = NMatrix.new(@shape, resultArray,  dtype: :int64)
+  def atan2(val1, val2)
+    result = NMatrix.new(:copy)
+    result.shape = @shape
+    result.dim = @dim
+    result.s = @s.copy.mapToSelf(Atan2.new(val1, val2))
+    result
   end
 
   def ldexp
