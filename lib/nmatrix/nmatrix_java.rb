@@ -231,6 +231,15 @@ class NMatrix
   
   protected
 
+  def create_dummy_nmatrix
+    nmatrix = NMatrix.new(:copy)
+    nmatrix.shape = self.shape
+    nmatrix.dim = self.dim
+    nmatrix.dtype = self.dtype
+    nmatrix.stype = self.stype
+    return nmatrix
+  end
+
   def __list_to_hash__
     
   end

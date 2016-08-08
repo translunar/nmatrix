@@ -271,9 +271,7 @@ class NMatrix
   end
 
   def floor
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
+    result = create_dummy_nmatrix
     result.s = @s.copy.mapToSelf(Floor.new())
     result
   end
