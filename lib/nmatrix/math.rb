@@ -1175,9 +1175,6 @@ class NMatrix
   def scale!(alpha, incx=1, n=nil)
     if jruby?
       @s.mapMultiplyToSelf(alpha)
-      if dim == 2
-        @twoDMat.scalarMultiply(alpha)
-      end
       return self
     else
       raise(DataTypeError, "Incompatible data type for the scaling factor") unless
@@ -1206,9 +1203,6 @@ class NMatrix
       nmatrix = NMatrix.new :copy
       nmatrix.shape = @shape.clone
       nmatrix.s = ArrayRealVector.new(@s.toArray.clone).mapMultiplyToSelf(alpha)
-      if dim == 2
-        nmatrix.twoDMat = MatrixUtils.createMatrix(@s.getData.clone).scalarMultiply(alpha)
-      end
       return nmatrix
     else
       return self.clone.scale!(alpha, incx, n)
