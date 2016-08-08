@@ -153,17 +153,17 @@ class NMatrix
     @stype = :dense
   end
 
-  def cast_full new_stype, new_dtype
+  def cast_full *args
 
-    to_return = NMatrix.new :copy
-    to_return.dtype = new_dtype
-    to_return.stype = new_stype
+    # to_return = NMatrix.new :copy
+    # to_return.dtype = new_dtype
+    # to_return.stype = new_stype
 
-    to_return.s = cast_elements(self.s)
+    # to_return.s = cast_elements(self.s)
 
     # to_return.twoDMat =
 
-    return to_return
+    return self
   end
 
   def default_value
