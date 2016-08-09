@@ -36,4 +36,12 @@ public class MathHelper{
     return result;
   }
 
+  public static double[] round(double[] arr){
+    double[] result = new double[arr.length];
+    for(int i = 0; i< arr.length; i++){
+      result[i] = Math.round(arr[i]);
+    } 
+    return result;
+  }
+
 }
