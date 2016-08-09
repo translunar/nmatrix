@@ -1,6 +1,19 @@
 public class ArrayGenerator{
   // Array from Matrix begin
 
+  public static double[] getArrayDouble(double[][] matrix, int row, int col)
+  {
+    double[] array = new double[row * col];
+    for (int index=0, i=0; i < row ; i++){
+        for (int j=0; j < col; j++){
+            array[index] = matrix[i][j];
+            index++;
+        }
+    }
+
+    return array;
+  }
+
   public static float[] getArrayFloat(float[][] matrix, int row, int col)
   {
     float[] array = new float[row * col];
