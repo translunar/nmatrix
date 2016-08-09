@@ -15,6 +15,7 @@ java_import 'org.apache.commons.math3.linear.CholeskyDecomposition'
 java_import 'MatrixGenerator'
 java_import 'ArrayGenerator'
 java_import 'MathHelper'
+java_import 'ArrayComparator'
 
 class NMatrix
   include_package 'org.apache.commons.math3.analysis.function'
@@ -513,7 +514,7 @@ class NMatrix
       if dtype == :object
         result = @s == otherNmatrix.s
       else
-        result = @s.equals(otherNmatrix.s)
+        result = ArrayComparator.equals(@s.toArray, otherNmatrix.s.toArray)
       end
     end
     result
