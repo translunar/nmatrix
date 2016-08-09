@@ -13,6 +13,7 @@ java_import 'org.apache.commons.math3.linear.LUDecomposition'
 java_import 'org.apache.commons.math3.linear.QRDecomposition'
 java_import 'org.apache.commons.math3.linear.CholeskyDecomposition'
 java_import 'MatrixGenerator'
+java_import 'MathHelper'
 
 class NMatrix
   include_package 'org.apache.commons.math3.analysis.function'
