@@ -1174,6 +1174,8 @@ class NMatrix
 
   def scale!(alpha, incx=1, n=nil)
     if jruby?
+      raise(DataTypeError, "Incompatible data type for the scaling factor") unless
+          NMatrix::upcast(self.dtype, NMatrix::min_dtype(alpha)) == self.dtype
       @s.mapMultiplyToSelf(alpha)
       return self
     else
