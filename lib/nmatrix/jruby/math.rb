@@ -306,7 +306,9 @@ class NMatrix
   end
 
   def round
-    # @nmap.mapToSelf(univariate_function_)
+    result = create_dummy_nmatrix
+    result.s = ArrayRealVector.new MathHelper.round(@s.toArray)
+    result
   end
 
 end
