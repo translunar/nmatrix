@@ -290,7 +290,7 @@ class NMatrix
       to_return = LUDecomposition.new(twoDMat).getDeterminant()
     end
 
-    return to_return
+    return to_return.round(3)
   end
 
   alias :det :det_exact
