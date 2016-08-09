@@ -258,11 +258,19 @@ class NMatrix
   end
 
   def erf
-    # @nmap.mapToSelf(univariate_function_)
+    result = NMatrix.new(:copy)
+    result.shape = @shape
+    result.dim = @dim
+    result.s = ArrayRealVector.new MathHelper.erf(@s.toArray)
+    result
   end
 
   def erfc
-    # @nmap.mapToSelf(univariate_function_)
+    result = NMatrix.new(:copy)
+    result.shape = @shape
+    result.dim = @dim
+    result.s = ArrayRealVector.new MathHelper.erfc(@s.toArray)
+    result
   end
 
   def cbrt
