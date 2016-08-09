@@ -44,4 +44,12 @@ public class MathHelper{
     return result;
   }
 
+  public static double[] ldexp(double[] arr1, double[] arr2){
+    double[] result = new double[arr1.length];
+    for(int i = 0; i< arr1.length; i++){
+      result[i] = arr1[i] * Math.pow(2, arr2[i]);
+    } 
+    return result;
+  }
+
 }

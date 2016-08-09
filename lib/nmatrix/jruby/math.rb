@@ -111,9 +111,10 @@ class NMatrix
     result
   end
 
-  def ldexp
-    resultArray = @nmat.mapLdexpToSelf().to_a
-    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
+  def ldexp(nmatrix)
+    result = create_dummy_nmatrix
+    result.s = ArrayRealVector.new MathHelper.ldexp(nmatrix.s.toArray, @s.toArray)
+    result
   end
 
   def hypot
