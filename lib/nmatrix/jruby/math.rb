@@ -225,6 +225,14 @@ class NMatrix
     result
   end
 
+  def log(val)
+    result = NMatrix.new(:copy)
+    result.shape = @shape
+    result.dim = @dim
+    result.s = ArrayRealVector.new MathHelper.log(val, @s.toArray)
+    result
+  end
+
   def log2
     result = NMatrix.new(:copy)
     result.shape = @shape
