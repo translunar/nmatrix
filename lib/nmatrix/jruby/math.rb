@@ -234,11 +234,7 @@ class NMatrix
   end
 
   def log2
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
-    result.s = @s.copy.mapToSelf(Log.new())
-    result
+    self.log(2)
   end
 
   def log10
@@ -282,11 +278,17 @@ class NMatrix
   end
 
   def gamma
-    # @nmap.mapToSelf(univariate_function_)
+    result = NMatrix.new(:copy)
+    result.shape = @shape
+    result.dim = @dim
+    result.s = ArrayRealVector.new MathHelper.gamma(@s.toArray)
+    result
   end
 
   def -@
-    # @nmap.mapToSelf(univariate_function_)
+    result = create_dummy_nmatrix
+    result.s = @s.copy.mapMultiplyToSelf(-1)
+    result
   end
 
   def floor
