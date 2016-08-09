@@ -377,20 +377,19 @@ class NMatrix
   # symmetric or Hermitian. However, it is still your responsibility to make
   # sure it is positive-definite.
   def factorize_cholesky
-    raise "Matrix must be symmetric/Hermitian for Cholesky factorization" unless self.hermitian?
+    # raise "Matrix must be symmetric/Hermitian for Cholesky factorization" unless self.hermitian?
 
     if jruby?
-      cholesky = CholeskyDecomposition.new(@twoDMat)
-      l = NMatrix.new :copy
-      l.shape = @shape
-      l.twoDMat = cholesky.getL
-      l.s = ArrayRealVector.new(get_oneDArray(@shape, l.twoDMat.getData))
-      u = NMatrix.new :copy
-      u.shape = @shape
-      u.twoDMat = cholesky.getLT
-      u.s = ArrayRealVector.new(get_oneDArray(@shape, u.twoDMat.getData))
-      return [l,u]
+      cholesky = CholeskyDecomposition.new(self.twoDMat2)
+      l = create_dummy_nmatrix
+      twoDMat = cholesky.getL
+      l.s = ArrayRealVector.new(ArrayGenerator.getArrayDouble(twoDMat.getData, @shape[0], @shape[1]))
+      u = create_dummy_nmatrix
+      twoDMat = cholesky.getLT
+      u.s = ArrayRealVector.new(ArrayGenerator.getArrayDouble(twoDMat.getData, @shape[0], @shape[1]))
+      return [u,l]
     else
+      raise "Matrix must be symmetric/Hermitian for Cholesky factorization" unless self.hermitian?
       l = self.clone.potrf_lower!.tril!
       u = l.conjugate_transpose
       return [u,l]
