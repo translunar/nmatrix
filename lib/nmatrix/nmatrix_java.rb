@@ -18,7 +18,7 @@ java_import 'MathHelper'
 
 class NMatrix
   include_package 'org.apache.commons.math3.analysis.function'
-  attr_accessor :shape , :dtype, :elements, :s, :nmat, :twoDMat, :dim
+  attr_accessor :shape , :dtype, :elements, :s, :nmat, :twoDMat, :dim, :stype
 
   def initialize(*args)
     if args[-1] == :copy
