@@ -117,9 +117,10 @@ class NMatrix
     result
   end
 
-  def hypot
-    resultArray = @nmat.mapHypotToSelf().to_a
-    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
+  def hypot(nmatrix)
+    result = create_dummy_nmatrix
+    result.s = ArrayRealVector.new MathHelper.hypot(nmatrix.s.toArray, @s.toArray)
+    result
   end
 
   def sin
