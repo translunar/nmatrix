@@ -92,4 +92,20 @@ public class MathHelper{
     return result;
   }
 
+  public static double[] atan2Scalar(double val, double[] arr){
+    double[] result = new double[arr.length];
+    for(int i = 0; i< arr.length; i++){
+      result[i] =  Math.atan2(val, arr[i]);
+    } 
+    return result;
+  }
+
+  public static double[] atan2Scalar2(double val, double[] arr){
+    double[] result = new double[arr.length];
+    for(int i = 0; i< arr.length; i++){
+      result[i] =  Math.atan2(arr[i], val);
+    } 
+    return result;
+  }
+
 }
