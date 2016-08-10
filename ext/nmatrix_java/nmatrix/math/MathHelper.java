@@ -60,6 +60,14 @@ public class MathHelper{
     return result;
   }
 
+  public static double[] ldexpScalar2(double val, double[] arr){
+    double[] result = new double[arr.length];
+    for(int i = 0; i< arr.length; i++){
+      result[i] = arr[i] * Math.pow(2, val);
+    } 
+    return result;
+  }
+
   public static double[] hypot(double[] arr1, double[] arr2){
     double[] result = new double[arr1.length];
     for(int i = 0; i< arr1.length; i++){
