@@ -126,7 +126,11 @@ class NMatrix
     if scalar
       result.s = ArrayRealVector.new MathHelper.hypotScalar(other, @s.toArray)
     else
-      result.s = ArrayRealVector.new MathHelper.hypot(other.s.toArray, @s.toArray)
+      if other.is_a? NMatrix
+        result.s = ArrayRealVector.new MathHelper.hypot(other.s.toArray, @s.toArray)
+      else
+        result.s = ArrayRealVector.new MathHelper.hypotScalar(other, @s.toArray)
+      end
     end
     result
   end
