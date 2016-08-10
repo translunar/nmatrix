@@ -321,20 +321,24 @@ class NMatrix
 
   def floor
     result = create_dummy_nmatrix
+    # Need to be changed later
+    result.dtype = :int16
     result.s = @s.copy.mapToSelf(Floor.new())
     result
   end
 
   def ceil
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
+    result = create_dummy_nmatrix
+    # Need to be changed later
+    result.dtype = :int16
     result.s = @s.copy.mapToSelf(Ceil.new())
     result
   end
 
   def round
     result = create_dummy_nmatrix
+    # Need to be changed later
+    result.dtype = :int16
     result.s = ArrayRealVector.new MathHelper.round(@s.toArray)
     result
   end
