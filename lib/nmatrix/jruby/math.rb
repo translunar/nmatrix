@@ -117,9 +117,13 @@ class NMatrix
     result
   end
 
-  def hypot(nmatrix)
+  def hypot(other, scalar=false)
     result = create_dummy_nmatrix
-    result.s = ArrayRealVector.new MathHelper.hypot(nmatrix.s.toArray, @s.toArray)
+    if scalar
+      result.s = ArrayRealVector.new MathHelper.hypotScalar(other, @s.toArray)
+    else
+      result.s = ArrayRealVector.new MathHelper.hypot(other.s.toArray, @s.toArray)
+    end
     result
   end
 

@@ -44,10 +44,10 @@ public class MathHelper{
     return result;
   }
 
-  public static double[] ldexp(double[] arr1, double[] arr2){
+  public static double[] ldexp(double[] arr1, double[] arr){
     double[] result = new double[arr1.length];
     for(int i = 0; i< arr1.length; i++){
-      result[i] = arr1[i] * Math.pow(2, arr2[i]);
+      result[i] = arr1[i] * Math.pow(2, arr[i]);
     } 
     return result;
   }
@@ -56,6 +56,14 @@ public class MathHelper{
     double[] result = new double[arr1.length];
     for(int i = 0; i< arr1.length; i++){
       result[i] =  Math.sqrt(arr2[i] * arr2[i] + arr1[i] * arr1[i]);
+    } 
+    return result;
+  }
+
+  public static double[] hypotScalar(double val, double[] arr){
+    double[] result = new double[arr.length];
+    for(int i = 0; i< arr.length; i++){
+      result[i] =  Math.sqrt(arr[i] * arr[i] + val * val);
     } 
     return result;
   }
