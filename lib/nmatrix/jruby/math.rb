@@ -243,11 +243,15 @@ class NMatrix
     result
   end
 
-  def log(val)
+  def log(val = :natural)
     result = NMatrix.new(:copy)
     result.shape = @shape
     result.dim = @dim
-    result.s = ArrayRealVector.new MathHelper.log(val, @s.toArray)
+    if val == :natural
+      result.s = @s.copy.mapToSelf(Log.new())
+    else
+      result.s = ArrayRealVector.new MathHelper.log(val, @s.toArray)
+    end
     result
   end
 
