@@ -116,7 +116,11 @@ class NMatrix
     if scalar
       result.s = ArrayRealVector.new MathHelper.ldexpScalar(other, @s.toArray)
     else
-      result.s = ArrayRealVector.new MathHelper.ldexp(other.s.toArray, @s.toArray)
+      if other.is_a? NMatrix
+        result.s = ArrayRealVector.new MathHelper.ldexp(other.s.toArray, @s.toArray)
+      else
+        result.s = ArrayRealVector.new MathHelper.ldexpScalar2(other, @s.toArray)
+      end
     end
     result
   end
