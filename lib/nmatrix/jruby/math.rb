@@ -111,9 +111,13 @@ class NMatrix
     result
   end
 
-  def ldexp(nmatrix)
+  def ldexp(other, scalar=false)
     result = create_dummy_nmatrix
-    result.s = ArrayRealVector.new MathHelper.ldexp(nmatrix.s.toArray, @s.toArray)
+    if scalar
+      result.s = ArrayRealVector.new MathHelper.ldexpScalar(other, @s.toArray)
+    else
+      result.s = ArrayRealVector.new MathHelper.ldexp(other.s.toArray, @s.toArray)
+    end
     result
   end
 
