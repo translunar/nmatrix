@@ -84,4 +84,12 @@ public class MathHelper{
     return result;
   }
 
+  public static double[] atan2(double[] arr1, double[] arr2){
+    double[] result = new double[arr1.length];
+    for(int i = 0; i< arr1.length; i++){
+      result[i] =  Math.atan2(arr2[i], arr1[i]);
+    } 
+    return result;
+  }
+
 }

@@ -103,11 +103,10 @@ class NMatrix
     raise Exception.new("modulus not supported in NMatrix-jruby")
   end
 
-  def atan2(val1, val2)
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
-    result.s = @s.copy.mapToSelf(Atan2.new(val1, val2))
+  def atan2(other)
+    result = create_dummy_nmatrix
+    # if scalar
+    result.s = ArrayRealVector.new MathHelper.atan2(other.s.toArray, @s.toArray)
     result
   end
 
