@@ -1207,6 +1207,8 @@ class NMatrix
   
   def scale(alpha, incx=1, n=nil)
     if jruby?
+      raise(DataTypeError, "Incompatible data type for the scaling factor") unless
+          NMatrix::upcast(self.dtype, NMatrix::min_dtype(alpha)) == self.dtype
       nmatrix = NMatrix.new :copy
       nmatrix.shape = @shape.clone
       nmatrix.s = ArrayRealVector.new(@s.toArray.clone).mapMultiplyToSelf(alpha)

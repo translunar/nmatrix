@@ -127,6 +127,18 @@ class NMatrix
     # @nmat= JNMatrix.new(@shape, @elements , "FLOAT32", "DENSE_STORE" )
   end
 
+  def self.min_dtype(alpha)
+    :int8
+  end
+
+  def self.upcast(alpha, beta)
+    if alpha == beta
+      return alpha
+    else
+      beta
+    end
+  end
+
   def clone
     result = NMatrix.new(:copy)
     result.shape = self.shape
