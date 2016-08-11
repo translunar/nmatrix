@@ -882,8 +882,8 @@ class NMatrix
 
   # // private methods
 
-  def __hessenberg__
-    
+  def __hessenberg__(param)
+    raise(NotImplementedError, "Hessenberg Transformer not implemented NMatrix-JRuby")
   end
 
   # /////////////////
