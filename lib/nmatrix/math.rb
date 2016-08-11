@@ -565,19 +565,13 @@ class NMatrix
     n    = self.shape[0]
     nrhs = b.shape[1]
     if jruby?
-      nmatrix = NMatrix.new :copy
-      nmatrix.dim = b.dim
-      nmatrix.shape = b.shape
+      nmatrix = create_dummy_nmatrix
       case opts[:form] 
-      when :general
+      when :general, :upper_tri, :upper_triangular, :lower_tri, :lower_triangular
         #LU solver
         solver = LUDecomposition.new(@twoDMat).getSolver
         nmatrix.s = solver.solve(b.s)
         return nmatrix
-      when :upper_tri, :upper_triangular
-
-      when :lower_tri, :lower_triangular
-
       when :pos_def, :positive_definite
         solver = Choleskyecomposition.new(@twoDMat).getSolver
         nmatrix.s = solver.solve(b.s)
