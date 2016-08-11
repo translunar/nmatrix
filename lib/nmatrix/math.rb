@@ -1124,7 +1124,7 @@ class NMatrix
       self.__list_map_merged_stored__(nil, nil) { |v,dummy| v.abs }
     else
       self.__yale_map_stored__ { |v| v.abs }
-    end
+    end.cast(self.stype, abs_dtype)
   end
 
   #
