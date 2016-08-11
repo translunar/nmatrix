@@ -461,7 +461,27 @@ class NMatrix
   end
 
   def __dense_map__
-    
+    nmatrix = NMatrix.new(:copy)
+    nmatrix.shape = @shape
+    nmatrix.dtype = @dtype
+    nmatrix.dim = self.dim
+
+    stride = get_stride(self)
+    offset = 0
+    coords = Array.new(dim){ 0 }
+    shape_copy =  Array.new(dim)
+  
+    s= Java::double[size].new
+    (0...size).each do |k|
+      dense_storage_coords(nmatrix, k, coords, stride, offset)
+      slice_index = dense_storage_pos(coords,stride)
+      
+      y = yield @s.getEntry(slice_index)
+      @s.setEntry(slice_index, y)
+    end
+    nmatrix.s = ArrayRealVector.new s
+
+    return nmatrix
   end
 
   def __dense_map_pair__

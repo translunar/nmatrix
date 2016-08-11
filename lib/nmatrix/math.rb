@@ -454,10 +454,12 @@ class NMatrix
       qrdecomp = QRDecomposition.new(@twoDMat)
       qmat = NMatrix.new(:copy)
       qmat.shape = @shape
+      qmat.dim = self.dim
       qmat.twoDMat = qrdecomp.getQ
       qmat.s = ArrayRealVector.new(get_oneDArray(@shape, qmat.twoDMat.getData))
       rmat = NMatrix.new(:copy)
       rmat.shape = shape
+      rmat.dim = self.dim
       rmat.twoDMat = qrdecomp.getR
       rmat.s = ArrayRealVector.new(get_oneDArray(@shape, rmat.twoDMat.getData))
       return [qmat,rmat]
@@ -1122,7 +1124,7 @@ class NMatrix
       self.__list_map_merged_stored__(nil, nil) { |v,dummy| v.abs }
     else
       self.__yale_map_stored__ { |v| v.abs }
-    end.cast(self.stype, abs_dtype)
+    end
   end
 
   #
