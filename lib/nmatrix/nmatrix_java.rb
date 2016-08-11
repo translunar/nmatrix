@@ -1,6 +1,7 @@
 require 'java'
 require_relative '../../ext/nmatrix_java/vendor/commons-math3-3.6.1.jar'
 require_relative '../../ext/nmatrix_java/target/nmatrix.jar'
+require_relative './jruby/error.rb'
 
 # java_import 'JNMatrix'
 # java_import 'Dtype'
@@ -909,6 +910,7 @@ class NMatrix
 
   end
 end
+
 
 require_relative './jruby/slice.rb'
 require_relative './jruby/math.rb'
