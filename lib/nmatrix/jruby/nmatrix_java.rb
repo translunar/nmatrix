@@ -921,6 +921,6 @@ end
 
 
 require_relative './slice.rb'
-require_relative './math.rb'
+require_relative './operators.rb'
 require_relative './decomposition.rb'
 require_relative './error.rb'
