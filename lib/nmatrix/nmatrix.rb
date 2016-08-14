@@ -37,7 +37,7 @@ def jruby?
 end
 
 if jruby?
-  require_relative 'nmatrix_java'
+  require_relative 'jruby/nmatrix_java'
 else
   if File.exist?("lib/nmatrix/nmatrix.so") #|| File.exist?("lib/nmatrix/nmatrix.bundle")
     # Development

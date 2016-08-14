@@ -1,7 +1,6 @@
 require 'java'
-require_relative '../../ext/nmatrix_java/vendor/commons-math3-3.6.1.jar'
-require_relative '../../ext/nmatrix_java/target/nmatrix.jar'
-require_relative './jruby/error.rb'
+require_relative '../../../ext/nmatrix_java/vendor/commons-math3-3.6.1.jar'
+require_relative '../../../ext/nmatrix_java/target/nmatrix.jar'
 
 # java_import 'JNMatrix'
 # java_import 'Dtype'
@@ -102,7 +101,7 @@ class NMatrix
           @s = storage
         else
           @s = ArrayRealVector.new(storage.to_java Java::double)
-          
+
           if(@shape.length == 2 )
             oneDArray = @s.toArray().to_a
             twoDArray = Java::double[shape[0],shape[1]].new
@@ -120,7 +119,7 @@ class NMatrix
       end
 
       @dim = @shape.is_a?(Array) ? @shape.length : 2
-        
+
     end
     # @s = @elements
     # Java enums are accessible from Ruby code as constants:
@@ -207,7 +206,7 @@ class NMatrix
       raise(ArgumentError, "wrong number of arguments (#{args.length} for #{effective_dim(dim+1)})" )
     else
       slice = get_slice(@dim, args, @shape)
-      
+
       # puts args[-1]
       dense_storage_set(slice, args[-1])
 
@@ -221,7 +220,7 @@ class NMatrix
   end
 
   def is_ref?
-    
+
   end
 
   # def dim
@@ -241,7 +240,7 @@ class NMatrix
   alias :effective_dimensions :effective_dim
 
 
-  
+
   protected
 
   def create_dummy_nmatrix
@@ -254,7 +253,7 @@ class NMatrix
   end
 
   def __list_to_hash__
-    
+
   end
 
   public
@@ -322,7 +321,7 @@ class NMatrix
       size = count_max_elements
       new_size = 1
       shape = interpret_shape(shape_ary, dim)
-      
+
       (0...dim).each do |index|
         new_size *= shape[index]
       end
@@ -344,7 +343,7 @@ class NMatrix
 
     if shape_ary.is_a?(Array)
       dim = shape_ary.length
-     
+
       (0...dim).each do |index|
         shape[index] = shape_ary[index].to_i
       end
@@ -367,7 +366,7 @@ class NMatrix
   public
 
   def each_with_indices
-    
+
     nmatrix = NMatrix.new(:copy)
     nmatrix.shape = @shape
     nmatrix.dtype = @dtype
@@ -382,9 +381,9 @@ class NMatrix
       dense_storage_coords(nmatrix, k, coords, stride, offset)
       slice_index = dense_storage_pos(coords,stride)
       ary = Array.new
-      if (@dtype == :object) 
+      if (@dtype == :object)
         ary << self.s[slice_index]
-      else 
+      else
         ary << self.s.toArray.to_a[slice_index]
       end
       (0...dim).each do |p|
@@ -400,7 +399,7 @@ class NMatrix
 
 
   def each_stored_with_indices
-  
+
     nmatrix = NMatrix.new(:copy)
     nmatrix.shape = @shape
     nmatrix.dtype = @dtype
@@ -415,9 +414,9 @@ class NMatrix
       dense_storage_coords(nmatrix, k, coords, stride, offset)
       slice_index = dense_storage_pos(coords,stride)
       ary = Array.new
-      if (@dtype == :object) 
+      if (@dtype == :object)
         ary << self.s[slice_index]
-      else 
+      else
         ary << self.s.toArray.to_a[slice_index]
       end
       (0...dim).each do |p|
@@ -432,11 +431,11 @@ class NMatrix
   end
 
   def map_stored
-    
+
   end
 
   def each_ordered_stored_with_indices
-    
+
   end
 
 
@@ -480,12 +479,12 @@ class NMatrix
     offset = 0
     coords = Array.new(dim){ 0 }
     shape_copy =  Array.new(dim)
-  
+
     s= Java::double[size].new
     (0...size).each do |k|
       dense_storage_coords(nmatrix, k, coords, stride, offset)
       slice_index = dense_storage_pos(coords,stride)
-      
+
       y = yield @s.getEntry(slice_index)
       @s.setEntry(slice_index, y)
     end
@@ -499,27 +498,27 @@ class NMatrix
   end
 
   def __list_map_merged_stored__
-    
+
   end
 
   def __list_map_stored__
-    
+
   end
 
   def __yale_map_merged_stored__
-    
+
   end
 
   def __yale_map_stored__
-    
+
   end
 
   def __yale_stored_diagonal_each_with_indices__
-    
+
   end
 
   def __yale_stored_nondiagonal_each_with_indices__
-    
+
   end
 
 
@@ -769,7 +768,7 @@ class NMatrix
         raise Exception.new("incompatible dimensions")
         return nil
       end
-      
+
       result = NMatrix.new(:copy)
       result.shape = [shape[0],other.shape[1]]
       result.dim = @dim
@@ -818,13 +817,13 @@ class NMatrix
   # // protected methods
 
   protected
-  
+
   def __inverse__
     # if (:stype != :dense)
     #   raise Exception.new("needs exact determinant implementation for this matrix stype")
     #   return nil
     # end
-    
+
     if (@dim != 2 || @shape[0] != @shape[1])
       raise Exception.new("matrices must be square to have an inverse defined")
       return nil
@@ -848,7 +847,7 @@ class NMatrix
     #   raise Exception.new("needs exact determinant implementation for this matrix stype")
     #   return nil
     # end
-    
+
     if (@dim != 2 || @shape[0] != @shape[1])
       raise Exception.new("matrices must be square to have an inverse defined")
       return nil
@@ -863,13 +862,13 @@ class NMatrix
 
     return self
   end
-  
+
   def __inverse_exact__
     # if (:stype != :dense)
     #   raise Exception.new("needs exact determinant implementation for this matrix stype")
     #   return nil
     # end
-    
+
     if (@dim != 2 || @shape[0] != @shape[1])
       raise Exception.new("matrices must be square to have an inverse defined")
       return nil
@@ -885,7 +884,7 @@ class NMatrix
     end
 
     return to_return
-    
+
   end
 
   private
@@ -903,7 +902,7 @@ class NMatrix
   public
 
   def data_pointer
-    
+
   end
 
   # /////////////
@@ -921,6 +920,7 @@ class NMatrix
 end
 
 
-require_relative './jruby/slice.rb'
-require_relative './jruby/math.rb'
-require_relative './jruby/decomposition.rb'
+require_relative './slice.rb'
+require_relative './math.rb'
+require_relative './decomposition.rb'
+require_relative './error.rb'
