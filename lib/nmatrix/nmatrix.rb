@@ -45,6 +45,7 @@ else
   else
     # Gem
     require_relative "../nmatrix.so"
+    require_relative 'math'
   end
 end
 # require_relative './io/mat_reader'
@@ -896,7 +897,7 @@ class NMatrix
     else
       layer
     end
-    
+
   end
 
 
