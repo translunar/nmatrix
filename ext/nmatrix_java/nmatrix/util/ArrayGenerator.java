@@ -27,7 +27,20 @@ public class ArrayGenerator{
     return array;
   }
 
-  public static float[] getArrayColMajor(float[][] matrix, int col, int row)
+  public static double[] getArrayColMajorDouble(double[][] matrix, int col, int row)
+  {
+    double[] array = new double[row * col];
+    for (int index=0, i=0; i < col ; i++){
+        for (int j=0; j < row; j++){
+            array[index] = matrix[i][j];
+            index++;
+        }
+    }
+
+    return array;
+  }
+
+  public static float[] getArrayColMajorFloat(float[][] matrix, int col, int row)
   {
     float[] array = new float[row * col];
     for (int index=0, i=0; i < col ; i++){
@@ -53,7 +66,7 @@ public class ArrayGenerator{
     return array;
   }
 
-  
+
 
   // Array from Matrix end
 
