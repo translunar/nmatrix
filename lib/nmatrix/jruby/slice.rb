@@ -34,7 +34,7 @@ class NMatrix
         end_ = v.end
         excl = v.exclude_end?
         slice[:coords][r] = (begin_ < 0) ? shape[r] + begin_ : begin_
-      
+
         # Exclude last element for a...b range
         if (end_ < 0)
           slice[:lengths][r] = shape_array[r] + end_ - slice[:coords][r] + (excl ? 0 : 1)
@@ -65,10 +65,7 @@ class NMatrix
       end
     end
     stride
-  end 
-
-# n[3,3]  # => 5.0
-# n[0..1,0..1] #=> matrix [2,2]
+  end
 
   def xslice(args)
     result = nil
@@ -81,12 +78,12 @@ class NMatrix
       slice = get_slice(@dim, args, @shape)
       stride = get_stride(self)
       if slice[:single]
-        if (@dtype == :object) 
+        if (@dtype == :object)
           result = @s[dense_storage_get(slice,stride)]
         else
-          s = @s.toArray().to_a                                
+          s = @s.toArray().to_a
           result = @s.getEntry(dense_storage_get(slice,stride))
-        end 
+        end
       else
         result = dense_storage_get(slice,stride)
       end
@@ -106,18 +103,18 @@ class NMatrix
       slice = get_slice(@dim, args, @shape)
       stride = get_stride(self)
       if slice[:single]
-        if (@dtype == :object) 
+        if (@dtype == :object)
           result = @s[dense_storage_get(slice,stride)]
-        else                               
+        else
           result = @s.getEntry(dense_storage_get(slice,stride))
-        end 
+        end
       else
         result = dense_storage_ref(slice,stride)
       end
     end
     return result
   end
-  
+
   def dense_storage_get(slice,stride)
     if slice[:single]
       return dense_storage_pos(slice[:coords],stride)
@@ -138,7 +135,7 @@ class NMatrix
       result.shape = resultShape
       dest = {}
       src[:stride] = get_stride(self)
-      if (@dtype == :object) 
+      if (@dtype == :object)
         src[:elements] = @s
       else
         src[:elements] = @s.toArray().to_a
@@ -148,9 +145,9 @@ class NMatrix
       dest[:elements] = []
       temp = []
       s = (slice_copy(src, dest, slice[:lengths], 0, psrc,0))
-      # if 
+      # if
       # arr = Java::double[s.length].new
-      if (@dtype == :object) 
+      if (@dtype == :object)
         arr = Java::boolean[s.length].new
       else
         arr = Java::double[s.length].new
@@ -158,36 +155,17 @@ class NMatrix
       (0...s.length).each do |i|
         arr[i] = s[i]
       end
-      if (@dtype == :object) 
+      if (@dtype == :object)
         result.s = arr
       else
         result.s = ArrayRealVector.new(arr)
       end
-      
+
       return result
     end
   end
 
-  # def dense_storage_ref(slice,stride)
-  #   if slice[:single]
-  #     return dense_storage_pos(slice[:coords],stride)
-  #   else
-  #     shape = @shape.dup
-  #     resultShape= Array.new(dim)
-  #     (0...dim).each do |i|
-  #       resultShape[i]  = slice[:lengths][i]
-  #     end
-  #     result = self.clone
-  #     result.shape = resultShape
-  #     result.dtype = @dtype
-  #     return result
-  #   end
-  # end
-
   def slice_copy(src, dest,lengths, pdest, psrc,n)
-    # p src
-    # p dest
-    
     if @dim-n>1
       (0...lengths[n]).each do |i|
         slice_copy(src, dest, lengths,pdest+dest[:stride][n]*i,psrc+src[:stride][n]*i,n+1)
@@ -220,12 +198,6 @@ class NMatrix
     return pos + offset;
   end
 
-  # def get_element
-  #   for (p = 0; p < dest->shape[n]; ++p) {
-  #       reinterpret_cast<LDType*>(dest->elements)[p+pdest] = reinterpret_cast<RDType*>(src->elements)[p+psrc];
-  #     }
-  # end
-
   def slice_set(dest, lengths, pdest, rank, v, v_size, v_offset)
     if (dim - rank > 1)
       (0...lengths[rank]).each do |i|
@@ -247,25 +219,14 @@ class NMatrix
   end
 
   def dense_storage_set(slice, right)
-    # s = NM_STORAGE_DENSE(left);
-
-    # std::pair<NMATRIX*,bool> nm_and_free =
-    #   interpret_arg_as_dense_nmatrix(right, s->dtype);
-
-    # Map the data onto D* v.
     stride = get_stride(self)
     v_size = 1
 
     if right.is_a?(NMatrix)
       right = right.s.toArray.to_a
     end
-    
-    # if(nm_and_free.first) {
-    #   t = Array.new(size)
-    #   v_size = count_max_elements(t)
-    # els
 
-    if(right.is_a?(Array))    
+    if(right.is_a?(Array))
       v_size = right.length
       v = right
       if (dtype == :RUBYOBJ)
@@ -275,7 +236,7 @@ class NMatrix
       (0...v_size).each do |m|
         v[m] = right[m]
       end
-    else 
+    else
       v = [right]
       if (@dtype == :RUBYOBJ)
         # nm_register_values(reinterpret_cast<VALUE*>(v), v_size)
@@ -298,30 +259,6 @@ class NMatrix
       dense_pos = dense_storage_pos(slice[:coords],stride)
       slice_set(dest, slice[:lengths], dense_pos, 0, v, v_size, v_offset)
     end
-
   end
-
-  # def dense_storage_get(const STORAGE* storage, SLICE* slice)
-  #   if slice[:single]
-  #     return dense_storage_pos(slice[:coords])
-  #   else
-  #     new_shape = Array.new dim
-  #     (0...dim).each fo |i|
-  #       new_shape[i]  = slice[:lengths][i]
-  #     end
-
-  #     # DENSE_STORAGE* ns = nm_dense_storage_create(s->dtype, shape, s->dim, NULL, 0);
-
-  #     slice_copy(ns,
-  #         reinterpret_cast<const DENSE_STORAGE*>(s->src),
-  #         slice->lengths,
-  #         0,
-  #         nm_dense_storage_pos(s, slice->coords),
-  #         0);
-
-  #     return ns
-
-  #   end
-  # end
 
 end
