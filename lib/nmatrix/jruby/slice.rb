@@ -90,8 +90,8 @@ class NMatrix
     end
     return result
   end
-#its by ref
 
+  #its by ref
   def xslice_ref(args)
     result = nil
 

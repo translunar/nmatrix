@@ -1,8 +1,9 @@
 class NMatrix
+
+  # A dummy matrix is a matrix without the elements atrribute.
+  # NMatrix#create_dummy_matrix prevents creating copies as @s is set explicitly.
   def +(other)
-    result = NMatrix.new(:copy)
-    result.dim = @dim
-    result.shape = @shape
+    result = create_dummy_nmatrix
     if (other.is_a?(NMatrix))
       #check dimension
       raise(ShapeError, "Cannot add matrices with different dimension") if (@dim != other.dim)
@@ -18,9 +19,7 @@ class NMatrix
   end
 
   def -(other)
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
+    result = create_dummy_nmatrix
     if (other.is_a?(NMatrix))
       #check dimension
       raise(ShapeError, "Cannot subtract matrices with different dimension") if (@dim != other.dim)
@@ -36,9 +35,7 @@ class NMatrix
   end
 
   def *(other)
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
+    result = create_dummy_nmatrix
     if (other.is_a?(NMatrix))
       #check dimension
       raise(ShapeError, "Cannot multiply matrices with different dimension") if (@dim != other.dim)
@@ -54,9 +51,7 @@ class NMatrix
   end
 
   def /(other)
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
+    result = create_dummy_nmatrix
     if (other.is_a?(NMatrix))
       #check dimension
       raise(ShapeError, "Cannot divide matrices with different dimension") if (@dim != other.dim)
@@ -126,65 +121,49 @@ class NMatrix
   end
 
   def sin
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
+    result = create_dummy_nmatrix
     result.s = @s.copy.mapToSelf(Sin.new())
     result
   end
 
   def cos
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
+    result = create_dummy_nmatrix
     result.s = @s.copy.mapToSelf(Cos.new())
     result
   end
 
   def tan
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
+    result = create_dummy_nmatrix
     result.s = @s.copy.mapToSelf(Tan.new())
     result
   end
 
   def asin
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
+    rresult = create_dummy_nmatrix
     result.s = @s.copy.mapToSelf(Asin.new())
     result
   end
 
   def acos
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
+    result = create_dummy_nmatrix
     result.s = @s.copy.mapToSelf(Acos.new())
     result
   end
 
   def atan
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
+    result = create_dummy_nmatrix
     result.s = @s.copy.mapToSelf(Atan.new())
     result
   end
 
   def sinh
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
+    result = create_dummy_nmatrix
     result.s = @s.copy.mapToSelf(Sinh.new())
     result
   end
 
   def cosh
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
+    result = create_dummy_nmatrix
     result.s = @s.copy.mapToSelf(Cosh.new())
     result
   end
@@ -198,41 +177,31 @@ class NMatrix
   end
 
   def asinh
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
+    result = create_dummy_nmatrix
     result.s = @s.copy.mapToSelf(Asinh.new())
     result
   end
 
   def acosh
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
+    result = create_dummy_nmatrix
     result.s = @s.copy.mapToSelf(Acosh.new())
     result
   end
 
   def atanh
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
+    result = create_dummy_nmatrix
     result.s = @s.copy.mapToSelf(Atanh.new())
     result
   end
 
   def exp
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
+    result = create_dummy_nmatrix
     result.s = @s.copy.mapToSelf(Exp.new())
     result
   end
 
   def log(val = :natural)
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
+    result = create_dummy_nmatrix
     if val == :natural
       result.s = @s.copy.mapToSelf(Log.new())
     else
@@ -246,49 +215,37 @@ class NMatrix
   end
 
   def log10
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
+    result = create_dummy_nmatrix
     result.s = @s.copy.mapToSelf(Log10.new())
     result
   end
 
   def sqrt
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
+    result = create_dummy_nmatrix
     result.s = @s.copy.mapToSelf(Sqrt.new())
     result
   end
 
   def erf
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
+    result = create_dummy_nmatrix
     result.s = ArrayRealVector.new MathHelper.erf(@s.toArray)
     result
   end
 
   def erfc
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
+    result = create_dummy_nmatrix
     result.s = ArrayRealVector.new MathHelper.erfc(@s.toArray)
     result
   end
 
   def cbrt
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
+    result = create_dummy_nmatrix
     result.s = @s.copy.mapToSelf(Cbrt.new())
     result
   end
 
   def gamma
-    result = NMatrix.new(:copy)
-    result.shape = @shape
-    result.dim = @dim
+    result = create_dummy_nmatrix
     result.s = ArrayRealVector.new MathHelper.gamma(@s.toArray)
     result
   end
