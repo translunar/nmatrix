@@ -5,15 +5,10 @@ class NMatrix
     result.shape = @shape
     if (other.is_a?(NMatrix))
       #check dimension
-      #check shape
-      if (@dim != other.dim)
-        raise Exception.new("cannot add matrices with different dimension")
-      end
+      raise(ShapeError, "Cannot add matrices with different dimension") if (@dim != other.dim)
       #check shape
       (0...dim).each do |i|
-        if (@shape[i] != other.shape[i])
-          raise Exception.new("cannot add matrices with different shapes");
-        end
+        raise(ShapeError, "Cannot add matrices with different shapes") if (@shape[i] != other.shape[i])
       end
       result.s = @s.copy.add(other.s)
     else
@@ -28,15 +23,10 @@ class NMatrix
     result.dim = @dim
     if (other.is_a?(NMatrix))
       #check dimension
-      #check shape
-      if (@dim != other.dim)
-        raise Exception.new("cannot subtract matrices with different dimension")
-      end
+      raise(ShapeError, "Cannot subtract matrices with different dimension") if (@dim != other.dim)
       #check shape
       (0...dim).each do |i|
-        if (@shape[i] != other.shape[i])
-          raise Exception.new("cannot subtract matrices with different shapes");
-        end
+        raise(ShapeError, "Cannot subtract matrices with different shapes") if (@shape[i] != other.shape[i])
       end
       result.s = @s.copy.subtract(other.s)
     else
@@ -51,15 +41,10 @@ class NMatrix
     result.dim = @dim
     if (other.is_a?(NMatrix))
       #check dimension
-      #check shape
-      if (@dim != other.dim)
-        raise Exception.new("cannot multiply matrices with different dimension")
-      end
+      raise(ShapeError, "Cannot multiply matrices with different dimension") if (@dim != other.dim)
       #check shape
       (0...dim).each do |i|
-        if (@shape[i] != other.shape[i])
-          raise Exception.new("cannot multiply matrices with different shapes");
-        end
+        raise(ShapeError, "Cannot multiply matrices with different shapes") if (@shape[i] != other.shape[i])
       end
       result.s = @s.copy.ebeMultiply(other.s)
     else
@@ -74,15 +59,10 @@ class NMatrix
     result.dim = @dim
     if (other.is_a?(NMatrix))
       #check dimension
-      #check shape
-      if (@dim != other.dim)
-        raise Exception.new("cannot divide matrices with different dimension")
-      end
+      raise(ShapeError, "Cannot divide matrices with different dimension") if (@dim != other.dim)
       #check shape
       (0...dim).each do |i|
-        if (@shape[i] != other.shape[i])
-          raise Exception.new("cannot divide matrices with different shapes");
-        end
+        raise(ShapeError, "Cannot divide matrices with different shapes") if (@shape[i] != other.shape[i])
       end
       result.s = @s.copy.ebeDivide(other.s)
     else
