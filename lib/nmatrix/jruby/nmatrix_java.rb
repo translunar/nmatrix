@@ -820,8 +820,8 @@ class NMatrix
       # to_return = *reinterpret_cast<VALUE*>(result);
     else
       to_return = create_dummy_nmatrix
-      to_return.twoDMat = MatrixUtils.inverse(@twoDMat)
-      to_return.s = ArrayRealVector.new(get_oneDArray(to_return.shape, to_return.twoDMat.getData()))
+      twoDMat = MatrixUtils.inverse(@twoDMat)
+      to_return.s = ArrayRealVector.new(ArrayGenerator.getArrayDouble(twoDMat.getData, @shape[0], @shape[1]))
     end
 
     return to_return
@@ -841,8 +841,8 @@ class NMatrix
     if (dtype == :RUBYOBJ)
       # to_return = *reinterpret_cast<VALUE*>(result);
     else
-      @twoDMat = MatrixUtils.inverse(@twoDMat)
-      @s = ArrayRealVector.new(get_oneDArray(@shape, @twoDMat.getData()))
+      twoDMat = MatrixUtils.inverse(@twoDMat)
+      @s = ArrayRealVector.new(ArrayGenerator.getArrayDouble(twoDMat.getData, @shape[0], @shape[1]))
     end
 
     return self
@@ -863,8 +863,8 @@ class NMatrix
       # to_return = *reinterpret_cast<VALUE*>(result);
     else
       to_return = create_dummy_nmatrix
-      to_return.twoDMat = MatrixUtils.inverse(@twoDMat)
-      to_return.s = ArrayRealVector.new(get_oneDArray(to_return.shape, to_return.twoDMat.getData()))
+      twoDMat = MatrixUtils.inverse(@twoDMat)
+      to_return.s = ArrayRealVector.new(ArrayGenerator.getArrayDouble(twoDMat.getData, @shape[0], @shape[1]))
     end
 
     return to_return
