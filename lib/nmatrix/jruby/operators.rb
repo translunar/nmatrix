@@ -139,7 +139,7 @@ class NMatrix
   end
 
   def asin
-    rresult = create_dummy_nmatrix
+    result = create_dummy_nmatrix
     result.s = @s.copy.mapToSelf(Asin.new())
     result
   end

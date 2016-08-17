@@ -757,11 +757,10 @@ class NMatrix
         return nil
       end
 
-      result = NMatrix.new(:copy)
-      result.shape = [shape[0],other.shape[1]]
-      result.dim = @dim
-      result.twoDMat = self.twoDMat2.multiply(other.twoDMat2)
-      result.s = ArrayRealVector.new(get_oneDArray(result.shape, result.twoDMat.getData()))
+      result = create_dummy_nmatrix
+      result.shape = [@shape[0],other.shape[1]]
+      twoDMat = self.twoDMat2.multiply(other.twoDMat2)
+      result.s = ArrayRealVector.new(ArrayGenerator.getArrayDouble(twoDMat.getData, @shape[0],other.shape[1]))
     else
       raise Exception.new("cannot have dot product with a scalar");
     end
