@@ -176,7 +176,7 @@ class NMatrix
   #   - +StorageTypeError+ -> ATLAS functions only work on dense matrices.
   #
   def getrf!
-    ipiv = LUDecomposition.new(@twoDMat).getPivot.to_a
+    ipiv = LUDecomposition.new(self.twoDMat).getPivot.to_a
     return ipiv
   end
 
@@ -303,7 +303,7 @@ class NMatrix
   #
   def potrf!(which)
     # The real implementation is in the plugin files.
-    cholesky = CholeskyDecomposition.new(self.twoDMat2)
+    cholesky = CholeskyDecomposition.new(self.twoDMat)
     if which == :upper
       u = create_dummy_nmatrix
       twoDMat = cholesky.getLT
@@ -339,7 +339,7 @@ class NMatrix
   # sure it is positive-definite.
   def factorize_cholesky
     # raise "Matrix must be symmetric/Hermitian for Cholesky factorization" unless self.hermitian?
-    cholesky = CholeskyDecomposition.new(self.twoDMat2)
+    cholesky = CholeskyDecomposition.new(self.twoDMat)
     l = create_dummy_nmatrix
     twoDMat = cholesky.getL
     l.s = ArrayRealVector.new(ArrayGenerator.getArrayDouble(twoDMat.getData, @shape[0], @shape[1]))
@@ -367,7 +367,7 @@ class NMatrix
     raise(NotImplementedError, "matrix is not 2-dimensional") unless self.dimensions == 2
     t = self.clone
     pivot = create_dummy_nmatrix
-    twoDMat = LUDecomposition.new(self.twoDMat2).getP
+    twoDMat = LUDecomposition.new(self.twoDMat).getP
     pivot.s = ArrayRealVector.new(ArrayGenerator.getArrayDouble(twoDMat.getData, @shape[0], @shape[1]))
     return [t,pivot]
   end
@@ -393,7 +393,7 @@ class NMatrix
 
     raise(NotImplementedError, "only implemented for dense storage") unless self.stype == :dense
     raise(ShapeError, "Input must be a 2-dimensional matrix to have a QR decomposition") unless self.dim == 2
-    qrdecomp = QRDecomposition.new(self.twoDMat2)
+    qrdecomp = QRDecomposition.new(self.twoDMat)
 
     qmat = create_dummy_nmatrix
     qtwoDMat = qrdecomp.getQ
@@ -490,11 +490,11 @@ class NMatrix
     case opts[:form]
     when :general, :upper_tri, :upper_triangular, :lower_tri, :lower_triangular
       #LU solver
-      solver = LUDecomposition.new(@twoDMat).getSolver
+      solver = LUDecomposition.new(self.twoDMat).getSolver
       nmatrix.s = solver.solve(b.s)
       return nmatrix
     when :pos_def, :positive_definite
-      solver = Choleskyecomposition.new(@twoDMat).getSolver
+      solver = Choleskyecomposition.new(self.twoDMat).getSolver
       nmatrix.s = solver.solve(b.s)
       return nmatrix
     else
@@ -1014,7 +1014,7 @@ class NMatrix
   #
   # Return the 2-norm of the vector. This is the BLAS nrm2 routine.
   def nrm2 incx=1, n=nil
-    @twoDMat.getFrobeniusNorm()
+    self.twoDMat.getFrobeniusNorm()
   end
   alias :norm2 :nrm2
 
