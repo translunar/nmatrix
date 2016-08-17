@@ -366,10 +366,9 @@ class NMatrix
     raise(NotImplementedError, "only implemented for dense storage") unless self.stype == :dense
     raise(NotImplementedError, "matrix is not 2-dimensional") unless self.dimensions == 2
     t = self.clone
-    pivot = NMatrix.new(:copy)
-    pivot.shape = @shape
-    pivot.twoDMat = LUDecomposition.new(@twoDMat).getP
-    pivot.s = ArrayRealVector.new(get_oneDArray(@shape, pivot.twoDMat.getData))
+    pivot = create_dummy_nmatrix
+    twoDMat = LUDecomposition.new(self.twoDMat2).getP
+    pivot.s = ArrayRealVector.new(ArrayGenerator.getArrayDouble(twoDMat.getData, @shape[0], @shape[1]))
     return [t,pivot]
   end
 
@@ -394,17 +393,15 @@ class NMatrix
 
     raise(NotImplementedError, "only implemented for dense storage") unless self.stype == :dense
     raise(ShapeError, "Input must be a 2-dimensional matrix to have a QR decomposition") unless self.dim == 2
-    qrdecomp = QRDecomposition.new(@twoDMat)
-    qmat = NMatrix.new(:copy)
-    qmat.shape = @shape
-    qmat.dim = self.dim
-    qmat.twoDMat = qrdecomp.getQ
-    qmat.s = ArrayRealVector.new(get_oneDArray(@shape, qmat.twoDMat.getData))
-    rmat = NMatrix.new(:copy)
-    rmat.shape = shape
-    rmat.dim = self.dim
-    rmat.twoDMat = qrdecomp.getR
-    rmat.s = ArrayRealVector.new(get_oneDArray(@shape, rmat.twoDMat.getData))
+    qrdecomp = QRDecomposition.new(self.twoDMat2)
+
+    qmat = create_dummy_nmatrix
+    qtwoDMat = qrdecomp.getQ
+    qmat.s = ArrayRealVector.new(ArrayGenerator.getArrayDouble(qtwoDMat.getData, @shape[0], @shape[1]))
+
+    rmat = create_dummy_nmatrix
+    rtwoDMat = qrdecomp.getR
+    rmat.s = ArrayRealVector.new(ArrayGenerator.getArrayDouble(rtwoDMat.getData, @shape[0], @shape[1]))
     return [qmat,rmat]
 
   end
