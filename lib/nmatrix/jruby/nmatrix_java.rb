@@ -272,7 +272,7 @@ class NMatrix
     # end
 
     if (@dim != 2 || @shape[0] != @shape[1])
-      raise Exception.new("matrices must be square to have a determinant defined")
+      raise(ShapeError, "matrices must be square to have a determinant defined")
       return nil
     end
     to_return = nil
@@ -504,12 +504,12 @@ class NMatrix
       #check dimension
       #check shape
       if (@dim != otherNmatrix.dim)
-        raise Exception.new("cannot compare matrices with different dimension")
+        raise(ShapeError, "cannot compare matrices with different dimension")
       end
       #check shape
       (0...dim).each do |i|
         if (@shape[i] != otherNmatrix.shape[i])
-          raise Exception.new("cannot compare matrices with different shapes");
+          raise(ShapeError, "cannot compare matrices with different shapes");
         end
       end
 
@@ -530,13 +530,13 @@ class NMatrix
     if (other.is_a?(NMatrix))
       #check dimension
       if (@dim != other.dim)
-        raise Exception.new("cannot compare matrices with different dimension")
+        raise(ShapeError, "cannot compare matrices with different dimension")
         return nil
       end
       #check shape
       (0...dim).each do |i|
         if (@shape[i] != other.shape[i])
-          raise Exception.new("cannot compare matrices with different shapes");
+          raise(ShapeError, "cannot compare matrices with different shapes");
           return nil
         end
       end
@@ -559,13 +559,13 @@ class NMatrix
     if (other.is_a?(NMatrix))
       #check dimension
       if (@dim != other.dim)
-        raise Exception.new("cannot compare matrices with different dimension")
+        raise(ShapeError, "cannot compare matrices with different dimension")
         return nil
       end
       #check shape
       (0...dim).each do |i|
         if (@shape[i] != other.shape[i])
-          raise Exception.new("cannot compare matrices with different shapes");
+          raise(ShapeError, "cannot compare matrices with different shapes");
           return nil
         end
       end
@@ -588,13 +588,13 @@ class NMatrix
     if (other.is_a?(NMatrix))
       #check dimension
       if (@dim != other.dim)
-        raise Exception.new("cannot compare matrices with different dimension")
+        raise(ShapeError, "cannot compare matrices with different dimension")
         return nil
       end
       #check shape
       (0...dim).each do |i|
         if (@shape[i] != other.shape[i])
-          raise Exception.new("cannot compare matrices with different shapes");
+          raise(ShapeError, "cannot compare matrices with different shapes");
           return nil
         end
       end
@@ -617,13 +617,13 @@ class NMatrix
     if (other.is_a?(NMatrix))
       #check dimension
       if (@dim != other.dim)
-        raise Exception.new("cannot compare matrices with different dimension")
+        raise(ShapeError, "cannot compare matrices with different dimension")
         return nil
       end
       #check shape
       (0...dim).each do |i|
         if (@shape[i] != other.shape[i])
-          raise Exception.new("cannot compare matrices with different shapes");
+          raise(ShapeError, "cannot compare matrices with different shapes");
           return nil
         end
       end
@@ -646,13 +646,13 @@ class NMatrix
     if (other.is_a?(NMatrix))
       #check dimension
       if (@dim != other.dim)
-        raise Exception.new("cannot compare matrices with different dimension")
+        raise(ShapeError, "cannot compare matrices with different dimension")
         return nil
       end
       #check shape
       (0...dim).each do |i|
         if (@shape[i] != other.shape[i])
-          raise Exception.new("cannot compare matrices with different shapes");
+          raise(ShapeError, "cannot compare matrices with different shapes");
           return nil
         end
       end
@@ -675,13 +675,13 @@ class NMatrix
     if (other.is_a?(NMatrix))
       #check dimension
       if (@dim != other.dim)
-        raise Exception.new("cannot compare matrices with different dimension")
+        raise(ShapeError, "cannot compare matrices with different dimension")
         return nil
       end
       #check shape
       (0...dim).each do |i|
         if (@shape[i] != other.shape[i])
-          raise Exception.new("cannot compare matrices with different shapes");
+          raise(ShapeError, "cannot compare matrices with different shapes");
           return nil
         end
       end
@@ -706,21 +706,25 @@ class NMatrix
     if (other.is_a?(NMatrix))
       #check dimension
       if (@shape.length!=2 || other.shape.length!=2)
-        raise Exception.new("please convert array to nx1 or 1xn NMatrix first")
+        raise(NotImplementedError, "please convert array to nx1 or 1xn NMatrix first")
         return nil
       end
       #check shape
       if (@shape[1] != other.shape[0])
-        raise Exception.new("incompatible dimensions")
+        raise(ArgumentError, "incompatible dimensions")
         return nil
       end
+
+      # if(@stype != other.stype)
+      #   raise(NotImplementedError, "matrices must have same stype")
+      # end
 
       result = create_dummy_nmatrix
       result.shape = [@shape[0],other.shape[1]]
       twoDMat = self.twoDMat.multiply(other.twoDMat)
       result.s = ArrayRealVector.new(ArrayGenerator.getArrayDouble(twoDMat.getData, @shape[0],other.shape[1]))
     else
-      raise Exception.new("cannot have dot product with a scalar");
+      raise(ArgumentError, "cannot have dot product with a scalar");
     end
     return result;
   end
