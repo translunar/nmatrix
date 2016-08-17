@@ -660,7 +660,7 @@ class NMatrix
       if jruby?
         nmatrix = NMatrix.new :copy
         nmatrix.shape = [@shape[1],@shape[0]]
-        twoDMat = self.twoDMat2.transpose
+        twoDMat = self.twoDMat.transpose
         nmatrix.s = ArrayRealVector.new(ArrayGenerator.getArrayDouble(twoDMat.getData(), shape[1],shape[0]))
         return nmatrix
       else

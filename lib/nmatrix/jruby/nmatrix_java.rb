@@ -19,7 +19,7 @@ java_import 'ArrayComparator'
 
 class NMatrix
   include_package 'org.apache.commons.math3.analysis.function'
-  attr_accessor :shape , :dtype, :elements, :s, :nmat, :twoDMat, :dim, :stype
+  attr_accessor :shape , :dtype, :elements, :s, :nmat, :dim, :stype
 
   def initialize(*args)
     if args[-1] == :copy
@@ -101,20 +101,6 @@ class NMatrix
           @s = storage
         else
           @s = ArrayRealVector.new(storage.to_java Java::double)
-
-          if(@shape.length == 2 )
-            oneDArray = @s.toArray().to_a
-            twoDArray = Java::double[shape[0],shape[1]].new
-            index = 0
-            (0...shape[0]).each do |i|
-              (0...shape[1]).each do |j|
-                twoDArray[i][j] = oneDArray[index]
-                index+=1
-              end
-            end
-            @twoDMat = MatrixUtils.createRealMatrix(twoDArray)
-            # puts "inited"
-          end
         end
       end
 
@@ -145,7 +131,7 @@ class NMatrix
     return @s.toArray.to_a
   end
 
-  def twoDMat2
+  def twoDMat
     return MatrixUtils.createRealMatrix MatrixGenerator.getMatrixDouble(self.s.toArray, @shape[0], @shape[1])
   end
 
@@ -293,7 +279,7 @@ class NMatrix
     if (dtype == :RUBYOBJ)
       # to_return = *reinterpret_cast<VALUE*>(result);
     else
-      to_return = LUDecomposition.new(twoDMat).getDeterminant()
+      to_return = LUDecomposition.new(self.twoDMat).getDeterminant()
     end
 
     return to_return.round(3)
@@ -731,7 +717,7 @@ class NMatrix
 
       result = create_dummy_nmatrix
       result.shape = [@shape[0],other.shape[1]]
-      twoDMat = self.twoDMat2.multiply(other.twoDMat2)
+      twoDMat = self.twoDMat.multiply(other.twoDMat)
       result.s = ArrayRealVector.new(ArrayGenerator.getArrayDouble(twoDMat.getData, @shape[0],other.shape[1]))
     else
       raise Exception.new("cannot have dot product with a scalar");
@@ -751,10 +737,10 @@ class NMatrix
         if (hermitian)
           #Currently, we are not dealing with complex matrices.
           eps = 0
-          is_symmetric = MatrixUtils.isSymmetric(@twoDMat, eps)
+          is_symmetric = MatrixUtils.isSymmetric(self.twoDMat, eps)
         else
           eps = 0
-          is_symmetric = MatrixUtils.isSymmetric(@twoDMat, eps)
+          is_symmetric = MatrixUtils.isSymmetric(self.twoDMat, eps)
         end
 
       else
@@ -792,7 +778,7 @@ class NMatrix
       # to_return = *reinterpret_cast<VALUE*>(result);
     else
       to_return = create_dummy_nmatrix
-      twoDMat = MatrixUtils.inverse(@twoDMat)
+      twoDMat = MatrixUtils.inverse(self.twoDMat)
       to_return.s = ArrayRealVector.new(ArrayGenerator.getArrayDouble(twoDMat.getData, @shape[0], @shape[1]))
     end
 
@@ -813,7 +799,7 @@ class NMatrix
     if (dtype == :RUBYOBJ)
       # to_return = *reinterpret_cast<VALUE*>(result);
     else
-      twoDMat = MatrixUtils.inverse(@twoDMat)
+      twoDMat = MatrixUtils.inverse(self.twoDMat)
       @s = ArrayRealVector.new(ArrayGenerator.getArrayDouble(twoDMat.getData, @shape[0], @shape[1]))
     end
 
@@ -835,7 +821,7 @@ class NMatrix
       # to_return = *reinterpret_cast<VALUE*>(result);
     else
       to_return = create_dummy_nmatrix
-      twoDMat = MatrixUtils.inverse(@twoDMat)
+      twoDMat = MatrixUtils.inverse(self.twoDMat)
       to_return.s = ArrayRealVector.new(ArrayGenerator.getArrayDouble(twoDMat.getData, @shape[0], @shape[1]))
     end
 
