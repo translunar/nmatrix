@@ -136,10 +136,7 @@ class NMatrix
   end
 
   def clone
-    result = NMatrix.new(:copy)
-    result.shape = self.shape
-    result.dtype = self.dtype
-    result.dim = self.dim
+    result = create_dummy_nmatrix
     result.s = @s.copy
     return result
   end
@@ -367,9 +364,7 @@ class NMatrix
 
   def each_with_indices
 
-    nmatrix = NMatrix.new(:copy)
-    nmatrix.shape = @shape
-    nmatrix.dtype = @dtype
+    nmatrix = create_dummy_nmatrix
     stride = get_stride(self)
     offset = 0
     #Create indices and initialize them to zero
@@ -400,9 +395,7 @@ class NMatrix
 
   def each_stored_with_indices
 
-    nmatrix = NMatrix.new(:copy)
-    nmatrix.shape = @shape
-    nmatrix.dtype = @dtype
+    nmatrix = create_dummy_nmatrix
     stride = get_stride(self)
     offset = 0
     #Create indices and initialize them to zero
@@ -442,9 +435,7 @@ class NMatrix
   protected
 
   def __dense_each__
-    nmatrix = NMatrix.new(:copy)
-    nmatrix.shape = @shape
-    nmatrix.dtype = @dtype
+    nmatrix = create_dummy_nmatrix
     stride = get_stride(self)
     offset = 0
     #Create indices and initialize them to zero
@@ -470,10 +461,7 @@ class NMatrix
   end
 
   def __dense_map__
-    nmatrix = NMatrix.new(:copy)
-    nmatrix.shape = @shape
-    nmatrix.dtype = @dtype
-    nmatrix.dim = self.dim
+    nmatrix = create_dummy_nmatrix
 
     stride = get_stride(self)
     offset = 0
@@ -832,9 +820,7 @@ class NMatrix
     if (dtype == :RUBYOBJ)
       # to_return = *reinterpret_cast<VALUE*>(result);
     else
-      to_return = NMatrix.new(:copy)
-      to_return.shape = @shape
-      to_return.dim = @dim
+      to_return = create_dummy_nmatrix
       to_return.twoDMat = MatrixUtils.inverse(@twoDMat)
       to_return.s = ArrayRealVector.new(get_oneDArray(to_return.shape, to_return.twoDMat.getData()))
     end
@@ -877,8 +863,7 @@ class NMatrix
     if (dtype == :RUBYOBJ)
       # to_return = *reinterpret_cast<VALUE*>(result);
     else
-      to_return = NMatrix.new(:copy)
-      to_return.shape = @shape
+      to_return = create_dummy_nmatrix
       to_return.twoDMat = MatrixUtils.inverse(@twoDMat)
       to_return.s = ArrayRealVector.new(get_oneDArray(to_return.shape, to_return.twoDMat.getData()))
     end
