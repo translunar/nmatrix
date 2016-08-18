@@ -2,9 +2,6 @@ require 'java'
 require_relative '../../../ext/nmatrix_java/vendor/commons-math3-3.6.1.jar'
 require_relative '../../../ext/nmatrix_java/target/nmatrix.jar'
 
-# java_import 'JNMatrix'
-# java_import 'Dtype'
-# java_import 'Stype'
 java_import 'org.apache.commons.math3.linear.ArrayRealVector'
 java_import 'org.apache.commons.math3.linear.RealMatrix'
 java_import 'org.apache.commons.math3.linear.MatrixUtils'
@@ -19,7 +16,7 @@ java_import 'ArrayComparator'
 
 class NMatrix
   include_package 'org.apache.commons.math3.analysis.function'
-  attr_accessor :shape , :dtype, :elements, :s, :nmat, :dim, :stype
+  attr_accessor :shape, :dim, , :dtype, :stype, :s
 
   def initialize(*args)
     if args[-1] == :copy
@@ -107,9 +104,6 @@ class NMatrix
       @dim = @shape.is_a?(Array) ? @shape.length : 2
 
     end
-    # @s = @elements
-    # Java enums are accessible from Ruby code as constants:
-    # @nmat= JNMatrix.new(@shape, @elements , "FLOAT32", "DENSE_STORE" )
   end
 
   # Needs to be properly implemented
@@ -182,23 +176,14 @@ class NMatrix
   end
 
   def []=(*args)
-
     to_return = nil
-
     if args.length > @dim+1
       raise(ArgumentError, "wrong number of arguments (#{args.length} for #{effective_dim(dim+1)})" )
     else
       slice = get_slice(@dim, args, @shape)
-
-      # puts args[-1]
       dense_storage_set(slice, args[-1])
-
-      # ttable[NM_STYPE(self)](self, slice, argv[argc-1]);
-
-      to_return = args[-1];
-
+      to_return = args[-1]
     end
-
     return to_return
   end
 
@@ -358,7 +343,6 @@ class NMatrix
 
     shape_copy =  Array.new(dim)
     (0...size).each do |k|
-      # nm_dense_storage_coords(sliced_dummy, k, coords);
       dense_storage_coords(nmatrix, k, coords, stride, offset)
       slice_index = dense_storage_pos(coords,stride)
       ary = Array.new
@@ -388,8 +372,8 @@ class NMatrix
     coords = Array.new(dim){ 0 }
 
     shape_copy =  Array.new(dim)
+
     (0...size).each do |k|
-      # nm_dense_storage_coords(sliced_dummy, k, coords);
       dense_storage_coords(nmatrix, k, coords, stride, offset)
       slice_index = dense_storage_pos(coords,stride)
       ary = Array.new
@@ -401,7 +385,6 @@ class NMatrix
       (0...dim).each do |p|
         ary << coords[p]
       end
-
       # yield the array which now consists of the value and the indices
       yield(ary)
     end if block_given?
@@ -502,7 +485,6 @@ class NMatrix
     result = false
     if (otherNmatrix.is_a?(NMatrix))
       #check dimension
-      #check shape
       if (@dim != otherNmatrix.dim)
         raise(ShapeError, "cannot compare matrices with different dimension")
       end
@@ -850,15 +832,6 @@ class NMatrix
   def data_pointer
 
   end
-
-  # /////////////
-  # // Aliases //
-  # /////////////
-
-  # rb_define_alias(cNMatrix, "dim", "dimensions");
-  # rb_define_alias(cNMatrix, "effective_dim", "effective_dimensions");
-  # rb_define_alias(cNMatrix, "equal?", "eql?");
-
 
   def elementwise_op(op,left_val,right_val)
 
