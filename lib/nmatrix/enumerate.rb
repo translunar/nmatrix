@@ -72,7 +72,7 @@ class NMatrix
   def map(&bl)
     return enum_for(:map) unless block_given?
     # NMatrix-jruby currently supports only doubles
-    cp  = jruby? ? :self : self.cast(dtype: :object)
+    cp  = jruby? ? self : self.cast(dtype: :object)
   end
 
   ##
