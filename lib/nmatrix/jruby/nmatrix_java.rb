@@ -16,7 +16,7 @@ java_import 'ArrayComparator'
 
 class NMatrix
   include_package 'org.apache.commons.math3.analysis.function'
-  attr_accessor :shape, :dim, , :dtype, :stype, :s
+  attr_accessor :shape, :dim, :dtype, :stype, :s
 
   def initialize(*args)
     if args[-1] == :copy
@@ -117,6 +117,8 @@ class NMatrix
 
   def clone
     result = create_dummy_nmatrix
+    # ArrayRealVector#clone is disable, hence use copy
+    # that returns a deep copy of the object.
     result.s = @s.copy
     return result
   end
@@ -143,15 +145,6 @@ class NMatrix
   end
 
   def cast_full *args
-
-    # to_return = NMatrix.new :copy
-    # to_return.dtype = new_dtype
-    # to_return.stype = new_stype
-
-    # to_return.s = cast_elements(self.s)
-
-    # to_return.twoDMat =
-
     return self
   end
 
@@ -247,6 +240,8 @@ class NMatrix
   end
 
   def offset
+    # ArrayRealVector takes care of the offset value when indexing a Vector.
+    # Hence, return 0.
     0
   end
 
@@ -261,7 +256,7 @@ class NMatrix
       return nil
     end
     to_return = nil
-    if (dtype == :RUBYOBJ)
+    if (dtype == :object)
       # to_return = *reinterpret_cast<VALUE*>(result);
     else
       to_return = LUDecomposition.new(self.twoDMat).getDeterminant()
@@ -319,10 +314,8 @@ class NMatrix
     elsif shape_ary.is_a?(FIXNUM)
       dim = 2
       shape = Array.new(dim)
-
       shape[0] = shape_ary.to_i
       shape[1] = shape_ary.to_i
-
     else
       raise(ArgumentError, "Expected an array of numbers or a single Fixnum for matrix shape")
     end
@@ -334,7 +327,6 @@ class NMatrix
   public
 
   def each_with_indices
-
     nmatrix = create_dummy_nmatrix
     stride = get_stride(self)
     offset = 0
@@ -364,7 +356,6 @@ class NMatrix
 
 
   def each_stored_with_indices
-
     nmatrix = create_dummy_nmatrix
     stride = get_stride(self)
     offset = 0
@@ -431,7 +422,6 @@ class NMatrix
 
   def __dense_map__
     nmatrix = create_dummy_nmatrix
-
     stride = get_stride(self)
     offset = 0
     coords = Array.new(dim){ 0 }
@@ -820,25 +810,11 @@ class NMatrix
   # // private methods
 
   def __hessenberg__(param)
-    raise(NotImplementedError, "Hessenberg Transformer not implemented NMatrix-JRuby")
-  end
-
-  # /////////////////
-  # // FFI Methods //
-  # /////////////////
-
-  public
-
-  def data_pointer
-
-  end
-
-  def elementwise_op(op,left_val,right_val)
-
+    raise(NotImplementedError, "Hessenberg Transformer not implemented for NMatrix-JRuby")
   end
 end
 
-
+# load jruby implementation of operators.
 require_relative './slice.rb'
 require_relative './math.rb'
 require_relative './operators.rb'
