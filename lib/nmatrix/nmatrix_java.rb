@@ -10,15 +10,44 @@ class NMatrix
   attr_accessor :shape , :dtype, :elements, :s, :dim, :nmat
 
 
-  def initialize(shape,elements,args)
+  def initialize(*args)
+    # puts args.length
+    # puts args
+    if (args.length <= 3)
+      @shape = args[0]
+      if args[1].is_a?(Array)
+        elements = args[1]
+        hash = args[2]
+      else
+        elements = Array.new()
+        hash = args[1]
+      end
+    end
 
-    @dtype = args[:dtype] if args[:dtype]
     
-    @stype = args[:stype] if args[:stype]
-    @shape = shape
+    offset = 0
+
+    if (!args[0].is_a?(Symbol) && !args[0].is_a?(String))
+      @stype = :dense
+    else
+      offset = 1
+      @stype = :dense
+    end
+
+    @shape = args[offset]
     @shape = [shape,shape] unless shape.is_a?(Array)
-    size = (0...shape.size).inject(1) { |x,i| x * shape[i] }
-    @size = size
+
+    # @dtype = interpret_dtype(argc-1-offset, argv+offset+1, stype);
+
+    # @dtype = args[:dtype] if args[:dtype]
+    @dtype_sym = nil
+    @stype_sym = nil
+    @default_val_num = nil
+    @capacity_num = nil
+    
+    
+    @size = (0...@shape.size).inject(1) { |x,i| x * @shape[i] }
+
     j=0;
     @elements = Array.new(size)
     if size > elements.length
@@ -169,6 +198,7 @@ class NMatrix
         slice[:single] = false
         t+=1
       # elsif condition
+        # not implemented currently
         # for range
         # if condition
           
@@ -198,9 +228,9 @@ class NMatrix
 
   public
 
-  def shape
+  # def shape
     
-  end
+  # end
 
   def supershape
     
