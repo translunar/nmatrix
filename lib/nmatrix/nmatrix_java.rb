@@ -311,7 +311,23 @@ class NMatrix
   end
 
   def det_exact
+    # if (:stype != :dense)
+    #   raise Exception.new("can only calculate exact determinant for dense matrices")
+    #   return nil
+    # end
 
+    if (@dim != 2 || @shape[0] != @shape[1])
+      raise Exception.new("matrices must be square to have a determinant defined")
+      return nil
+    end
+    to_return = nil
+    if (dtype == :RUBYOBJ)
+      # to_return = *reinterpret_cast<VALUE*>(result);
+    else
+      to_return = @nmat.twoDMat.getDeterminant()
+    end
+
+    return to_return
   end
 
   def complex_conjugate!
@@ -734,31 +750,47 @@ class NMatrix
 
   protected
   
-  def __inverse__(inverse, bang)
-
-    # if (@dtype != "DENSE_STORE")
-    #   rb_raise(rb_eNotImpError, "needs exact determinant implementation for this matrix stype");
-    #   return Qnil;
+  def __inverse__
+    # if (:stype != :dense)
+    #   raise Exception.new("needs exact determinant implementation for this matrix stype")
+    #   return nil
     # end
+    
+    if (@dim != 2 || @shape[0] != @shape[1])
+      raise Exception.new("matrices must be square to have an inverse defined")
+      return nil
+    end
+    to_return = nil
+    if (dtype == :RUBYOBJ)
+      # to_return = *reinterpret_cast<VALUE*>(result);
+    else
+      elements = @nmat.twoDMat.inverse().to_a
+      to_return = NMatrix.new(@shape, elements, dtype: :int64)
+    end
 
-    # if (@dim != 2 || @shape[0] != @shape[1])
-   #    rb_raise(nm_eShapeError, "matrices must be square to have an inverse defined");
-   #    return nil
-    # end
-
-    # if (bang == true)
-   #    math_inverse(@shape[0], @s, @dtype)
-          
-   #    return self;
-    # end
-
-    # math_inverse(NM_SHAPE0(inverse), @s 
-
-    # return inverse
+    return to_return
   end
+  
+  def __inverse_exact__
+    # if (:stype != :dense)
+    #   raise Exception.new("needs exact determinant implementation for this matrix stype")
+    #   return nil
+    # end
+    
+    if (@dim != 2 || @shape[0] != @shape[1])
+      raise Exception.new("matrices must be square to have an inverse defined")
+      return nil
+    end
+    to_return = nil
+    if (dtype == :RUBYOBJ)
+      # to_return = *reinterpret_cast<VALUE*>(result);
+    else
+      elements = @nmat.twoDMat.inverse().to_a
+      to_return = NMatrix.new(@shape, elements, dtype: :int64)
+    end
 
-  def __inverse_exact__(inverse, bang)
-
+    return to_return
+    
   end
 
   private
