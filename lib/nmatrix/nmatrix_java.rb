@@ -710,8 +710,32 @@ class NMatrix
   # // Matrix Math Methods //
   # /////////////////////////
 
-  def dot
-    
+  def dot(other)
+    result = nil
+    if (other.is_a?(NMatrix))
+      #check dimension
+      #check shape
+      if (@shape.length!=2 || other.shape.length!=2)
+        raise Exception.new("please convert array to nx1 or 1xn NMatrix first")
+        return nil
+      end
+      if (@shape[1] != other.shape[0])
+        raise Exception.new("incompatible dimensions")
+        return nil
+      end
+      #check shape
+      (i=0...dim).each do |i|
+        if (@shape[i] != other.shape[i])
+          raise Exception.new("cannot add matrices with different shapes");
+        end
+      end
+      resultArray = @nmat.twoDMat.multiply(other.nmat.twoDMat).to_a
+      newShape= [@shape[0],other.shape[1]]
+      result = NMatrix.new(newShape, resultArray,  dtype: :int64)
+    else
+      raise Exception.new("cannot have dot product with a scalar");
+    end
+    return result;
   end
 
   def symmetric?
