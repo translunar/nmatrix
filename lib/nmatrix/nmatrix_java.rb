@@ -99,7 +99,7 @@ class NMatrix
   end
 
   def slice(*args)
-    return nm_xslice(args)
+    return xslice(args)
   end
 
   def []=(*args,value)
