@@ -37,6 +37,7 @@ class NMatrix
 
     @shape = args[offset]
     @shape = [shape,shape] unless shape.is_a?(Array)
+    elements = args[offset+1]
 
     # @dtype = interpret_dtype(argc-1-offset, argv+offset+1, stype);
 
@@ -678,28 +679,154 @@ class NMatrix
     # @nmap.mapToSelf(univariate_function_)
   end
 
-  def =~
-    @nmap.mapToSelf(univariate_function_)
+  def =~ (other)
+    resultArray = Array.new(@s.length)
+    if (other.is_a?(NMatrix))
+      #check dimension
+      if (@dim != other.dim)
+        raise Exception.new("cannot compare matrices with different dimension")
+        return nil
+      end
+      #check shape
+      (i=0...dim).each do |i|
+        if (@shape[i] != other.shape[i])
+          raise Exception.new("cannot compare matrices with different shapes");
+          return nil
+        end
+      end
+
+      #check the entries
+      (0...@s.length).each do |i|
+        resultArray[i] = @s[i] =~ other.s[i] ? true : false
+      end
+      # result = NMatrix.new(@shape, resultArray, dtype: :int64)
+    end
+    resultArray
   end
 
-  def !~
-    @nmap.mapToSelf(univariate_function_)
+  def !~ (other)
+    resultArray = Array.new(@s.length)
+    if (other.is_a?(NMatrix))
+      #check dimension
+      if (@dim != other.dim)
+        raise Exception.new("cannot compare matrices with different dimension")
+        return nil
+      end
+      #check shape
+      (i=0...dim).each do |i|
+        if (@shape[i] != other.shape[i])
+          raise Exception.new("cannot compare matrices with different shapes");
+          return nil
+        end
+      end
+
+      #check the entries
+      (0...@s.length).each do |i|
+        resultArray[i] = @s[i] !~ other.s[i] ? true : false
+      end
+      # result = NMatrix.new(@shape, resultArray, dtype: :int64)
+    end
+    resultArray
   end
 
-  def <=
-    @nmap.mapToSelf(univariate_function_)
+  def <= (other)
+    resultArray = Array.new(@s.length)
+    if (other.is_a?(NMatrix))
+      #check dimension
+      if (@dim != other.dim)
+        raise Exception.new("cannot compare matrices with different dimension")
+        return nil
+      end
+      #check shape
+      (i=0...dim).each do |i|
+        if (@shape[i] != other.shape[i])
+          raise Exception.new("cannot compare matrices with different shapes");
+          return nil
+        end
+      end
+
+      #check the entries
+      (0...@s.length).each do |i|
+        resultArray[i] = @s[i] <= other.s[i] ? true : false
+      end
+      # result = NMatrix.new(@shape, resultArray, dtype: :int64)
+    end
+    resultArray
   end
 
-  def >=
-    @nmap.mapToSelf(univariate_function_)
+  def >= (other)
+    resultArray = Array.new(@s.length)
+    if (other.is_a?(NMatrix))
+      #check dimension
+      if (@dim != other.dim)
+        raise Exception.new("cannot compare matrices with different dimension")
+        return nil
+      end
+      #check shape
+      (i=0...dim).each do |i|
+        if (@shape[i] != other.shape[i])
+          raise Exception.new("cannot compare matrices with different shapes");
+          return nil
+        end
+      end
+
+      #check the entries
+      (0...@s.length).each do |i|
+        resultArray[i] = @s[i] >= other.s[i] ? true : false
+      end
+      # result = NMatrix.new(@shape, resultArray, dtype: :int64)
+    end
+    resultArray
   end
 
-  def <
-    @nmap.mapToSelf(univariate_function_)
+  def < (other)
+    resultArray = Array.new(@s.length)
+    if (other.is_a?(NMatrix))
+      #check dimension
+      if (@dim != other.dim)
+        raise Exception.new("cannot compare matrices with different dimension")
+        return nil
+      end
+      #check shape
+      (i=0...dim).each do |i|
+        if (@shape[i] != other.shape[i])
+          raise Exception.new("cannot compare matrices with different shapes");
+          return nil
+        end
+      end
+
+      #check the entries
+      (0...@s.length).each do |i|
+        resultArray[i] = @s[i] < other.s[i] ? true : false
+      end
+      # result = NMatrix.new(@shape, resultArray, dtype: :int64)
+    end
+    resultArray
   end
 
-  def >
-    @nmap.mapToSelf(univariate_function_)
+  def > (other)
+    resultArray = Array.new(@s.length)
+    if (other.is_a?(NMatrix))
+      #check dimension
+      if (@dim != other.dim)
+        raise Exception.new("cannot compare matrices with different dimension")
+        return nil
+      end
+      #check shape
+      (i=0...dim).each do |i|
+        if (@shape[i] != other.shape[i])
+          raise Exception.new("cannot compare matrices with different shapes");
+          return nil
+        end
+      end
+
+      #check the entries
+      (0...@s.length).each do |i|
+        resultArray[i] = @s[i] > other.s[i] ? true : false
+      end
+      # result = NMatrix.new(@shape, resultArray, dtype: :int64)
+    end
+    resultArray
   end
 
   # /////////////////////////////
