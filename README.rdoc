@@ -83,10 +83,9 @@ Next, create build directories:
     mkdir -p ext/nmatrix_java/build/class
     mkdir ext/nmatrix_java/target
 
-Finally, compile.
+Finally, compile and package as jar.
 
-    rake compile
-    rake jar
+    rake jruby
 
 === Plugins
 

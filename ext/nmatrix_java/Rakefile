@@ -19,7 +19,7 @@ end
 #-----------------------------------------------------------------------------------------
 
 desc 'Compile java classes'
-task :compile do
+task :javac do
 
   Dir.chdir("nmatrix")
   classes    = Dir['**/*.java']
@@ -65,4 +65,4 @@ end
 
 #-----------------------------------------------------------------------------------------
 
-task :default => :compile
+task :default => :javac

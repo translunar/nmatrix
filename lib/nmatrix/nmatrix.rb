@@ -45,16 +45,17 @@ else
   else
     # Gem
     require_relative "../nmatrix.so"
-    require_relative 'math'
+    require_relative './math.rb'
+    require_relative './io/mat_reader'
+    require_relative './io/mat5_reader'
+    require_relative './io/market'
+    require_relative './io/point_cloud'
+
+    require_relative './lapack_core.rb'
+    require_relative './yale_functions.rb'
   end
 end
-# require_relative './io/mat_reader'
-# require_relative './io/mat5_reader'
-# require_relative './io/market'
-# require_relative './io/point_cloud'
 
-# require_relative './lapack_core.rb'
-# require_relative './yale_functions.rb'
 require_relative './monkeys'
 
 # NMatrix is a matrix class that supports both multidimensional arrays
@@ -1167,8 +1168,7 @@ protected
 end
 
 require_relative './shortcuts.rb'
-# require_relative './math.rb'
 require_relative './enumerate.rb'
 
 require_relative './version.rb'
-# require_relative './blas.rb'
+require_relative './blas.rb'
