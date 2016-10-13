@@ -141,9 +141,10 @@ class NMatrix
         if (@dtype == "RUBYOBJ") 
           # result = *reinterpret_cast<VALUE*>( ttable[NM_STYPE(self)](s, slice) );
         else                                
-          result = dense_storage_get(slice,stride)
+          result = @s[dense_storage_get(slice,stride)]
         end 
       else
+        result = dense_storage_get(slice,stride)
         # NMATRIX* mat  = NM_ALLOC(NMATRIX);
         # mat->stype    = NM_STYPE(self);
         # mat->storage  = (STORAGE*)((*slice_func)( s, slice ));
@@ -152,31 +153,33 @@ class NMatrix
       end
     end
 
-    return @s[result]
+    return result
   end
-
+#its by ref
   def dense_storage_get(slice,stride)
     if slice[:single]
-      # return dense_storage_pos(slice[:coords],stride)
+      return dense_storage_pos(slice[:coords],stride)
     else
-      # nm_dense_storage_register(s);
-      # shape = Array.new()
-      # (0...@dim).each do |i|
-      #   shape[i]  = slice[:lengths][i];
-      # end
+      ns={}
+      ns[:dim]        = @dim
+      ns[:dtype]      = @dtype
+      ns[:offset]     = []
+      ns[:shape]      = []
+      (0...ns[:dim]).each do |i|
+        ns[:offset][i] = slice[:coords][i] 
+        # + s[:offset][i]
+        ns[:shape][i]  = slice[:lengths][i]
+      end
 
-      # DENSE_STORAGE* ns = nm_dense_storage_create(s->dtype, shape, s->dim, NULL, 0);
+      # ns[:stride]     = s[:stride];
+      ns[:elements]   = @s
 
-      # slice_copy(ns,
-      #     reinterpret_cast<const DENSE_STORAGE*>(s->src),
-      #     slice->lengths,
-      #     0,
-      #     nm_dense_storage_pos(s, slice->coords),
-      #     0);
+      # s[:src][:count] += 1
+      # ns[:src] = s[:src]
 
-      # return ns;
+      return ns;
     end
-    return dense_storage_pos(slice[:coords],stride)
+    # return dense_storage_pos(slice[:coords],stride)
   end
 
   def dense_storage_pos(coords,stride)
@@ -223,16 +226,21 @@ class NMatrix
         slice[:lengths][r] = shape_array[r]
         slice[:single] = false
         t+=1
-      # elsif condition
-        # not implemented currently
-        # for range
-        # if condition
-          
-        # elsif condition
-          
-        # slice[:single] = false
-        # t++
-        # end
+      elsif v.is_a?(Range)
+        begin_ = v.begin
+        end_ = v.end
+        excl = v.exclude_end?
+        slice[:coords][r] = (begin_ < 0) ? shape[r] + begin_ : begin_
+      
+        # Exclude last element for a...b range
+        if (end_ < 0)
+          slice[:lengths][r] = shape_array[r] + end_ - slice[:coords][r] + (excl ? 0 : 1)
+        else
+          slice[:lengths][r] = end_ - slice[:coords][r] + (excl ? 0 : 1)
+        end
+
+        slice[:single] = false
+        t+=1
       else
         raise Exception.new("expected Fixnum or Range for slice component instead of")
       end
