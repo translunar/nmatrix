@@ -97,7 +97,7 @@ class NMatrix
   end
 
   def entries
-    return @s
+    return @s.toArray.to_a
   end
 
   def dtype
