@@ -231,25 +231,25 @@ class NMatrix
   def each_with_indices
     to_return = nil
 
-    switch(@dtype) do
-    case 'DENSE_STORE'
+    case(@dtype)
+    when 'DENSE_STORE'
       to_return = @s
       break;
-    default:
+    else
       raise Exception.new(nm_eDataTypeError, "Not a proper storage type");
     end
-    to_return;
+    to_return
   end
 
 
   def each_stored_with_indices
     to_return = nil
 
-    switch(@dtype) do
-    case 'DENSE_STORE'
+    case(@dtype)
+    when 'DENSE_STORE'
       to_return = @s
       break;
-    default:
+    else
       raise Exception.new(nm_eDataTypeError, "Not a proper storage type");
     end
     to_return;
@@ -569,3 +569,4 @@ class NMatrix
   # rb_define_alias(cNMatrix, "dim", "dimensions");
   # rb_define_alias(cNMatrix, "effective_dim", "effective_dimensions");
   # rb_define_alias(cNMatrix, "equal?", "eql?");
+end
