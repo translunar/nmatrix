@@ -162,10 +162,10 @@ class NMatrix
     @dim
   end
 
-  def effective_dimensions
+  def effective_dim
     d = 0
     (0...@dim).each do |i|
-      d+=1 unless s.shape[i] == 1
+      d+=1 unless @shape[i] == 1
     end
     return d
   end

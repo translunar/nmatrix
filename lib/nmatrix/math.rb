@@ -1062,8 +1062,12 @@ class NMatrix
   #
   # Return the 2-norm of the vector. This is the BLAS nrm2 routine.
   def nrm2 incx=1, n=nil
-    return method_missing(:nrm2, incx, n) unless vector?
-    NMatrix::BLAS::nrm2(self, incx, self.size / incx)
+    if jruby?
+      return @twoDMat.getFrobeniusNorm()
+    else
+      return method_missing(:nrm2, incx, n) unless vector?
+      NMatrix::BLAS::nrm2(self, incx, self.size / incx)
+    end
   end
   alias :norm2 :nrm2
 
@@ -1080,11 +1084,15 @@ class NMatrix
   # Return the scaling result of the matrix. BLAS scal will be invoked if provided.
 
   def scale!(alpha, incx=1, n=nil)
-    raise(DataTypeError, "Incompatible data type for the scaling factor") unless
-        NMatrix::upcast(self.dtype, NMatrix::min_dtype(alpha)) == self.dtype
-    return NMatrix::BLAS::scal(alpha, self, incx, self.size / incx) if NMatrix::BLAS.method_defined? :scal
-    self.each_stored_with_indices do |e, *i|
-      self[*i] = e*alpha
+    if jruby?
+      @s = @s.mapMultiplyToSelf(alpha)
+    else
+      raise(DataTypeError, "Incompatible data type for the scaling factor") unless
+          NMatrix::upcast(self.dtype, NMatrix::min_dtype(alpha)) == self.dtype
+      return NMatrix::BLAS::scal(alpha, self, incx, self.size / incx) if NMatrix::BLAS.method_defined? :scal
+      self.each_stored_with_indices do |e, *i|
+        self[*i] = e*alpha
+      end
     end
   end
 
