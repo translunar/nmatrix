@@ -3,8 +3,9 @@ import org.apache.commons.math3.linear.ArrayFieldVector;
 import org.apache.commons.math3.linear.ArrayRealVector;
 import org.apache.commons.math3.linear.RealVector;
 import org.apache.commons.math3.linear.FieldVector;
-import org.apache.commons.math3.analysis.function.Sin;
+import org.apache.commons.math3.analysis.function.*;
 import org.apache.commons.math3.analysis.UnivariateFunction;
+import org.apache.commons.math3.special.Erf;
 
 public class JNMatrix{
 
@@ -108,6 +109,14 @@ public class JNMatrix{
     return resRealArray.toArray();
   }
 
+  // ArrayRealVector  subtract(RealVector v)
+  // Subtract v from this vector.
+
+  public double[] subtract(JNMatrix n){
+    ArrayRealVector resRealArray =  this.realArray.subtract(n.realArray);
+    return resRealArray.toArray();
+  }
+
   // void addToEntry(int index, double increment)
   // Change an entry at the specified index.
 
@@ -163,10 +172,22 @@ public class JNMatrix{
   // Returns a (deep) copy of this vector.
   // double dotProduct(RealVector v)
   // Compute the dot product of this vector with v.
+
+
   // ArrayRealVector  ebeDivide(RealVector v)
   // Element-by-element division.
+  public double[] ebeDivide(JNMatrix n){
+    ArrayRealVector resRealArray =  this.realArray.ebeDivide(n.realArray);
+    return resRealArray.toArray();
+  }
+
+
   // ArrayRealVector  ebeMultiply(RealVector v)
   // Element-by-element multiplication.
+  public double[] ebeMultiply(JNMatrix n){
+    ArrayRealVector resRealArray =  this.realArray.ebeMultiply(n.realArray);
+    return resRealArray.toArray();
+  }
 
   // Test for the equality of two real vectors.
   public boolean equals(JNMatrix other){
@@ -256,34 +277,34 @@ public class JNMatrix{
 
   // RealVector mapAddToSelf(double d)
   // Add a value to each entry.
-  public JNMatrix mapAddToSelf(double d){
-    JNMatrix res= new JNMatrix(this.shape, this.realArray.toArray(), "FLOAT32", "DENSE_STORE");
-    return res;
+  public double[] mapAddToSelf(double d){
+    RealVector resRealArray =  this.realArray.mapAddToSelf(d);
+    return resRealArray.toArray();
   }
 
 
 
   // RealVector mapDivideToSelf(double d)
   // Divide each entry by the argument.
-  public JNMatrix mapDivideToSelf(double d){
-    JNMatrix res= new JNMatrix(this.shape, this.realArray.toArray(), "FLOAT32", "DENSE_STORE");
-    return res;
+  public double[] mapDivideToSelf(double d){
+    RealVector resRealArray =  this.realArray.mapDivideToSelf(d);
+    return resRealArray.toArray();
   }
 
 
   // RealVector mapMultiplyToSelf(double d)
   // Multiply each entry.
-  public JNMatrix mapMultiplyToSelf(double d){
-    JNMatrix res= new JNMatrix(this.shape, this.realArray.toArray(), "FLOAT32", "DENSE_STORE");
-    return res;
+  public double[] mapMultiplyToSelf(double d){
+    RealVector resRealArray =  this.realArray.mapMultiplyToSelf(d);
+    return resRealArray.toArray();
   }
 
 
   // RealVector mapSubtractToSelf(double d)
   // Subtract a value from each entry.
-  public JNMatrix mapSubtractToSelf(double d){
-    JNMatrix res= new JNMatrix(this.shape, this.realArray.toArray(), "FLOAT32", "DENSE_STORE");
-    return res;
+  public double[] mapSubtractToSelf(double d){
+    RealVector resRealArray =  this.realArray.mapSubtractToSelf(d);
+    return resRealArray.toArray();
   }
 
 
@@ -301,6 +322,136 @@ public class JNMatrix{
     ArrayRealVector resRealArray =  this.realArray.mapToSelf(new Sin());
     return resRealArray.toArray();
   }
+
+  public double[] mapCosToSelf(){
+    ArrayRealVector resRealArray =  this.realArray.mapToSelf(new Cos());
+    return resRealArray.toArray();
+  }
+
+  public double[] mapTanToSelf(){
+    ArrayRealVector resRealArray =  this.realArray.mapToSelf(new Tan());
+    return resRealArray.toArray();
+  }
+
+
+
+  public double[] mapAsinToSelf(){
+    ArrayRealVector resRealArray =  this.realArray.mapToSelf(new Asin());
+    return resRealArray.toArray();
+  }
+
+  public double[] mapAcosToSelf(){
+    ArrayRealVector resRealArray =  this.realArray.mapToSelf(new Acos());
+    return resRealArray.toArray();
+  }
+
+  public double[] mapAtanToSelf(){
+    ArrayRealVector resRealArray =  this.realArray.mapToSelf(new Atan());
+    return resRealArray.toArray();
+  }
+
+
+
+  public double[] mapSinhToSelf(){
+    ArrayRealVector resRealArray =  this.realArray.mapToSelf(new Sinh());
+    return resRealArray.toArray();
+  }
+
+  public double[] mapCoshToSelf(){
+    ArrayRealVector resRealArray =  this.realArray.mapToSelf(new Cosh());
+    return resRealArray.toArray();
+  }
+
+  public double[] mapTanhToSelf(){
+    ArrayRealVector resRealArray =  this.realArray.mapToSelf(new Tanh());
+    return resRealArray.toArray();
+  }
+
+
+
+  public double[] mapAsinhToSelf(){
+    ArrayRealVector resRealArray =  this.realArray.mapToSelf(new Asinh());
+    return resRealArray.toArray();
+  }
+
+  public double[] mapAcoshToSelf(){
+    ArrayRealVector resRealArray =  this.realArray.mapToSelf(new Acosh());
+    return resRealArray.toArray();
+  }
+
+  public double[] mapAtanhToSelf(){
+    ArrayRealVector resRealArray =  this.realArray.mapToSelf(new Atanh());
+    return resRealArray.toArray();
+  }
+
+  // public double[] mapAtan2ToSelf(){
+  //   ArrayRealVector resRealArray =  this.realArray.mapToSelf(new Atan2());
+  //   return resRealArray.toArray();
+  // }
+
+
+  public double[] mapExpToSelf(){
+    ArrayRealVector resRealArray =  this.realArray.mapToSelf(new Exp());
+    return resRealArray.toArray();
+  }
+
+  public double[] mapLog2ToSelf(){
+    ArrayRealVector resRealArray =  this.realArray.mapToSelf(new Log());
+    return resRealArray.toArray();
+  }
+
+  public double[] mapLog10ToSelf(){
+    ArrayRealVector resRealArray =  this.realArray.mapToSelf(new Log10());
+    return resRealArray.toArray();
+  }
+
+
+  public double[] mapSqrtToSelf(){
+    ArrayRealVector resRealArray =  this.realArray.mapToSelf(new Sqrt());
+    return resRealArray.toArray();
+  }
+
+  // public double[] mapErfToSelf(double e){
+  //   ArrayRealVector resRealArray =  this.realArray.mapToSelf(Erf.erf());
+  //   return resRealArray.toArray();
+  // }
+
+  // public double[] mapErfcToSelf(double e){
+  //   ArrayRealVector resRealArray =  this.realArray.mapToSelf(Erf.erfc());
+  //   return resRealArray.toArray();
+  // }
+
+
+
+  public double[] mapCbrtToSelf(){
+    ArrayRealVector resRealArray =  this.realArray.mapToSelf(new Cbrt());
+    return resRealArray.toArray();
+  }
+
+  // public double[] mapGammaToSelf(){
+  //   ArrayRealVector resRealArray =  this.realArray.mapToSelf(new Gamma());
+  //   return resRealArray.toArray();
+  // }
+
+  // public double[] mapAtSelf(){
+  //   ArrayRealVector resRealArray =  this.realArray.mapToSelf(new Sin());
+  //   return resRealArray.toArray();
+  // }
+
+  public double[] mapFloorToSelf(){
+    ArrayRealVector resRealArray =  this.realArray.mapToSelf(new Floor());
+    return resRealArray.toArray();
+  }
+
+  public double[] mapCeilToSelf(){
+    ArrayRealVector resRealArray =  this.realArray.mapToSelf(new Ceil());
+    return resRealArray.toArray();
+  }
+
+  // public double[] mapRoundToSelf(){
+  //   ArrayRealVector resRealArray =  this.realArray.mapToSelf(new Round());
+  //   return resRealArray.toArray();
+  // }
 
   // RealMatrix outerProduct(RealVector v)
   // Compute the outer product.
@@ -340,14 +491,6 @@ public class JNMatrix{
   public void setSubVector(int index, RealVector v){
     this.setSubVector(index, v);
   }
-
-  // ArrayRealVector  subtract(RealVector v)
-  // Subtract v from this vector.
-
-  // public JNMatrix subtract(JNMatrix N){
-  //  JNMatrix res = JNMatrix new(this.shape, this.realArray.subtract(N.realArray), "FLOAT32", "DENSE_STORE");
-  //  return res;
-  // }
 
   // Convert the vector to an array of doubles.
   // double[] toArray()

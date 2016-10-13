@@ -358,37 +358,96 @@ class NMatrix
     result
   end
 
-  def +(otherNmatrix)
+  def +(other)
     result = nil
-    if (otherNmatrix.is_a?(NMatrix))
+    if (other.is_a?(NMatrix))
       #check dimension
       #check shape
-      if (@dim != otherNmatrix.dim)
-        raise Exception.new("cannot compare matrices with different dimension")
+      if (@dim != other.dim)
+        raise Exception.new("cannot add matrices with different dimension")
       end
       #check shape
       (i=0...dim).each do |i|
-        if (@shape[i] != otherNmatrix.shape[i])
-          raise Exception.new("cannot compare matrices with different shapes");
+        if (@shape[i] != other.shape[i])
+          raise Exception.new("cannot add matrices with different shapes");
         end
       end
-
-      resultArray = @nmat.add(otherNmatrix.nmat).to_a
+      resultArray = @nmat.add(other.nmat).to_a
+      result = NMatrix.new(shape, resultArray,  dtype: :int64)
+    else
+      resultArray = @nmat.mapAddToSelf(other).to_a
       result = NMatrix.new(shape, resultArray,  dtype: :int64)
     end
     result
   end
 
-  def -
-    @nmap.mapSubtractToSelf(d)
+  def -(other)
+    result = nil
+    if (other.is_a?(NMatrix))
+      #check dimension
+      #check shape
+      if (@dim != other.dim)
+        raise Exception.new("cannot subtract matrices with different dimension")
+      end
+      #check shape
+      (i=0...dim).each do |i|
+        if (@shape[i] != other.shape[i])
+          raise Exception.new("cannot subtract matrices with different shapes");
+        end
+      end
+      resultArray = @nmat.subtract(other.nmat).to_a
+      result = NMatrix.new(shape, resultArray,  dtype: :int64)
+    else
+      resultArray = @nmat.mapSubtractToSelf(other).to_a
+      result = NMatrix.new(shape, resultArray,  dtype: :int64)
+    end
+    result
   end
 
-  def *
-    @nmap.mapMultiplyToSelf(d)
+  def *(other)
+    result = nil
+    if (other.is_a?(NMatrix))
+      #check dimension
+      #check shape
+      if (@dim != other.dim)
+        raise Exception.new("cannot multiply matrices with different dimension")
+      end
+      #check shape
+      (i=0...dim).each do |i|
+        if (@shape[i] != other.shape[i])
+          raise Exception.new("cannot multiply matrices with different shapes");
+        end
+      end
+      resultArray = @nmat.ebeMultiply(other.nmat).to_a
+      result = NMatrix.new(shape, resultArray,  dtype: :int64)
+    else
+      resultArray = @nmat.mapMultiplyToSelf(other).to_a
+      result = NMatrix.new(shape, resultArray,  dtype: :int64)
+    end
+    result
   end
 
-  def /
-    @nmap.mapDivideToSelf(d)
+  def /(other)
+    result = nil
+    if (other.is_a?(NMatrix))
+      #check dimension
+      #check shape
+      if (@dim != other.dim)
+        raise Exception.new("cannot divide matrices with different dimension")
+      end
+      #check shape
+      (i=0...dim).each do |i|
+        if (@shape[i] != other.shape[i])
+          raise Exception.new("cannot divide matrices with different shapes");
+        end
+      end
+      resultArray = @nmat.ebeDivide(other.nmat).to_a
+      result = NMatrix.new(shape, resultArray,  dtype: :int64)
+    else
+      resultArray = @nmat.mapDivideToSelf(other).to_a
+      result = NMatrix.new(shape, resultArray,  dtype: :int64)
+    end
+    result
   end
 
   def **
@@ -400,116 +459,138 @@ class NMatrix
   end
 
   def atan2
-    @nmap.mapToSelf(univariate_function_atan2)
+    # resultArray = @nmat.mapAtan2ToSelf().to_a
+    # result = NMatrix.new(@shape, resultArray,  dtype: :int64)
   end
 
   def ldexp
-    @nmap.mapToSelf(univariate_function_)
+    resultArray = @nmat.mapLdexpToSelf().to_a
+    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
   end
 
   def hypot
-    @nmap.mapToSelf(univariate_function_)
+    resultArray = @nmat.mapHypotToSelf().to_a
+    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
   end
 
   def sin
     resultArray = @nmat.mapSinToSelf().to_a
-    result = NMatrix.new(shape, resultArray,  dtype: :int64)
+    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
   end
 
   def cos
-    @nmap.mapToSelf(univariate_function_)
+    resultArray = @nmat.mapCosToSelf().to_a
+    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
   end
 
   def tan
-    @nmap.mapToSelf(univariate_function_)
+    resultArray = @nmat.mapTanToSelf().to_a
+    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
   end
 
   def asin
-    @nmap.mapToSelf(univariate_function_)
+    resultArray = @nmat.mapAsinToSelf().to_a
+    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
   end
 
   def acos
-    @nmap.mapToSelf(univariate_function_)
+    resultArray = @nmat.mapAcosToSelf().to_a
+    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
   end
 
   def atan
-    @nmap.mapToSelf(univariate_function_)
+    resultArray = @nmat.mapAtanToSelf().to_a
+    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
   end
 
   def sinh
-    @nmap.mapToSelf(univariate_function_)
+    resultArray = @nmat.mapSinhToSelf().to_a
+    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
   end
 
   def cosh
-    @nmap.mapToSelf(univariate_function_)
+    resultArray = @nmat.mapCoshToSelf().to_a
+    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
   end
 
   def tanh
-    @nmap.mapToSelf(univariate_function_)
+    resultArray = @nmat.mapTanhToSelf().to_a
+    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
   end
 
   def asinh
-    @nmap.mapToSelf(univariate_function_)
+    resultArray = @nmat.mapAsinhToSelf().to_a
+    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
   end
 
   def acosh
-    @nmap.mapToSelf(univariate_function_)
+    resultArray = @nmat.mapAcoshToSelf().to_a
+    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
   end
 
   def atanh
-    @nmap.mapToSelf(univariate_function_)
+    resultArray = @nmat.mapAtanhToSelf().to_a
+    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
   end
 
   def exp
-    @nmap.mapToSelf(univariate_function_)
+    resultArray = @nmat.mapExpToSelf().to_a
+    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
   end
 
   def log2
-    @nmap.mapToSelf(univariate_function_)
+    resultArray = @nmat.mapLog2ToSelf().to_a
+    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
   end
 
   def log10
-    @nmap.mapToSelf(univariate_function_)
+    resultArray = @nmat.mapLog10ToSelf().to_a
+    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
   end
 
   def sqrt
-    @nmap.mapToSelf(univariate_function_)
+    resultArray = @nmat.mapSqrtToSelf().to_a
+    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
   end
 
   def erf
-    @nmap.mapToSelf(univariate_function_)
+    # @nmap.mapToSelf(univariate_function_)
   end
 
   def erfc
-    @nmap.mapToSelf(univariate_function_)
+    # @nmap.mapToSelf(univariate_function_)
   end
 
   def cbrt
-    @nmap.mapToSelf(univariate_function_)
+    resultArray = @nmat.mapCbrtToSelf().to_a
+    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
   end
 
   def gamma
-    @nmap.mapToSelf(univariate_function_)
+    # @nmap.mapToSelf(univariate_function_)
   end
 
   def log
-    @nmap.mapToSelf(univariate_function_)
+    resultArray = @nmat.mapLogToSelf().to_a
+    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
   end
 
   def -@
-    @nmap.mapToSelf(univariate_function_)
+    # @nmap.mapToSelf(univariate_function_)
   end
 
   def floor
-    @nmap.mapToSelf(univariate_function_)
+    resultArray = @nmat.mapFloorToSelf().to_a
+    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
   end
 
   def ceil
-    @nmap.mapToSelf(univariate_function_)
+    resultArray = @nmat.mapCeilToSelf().to_a
+    result = NMatrix.new(@shape, resultArray,  dtype: :int64)
   end
 
   def round
-    @nmap.mapToSelf(univariate_function_)
+    # @nmap.mapToSelf(univariate_function_)
   end
 
   def =~
