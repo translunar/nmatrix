@@ -8,7 +8,8 @@ require_relative '../../ext/nmatrix_java/vendor/commons-math3-3.6.1.jar'
 java_import 'org.apache.commons.math3.linear.ArrayRealVector'
 java_import 'org.apache.commons.math3.linear.RealMatrix'
 java_import 'org.apache.commons.math3.linear.MatrixUtils'
-
+java_import 'org.apache.commons.math3.linear.LUDecomposition'
+java_import 'org.apache.commons.math3.linear.QRDecomposition'
 
 class NMatrix
   include_package 'org.apache.commons.math3.analysis.function'
@@ -53,7 +54,6 @@ class NMatrix
       @stype_sym = nil
       @default_val_num = nil
       @capacity_num = nil
-      
       
       @size = (0...@shape.size).inject(1) { |x,i| x * @shape[i] }
 
@@ -162,6 +162,8 @@ class NMatrix
     shape.is_a?(Array) ? shape.length : 2
   end
 
+  alias :dimensions :dim
+
   def effective_dim(s)
     d = 0
     (0...@dim).each do |i|
@@ -169,6 +171,8 @@ class NMatrix
     end
     return d
   end
+
+  alias :effective_dimensions :effective_dim
 
   def xslice(args)
     result = nil
@@ -683,7 +687,7 @@ class NMatrix
     result
   end
 
-  def log
+  def log2
     result = NMatrix.new(:copy)
     result.shape = @shape
     result.s = @s.mapToSelf(Log.new())
