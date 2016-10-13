@@ -101,10 +101,9 @@ public class JNMatrix{
   // ArrayRealVector add(RealVector v)
   // Compute the sum of this vector and v.
 
-  public JNMatrix add(JNMatrix n){
+  public double[] add(JNMatrix n){
     ArrayRealVector resRealArray =  this.realArray.add(n.realArray);
-    JNMatrix res = new JNMatrix(this.shape, resRealArray.toArray(), "FLOAT32", "DENSE_STORE");
-    return res;
+    return resRealArray.toArray();
   }
 
   // void addToEntry(int index, double increment)
