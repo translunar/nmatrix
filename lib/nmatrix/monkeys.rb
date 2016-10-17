@@ -26,7 +26,7 @@
 # Ruby core extensions for NMatrix.
 #++
 
-require 'nmatrix/math'
+require './nmatrix/math'
 
 #######################
 # Classes and Modules #
