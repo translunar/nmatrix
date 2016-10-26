@@ -849,6 +849,34 @@ describe "math" do
     end
   end
 
+  context "#least_squares" do
+    it "finds the least squares approximation to the equation A * X = B" do
+      a = NMatrix.new([3,2], [2.0, 0, -1, 1, 0, 2]) 
+      b = NMatrix.new([3,1], [1.0, 0, -1])
+      solution = NMatrix.new([2,1], [1.0 / 3 , -1.0 / 3], dtype: :float64)
+    
+      begin
+        least_squares = a.least_squares(b)
+        expect(least_squares).to be_within(0.0001).of solution
+      rescue NotImplementedError
+        "Suppressing a NotImplementedError when the lapacke or atlas plugin is not available"
+      end
+    end
+    
+    it "finds the least squares approximation to the equation A * X = B with high tolerance" do
+      a = NMatrix.new([4,2], [1.0, 1, 1, 2, 1, 3,1,4]) 
+      b = NMatrix.new([4,1], [6.0, 5, 7, 10])
+      solution = NMatrix.new([2,1], [3.5 , 1.4], dtype: :float64)
+    
+      begin
+        least_squares = a.least_squares(b, tolerance: 10e-5)
+        expect(least_squares).to be_within(0.0001).of solution
+      rescue NotImplementedError
+        "Suppressing a NotImplementedError when the lapacke or atlas plugin is not available"
+      end
+    end    
+  end
+
   context "#hessenberg" do
     FLOAT_DTYPES.each do |dtype|
       context dtype do
