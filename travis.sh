@@ -37,12 +37,12 @@ then
 
     # Install ruby
     (
-      brew install bison openssl readline libyaml
+      brew install bison openssl readline
       brew link --force openssl
       RBENV_VERSION=system
       MAKEOPTS='-j 4'
       CONFIGURE_OPTS="--disable-install-doc --with-out-ext=tk,tk/tkutil --with-opt-dir=/usr/local"
-      rbenv install $ruby_version
+      rbenv install --verbose $ruby_version
     )
 
     gem pristine --all

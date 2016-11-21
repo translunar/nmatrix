@@ -303,7 +303,7 @@ class NMatrix
 
 
     #Default behaviour produces Q * I  = Q if c is not supplied.
-    result = c ? c : NMatrix.identity(self.shape[0], dtype: self.dtype)
+    result = c ? c.clone : NMatrix.identity(self.shape[0], dtype: self.dtype)
     NMatrix::LAPACK::lapacke_ormqr(:row, side, transpose, result.shape[0], result.shape[1], tau.shape[0], self, self.shape[1], tau, result, result.shape[1])
     
     result
@@ -343,7 +343,7 @@ class NMatrix
     raise(TypeError, "c must have the same dtype as the calling NMatrix") if c and c.dtype != self.dtype
 
     #Default behaviour produces Q * I  = Q if c is not supplied.
-    result = c ? c : NMatrix.identity(self.shape[0], dtype: self.dtype)
+    result = c ? c.clone : NMatrix.identity(self.shape[0], dtype: self.dtype)
     NMatrix::LAPACK::lapacke_unmqr(:row, side, transpose, result.shape[0], result.shape[1], tau.shape[0], self, self.shape[1], tau, result, result.shape[1])
     
     result

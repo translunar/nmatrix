@@ -53,7 +53,7 @@ static VALUE nm_each_stored_with_indices(VALUE nmatrix);
 static VALUE nm_each_ordered_stored_with_indices(VALUE nmatrix);
 static VALUE nm_map_stored(VALUE nmatrix);
 
-static SLICE* get_slice(size_t dim, int argc, VALUE* arg, size_t* shape);
+static void init_slice_no_alloc(SLICE* slice, size_t dim, int argc, VALUE* arg, size_t* shape);
 static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(const STORAGE*, SLICE*), void (*delete_func)(NMATRIX*), VALUE self);
 static VALUE nm_mset(int argc, VALUE* argv, VALUE self);
 static VALUE nm_mget(int argc, VALUE* argv, VALUE self);
@@ -397,28 +397,6 @@ void Init_nmatrix() {
 //////////////////
 // Ruby Methods //
 //////////////////
-
-
-/*
- * Slice constructor.
- */
-static SLICE* alloc_slice(size_t dim) {
-  SLICE* slice = NM_ALLOC(SLICE);
-  slice->coords = NM_ALLOC_N(size_t, dim);
-  slice->lengths = NM_ALLOC_N(size_t, dim);
-  return slice;
-}
-
-
-/*
- * Slice destructor.
- */
-static void free_slice(SLICE* slice) {
-  NM_FREE(slice->coords);
-  NM_FREE(slice->lengths);
-  NM_FREE(slice);
-}
-
 
 /*
  * Allocator.
@@ -1272,7 +1250,12 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
       tmp_shape[m]  = shape[m];
     }
 
-    SLICE* slice = get_slice(dim, dim, slice_argv, shape);
+    SLICE slice_s;
+    SLICE* slice = &slice_s;
+    slice->coords = NM_ALLOCA_N(size_t, dim);
+    slice->lengths = NM_ALLOCA_N(size_t, dim);
+    init_slice_no_alloc(slice, dim, dim, slice_argv, shape);
+
     // Create a temporary dense matrix and use it to do a slice assignment on self.
     NMATRIX* tmp = nm_create(nm::DENSE_STORE, (STORAGE*)nm_dense_storage_create(dtype, tmp_shape, dim, v, v_size));
     nm_register_nmatrix(tmp);
@@ -1281,8 +1264,6 @@ static VALUE nm_init_new_version(int argc, VALUE* argv, VALUE self) {
     nm_register_value(&rb_tmp);
     if (stype == nm::YALE_STORE)  nm_yale_storage_set(self, slice, rb_tmp);
     else                          nm_list_storage_set(self, slice, rb_tmp);
-
-    free_slice(slice);
 
     // We need to free v if it's not the same size as tmp -- because tmp will have made a copy instead.
     //if (nm_storage_count_max_elements(tmp->storage) != v_size)
@@ -2018,7 +1999,11 @@ static VALUE nm_mset(int argc, VALUE* argv, VALUE self) {
     NM_CONSERVATIVE(nm_register_value(&self));
     NM_CONSERVATIVE(nm_register_values(argv, argc));
 
-    SLICE* slice = get_slice(dim, argc-1, argv, NM_STORAGE(self)->shape);
+    SLICE slice_s;
+    SLICE* slice = &slice_s;
+    slice->coords = NM_ALLOCA_N(size_t, dim);
+    slice->lengths = NM_ALLOCA_N(size_t, dim);
+    init_slice_no_alloc(slice, dim, argc-1, argv, NM_STORAGE(self)->shape);
 
     static void (*ttable[nm::NUM_STYPES])(VALUE, SLICE*, VALUE) = {
       nm_dense_storage_set,
@@ -2027,8 +2012,6 @@ static VALUE nm_mset(int argc, VALUE* argv, VALUE self) {
     };
 
     ttable[NM_STYPE(self)](self, slice, argv[argc-1]);
-
-    free_slice(slice);
 
     to_return = argv[argc-1];
 
@@ -2259,7 +2242,12 @@ static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(const STORAGE*
 
     nm_register_value(&result);
 
-    SLICE* slice = get_slice(NM_DIM(self), argc, argv, s->shape);
+    SLICE slice_s;
+    SLICE* slice = &slice_s;
+    size_t dim = NM_DIM(self);
+    slice->coords = NM_ALLOCA_N(size_t, dim);
+    slice->lengths = NM_ALLOCA_N(size_t, dim);
+    init_slice_no_alloc(slice, dim, argc, argv, s->shape);
 
     if (slice->single) {
       static void* (*ttable[nm::NUM_STYPES])(const STORAGE*, SLICE*) = {
@@ -2280,8 +2268,6 @@ static VALUE nm_xslice(int argc, VALUE* argv, void* (*slice_func)(const STORAGE*
       result        = Data_Wrap_Struct(CLASS_OF(self), nm_mark, delete_func, mat);
       nm_unregister_nmatrix(mat);
     }
-
-    free_slice(slice);
   }
 
   nm_unregister_value(&result);
@@ -2623,19 +2609,17 @@ nm::dtype_t nm_dtype_guess(VALUE v) {
   }
 }
 
-
-
 /*
- * Allocate and return a SLICE object, which will contain the appropriate coordinate and length information for
- * accessing some part of a matrix.
+ * Modify an existing SLICE object (with properly allocated memory),
+ * so that it will contain the appropriate coordinate and length information
+ * for accessing some part of a matrix.
  */
-static SLICE* get_slice(size_t dim, int argc, VALUE* arg, size_t* shape) {
+static void init_slice_no_alloc(SLICE* slice, size_t dim, int argc, VALUE* arg, size_t* shape) {
   NM_CONSERVATIVE(nm_register_values(arg, argc));
 
   VALUE beg, end;
   int excl;
 
-  SLICE* slice = alloc_slice(dim);
   slice->single = true;
 
   // r is the shape position; t is the slice position. They may differ when we're dealing with a
@@ -2693,7 +2677,6 @@ static SLICE* get_slice(size_t dim, int argc, VALUE* arg, size_t* shape) {
   }
 
   NM_CONSERVATIVE(nm_unregister_values(arg, argc));
-  return slice;
 }
 
 #ifdef BENCHMARK

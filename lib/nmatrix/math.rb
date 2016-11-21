@@ -533,6 +533,77 @@ class NMatrix
 
   #
   # call-seq:
+  #     least_squares(b) -> NMatrix
+  #     least_squares(b, tolerance: 10e-10) -> NMatrix
+  #
+  # Provides the linear least squares approximation of an under-determined system  
+  # using QR factorization provided that the matrix is not rank-deficient.
+  #
+  # Only works for dense matrices.
+  #
+  # * *Arguments* :
+  #   - +b+ -> The solution column vector NMatrix of A * X = b.
+  #   - +tolerance:+ -> Absolute tolerance to check if a diagonal element in A = QR is near 0 
+  #              
+  # * *Returns* :
+  #   - NMatrix that is a column vector with the LLS solution
+  #
+  # * *Raises* :
+  #   - +ArgumentError+ -> least squares approximation only works for non-complex types
+  #   - +ShapeError+ -> system must be under-determined ( rows > columns )
+  #
+  # Examples :-
+  #
+  #   a = NMatrix.new([3,2], [2.0, 0, -1, 1, 0, 2]) 
+  #   
+  #   b = NMatrix.new([3,1], [1.0, 0, -1])
+  #
+  #   a.least_squares(b)
+  #     =>[
+  #         [ 0.33333333333333326 ]
+  #         [ -0.3333333333333334 ]
+  #       ]
+  #
+  def least_squares(b, tolerance: 10e-6)  
+    raise(ArgumentError, "least squares approximation only works for non-complex types") if 
+      self.complex_dtype?
+    
+    rows, columns = self.shape
+
+    raise(ShapeError, "system must be under-determined ( rows > columns )") unless 
+      rows > columns
+   
+    #Perform economical QR factorization
+    r = self.clone
+    tau = r.geqrf!
+    q_transpose_b = r.ormqr(tau, :left, :transpose, b)
+    
+    #Obtain R from geqrf! intermediate
+    r[0...columns, 0...columns].upper_triangle!
+    r[columns...rows, 0...columns] = 0
+    
+    diagonal = r.diagonal
+
+    raise(ArgumentError, "rank deficient matrix") if diagonal.any? { |x| x == 0 }
+  
+    if diagonal.any? { |x| x.abs < tolerance }
+      warn "warning: A diagonal element of R in A = QR is close to zero ;" << 
+           " indicates a possible loss of precision"
+    end
+
+    # Transform the system A * X = B to R1 * X = B2 where B2 = Q1_t * B
+    r1 = r[0...columns, 0...columns]
+    b2 = q_transpose_b[0...columns]
+
+    nrhs = b2.shape[1]
+
+    #Solve the upper triangular system
+    NMatrix::BLAS::cblas_trsm(:row, :left, :upper, false, :nounit, r1.shape[0], nrhs, 1.0, r1, r1.shape[0], b2, nrhs)
+    b2
+  end
+
+  #
+  # call-seq:
   #     gesvd! -> [u, sigma, v_transpose]
   #     gesvd! -> [u, sigma, v_conjugate_transpose] # complex
   #
