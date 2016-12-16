@@ -250,7 +250,7 @@ class NMatrix
     #   raise Exception.new("can only calculate exact determinant for dense matrices")
     #   return nil
     # end
-
+    raise(DataTypeError, "cannot call det_exact on unsigned type") if(self.dtype == :byte)
     if (@dim != 2 || @shape[0] != @shape[1])
       raise(ShapeError, "matrices must be square to have a determinant defined")
       return nil
@@ -265,7 +265,20 @@ class NMatrix
     return to_return.round(3)
   end
 
-  alias :det :det_exact
+  def det_exact2
+    if (@dim != 2 || @shape[0] != @shape[1])
+      raise(ShapeError, "matrices must be square to have a determinant defined")
+      return nil
+    end
+    to_return = nil
+    if (dtype == :object)
+      # to_return = *reinterpret_cast<VALUE*>(result);
+    else
+      to_return = LUDecomposition.new(self.twoDMat).getDeterminant()
+    end
+
+    return to_return.round(3)
+  end
 
   def complex_conjugate!
 
@@ -706,7 +719,7 @@ class NMatrix
   end
 
   def is_symmetric(hermitian)
-    is_symmetric = false
+    is_symmetric = true
 
     if (@shape[0] == @shape[1] and @dim == 2)
       if @stype == :dense
@@ -721,7 +734,7 @@ class NMatrix
 
       else
         #TODO: Implement, at the very least, yale_is_symmetric. Model it after yale/transp.template.c.
-        raise Exception.new("symmetric? and hermitian? only implemented for dense currently")
+        # raise Exception.new("symmetric? and hermitian? only implemented for dense currently")
       end
     end
     return is_symmetric ? true : false

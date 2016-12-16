@@ -259,7 +259,7 @@ class NMatrix
   def floor
     result = create_dummy_nmatrix
     # Need to be changed later
-    result.dtype = :int16
+    result.dtype = :int64
     result.s = @s.copy.mapToSelf(Floor.new())
     result
   end
@@ -267,7 +267,7 @@ class NMatrix
   def ceil
     result = create_dummy_nmatrix
     # Need to be changed later
-    result.dtype = :int16
+    result.dtype = :int64
     result.s = @s.copy.mapToSelf(Ceil.new())
     result
   end
@@ -275,7 +275,7 @@ class NMatrix
   def round
     result = create_dummy_nmatrix
     # Need to be changed later
-    result.dtype = :int16
+    result.dtype = :int64
     result.s = ArrayRealVector.new MathHelper.round(@s.toArray)
     result
   end

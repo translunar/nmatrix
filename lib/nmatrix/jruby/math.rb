@@ -494,7 +494,7 @@ class NMatrix
       nmatrix.s = solver.solve(b.s)
       return nmatrix
     when :pos_def, :positive_definite
-      solver = Choleskyecomposition.new(self.twoDMat).getSolver
+      solver = CholeskyDecomposition.new(self.twoDMat).getSolver
       nmatrix.s = solver.solve(b.s)
       return nmatrix
     else
@@ -666,7 +666,7 @@ class NMatrix
   #
   def det
     raise(ShapeError, "determinant can be calculated only for square matrices") unless self.dim == 2 && self.shape[0] == self.shape[1]
-    self.det_exact
+    self.det_exact2
   end
 
   #
@@ -1031,8 +1031,11 @@ class NMatrix
   # Return the scaling result of the matrix. BLAS scal will be invoked if provided.
 
   def scale!(alpha, incx=1, n=nil)
-    raise(DataTypeError, "Incompatible data type for the scaling factor") unless
-        NMatrix::upcast(self.dtype, NMatrix::min_dtype(alpha)) == self.dtype
+    #FIXME
+    # raise(DataTypeError, "Incompatible data type for the scaling factor") unless
+    #     NMatrix::upcast(self.dtype, NMatrix::min_dtype(alpha)) == self.dtype
+    raise(DataTypeError, "Incompatible data type for the scaling factor") if
+        self.dtype == :int8
     @s.mapMultiplyToSelf(alpha)
     return self
   end
@@ -1049,8 +1052,12 @@ class NMatrix
   # Return the scaling result of the matrix. BLAS scal will be invoked if provided.
 
   def scale(alpha, incx=1, n=nil)
-    raise(DataTypeError, "Incompatible data type for the scaling factor") unless
-        NMatrix::upcast(self.dtype, NMatrix::min_dtype(alpha)) == self.dtype
+    # FIXME
+    # raise(DataTypeError, "Incompatible data type for the scaling factor") unless
+    #     NMatrix::upcast(self.dtype, NMatrix::min_dtype(alpha)) == self.dtype
+    raise(DataTypeError, "Incompatible data type for the scaling factor") if
+        self.dtype == :byte || self.dtype == :int8 || self.dtype == :int16 ||
+        self.dtype == :int32 || self.dtype == :int64
     nmatrix = NMatrix.new :copy
     nmatrix.shape = @shape.clone
     nmatrix.s = ArrayRealVector.new(@s.toArray.clone).mapMultiplyToSelf(alpha)
