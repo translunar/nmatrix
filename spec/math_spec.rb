@@ -128,7 +128,7 @@ describe "math" do
               context dtype do
                 before :each do
                   @size = [2,2]
-                  @m    = NMatrix.seq(@size, dtype: dtype, stype: stype)+1 unless dtype == :object
+                  @m    = NMatrix.seq(@size, dtype: dtype, stype: stype)+1 unless jruby? and dtype == :object
                   @a    = @m.to_a.flatten
                 end
 
@@ -173,7 +173,7 @@ describe "math" do
                 @size = [2,2]
                 @mat  = NMatrix.new @size, [1.33334, 0.9998, 1.9999, -8.9999],
                   dtype: dtype, stype: stype
-                @ans  = @mat.to_a.flatten unless dtype == :object
+                @ans  = @mat.to_a.flatten unless jruby? and dtype == :object
               end
 
               it "rounds" do
