@@ -125,10 +125,16 @@ then
 
   bundle exec rake travis:env
 
-  bundle exec rake compile $nmatrix_plugins_opt || {
-    echo === Contents of mkmf.log ===
-    cat tmp/*/nmatrix/*/mkmf.log
-    exit 1
-  }
-  bundle exec rake spec $nmatrix_plugins_opt
+  if [[ "$TRAVIS_RUBY_VERSION" =~ "jruby" ]];then
+    bundle exec rake jruby
+    bundle exec rake spec
+  else
+    bundle exec rake compile $nmatrix_plugins_opt || {
+      echo === Contents of mkmf.log ===
+      cat tmp/*/nmatrix/*/mkmf.log
+      exit 1
+    }
+    bundle exec rake spec $nmatrix_plugins_opt
+  fi
+
 fi

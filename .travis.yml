@@ -20,7 +20,7 @@ rvm:
   - 2.3.0-clang
   - ruby-head-clang
   # JRuby versions --- experimental, pending merging Prasun's GSoC project.
-  # - jruby-9.0.0.0 # earliest supported version (uncomment when jruby-head is passing)
+  - jruby-9.0.5.0 # earliest supported version (uncomment when jruby-head is passing)
   - jruby-head    # latest supported JRuby
   # Make sure to add exclude lines for new JRuby versions below.
 
@@ -42,7 +42,8 @@ matrix:
       env: USE_OPENBLAS=1
     - rvm: jruby-head
       env: USE_REF=1
-    #- rvm: jruby-9.0.0.0
+    - rvm: jruby-9.0.5.0
+      env: USE_REF=1
     #  env:
     #    - USE_ATLAS=1
     #    - USE_OPENBLAS=1
@@ -106,8 +107,6 @@ matrix:
         - ruby_version=2.1.8 USE_OPENBLAS=1
   allow_failures:
     # trunk
-    - rvm: jruby-head
-    #- rvm: jruby-9.0.0.0
     - rvm: ruby-head
     - rvm: ruby-head-clang
     - os: osx
