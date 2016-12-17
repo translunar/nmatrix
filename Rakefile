@@ -320,25 +320,37 @@ task :jruby => 'jruby:all'
 
 namespace :travis do
   task :env do
-    puts "\n# Build environment:"
-    %w[
-      CC CXX
-      USE_ATLAS USE_OPENBLAS USE_REF NO_EXTERNAL_LIB
-      TRAVIS_OS_NAME TRAVIS_BRANCH TRAVIS_COMMIT TRAVIS_PULL_REQUEST
-    ].each do |name|
-      puts "- #{name}: #{ENV[name]}"
-    end
+    if /java/ === RUBY_PLATFORM
+      puts "Building for jruby"
+      sh "mkdir ext/nmatrix_java/vendor"
+      puts "Downloading tar file."
+      sh "wget http://www-eu.apache.org/dist//commons/math/binaries/commons-math3-3.6.1-bin.tar.gz"
+      puts "Unzipping tar file."
+      sh "tar -zxf commons-math3-3.6.1-bin.tar.gz"
+      puts "Deleting tar file."
+      sh "rm commons-math3-3.6.1-bin.tar.gz"
+      sh "cp -r commons-math3-3.6.1/commons-math3-3.6.1.jar ext/nmatrix_java/vendor"
+    else
+      puts "\n# Build environment:"
+      %w[
+        CC CXX
+        USE_ATLAS USE_OPENBLAS USE_REF NO_EXTERNAL_LIB
+        TRAVIS_OS_NAME TRAVIS_BRANCH TRAVIS_COMMIT TRAVIS_PULL_REQUEST
+      ].each do |name|
+        puts "- #{name}: #{ENV[name]}"
+      end
 
-    require 'rbconfig'
-    puts "\n# RbConfig::MAKEFILE_CONFIG values:"
-    %w[
-      CC CXX CPPFLAGS CFLAGS CXXFLAGS
-    ].each do |name|
-      puts "- #{name}: #{RbConfig::MAKEFILE_CONFIG[name]}"
-    end
+      require 'rbconfig'
+      puts "\n# RbConfig::MAKEFILE_CONFIG values:"
+      %w[
+        CC CXX CPPFLAGS CFLAGS CXXFLAGS
+      ].each do |name|
+        puts "- #{name}: #{RbConfig::MAKEFILE_CONFIG[name]}"
+      end
 
-    cc = RbConfig::MAKEFILE_CONFIG['CC']
-    puts "\n$ #{cc} -v\n#{`#{cc} -v 2>&1`}"
+      cc = RbConfig::MAKEFILE_CONFIG['CC']
+      puts "\n$ #{cc} -v\n#{`#{cc} -v 2>&1`}"
+    end
   end
 end
 
