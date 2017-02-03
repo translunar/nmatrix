@@ -104,13 +104,14 @@ describe NMatrix do
     [:dense, :yale, :list].each do |stype|
       context "#block_diagonal #{dtype} #{stype}" do
         it "block_diagonal() creates a block-diagonal NMatrix" do
+          pending("not yet implemented for NMatrix-JRuby") if jruby? and dtype == :object
           a = NMatrix.new([2,2], [1,2,
                                   3,4])
           b = NMatrix.new([1,1], [123.0])
           c = NMatrix.new([3,3], [1,2,3,
                                   1,2,3,
                                   1,2,3])
-          d = Array[ [1,1,1], [2,2,2], [3,3,3] ] 
+          d = Array[ [1,1,1], [2,2,2], [3,3,3] ]
           e = 12
           m = NMatrix.block_diagonal(a, b, c, d, e, dtype: dtype, stype: stype)
           expect(m).to eq(NMatrix.new([10,10], [1, 2,   0, 0, 0, 0, 0, 0, 0,  0,
@@ -158,42 +159,44 @@ describe NMatrix do
       expect { NMatrix.random("not an array or integer") }.to raise_error
     end
   end
-  
+
   context "::magic" do
-    
+
     ALL_DTYPES.each do |dtype|
       context dtype do
         it "creates a matrix with numbers from 1 to n^n(n squared)" do
+          pending("not yet implemented for NMatrix-JRuby") if jruby?
           a = NMatrix.magic(3, dtype: dtype)
-          magic3 = NMatrix.new([3,3], [4, 9, 2, 3, 5, 7, 8, 1, 6], dtype: dtype)	
+          magic3 = NMatrix.new([3,3], [4, 9, 2, 3, 5, 7, 8, 1, 6], dtype: dtype)
           expect(a).to eq magic3
-      
+
           b = NMatrix.magic(4, dtype: dtype)
           magic4 = NMatrix.new([4,4], [1, 15, 14,  4, 12,  6,  7, 9, 8, 10, 11, 5, 13, 3, 2, 16], dtype: dtype)
           expect(b).to eq magic4
-      
+
           c = NMatrix.magic(6, dtype: dtype)
           magic6 = NMatrix.new([6,6], [31, 9, 2, 22, 27, 20, 3, 32, 7, 21, 23, 25, 35, 1, 6, 26, 19, 24, 4, 36, 29, 13, 18, 11, 30, 5, 34, 12, 14, 16, 8, 28, 33, 17, 10, 15], dtype: dtype)
-          expect(c).to eq magic6  
+          expect(c).to eq magic6
         end
       end
     end
-    
+
     it "shape of two is not allowed" do
       expect { NMatrix.magic(2) }.to raise_error(ArgumentError)
     end
-    
-    it "Only accepts an integer as dimension" do 
+
+    it "Only accepts an integer as dimension" do
       expect { NMatrix.magic(3.0) }.to raise_error(ArgumentError)
     end
   end
-  
+
   context "::linspace" do
     it "creates a row vector when given only one shape parameter" do
+      pending("not yet implemented for NMatrix-JRuby") if jruby?
       v = NMatrix.linspace(1, 10, 4)
       #Expect a row vector only
       expect(v.shape.length).to eq(1)
-      
+
       ans = [1.0,4.0,7.0,10.0]
 
       expect(v[0]).to be_within(0.000001).of(ans[0])
@@ -201,13 +204,14 @@ describe NMatrix do
       expect(v[2]).to be_within(0.000001).of(ans[2])
       expect(v[3]).to be_within(0.000001).of(ans[3])
     end
-    
+
     it "creates a matrix of input shape with each entry linearly spaced in row major order" do
+      pending("not yet implemented for NMatrix-JRuby") if jruby?
       v = NMatrix.linspace(1, Math::PI, [2,2])
       expect(v.dtype).to eq(:float64)
 
       ans = [1.0, 1.7138642072677612, 2.4277284145355225, 3.1415927410125732]
-      
+
       expect(v[0,0]).to be_within(0.000001).of(ans[0])
       expect(v[0,1]).to be_within(0.000001).of(ans[1])
       expect(v[1,0]).to be_within(0.000001).of(ans[2])
@@ -217,13 +221,14 @@ describe NMatrix do
 
   context "::logspace" do
     it "creates a logarithmically spaced vector" do
+      pending("not yet implemented for NMatrix-JRuby") if jruby?
       v = NMatrix.logspace(1, 2, 10)
-      
+
       expect(v.shape.length).to eq(1)
-      
+
       #Unit test taken from Matlab R2015b output of logspace(1,2,10)
       ans = [10.0000, 12.9155, 16.6810, 21.5443, 27.8256, 35.9381, 46.4159, 59.9484, 77.4264, 100.0000]
-      
+
       expect(v[0].round(4)).to be_within(0.000001).of(ans[0])
       expect(v[1].round(4)).to be_within(0.000001).of(ans[1])
       expect(v[2].round(4)).to be_within(0.000001).of(ans[2])
@@ -235,13 +240,14 @@ describe NMatrix do
       expect(v[8].round(4)).to be_within(0.000001).of(ans[8])
       expect(v[9].round(4)).to be_within(0.000001).of(ans[9])
     end
-    
+
     it "creates a logarithmically spaced vector bounded by Math::PI if :pi is pre-supplied" do
+      pending("not yet implemented for NMatrix-JRuby") if jruby?
       v = NMatrix.logspace(1, :pi, 7)
-                 
+
       #Unit test taken from Matlab R2015b output of logspace(1,pi,10)
       ans = [10.0000, 8.2450, 6.7980, 5.6050, 4.6213, 3.8103, 3.1416]
-      
+
       expect(v[0].round(4)).to be_within(0.000001).of(ans[0])
       expect(v[1].round(4)).to be_within(0.000001).of(ans[1])
       expect(v[2].round(4)).to be_within(0.000001).of(ans[2])
@@ -249,13 +255,14 @@ describe NMatrix do
       expect(v[4].round(4)).to be_within(0.000001).of(ans[4])
       expect(v[5].round(4)).to be_within(0.000001).of(ans[5])
       expect(v[6].round(4)).to be_within(0.000001).of(ans[6])
-    end    
+    end
 
     it "creates a matrix of input shape with each entry logarithmically spaced in row major order" do
+      pending("not yet implemented for NMatrix-JRuby") if jruby?
       v = NMatrix.logspace(1, 2, [3,2])
-      
+
       ans = [10.0, 15.8489, 25.1189, 39.8107, 63.0957, 100.0]
-      
+
       expect(v[0,0].round(4)).to be_within(0.000001).of(ans[0])
       expect(v[0,1].round(4)).to be_within(0.000001).of(ans[1])
       expect(v[1,0].round(4)).to be_within(0.000001).of(ans[2])
@@ -360,6 +367,7 @@ describe NMatrix do
     end
 
     it "should create an nmatrix of ones with dimensions and type the same as its argument" do
+      pending("not yet implemented for NMatrix-JRuby") if jruby?
       expect(NMatrix.ones_like(@nm_1d)).to eq NMatrix[1.0, 1.0, 1.0, 1.0, 1.0]
       expect(NMatrix.ones_like(@nm_2d)).to eq NMatrix[[1.0, 1.0], [1.0, 1.0]]
     end
@@ -383,6 +391,7 @@ describe "NVector" do
   end
 
   it "ones() creates a vector of ones" do
+    pending("not yet implemented for NMatrix-JRuby") if jruby?
     v = NVector.ones(3)
 
     3.times do |i|
@@ -391,6 +400,7 @@ describe "NVector" do
   end
 
   it "random() creates a vector of random numbers" do
+    pending("not yet implemented for NMatrix-JRuby") if jruby?
     v = NVector.random(4)
     expect(v.dtype).to eq(:float64)
     expect(v.stype).to eq(:dense)
@@ -424,16 +434,19 @@ describe "NVector" do
   end
 
   it "cindgen() creates a vector of complexes, sequentially" do
+    pending("not yet implemented for NMatrix-JRuby") if jruby?
     v = NVector.cindgen(2)
     expect(v).to eq(NMatrix.new([2,1], [Complex(0.0, 0.0), Complex(1.0, 0.0)], dtype: :complex64))
   end
 
   it "linspace() creates a vector with n values equally spaced between a and b" do
+    pending("not yet implemented for NMatrix-JRuby") if jruby?
     v = NVector.linspace(0, 2, 5)
     expect(v).to eq(NMatrix.new([5,1], [0.0, 0.5, 1.0, 1.5, 2.0]))
   end
 
   it "logspace() creates a vector with n values logarithmically spaced between decades 10^a and 10^b" do
+    pending("not yet implemented for NMatrix-JRuby") if jruby?
     v = NVector.logspace(0, 3, 4)
     expect(v).to eq(NMatrix.new([4,1], [1.0, 10.0, 100.0, 1000.0]))
   end

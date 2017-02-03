@@ -80,6 +80,7 @@ describe 'NMatrix' do
     end
 
     it "should generate a translation matrix from an NMatrix with correctly inferred dtype" do
+      pending("not yet implemented for NMatrix-JRuby") if jruby?
       t = NMatrix.translation(NMatrix.new([3,1], [4,5,6], dtype: :float64) )
       expect(t).to be_within(1e-8).of(NMatrix.new([4,4], [1, 0, 0, 4,
                                                       0, 1, 0, 5,

@@ -31,7 +31,7 @@ describe NMatrix do
   context "yale" do
     before :each do
       @n = NMatrix.new(3, stype: :yale, dtype: :int64)
-      @n.extend NMatrix::YaleFunctions
+      @n.extend NMatrix::YaleFunctions unless jruby?
       @m = NMatrix.new(3, stype: :yale, dtype: :int64)
       @n[0,0] = 52
       @n[0,2] = 5
@@ -40,10 +40,11 @@ describe NMatrix do
       @n[2,0] = 6
       @m[1,1] = -48
       @m[0,2] = -5
-      @n.extend NMatrix::YaleFunctions
+      @n.extend NMatrix::YaleFunctions unless jruby?
     end
 
     it "should perform scalar math" do
+      pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby?
       x = @n * 3
       expect(x[0,0]).to eq(52 * 3)
       expect(x[0,1]).to eq(30 * 3)
@@ -57,6 +58,7 @@ describe NMatrix do
     end
 
     it "should refuse to perform a dot operation on a yale with non-zero default" do
+      pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby?
       r = NMatrix.new(3, stype: :yale, dtype: :int64)
       y = r + 3
       expect { y.dot(r) }.to raise_error
@@ -78,11 +80,13 @@ describe NMatrix do
     end
 
     it "should perform element-wise division" do
+      pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby?
       r = NMatrix.new(:dense, 3, [52, 30, -2, 0, -1, 0, 6, 0, 0], :int64).cast(:yale, :int64)
       expect(@n/(@m+1)).to eq(r)
     end
 
     it "should perform element-wise modulo" do
+      pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby?
       m = NMatrix.new(3, stype: :yale, dtype: :int64, default: 0) + 5
       expect(@n % m).to eq(NMatrix.new(:dense, 3, [2,0,0,0,0,0,1,0,0], :int64).cast(:yale, :int64))
     end
@@ -124,6 +128,7 @@ describe NMatrix do
     end
 
     it "should perform scalar math" do
+      pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby?
       x = @n * 3
       expect(x[0,0]).to eq(52 * 3)
       expect(x[1,1]).to eq(40 * 3)
@@ -162,6 +167,7 @@ describe NMatrix do
     end
 
     it "should perform element-wise modulo" do
+      pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby?
       m = NMatrix.new(:list, 2, 1, :int64)
       m[0,0] = 50
       m[1,1] = 40
@@ -245,6 +251,7 @@ describe NMatrix do
       end
 
       it "divides in the Ruby way" do
+        pending("not yet implemented int dtype for NMatrix-JRuby") if jruby?
         m = @m.clone
         m[1,0] = 3
         r = @n/m
@@ -258,6 +265,7 @@ describe NMatrix do
       end
 
       it "modulo" do
+        pending("not yet implemented int dtype for NMatrix-JRuby") if jruby?
         expect(@n % (@m + 2)).to eq(NMatrix.new(:dense, [2,2], [-1, 0, 1, 4], :int64))
       end
     end

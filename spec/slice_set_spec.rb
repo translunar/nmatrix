@@ -40,8 +40,12 @@ describe "Set slice operation" do
 
         if stype == :yale
           step "verify correct arrangement of Yale IJA and A arrays" do
-            @m.extend NMatrix::YaleFunctions
-            expect(@m.yale_ija).to eq([4,6,8,10,1,2,0,2,0,1])
+            @m.extend NMatrix::YaleFunctions unless jruby?
+            if jruby?
+              pending("not yet implemented for NMatrix-JRuby")
+            else
+              expect(@m.yale_ija).to eq([4,6,8,10,1,2,0,2,0,1])
+            end
             expect(@m.yale_a).to   eq([0,4,8,0, 1,2,3,5,6,7])
           end
         end
@@ -145,6 +149,7 @@ describe "Set slice operation" do
       end
 
       example "set a range of values to a matrix's contents" do
+        pending("not yet implemented for int dtype for NMatrix-JRuby") if jruby?
         x = NMatrix.new(4, stype: :yale, dtype: :int16)
         x.extend NMatrix::YaleFunctions if stype == :yale
         x[1..3,1..3] = @m

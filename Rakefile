@@ -73,6 +73,7 @@ namespace :spec do
   gemspecs.each do |gemspec|
     test_files = gemspec.test_files
     test_files.keep_if { |file| file =~ /_spec\.rb$/ }
+    test_files -= ['spec/nmatrix_yale_spec.rb', 'spec/blas_spec.rb', 'spec/lapack_core_spec.rb'] if /java/ === RUBY_PLATFORM
     next if test_files.empty?
     spec_tasks << gemspec.name
     RSpec::Core::RakeTask.new(gemspec.name) do |spec|
@@ -273,27 +274,83 @@ RDoc::Task.new do |rdoc|
   rdoc.options << "--exclude=lib/nmatrix/rspec.rb"
 end
 
+# jruby tasks
+
+namespace :jruby do
+
+  PROJECT_DIR = File.expand_path(".",Dir.pwd)
+
+  BUILD_DIR = "build"
+  CLASSES_DIR = "../build/classes"
+  TEST_CLASSES_DIR = "build/testClasses"
+
+  JRUBY_DIR = "#{PROJECT_DIR}/ext/nmatrix_java"
+  VENDOR_DIR = "#{JRUBY_DIR}/vendor"
+  TARGET_DIR = "#{JRUBY_DIR}/target"
+
+  jars = Dir["#{VENDOR_DIR}/*.jar"]
+
+  desc 'Compile java classes'
+  task :javac do
+    unless RUBY_PLATFORM == 'java'
+      abort 'Please run with JRuby'
+    end
+    sh "mkdir -p #{JRUBY_DIR}/build/classes"
+    Dir.chdir("#{JRUBY_DIR}/nmatrix")
+    classes    = Dir['**/*.java']
+    sh "javac -classpath #{jars.join(':')} -d #{CLASSES_DIR} #{classes.join(' ')}"
+  end
+
+  desc 'Package java classes in a jar file'
+  task :jar do
+    unless RUBY_PLATFORM == 'java'
+      abort 'Please run with JRuby'
+    end
+    sh "mkdir -p #{TARGET_DIR}"
+    Dir.chdir("#{JRUBY_DIR}/build/classes")
+    classes = Dir['**/*.class']
+    sh "jar -cf #{TARGET_DIR}/nmatrix.jar #{classes.join(' ')}"
+  end
+
+  task :all => [:javac, :jar]
+end
+
+desc "Compile java classes and Package them in a jar file"
+task :jruby => 'jruby:all'
+
 namespace :travis do
   task :env do
-    puts "\n# Build environment:"
-    %w[
-      CC CXX
-      USE_ATLAS USE_OPENBLAS USE_REF NO_EXTERNAL_LIB
-      TRAVIS_OS_NAME TRAVIS_BRANCH TRAVIS_COMMIT TRAVIS_PULL_REQUEST
-    ].each do |name|
-      puts "- #{name}: #{ENV[name]}"
-    end
+    if /java/ === RUBY_PLATFORM
+      puts "Building for jruby"
+      sh "mkdir ext/nmatrix_java/vendor"
+      puts "Downloading tar file."
+      sh "wget http://www-eu.apache.org/dist//commons/math/binaries/commons-math3-3.6.1-bin.tar.gz"
+      puts "Unzipping tar file."
+      sh "tar -zxf commons-math3-3.6.1-bin.tar.gz"
+      puts "Deleting tar file."
+      sh "rm commons-math3-3.6.1-bin.tar.gz"
+      sh "cp -r commons-math3-3.6.1/commons-math3-3.6.1.jar ext/nmatrix_java/vendor"
+    else
+      puts "\n# Build environment:"
+      %w[
+        CC CXX
+        USE_ATLAS USE_OPENBLAS USE_REF NO_EXTERNAL_LIB
+        TRAVIS_OS_NAME TRAVIS_BRANCH TRAVIS_COMMIT TRAVIS_PULL_REQUEST
+      ].each do |name|
+        puts "- #{name}: #{ENV[name]}"
+      end
 
-    require 'rbconfig'
-    puts "\n# RbConfig::MAKEFILE_CONFIG values:"
-    %w[
-      CC CXX CPPFLAGS CFLAGS CXXFLAGS
-    ].each do |name|
-      puts "- #{name}: #{RbConfig::MAKEFILE_CONFIG[name]}"
-    end
+      require 'rbconfig'
+      puts "\n# RbConfig::MAKEFILE_CONFIG values:"
+      %w[
+        CC CXX CPPFLAGS CFLAGS CXXFLAGS
+      ].each do |name|
+        puts "- #{name}: #{RbConfig::MAKEFILE_CONFIG[name]}"
+      end
 
-    cc = RbConfig::MAKEFILE_CONFIG['CC']
-    puts "\n$ #{cc} -v\n#{`#{cc} -v 2>&1`}"
+      cc = RbConfig::MAKEFILE_CONFIG['CC']
+      puts "\n$ #{cc} -v\n#{`#{cc} -v 2>&1`}"
+    end
   end
 end
 
