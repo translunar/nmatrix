@@ -1,5 +1,7 @@
 = NMatrix
 
+{<img src="https://badges.gitter.im/SciRuby/nmatrix.svg" alt="Join the chat at https://gitter.im/SciRuby/nmatrix">}[https://gitter.im/SciRuby/nmatrix?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge]
+
 Fast Numerical Linear Algebra Library for Ruby
 
 * {sciruby.com}[http://sciruby.com]
