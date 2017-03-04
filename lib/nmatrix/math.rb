@@ -536,15 +536,15 @@ class NMatrix
   #     least_squares(b) -> NMatrix
   #     least_squares(b, tolerance: 10e-10) -> NMatrix
   #
-  # Provides the linear least squares approximation of an under-determined system  
+  # Provides the linear least squares approximation of an under-determined system
   # using QR factorization provided that the matrix is not rank-deficient.
   #
   # Only works for dense matrices.
   #
   # * *Arguments* :
   #   - +b+ -> The solution column vector NMatrix of A * X = b.
-  #   - +tolerance:+ -> Absolute tolerance to check if a diagonal element in A = QR is near 0 
-  #              
+  #   - +tolerance:+ -> Absolute tolerance to check if a diagonal element in A = QR is near 0
+  #
   # * *Returns* :
   #   - NMatrix that is a column vector with the LLS solution
   #
@@ -554,8 +554,8 @@ class NMatrix
   #
   # Examples :-
   #
-  #   a = NMatrix.new([3,2], [2.0, 0, -1, 1, 0, 2]) 
-  #   
+  #   a = NMatrix.new([3,2], [2.0, 0, -1, 1, 0, 2])
+  #
   #   b = NMatrix.new([3,1], [1.0, 0, -1])
   #
   #   a.least_squares(b)
@@ -564,30 +564,30 @@ class NMatrix
   #         [ -0.3333333333333334 ]
   #       ]
   #
-  def least_squares(b, tolerance: 10e-6)  
-    raise(ArgumentError, "least squares approximation only works for non-complex types") if 
+  def least_squares(b, tolerance: 10e-6)
+    raise(ArgumentError, "least squares approximation only works for non-complex types") if
       self.complex_dtype?
-    
+
     rows, columns = self.shape
 
-    raise(ShapeError, "system must be under-determined ( rows > columns )") unless 
+    raise(ShapeError, "system must be under-determined ( rows > columns )") unless
       rows > columns
-   
+
     #Perform economical QR factorization
     r = self.clone
     tau = r.geqrf!
     q_transpose_b = r.ormqr(tau, :left, :transpose, b)
-    
+
     #Obtain R from geqrf! intermediate
     r[0...columns, 0...columns].upper_triangle!
     r[columns...rows, 0...columns] = 0
-    
+
     diagonal = r.diagonal
 
     raise(ArgumentError, "rank deficient matrix") if diagonal.any? { |x| x == 0 }
-  
+
     if diagonal.any? { |x| x.abs < tolerance }
-      warn "warning: A diagonal element of R in A = QR is close to zero ;" << 
+      warn "warning: A diagonal element of R in A = QR is close to zero ;" <<
            " indicates a possible loss of precision"
     end
 
@@ -981,7 +981,9 @@ class NMatrix
   ##
   # call-seq:
   #   sum() -> NMatrix
+  #   cumsum() -> NMatrix
   #   sum(dimen) -> NMatrix
+  #   cumsum(dimen) -> NMatrix
   #
   # Calculates the sum along the specified dimension.
   #
@@ -991,7 +993,7 @@ class NMatrix
       sum + sub_mat
     end
   end
-
+  alias :cumsum :sum
 
   ##
   # call-seq:
