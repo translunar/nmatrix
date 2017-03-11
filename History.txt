@@ -779,3 +779,112 @@
 
   * Fixed undefined variable 'idefaults' in lapacke extconf
     (by @agisga)
+
+=== 0.2.2 / 2016-07-22
+
+* No major enhancements.
+
+* 15 minor enhancements:
+
+  * Added Hilbert and inverse Hilbert matrix functions
+    #hilbert and #inv_hilbert (by @arafatk)
+
+  * Added NMatrix.linspace constructor for generating a 
+    vector with linearly spaced elements (by @gau27)
+
+  * Added NMatrix.logspace constructor for generating a
+    vector with logarithmically spaced elements (by @gau27)
+
+  * Improved Travis configs (by @v0dro)
+
+  * Added C API documentation and included ruby_constants.h
+    in C API include files (by @v0dro)
+
+  * Added #magic function to create magic square matrices
+    (by @shahsaurabh0605)
+
+  * Added NMatrix#last (by @gau27)
+
+  * Added QR factorization by exposing LAPACK functions
+    GEQRF, ORMQR, UNMQR (by @gau27)
+
+  * Made templates a little smarter for those functions
+    which require a separate return dtype by adding the
+    MagnitudeDType template typename; and added a magnitude
+    function to replace std::abs and abs to make complex
+    and real templates more generic (by @mohawkjohn)
+
+  * Added #adjugate and #adjugate! functions (by @sujithvm)
+
+  * Added #scale and #scale! methods by exposing BLAS SCAL
+    (by @lds56)
+
+  * Re-factored type comparisons to use RB_TYPE_P instead of
+    TYPE(obj) (by @mrkn)
+
+  * Updated license to BSD 3-clause (by @gau27)
+
+  * Cleaned up gem installation settings and dependencies
+    (by @mrkn)
+
+  * DRYed up extconf script (by @mrkn)
+
+* 15 bug fixes:
+
+  * Fixed offsets and changed limits in TRSM to follow the
+    Fortran implementation (by @lokeshh), and adjusted
+    triangular #solve accordingly (by @agisga)
+
+  * Fixed NRM2 (CBLAS 2-norm) for complex types (by
+    @lokeshh)
+
+  * Fixed NRM2 divide-by-zero bug (by @arafatk)
+
+  * Fixed #reshape! to work when changing dimensionality (by
+    @wlevine)
+
+  * Fixed ambiguous references by making proper use of
+    namespace qualifiers for dtypes, allowing compilation in
+    Windows using the mingw64 toolchain available through
+    msys2 (by @preetpalS)
+
+  * Replaced all uses of u_int8_t with uint8_t and added static
+    assertions to prevent ambiguous use of u_intX_t types
+    (by @preetpalS)
+
+  * Added workaround in extconf script for Windows use of a
+    different name for the null device (by @preetpalS)
+
+  * Updated deprecated RSpec code and other miscellaneous
+    cleanups (by @yui-knk)
+
+  * Removed incomplete support of Hash as an argument for
+    NMatrix#[] (by @yui-knk)
+
+  * Fixed typo in slicing exception error message (by
+    @mohawkjohn)
+
+  * Fixed #concat implementation for case of differing
+    sizes along concatenation dimension (by @alno)
+
+  * Ensured dtype is preserved by #repeat (by @alno)
+
+  * Fixed #det_exact for :object dtype (by @isuruf)
+
+  * Stopped using deprecated register storage class
+    specifier (by @mrkn)
+
+  * Fixed clang/clang++ compiler selection by forcing use of
+    clang++ when clang is used (by @mrkn)
+
+=== 0.2.3 / 2016-07-25
+
+* No major enhancements.
+
+* No minor enhancements.
+
+* 1 bug fix:
+
+  * Fixed gem installation problem caused by mkmf
+    abstraction (by @mrkn)
+

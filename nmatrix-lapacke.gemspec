@@ -9,9 +9,9 @@ Gem::Specification.new do |gem|
   gem.summary = "general LAPACK backend for nmatrix using LAPACKE interface"
   gem.description = "For using linear algebra fuctions provided by LAPACK and BLAS"
   gem.homepage = 'http://sciruby.com'
-  gem.authors = ['John Woods', 'Chris Wailes', 'Aleksey Timin']
+  gem.authors = ['Will Levine', 'John Woods']
   gem.email =  ['john.o.woods@gmail.com']
-  gem.license = 'BSD 3-clause'
+  gem.license = 'BSD-3-Clause'
 
   gem.files         = ["lib/nmatrix/lapacke.rb","lib/nmatrix/lapack_ext_common.rb"]
   gem.files         += `git ls-files -- ext/nmatrix_lapacke`.split("\n")

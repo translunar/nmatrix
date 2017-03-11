@@ -19,7 +19,7 @@ Gem::Specification.new do |gem|
   gem.homepage = 'http://sciruby.com'
   gem.authors = ['John Woods', 'Chris Wailes', 'Aleksey Timin']
   gem.email =  ['john.o.woods@gmail.com']
-  gem.license = 'BSD 3-clause'
+  gem.license = 'BSD-3-Clause'
   gem.post_install_message = <<-EOF
 ***********************************************************
 Welcome to SciRuby: Tools for Scientific Computing in Ruby!

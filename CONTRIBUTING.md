@@ -62,6 +62,16 @@ $ rake spec
 This will install all dependencies, compile the extension and run the
 specs.
 
+For **JRuby**
+
+```bash
+$ mkdir ext/nmatrix_java/vendor
+Download commons_math.3.6.1 jar and place it in ext/nmatrix_java/vendor directory
+$ mkdir -p ext/nmatrix_java/build/class
+$ mkdir ext/nmatrix_java/target
+$ rake jruby
+```
+
 If everything's fine until now, you can create a new branch to work on
 your feature:
 
@@ -84,11 +94,7 @@ Please go thorough this before you create any C accessors:
 
 * Perform all pre-computation error checking in Ruby.
 * Curate any extra data (cloned objects, trivial computations, etc.) in Ruby.
-* Do _NOT_ resolve VALUE into constituent elements unless they reach
-  the function where the elements are needed or it is absolutely
-  necessary. Passing around a VALUE in the C/C++ core is much more
-  convienient than passing around `void*` pointers which point to an
-  array of matrix elements.
+* Do _NOT_ resolve VALUE into constituent elements unless they reach the function where the elements are needed or it is absolutely necessary. Passing around a VALUE in the C/C++ core is much more convienient than passing around `void*` pointers which point to an array of matrix elements.
 
 Basically, follow a practice of 'once you enter C, never look back!'.
 

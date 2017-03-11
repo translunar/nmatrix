@@ -33,10 +33,12 @@ describe NMatrix::IO do
   let(:test_out) { File.join(tmp_dir, 'test-out') }
 
   it "repacks a string" do
+    pending("not yet implemented for NMatrix-JRuby") if jruby?
     expect(NMatrix::IO::Matlab.repack("hello", :miUINT8, :byte)).to eq("hello")
   end
 
   it "creates yale from internal byte-string function" do
+    pending("not yet implemented for NMatrix-JRuby") if jruby?
     ia = NMatrix::IO::Matlab.repack("\0\1\3\3\4", :miUINT8, :itype)
     ja = NMatrix::IO::Matlab.repack("\0\1\3\0\0\0\0\0\0\0\0", :miUINT8, :itype)
     n = NMatrix.new(:yale, [4,4], :byte, ia, ja, "\2\3\5\4", :byte)
@@ -49,7 +51,7 @@ describe NMatrix::IO do
   end
 
   it "reads MATLAB .mat file containing a single square sparse matrix" do
-    # Note: same matrix as above
+    pending("not yet implemented for NMatrix-JRuby") if jruby?
     n = NMatrix::IO::Matlab.load_mat("spec/4x4_sparse.mat")
     expect(n[0,0]).to eq(2)
     expect(n[1,1]).to eq(3)
@@ -79,6 +81,7 @@ describe NMatrix::IO do
   end
 
   it "loads a Point Cloud Library PCD file" do
+    pending("not yet implemented for NMatrix-JRuby") if jruby?
     n = NMatrix::IO::PointCloud.load("spec/test.pcd")
     expect(n.column(0).sort.uniq.size).to eq(1)
     expect(n.column(0).sort.uniq.first).to eq(207.008)
@@ -86,6 +89,7 @@ describe NMatrix::IO do
   end
 
   it "raises an error when reading a non-existent file" do
+    pending("not yet implemented for NMatrix-JRuby") if jruby?
     fn = rand(10000000).to_i.to_s
     while File.exist?(fn)
       fn = rand(10000000).to_i.to_s
@@ -94,6 +98,7 @@ describe NMatrix::IO do
   end
 
   it "reads and writes NMatrix dense" do
+    pending("not yet implemented for NMatrix-JRuby") if jruby?
     n = NMatrix.new(:dense, [4,3], [0,1,2,3,4,5,6,7,8,9,10,11], :int32)
     n.write(test_out)
 
@@ -102,6 +107,7 @@ describe NMatrix::IO do
   end
 
   it "reads and writes NMatrix dense as symmetric" do
+    pending("not yet implemented for NMatrix-JRuby") if jruby?
     n = NMatrix.new(:dense, 3, [0,1,2,1,3,4,2,4,5], :int16)
     n.write(test_out, :symmetric)
 
@@ -110,6 +116,7 @@ describe NMatrix::IO do
   end
 
   it "reads and writes NMatrix dense as skew" do
+    pending("not yet implemented for NMatrix-JRuby") if jruby?
     n = NMatrix.new(:dense, 3, [0,1,2,-1,3,4,-2,-4,5], :float64)
     n.write(test_out, :skew)
 
@@ -118,6 +125,7 @@ describe NMatrix::IO do
   end
 
   it "reads and writes NMatrix dense as hermitian" do
+    pending("not yet implemented for NMatrix-JRuby") if jruby?
     n = NMatrix.new(:dense, 3, [0,1,2,1,3,4,2,4,5], :complex64)
     n.write(test_out, :hermitian)
 
@@ -126,6 +134,7 @@ describe NMatrix::IO do
   end
 
   it "reads and writes NMatrix dense as upper" do
+    pending("not yet implemented for NMatrix-JRuby") if jruby?
     n = NMatrix.new(:dense, 3, [-1,1,2,3,4,5,6,7,8], :int32)
     n.write(test_out, :upper)
 
@@ -137,6 +146,7 @@ describe NMatrix::IO do
   end
 
   it "reads and writes NMatrix dense as lower" do
+    pending("not yet implemented for NMatrix-JRuby") if jruby?
     n = NMatrix.new(:dense, 3, [-1,1,2,3,4,5,6,7,8], :int32)
     n.write(test_out, :lower)
 

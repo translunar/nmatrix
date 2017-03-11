@@ -45,10 +45,7 @@
 /*
  * Macros
  */
-#define NM_RUBYVAL_IS_NUMERIC(val)                (FIXNUM_P(val) or (TYPE(val) == T_FLOAT) or (TYPE(val) == T_COMPLEX))
-#define NMATRIX_CHECK_TYPE(val) \
-  if (TYPE(val) != T_DATA || (RDATA(val)->dfree != (RUBY_DATA_FUNC)nm_delete && RDATA(val)->dfree != (RUBY_DATA_FUNC)nm_delete_ref)) \
-    rb_raise(rb_eTypeError, "Expected NMatrix on left-hand side of operation.");
+#define NM_RUBYVAL_IS_NUMERIC(val)                (FIXNUM_P(val) or RB_FLOAT_TYPE_P(val) or RB_TYPE_P(val, T_COMPLEX))
 
 /*
  * Classes and Functions
@@ -113,7 +110,7 @@ class RubyObject {
   inline operator VALUE() const { return rval; }
   //inline operator uint32_t() const { return NUM2ULONG(this->rval);      }
   inline operator int64_t() const { RETURN_OBJ2NUM(NUM2LONG)        }
-  inline operator uint64_t() const { RETURN_OBJ2NUM(NUM2ULONG)      }
+  //inline operator uint64_t() const { RETURN_OBJ2NUM(NUM2ULONG)      }
   inline operator double()   const { RETURN_OBJ2NUM(NUM2DBL)        }
   inline operator float()  const { RETURN_OBJ2NUM(NUM2DBL)          }
 

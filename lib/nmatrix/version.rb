@@ -29,7 +29,7 @@ class NMatrix
   module VERSION #:nodoc:
     MAJOR = 0
     MINOR = 2
-    TINY = 1
+    TINY = 4
     #PRE = "a"
 
     STRING = [MAJOR, MINOR, TINY].compact.join(".")

@@ -11,7 +11,6 @@ env:
   - USE_REF=1         # Installs OpenBLAS and reference LAPACK, builds and tests nmatrix, nmatrix-lapacke
   - NO_EXTERNAL_LIB=1 # No external libraries installed, only nmatrix
 rvm:
-  - 1.9.3
   - 2.0.0-p648
   - 2.1.8
   - 2.2.4
@@ -20,6 +19,10 @@ rvm:
   # The latest stable and head versions built by clang
   - 2.3.0-clang
   - ruby-head-clang
+  # JRuby versions --- experimental, pending merging Prasun's GSoC project.
+  - jruby-9.0.5.0 # earliest supported version (uncomment when jruby-head is passing)
+  - jruby-head    # latest supported JRuby
+  # Make sure to add exclude lines for new JRuby versions below.
 
 before_install: ./travis.sh before_install
 
@@ -33,6 +36,18 @@ script: ./travis.sh script
 # For other configurations we only test with one version of ruby.
 matrix:
   exclude:
+    - rvm: jruby-head
+      env: USE_ATLAS=1
+    - rvm: jruby-head
+      env: USE_OPENBLAS=1
+    - rvm: jruby-head
+      env: USE_REF=1
+    - rvm: jruby-9.0.5.0
+      env: USE_ATLAS=1
+    - rvm: jruby-9.0.5.0
+      env: USE_OPENBLAS=1
+    - rvm: jruby-9.0.5.0
+      env: USE_REF=1    
     # NOTE: The following two ruby versions on OSX are currently unavailable
     - os: osx
       rvm: 2.0.0-p648
@@ -91,19 +106,19 @@ matrix:
       env:
         - ruby_version=2.1.8 USE_OPENBLAS=1
   allow_failures:
-    # Ruby versions which got EOL
-    - rvm: 1.9.3
     # trunk
     - rvm: ruby-head
     - rvm: ruby-head-clang
-    - env: ruby_version=2.4.0-dev USE_OPENBLAS=1
-    - env: ruby_version=2.4.0-dev NO_EXTERNAL_LIB=1
-    # linux with clang
-    - os: linux
-      rvm: 2.3.0-clang
-    # For some reason this OpenBLAS configuration isn't working on travis, disable it for now.
-    - os: linux
-      env: USE_OPENBLAS=1
+    - os: osx
+      compiler: clang
+      rvm: 2.2
+      env:
+        - ruby_version=2.4.0-dev USE_OPENBLAS=1
+    - os: osx
+      compiler: clang
+      rvm: 2.2
+      env:
+        - ruby_version=2.4.0-dev NO_EXTERNAL_LIB=1
 
 notifications:
   irc: "chat.freenode.net#sciruby"

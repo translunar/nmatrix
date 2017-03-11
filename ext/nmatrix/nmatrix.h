@@ -33,6 +33,7 @@
  */
 
 #include <ruby.h>
+#include "ruby_constants.h"
 
 #ifdef __cplusplus
   #include <cmath>
@@ -55,6 +56,28 @@
 
 #ifdef __cplusplus
   #include "nm_memory.h"
+#endif
+
+#ifndef RB_BUILTIN_TYPE
+# define RB_BUILTIN_TYPE(obj) BUILTIN_TYPE(obj)
+#endif
+
+#ifndef RB_FLOAT_TYPE_P
+/* NOTE: assume flonum doesn't exist */
+# define RB_FLOAT_TYPE_P(obj) ( \
+    (!SPECIAL_CONST_P(obj) && BUILTIN_TYPE(obj) == T_FLOAT))
+#endif
+
+#ifndef RB_TYPE_P
+# define RB_TYPE_P(obj, type) ( \
+    ((type) == T_FIXNUM) ? FIXNUM_P(obj) : \
+    ((type) == T_TRUE) ? ((obj) == Qtrue) : \
+    ((type) == T_FALSE) ? ((obj) == Qfalse) : \
+    ((type) == T_NIL) ? ((obj) == Qnil) : \
+    ((type) == T_UNDEF) ? ((obj) == Qundef) : \
+    ((type) == T_SYMBOL) ? SYMBOL_P(obj) : \
+    ((type) == T_FLOAT) ? RB_FLOAT_TYPE_P(obj) : \
+    (!SPECIAL_CONST_P(obj) && BUILTIN_TYPE(obj) == (type)))
 #endif
 
 #ifndef FIX_CONST_VALUE_PTR
@@ -343,11 +366,25 @@ NM_DEF_STRUCT_POST(NM_GC_HOLDER);       // };
 
 #define NM_SRC(val)             (NM_STORAGE(val)->src)
 #define NM_DIM(val)             (NM_STORAGE(val)->dim)
+
+// Returns an int corresponding the data type of the nmatrix. See the dtype_t
+// enum for a list of possible data types.
 #define NM_DTYPE(val)           (NM_STORAGE(val)->dtype)
+
+// Returns a number corresponding the storage type of the nmatrix. See the stype_t
+// enum for a list of possible storage types.
 #define NM_STYPE(val)           (NM_STRUCT(val)->stype)
+
+// Get the shape of the ith dimension (int)
 #define NM_SHAPE(val,i)         (NM_STORAGE(val)->shape[(i)])
+
+// Get the shape of the 0th dimension (int)
 #define NM_SHAPE0(val)          (NM_STORAGE(val)->shape[0])
+
+// Get the shape of the 1st dimenension (int)
 #define NM_SHAPE1(val)          (NM_STORAGE(val)->shape[1])
+
+// Get the default value assigned to the nmatrix.
 #define NM_DEFAULT_VAL(val)     (NM_STORAGE_LIST(val)->default_val)
 
 // Number of elements in a dense nmatrix.
@@ -366,7 +403,8 @@ NM_DEF_STRUCT_POST(NM_GC_HOLDER);       // };
 
 #define RB_FILE_EXISTS(fn)   (rb_funcall(rb_const_get(rb_cObject, rb_intern("File")), rb_intern("exists?"), 1, (fn)) == Qtrue)
 
-#define CheckNMatrixType(v)   if (TYPE(v) != T_DATA || (RDATA(v)->dfree != (RUBY_DATA_FUNC)nm_delete && RDATA(v)->dfree != (RUBY_DATA_FUNC)nm_delete_ref)) rb_raise(rb_eTypeError, "expected NMatrix on left-hand side of operation");
+#define IsNMatrixType(v)  (RB_TYPE_P(v, T_DATA) && (RDATA(v)->dfree == (RUBY_DATA_FUNC)nm_delete || RDATA(v)->dfree == (RUBY_DATA_FUNC)nm_delete_ref))
+#define CheckNMatrixType(v)   if (!IsNMatrixType(v)) rb_raise(rb_eTypeError, "expected NMatrix on left-hand side of operation");
 
 #define NM_IsNMatrix(obj) \
   (rb_obj_is_kind_of(obj, cNMatrix) == Qtrue)

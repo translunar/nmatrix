@@ -9,6 +9,7 @@ if [ -n "$ruby_version" -a "$TRAVIS_OS_NAME" = "osx" ]; then
     eval "$(rbenv init -)"
   fi
   export RBENV_VERSION=$ruby_version
+  unset GEM_PATH GEM_HOME
 fi
 
 if [ "$1" = "install" ]
@@ -36,18 +37,20 @@ then
 
     # Install ruby
     (
-      brew install bison openssl readline libyaml
+      brew install bison openssl readline
       brew link --force openssl
       RBENV_VERSION=system
       MAKEOPTS='-j 4'
       CONFIGURE_OPTS="--disable-install-doc --with-out-ext=tk,tk/tkutil --with-opt-dir=/usr/local"
-      rbenv install $ruby_version
+      rbenv install --verbose $ruby_version
     )
-    gem update --system
-    gem update
+
+    gem pristine --all
+    gem update --no-document --system
+    gem update --no-document
   fi
 
-  gem install bundler -v '~> 1.6'
+  gem install --no-document bundler -v '~> 1.6'
 
   if [ -n "$USE_ATLAS" ]
   then
@@ -122,10 +125,16 @@ then
 
   bundle exec rake travis:env
 
-  bundle exec rake compile $nmatrix_plugins_opt || {
-    echo === Contents of mkmf.log ===
-    cat tmp/*/nmatrix/*/mkmf.log
-    exit 1
-  }
-  bundle exec rake spec $nmatrix_plugins_opt
+  if [[ "$TRAVIS_RUBY_VERSION" =~ "jruby" ]];then
+    bundle exec rake jruby
+    bundle exec rake spec
+  else
+    bundle exec rake compile $nmatrix_plugins_opt || {
+      echo === Contents of mkmf.log ===
+      cat tmp/*/nmatrix/*/mkmf.log
+      exit 1
+    }
+    bundle exec rake spec $nmatrix_plugins_opt
+  fi
+
 fi

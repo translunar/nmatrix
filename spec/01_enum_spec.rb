@@ -35,6 +35,7 @@ describe "NMatrix enumeration for" do
 
       if stype == :yale
         it "should iterate properly along each row of a slice" do
+          pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby?
           vv = []
           ii = []
           jj = []
@@ -53,6 +54,7 @@ describe "NMatrix enumeration for" do
         end
 
         it "should iterate along diagonal portion of A array" do
+          pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby?
           vv = []
           ii = []
           jj = []
@@ -67,6 +69,7 @@ describe "NMatrix enumeration for" do
         end
 
         it "should iterate along non-diagonal portion of A array" do
+          pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby?
           vv = []
           ii = []
           jj = []
@@ -82,6 +85,7 @@ describe "NMatrix enumeration for" do
         end
 
         it "should iterate along a sliced diagonal portion of an A array" do
+          pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby?
           m = n[0..3,1..3]
           vv = []
           ii = []
@@ -97,6 +101,7 @@ describe "NMatrix enumeration for" do
         end
 
         it "should iterate along a sliced non-diagonal portion of a sliced A array" do
+          pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby?
           vv = []
           ii = []
           jj = []
@@ -114,6 +119,7 @@ describe "NMatrix enumeration for" do
         end
 
         it "should visit each stored element of the matrix in order by indices" do
+          pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby?
           vv = []
           ii = []
           jj = []
@@ -129,7 +135,7 @@ describe "NMatrix enumeration for" do
         end
 
         it "should visit each stored element of the slice in order by indices" do
-
+          pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby?
           vv = []
           ii = []
           jj = []

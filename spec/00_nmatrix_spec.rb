@@ -41,8 +41,71 @@ describe NMatrix do
     expect { n[0] }.to raise_error(ArgumentError)
   end
 
-  it "calculates exact determinants on small square matrices" do
+  it "calculates exact determinants on small dense matrices" do
     expect(NMatrix.new(2, [1,2,3,4], stype: :dense, dtype: :int64).det_exact).to eq(-2)
+    expect(NMatrix.new(3, [1,2,3,0,5,6,7,8,0], stype: :dense, dtype: :int64)
+           .det_exact).to eq(-69)
+  end
+
+  it "calculates exact determinants on small yale square matrices" do
+    expect(NMatrix.new(2, [1,2,3,4], stype: :yale, dtype: :int64).det_exact).to eq(-2)
+    expect(NMatrix.new(3, [1,2,3,0,5,6,7,8,0], stype: :yale, dtype: :int64)
+           .det_exact).to eq(-69)
+  end
+
+  it "calculates exact determinants on small list square matrices" do
+    expect(NMatrix.new(2, [1,2,3,4], stype: :list, dtype: :int64).det_exact).to eq(-2)
+    expect(NMatrix.new(3, [1,2,3,0,5,6,7,8,0], stype: :list, dtype: :int64)
+           .det_exact).to eq(-69)
+  end
+
+  it "calculates inverse exact determinants on small dense matrices" do
+    pending("not yet implemented for NMatrix-JRuby") if jruby?
+    a = NMatrix.new(3, [1,2,3,0,1,4,5,6,0], stype: :dense, dtype: :int64)
+    inversed = a.method(:__inverse_exact__).call(a.clone, 3, 3)
+    b = NMatrix.new(3, [-24,18,5,20,-15,-4,-5,4,1], stype: :dense, dtype: :int64)
+    expect(inversed).to eq(b)
+
+    c = NMatrix.new(3, [1,0,3,0,0,1,0,6,0], stype: :dense, dtype: :int64)
+    inversed = c.method(:__inverse_exact__).call(c.clone, 3, 3)
+    d = NMatrix.new(3, [1,-3,0,0,0,0,0,1,0], stype: :dense, dtype: :int64)
+    expect(inversed).to eq(d)
+
+    e = NMatrix.new(2, [3,1,2,1], stype: :dense, dtype: :int64)
+    inversed = e.method(:__inverse_exact__).call(e.clone, 2, 2)
+    f = NMatrix.new(2, [1,-1,-2,-3], stype: :dense, dtype: :int64)
+    expect(inversed).to eq(f)
+  end
+
+  it "calculates inverse exact determinants on small yale matrices" do
+    pending("not yet implemented for NMatrix-JRuby") if jruby?
+    a = NMatrix.new(3, [1,2,3,0,1,4,5,6,0], stype: :yale, dtype: :int64)
+    inversed = a.method(:__inverse_exact__).call(a.clone, 3, 3)
+    b = NMatrix.new(3, [-24,18,5,20,-15,-4,-5,4,1], stype: :yale, dtype: :int64)
+    expect(inversed).to eq(b)
+
+    c = NMatrix.new(3, [1,0,3,0,0,1,0,6,0], stype: :yale, dtype: :int64)
+    inversed = c.method(:__inverse_exact__).call(c.clone, 3, 3)
+    d = NMatrix.new(3, [1,-3,0,0,0,0,0,1,0], stype: :yale, dtype: :int64)
+    expect(inversed).to eq(d)
+
+    e = NMatrix.new(2, [3,1,2,1], stype: :yale, dtype: :int64)
+    inversed = e.method(:__inverse_exact__).call(e.clone, 2, 2)
+    f = NMatrix.new(2, [1,-1,-2,-3], stype: :yale, dtype: :int64)
+    expect(inversed).to eq(f)
+  end
+
+  it "calculates inverse exact determinants on small list matrices" do
+    pending("not yet implemented for NMatrix-JRuby") if jruby?
+    a = NMatrix.new(3, [1,2,3,0,1,4,5,6,0], stype: :list, dtype: :int64)
+    inversed = a.method(:__inverse_exact__).call(a.clone, 3, 3)
+    b = NMatrix.new(3, [-24,18,5,20,-15,-4,-5,4,1], stype: :list, dtype: :int64)
+    expect(inversed).to eq(b)
+
+    c = NMatrix.new(2, [3,1,2,1], stype: :list, dtype: :int64)
+    inversed = c.method(:__inverse_exact__).call(c.clone, 2, 2)
+    d = NMatrix.new(2, [1,-1,-2,-3], stype: :list, dtype: :int64)
+    expect(inversed).to eq(d)
   end
 
   it "calculates determinants" do
@@ -78,6 +141,7 @@ describe NMatrix do
 
   it "fills dense Ruby object matrix with nil" do
     n = NMatrix.new([4,3], dtype: :object)
+    pending("not yet implemented for object dtype for NMatrix-JRuby") if jruby?
     expect(n[0,0]).to eq(nil)
   end
 
@@ -146,6 +210,7 @@ describe NMatrix do
 
   it "dense handles missing initialization value" do
     n = NMatrix.new(3, dtype: :int8)
+    pending("not yet implemented for int dtype for NMatrix-JRuby") if jruby?
     expect(n.stype).to eq(:dense)
     expect(n.dtype).to eq(:int8)
 
@@ -158,6 +223,8 @@ describe NMatrix do
     context storage_type do
     it "can be duplicated" do
         n = NMatrix.new([2,3], 1.1, stype: storage_type, dtype: :float64)
+        # FIXME
+        pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby? #and storage_type != :dense
         expect(n.stype).to eq(storage_type)
 
         n[0,0] = 0.0
@@ -223,6 +290,7 @@ describe NMatrix do
           end
 
           it "allows storage-based iteration of matrices" do
+            pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby? and storage_type != :dense
             STDERR.puts storage_type.inspect
             STDERR.puts dtype.inspect
             n = NMatrix.new([3,3], 0, stype: storage_type, dtype: dtype)
@@ -263,6 +331,7 @@ describe NMatrix do
     # dense and list, not yale
     context "(storage: #{storage_type})" do
       it "gets default value" do
+        pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby?
         expect(NMatrix.new(3, 0, stype: storage_type)[1,1]).to eq(0)
         expect(NMatrix.new(3, 0.1, stype: storage_type)[1,1]).to eq(0.1)
         expect(NMatrix.new(3, 1, stype: storage_type)[1,1]).to eq(1)
@@ -321,12 +390,16 @@ describe NMatrix do
 
   context "dense" do
     it "should return the matrix being iterated over when each is called with a block" do
+      # FIXME
+      pending("not yet implemented for NMatrix-JRuby") if jruby?
       a = NMatrix.new(2, 1)
       val = (a.each { })
       expect(val).to eq(a)
     end
 
     it "should return the matrix being iterated over when each_stored_with_indices is called with a block" do
+      # FIXME
+      pending("not yet implemented for NMatrix-JRuby") if jruby?
       a = NMatrix.new(2,1)
       val = (a.each_stored_with_indices { })
       expect(val).to eq(a)
@@ -336,12 +409,14 @@ describe NMatrix do
   [:list, :yale].each do |storage_type|
     context storage_type do
       it "should return the matrix being iterated over when each_stored_with_indices is called with a block" do
+        pending("not yet implemented for Complex dtype for NMatrix-JRuby") if jruby?
         n = NMatrix.new([2,3], 1.1, stype: storage_type, dtype: :float64, default: 0)
         val = (n.each_stored_with_indices { })
         expect(val).to eq(n)
       end
 
       it "should return an enumerator when each_stored_with_indices is called without a block" do
+        pending("not yet implemented for Complex dtype for NMatrix-JRuby") if jruby?
         n = NMatrix.new([2,3], 1.1, stype: storage_type, dtype: :float64, default: 0)
         val = n.each_stored_with_indices
         expect(val).to be_a Enumerator
@@ -405,11 +480,15 @@ describe 'NMatrix' do
 
   context "#reshape" do
     it "should change the shape of a matrix without the contents changing" do
+      # FIXME
+      pending("not yet implemented for NMatrix-JRuby") if jruby?
       n = NMatrix.seq(4)+1
       expect(n.reshape([8,2]).to_flat_array).to eq(n.to_flat_array)
     end
 
     it "should permit a change of dimensionality" do
+      # FIXME
+      pending("not yet implemented for NMatrix-JRuby") if jruby?
       n = NMatrix.seq(4)+1
       expect(n.reshape([8,1,2]).to_flat_array).to eq(n.to_flat_array)
     end
@@ -425,6 +504,8 @@ describe 'NMatrix' do
     end
 
     it "should do the reshape operation in place, changing dimension" do
+      # FIXME
+      pending("not yet implemented for NMatrix-JRuby") if jruby?
       n = NMatrix.seq(4)
       a = n.reshape!([4,2,2])
       expect(n).to eq(NMatrix.seq([4,2,2]))
@@ -432,6 +513,8 @@ describe 'NMatrix' do
     end
 
     it "reshape and reshape! must produce same result" do
+      # FIXME
+      pending("not yet implemented for NMatrix-JRuby") if jruby?
       n = NMatrix.seq(4)+1
       a = NMatrix.seq(4)+1
       expect(n.reshape!([8,2])==a.reshape(8,2)).to eq(true) # because n itself changes
@@ -481,6 +564,8 @@ describe 'NMatrix' do
     [:dense].each do |stype| # list storage transpose not yet implemented
       context(stype) do # yale support only 2-dim matrix
         it "should work like vector product on a #{stype} (1-dimensional)" do
+          # FIXME
+          pending("not yet implemented for NMatrix-JRuby") if jruby?
           m = NMatrix.new([3], [1,2,3], stype: stype)
           expect(m.dot(m)).to eq (NMatrix.new([1],[14]))
         end
@@ -538,8 +623,34 @@ describe 'NMatrix' do
     end
 
     it "should permit depth concatenation on tensors" do
+      # FIXME
+      pending("not yet implemented for NMatrix-JRuby") if jruby?
       n = NMatrix.new([1,3,1], [1,2,3])
       expect(n.dconcat(n)).to eq(NMatrix.new([1,3,2], [1,1,2,2,3,3]))
+    end
+
+    it "should work on matrices with different size along concat dim" do
+      n = N[[1, 2, 3],
+            [4, 5, 6]]
+      m = N[[7],
+            [8]]
+
+      # FIXME
+      pending("not yet implemented for NMatrix-JRuby") if jruby?
+      expect(n.hconcat(m)).to eq N[[1, 2, 3, 7], [4, 5, 6, 8]]
+      expect(m.hconcat(n)).to eq N[[7, 1, 2, 3], [8, 4, 5, 6]]
+    end
+
+    it "should work on matrices with different size along concat dim" do
+      n = N[[1, 2, 3],
+            [4, 5, 6]]
+
+      m = N[[7, 8, 9]]
+
+      # FIXME
+      pending("not yet implemented for NMatrix-JRuby") if jruby?
+      expect(n.vconcat(m)).to eq N[[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+      expect(m.vconcat(n)).to eq N[[7, 8, 9], [1, 2, 3], [4, 5, 6]]
     end
   end
 
@@ -562,6 +673,7 @@ describe 'NMatrix' do
       context(stype) do
         it "should work in-place for complex dtypes" do
           pending("not yet implemented for list stype") if stype == :list
+          pending("not yet implemented for Complex dtype for NMatrix-JRuby") if jruby?
           n = NMatrix.new([2,3], [Complex(2,3)], stype: stype, dtype: :complex128)
           n.complex_conjugate!
           expect(n).to eq(NMatrix.new([2,3], [Complex(2,-3)], stype: stype, dtype: :complex128))
@@ -570,6 +682,7 @@ describe 'NMatrix' do
         [:object, :int64].each do |dtype|
           it "should work in-place for non-complex dtypes" do
             pending("not yet implemented for list stype") if stype == :list
+            pending("not yet implemented for Complex dtype for NMatrix-JRuby") if jruby?
             n = NMatrix.new([2,3], 1, stype: stype, dtype: dtype)
             n.complex_conjugate!
             expect(n).to eq(NMatrix.new([2,3], [1], stype: stype, dtype: dtype))
@@ -584,6 +697,7 @@ describe 'NMatrix' do
       context(stype) do
         it "should work out-of-place for complex dtypes" do
           pending("not yet implemented for list stype") if stype == :list
+          pending("not yet implemented for Complex dtype for NMatrix-JRuby") if jruby?
           n = NMatrix.new([2,3], [Complex(2,3)], stype: stype, dtype: :complex128)
           expect(n.complex_conjugate).to eq(NMatrix.new([2,3], [Complex(2,-3)], stype: stype, dtype: :complex128))
         end
@@ -591,6 +705,7 @@ describe 'NMatrix' do
         [:object, :int64].each do |dtype|
           it "should work out-of-place for non-complex dtypes" do
             pending("not yet implemented for list stype") if stype == :list
+            pending("not yet implemented for Complex dtype for NMatrix-JRuby") if jruby?
             n = NMatrix.new([2,3], 1, stype: stype, dtype: dtype)
             expect(n.complex_conjugate).to eq(NMatrix.new([2,3], [1], stype: stype, dtype: dtype))
           end
@@ -638,9 +753,26 @@ describe 'NMatrix' do
     end
   end
 
+  context "#last" do
+    it "returns the last element of a 1-dimensional NMatrix" do
+      n = NMatrix.new([1,4], [1,2,3,4])
+      expect(n.last).to eq(4)
+    end
+
+    it "returns the last element of a 2-dimensional NMatrix" do
+      n = NMatrix.new([2,2], [4,8,12,16])
+      expect(n.last).to eq(16)
+    end
+
+    it "returns the last element of a 3-dimensional NMatrix" do
+      n = NMatrix.new([2,2,2], [1,2,3,4,5,6,7,8])
+      expect(n.last).to eq(8)
+    end
+  end
+
   context "#diagonal" do
     ALL_DTYPES.each do |dtype|
-      before do 
+      before do
         @square_matrix =  NMatrix.new([3,3], [
           23,11,23,
           44, 2, 0,
@@ -686,8 +818,16 @@ describe 'NMatrix' do
     end
 
     it "returns repeated matrix" do
+      pending("Not yet implemented for NMatrix JRuby") if jruby?
       expect(@sample_matrix.repeat(2, 0)).to eq(NMatrix.new([4, 2], [1, 2, 3, 4, 1, 2, 3, 4]))
       expect(@sample_matrix.repeat(2, 1)).to eq(NMatrix.new([2, 4], [1, 2, 1, 2, 3, 4, 3, 4]))
+    end
+
+    it "preserves dtype" do
+      # FIXME
+      pending("not yet implemented for NMatrix-JRuby") if jruby?
+      expect(@sample_matrix.repeat(2, 0).dtype).to eq(@sample_matrix.dtype)
+      expect(@sample_matrix.repeat(2, 1).dtype).to eq(@sample_matrix.dtype)
     end
   end
 
@@ -700,42 +840,50 @@ describe 'NMatrix' do
       @expected_for_ij = [NMatrix.new([3, 2], [1, 1, 2, 2, 3, 3]), NMatrix.new([3, 2], [4, 5, 4, 5, 4, 5])]
       @expected_for_sparse = [NMatrix.new([1, 3], [1, 2, 3]), NMatrix.new([2, 1], [4, 5])]
       @expected_for_sparse_ij = [NMatrix.new([3, 1], [1, 2, 3]), NMatrix.new([1, 2], [4, 5])]
+      # FIXME
       @expected_3dim = [NMatrix.new([1, 3, 1], [1, 2, 3]).repeat(2, 0).repeat(2, 2),
                         NMatrix.new([2, 1, 1], [4, 5]).repeat(3, 1).repeat(2, 2),
-                        NMatrix.new([1, 1, 2], [6, 7]).repeat(2, 0).repeat(3, 1)]
+                        NMatrix.new([1, 1, 2], [6, 7]).repeat(2, 0).repeat(3, 1)] unless jruby?
       @expected_3dim_sparse_ij = [NMatrix.new([3, 1, 1], [1, 2, 3]),
                                   NMatrix.new([1, 2, 1], [4, 5]),
                                   NMatrix.new([1, 1, 2], [6, 7])]
     end
 
     it "checks arrays count" do
+      pending("Not yet implemented for NMatrix JRuby") if jruby?
       expect{NMatrix.meshgrid([@x])}.to raise_error(ArgumentError)
       expect{NMatrix.meshgrid([])}.to raise_error(ArgumentError)
     end
 
     it "flattens input arrays before use" do
+      pending("Not yet implemented for NMatrix JRuby") if jruby?
       expect(NMatrix.meshgrid([@two_dim, @two_dim_array])).to eq(NMatrix.meshgrid([@two_dim.to_flat_array, @two_dim_array.flatten]))
     end
 
     it "returns new NMatrixes" do
+      pending("Not yet implemented for NMatrix JRuby") if jruby?
       expect(NMatrix.meshgrid([@x, @y])).to eq(@expected_result)
     end
 
     it "has option :sparse" do
+      pending("Not yet implemented for NMatrix JRuby") if jruby?
       expect(NMatrix.meshgrid([@x, @y], sparse: true)).to eq(@expected_for_sparse)
     end
 
     it "has option :indexing" do
+      pending("Not yet implemented for NMatrix JRuby") if jruby?
       expect(NMatrix.meshgrid([@x, @y], indexing: :ij)).to eq(@expected_for_ij)
       expect(NMatrix.meshgrid([@x, @y], indexing: :xy)).to eq(@expected_result)
       expect{NMatrix.meshgrid([@x, @y], indexing: :not_ij_not_xy)}.to raise_error(ArgumentError)
     end
 
     it "works well with both options set" do
+      pending("Not yet implemented for NMatrix JRuby") if jruby?
       expect(NMatrix.meshgrid([@x, @y], sparse: true, indexing: :ij)).to eq(@expected_for_sparse_ij)
     end
 
     it "is able to take more than two arrays as arguments and works well with options" do
+      pending("Not yet implemented for NMatrix JRuby") if jruby?
       expect(NMatrix.meshgrid([@x, @y, @z])).to eq(@expected_3dim)
       expect(NMatrix.meshgrid([@x, @y, @z], sparse: true, indexing: :ij)).to eq(@expected_3dim_sparse_ij)
     end

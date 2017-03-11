@@ -44,6 +44,8 @@ describe "Slice operation" do
 
       if stype == :yale
         it "should binary search for the left boundary of a partial row of stored indices correctly" do
+          #FIXME
+          pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby?
           n = NMatrix.new(10, stype: :yale, dtype: :int32)
           n[3,0] = 1
           #n[3,2] = 2
@@ -87,7 +89,8 @@ describe "Slice operation" do
 
       unless stype == :dense
         it "should iterate across a row of stored indices" do
-
+          #FIXME
+          pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby?
           vs = []
           is = []
           js = []
@@ -102,6 +105,8 @@ describe "Slice operation" do
         end
 
         it "should iterate across a submatrix of stored indices" do
+          #FIXME
+          pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby?
           vs = []
           is = []
           js = []
@@ -118,6 +123,7 @@ describe "Slice operation" do
       end
 
       it "should return correct supershape" do
+        pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby?
         x = NMatrix.random([10,12])
         y = x[0...8,5...12]
         expect(y.shape).to eq([8,7])
@@ -125,11 +131,12 @@ describe "Slice operation" do
       end
 
       it "should have #is_ref? method" do
+        pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby?
         a = stype_matrix[0..1, 0..1]
         b = stype_matrix.slice(0..1, 0..1)
-        expect(stype_matrix.is_ref?).to be_false
-        expect(a.is_ref?).to be_true
-        expect(b.is_ref?).to be_false
+        expect(stype_matrix.is_ref?).to be false
+        expect(a.is_ref?).to be true
+        expect(b.is_ref?).to be false
       end
 
       it "reference should compare with non-reference" do
@@ -141,10 +148,11 @@ describe "Slice operation" do
       context "with copying" do
         it 'should return an NMatrix' do
           n = stype_matrix.slice(0..1,0..1)
-          expect(nm_eql(n, NMatrix.new([2,2], [0,1,3,4], dtype: :int32))).to be_true
+          expect(nm_eql(n, NMatrix.new([2,2], [0,1,3,4], dtype: :int32))).to be true
         end
 
         it 'should return a copy of 2x2 matrix to self elements' do
+          pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby?
           n = stype_matrix.slice(1..2,0..1)
           expect(n.shape).to eql([2,2])
 
@@ -154,6 +162,8 @@ describe "Slice operation" do
         end
 
         it 'should return a 1x2 matrix without refs to self elements' do
+          #FIXME
+          pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby?
           n = stype_matrix.slice(0,1..2)
           expect(n.shape).to eql([1,2])
 
@@ -165,6 +175,7 @@ describe "Slice operation" do
         end
 
         it 'should return a 2x1 matrix without refs to self elements' do
+          pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby?
           stype_matrix.extend NMatrix::YaleFunctions
 
           n = stype_matrix.slice(0..1,1)
@@ -183,19 +194,19 @@ describe "Slice operation" do
 
         [:dense, :list, :yale].each do |cast_type|
           it "should cast copied slice from #{stype.upcase} to #{cast_type.upcase}" do
-            expect(nm_eql(stype_matrix.slice(1..2, 1..2).cast(cast_type, :int32), stype_matrix.slice(1..2,1..2))).to be_true
-            expect(nm_eql(stype_matrix.slice(0..1, 1..2).cast(cast_type, :int32), stype_matrix.slice(0..1,1..2))).to be_true
-            expect(nm_eql(stype_matrix.slice(1..2, 0..1).cast(cast_type, :int32), stype_matrix.slice(1..2,0..1))).to be_true
-            expect(nm_eql(stype_matrix.slice(0..1, 0..1).cast(cast_type, :int32), stype_matrix.slice(0..1,0..1))).to be_true
+            expect(nm_eql(stype_matrix.slice(1..2, 1..2).cast(cast_type, :int32), stype_matrix.slice(1..2,1..2))).to be true
+            expect(nm_eql(stype_matrix.slice(0..1, 1..2).cast(cast_type, :int32), stype_matrix.slice(0..1,1..2))).to be true
+            expect(nm_eql(stype_matrix.slice(1..2, 0..1).cast(cast_type, :int32), stype_matrix.slice(1..2,0..1))).to be true
+            expect(nm_eql(stype_matrix.slice(0..1, 0..1).cast(cast_type, :int32), stype_matrix.slice(0..1,0..1))).to be true
 
             # Non square
-            expect(nm_eql(stype_matrix.slice(0..2, 1..2).cast(cast_type, :int32), stype_matrix.slice(0..2,1..2))).to be_true
+            expect(nm_eql(stype_matrix.slice(0..2, 1..2).cast(cast_type, :int32), stype_matrix.slice(0..2,1..2))).to be true
             #require 'pry'
             #binding.pry if cast_type == :yale
-            expect(nm_eql(stype_matrix.slice(1..2, 0..2).cast(cast_type, :int32), stype_matrix.slice(1..2,0..2))).to be_true
+            expect(nm_eql(stype_matrix.slice(1..2, 0..2).cast(cast_type, :int32), stype_matrix.slice(1..2,0..2))).to be true
 
             # Full
-            expect(nm_eql(stype_matrix.slice(0..2, 0..2).cast(cast_type, :int32), stype_matrix)).to be_true
+            expect(nm_eql(stype_matrix.slice(0..2, 0..2).cast(cast_type, :int32), stype_matrix)).to be true
           end
         end
       end
@@ -214,10 +225,12 @@ describe "Slice operation" do
       context "by reference" do
         it 'should return an NMatrix' do
           n = stype_matrix[0..1,0..1]
-          expect(nm_eql(n, NMatrix.new([2,2], [0,1,3,4], dtype: :int32))).to be_true
+          expect(nm_eql(n, NMatrix.new([2,2], [0,1,3,4], dtype: :int32))).to be true
         end
 
         it 'should return a 2x2 matrix with refs to self elements' do
+          #FIXME
+          pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby? # and :cast_type != :dense
           n = stype_matrix[1..2,0..1]
           expect(n.shape).to eql([2,2])
 
@@ -227,6 +240,8 @@ describe "Slice operation" do
         end
 
         it 'should return a 1x2 vector with refs to self elements' do
+          #FIXME
+          pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby? # and :cast_type != :dense
           n = stype_matrix[0,1..2]
           expect(n.shape).to eql([1,2])
 
@@ -236,6 +251,7 @@ describe "Slice operation" do
         end
 
         it 'should return a 2x1 vector with refs to self elements' do
+          pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby?
           n = stype_matrix[0..1,1]
           expect(n.shape).to eql([2,1])
 
@@ -246,7 +262,7 @@ describe "Slice operation" do
 
         it 'should slice again' do
           n = stype_matrix[1..2, 1..2]
-          expect(nm_eql(n[1,0..1], NVector.new(2, [7,8], dtype: :int32).transpose)).to be_true
+          expect(nm_eql(n[1,0..1], NVector.new(2, [7,8], dtype: :int32).transpose)).to be true
         end
 
         it 'should be correct slice for range 0..2 and 0...3' do
@@ -320,7 +336,9 @@ describe "Slice operation" do
             end
 
             it "compares slices to scalars" do
-              (stype_matrix[1, 0..2] > 2).each { |e| expect(e != 0).to be_true }
+              #FIXME
+              pending("not yet implemented for sparse matrices for NMatrix-JRuby") if jruby?
+              (stype_matrix[1, 0..2] > 2).each { |e| expect(e != 0).to be true }
             end
 
             it "iterates only over elements in the slice" do
@@ -367,20 +385,20 @@ describe "Slice operation" do
 
         [:dense, :list, :yale].each do |cast_type|
           it "should cast a square reference-slice from #{stype.upcase} to #{cast_type.upcase}" do
-            expect(nm_eql(stype_matrix[1..2, 1..2].cast(cast_type), stype_matrix[1..2,1..2])).to be_true
-            expect(nm_eql(stype_matrix[0..1, 1..2].cast(cast_type), stype_matrix[0..1,1..2])).to be_true
-            expect(nm_eql(stype_matrix[1..2, 0..1].cast(cast_type), stype_matrix[1..2,0..1])).to be_true
-            expect(nm_eql(stype_matrix[0..1, 0..1].cast(cast_type), stype_matrix[0..1,0..1])).to be_true
+            expect(nm_eql(stype_matrix[1..2, 1..2].cast(cast_type), stype_matrix[1..2,1..2])).to be true
+            expect(nm_eql(stype_matrix[0..1, 1..2].cast(cast_type), stype_matrix[0..1,1..2])).to be true
+            expect(nm_eql(stype_matrix[1..2, 0..1].cast(cast_type), stype_matrix[1..2,0..1])).to be true
+            expect(nm_eql(stype_matrix[0..1, 0..1].cast(cast_type), stype_matrix[0..1,0..1])).to be true
           end
 
           it "should cast a rectangular reference-slice from #{stype.upcase} to #{cast_type.upcase}" do
             # Non square
-            expect(nm_eql(stype_matrix[0..2, 1..2].cast(cast_type), stype_matrix[0..2,1..2])).to be_true # FIXME: memory problem.
-            expect(nm_eql(stype_matrix[1..2, 0..2].cast(cast_type), stype_matrix[1..2,0..2])).to be_true # this one is fine
+            expect(nm_eql(stype_matrix[0..2, 1..2].cast(cast_type), stype_matrix[0..2,1..2])).to be true # FIXME: memory problem.
+            expect(nm_eql(stype_matrix[1..2, 0..2].cast(cast_type), stype_matrix[1..2,0..2])).to be true # this one is fine
           end
 
           it "should cast a square full-matrix reference-slice from #{stype.upcase} to #{cast_type.upcase}" do
-            expect(nm_eql(stype_matrix[0..2, 0..2].cast(cast_type), stype_matrix)).to be_true
+            expect(nm_eql(stype_matrix[0..2, 0..2].cast(cast_type), stype_matrix)).to be true
           end
         end
       end

@@ -198,39 +198,39 @@ const nm::dtype_t Upcast[nm::NUM_DTYPES][nm::NUM_DTYPES] = {
 void rubyval_to_cval(VALUE val, nm::dtype_t dtype, void* loc) {
   using namespace nm;
   switch (dtype) {
-    case BYTE:
+    case nm::BYTE:
       *reinterpret_cast<uint8_t*>(loc)      = static_cast<uint8_t>(RubyObject(val));
       break;
 
-    case INT8:
+    case nm::INT8:
       *reinterpret_cast<int8_t*>(loc)        = static_cast<int8_t>(RubyObject(val));
       break;
 
-    case INT16:
+    case nm::INT16:
       *reinterpret_cast<int16_t*>(loc)      = static_cast<int16_t>(RubyObject(val));
       break;
 
-    case INT32:
+    case nm::INT32:
       *reinterpret_cast<int32_t*>(loc)      = static_cast<int32_t>(RubyObject(val));
       break;
 
-    case INT64:
+    case nm::INT64:
       *reinterpret_cast<int64_t*>(loc)      = static_cast<int64_t>(RubyObject(val));
       break;
 
-    case FLOAT32:
+    case nm::FLOAT32:
       *reinterpret_cast<float32_t*>(loc)    = static_cast<float32_t>(RubyObject(val));
       break;
 
-    case FLOAT64:
+    case nm::FLOAT64:
       *reinterpret_cast<float64_t*>(loc)    = static_cast<float64_t>(RubyObject(val));
       break;
 
-    case COMPLEX64:
+    case nm::COMPLEX64:
       *reinterpret_cast<Complex64*>(loc)    = RubyObject(val).to<Complex64>();
       break;
 
-    case COMPLEX128:
+    case nm::COMPLEX128:
       *reinterpret_cast<Complex128*>(loc)    = RubyObject(val).to<Complex128>();
       break;
 

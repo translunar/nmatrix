@@ -40,6 +40,8 @@ describe Array do
     end
 
     it "defaults to dtype :object if necessary" do
+      #FIXME
+      pending("not yet implemented for object dtype for NMatrix-JRuby") if jruby?
       a = %w(this is an array of strings)
       expect(a.to_nm([3,2]).dtype).to eq :object
       expect(a.to_nm([3,2])).to eq(NMatrix.new([3,2], a, dtype: :object))

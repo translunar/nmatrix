@@ -77,6 +77,11 @@ extern "C" {
   static VALUE nm_lapacke_lapacke_potrs(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE nrhs, VALUE a, VALUE lda, VALUE b, VALUE ldb);
   static VALUE nm_lapacke_lapacke_potri(VALUE self, VALUE order, VALUE uplo, VALUE n, VALUE a, VALUE lda);
 
+  static VALUE nm_lapacke_lapacke_geqrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE tau);
+  static VALUE nm_lapacke_lapacke_ormqr(VALUE self, VALUE order, VALUE side, VALUE trans, VALUE m, VALUE n, VALUE k, VALUE a, VALUE lda, VALUE tau, VALUE c, VALUE ldc);
+  static VALUE nm_lapacke_lapacke_unmqr(VALUE self, VALUE order, VALUE side, VALUE trans, VALUE m, VALUE n, VALUE k, VALUE a, VALUE lda, VALUE tau, VALUE c, VALUE ldc);
+
+
   static VALUE nm_lapacke_lapacke_gesvd(VALUE self, VALUE order, VALUE jobu, VALUE jobvt, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt, VALUE superb);
   static VALUE nm_lapacke_lapacke_gesdd(VALUE self, VALUE order, VALUE jobz, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE s, VALUE u, VALUE ldu, VALUE vt, VALUE ldvt);
   static VALUE nm_lapacke_lapacke_geev(VALUE self, VALUE order, VALUE jobvl, VALUE jobvr, VALUE n, VALUE a, VALUE lda, VALUE w, VALUE wi, VALUE vl, VALUE ldvl, VALUE vr, VALUE ldvr);
@@ -120,6 +125,10 @@ void nm_math_init_lapack() {
   rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_potrf", (METHOD)nm_lapacke_lapacke_potrf, 5);
   rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_potrs", (METHOD)nm_lapacke_lapacke_potrs, 8);
   rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_potri", (METHOD)nm_lapacke_lapacke_potri, 5);
+
+  rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_geqrf", (METHOD)nm_lapacke_lapacke_geqrf, 6);
+  rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_ormqr", (METHOD)nm_lapacke_lapacke_ormqr, 11);
+  rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_unmqr", (METHOD)nm_lapacke_lapacke_unmqr, 11);
 
   rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_gesvd", (METHOD)nm_lapacke_lapacke_gesvd, 13);
   rb_define_singleton_method(cNMatrix_LAPACKE_LAPACK, "lapacke_gesdd", (METHOD)nm_lapacke_lapacke_gesdd, 11);
@@ -311,11 +320,11 @@ static VALUE nm_lapacke_cblas_nrm2(VALUE self, VALUE n, VALUE x, VALUE incx) {
 
   static void (*ttable[nm::NUM_DTYPES])(const int N, const void* X, const int incX, void* sum) = {
       NULL, NULL, NULL, NULL, NULL, // no help for integers
-      nm::math::lapacke::cblas_nrm2<float32_t,float32_t>,
-      nm::math::lapacke::cblas_nrm2<float64_t,float64_t>,
-      nm::math::lapacke::cblas_nrm2<float32_t,nm::Complex64>,
-      nm::math::lapacke::cblas_nrm2<float64_t,nm::Complex128>,
-      nm::math::lapacke::cblas_nrm2<nm::RubyObject,nm::RubyObject>
+      nm::math::lapacke::cblas_nrm2<float32_t>,
+      nm::math::lapacke::cblas_nrm2<float64_t>,
+      nm::math::lapacke::cblas_nrm2<nm::Complex64>,
+      nm::math::lapacke::cblas_nrm2<nm::Complex128>,
+      nm::math::lapacke::cblas_nrm2<nm::RubyObject>
   };
 
   nm::dtype_t dtype  = NM_DTYPE(x);
@@ -360,16 +369,16 @@ static VALUE nm_lapacke_cblas_nrm2(VALUE self, VALUE n, VALUE x, VALUE incx) {
 static VALUE nm_lapacke_cblas_asum(VALUE self, VALUE n, VALUE x, VALUE incx) {
 
   static void (*ttable[nm::NUM_DTYPES])(const int N, const void* X, const int incX, void* sum) = {
-      nm::math::lapacke::cblas_asum<uint8_t,uint8_t>,
-      nm::math::lapacke::cblas_asum<int8_t,int8_t>,
-      nm::math::lapacke::cblas_asum<int16_t,int16_t>,
-      nm::math::lapacke::cblas_asum<int32_t,int32_t>,
-      nm::math::lapacke::cblas_asum<int64_t,int64_t>,
-      nm::math::lapacke::cblas_asum<float32_t,float32_t>,
-      nm::math::lapacke::cblas_asum<float64_t,float64_t>,
-      nm::math::lapacke::cblas_asum<float32_t,nm::Complex64>,
-      nm::math::lapacke::cblas_asum<float64_t,nm::Complex128>,
-      nm::math::lapacke::cblas_asum<nm::RubyObject,nm::RubyObject>
+      nm::math::lapacke::cblas_asum<uint8_t>,
+      nm::math::lapacke::cblas_asum<int8_t>,
+      nm::math::lapacke::cblas_asum<int16_t>,
+      nm::math::lapacke::cblas_asum<int32_t>,
+      nm::math::lapacke::cblas_asum<int64_t>,
+      nm::math::lapacke::cblas_asum<float32_t>,
+      nm::math::lapacke::cblas_asum<float64_t>,
+      nm::math::lapacke::cblas_asum<nm::Complex64>,
+      nm::math::lapacke::cblas_asum<nm::Complex128>,
+      nm::math::lapacke::cblas_asum<nm::RubyObject>
   };
 
   nm::dtype_t dtype  = NM_DTYPE(x);
@@ -647,7 +656,7 @@ static VALUE nm_lapacke_lapacke_getri(VALUE self, VALUE order, VALUE n, VALUE a,
 
   // Allocate the C version of the pivot index array
   int* ipiv_;
-  if (TYPE(ipiv) != T_ARRAY) {
+  if (!RB_TYPE_P(ipiv, T_ARRAY)) {
     rb_raise(rb_eArgError, "ipiv must be of type Array");
   } else {
     ipiv_ = NM_ALLOCA_N(int, RARRAY_LEN(ipiv));
@@ -739,7 +748,7 @@ static VALUE nm_lapacke_lapacke_getrs(VALUE self, VALUE order, VALUE trans, VALU
 
   // Allocate the C version of the pivot index array
   int* ipiv_;
-  if (TYPE(ipiv) != T_ARRAY) {
+  if (!RB_TYPE_P(ipiv, T_ARRAY)) {
     rb_raise(rb_eArgError, "ipiv must be of type Array");
   } else {
     ipiv_ = NM_ALLOCA_N(int, RARRAY_LEN(ipiv));
@@ -963,5 +972,128 @@ static VALUE nm_lapacke_lapacke_geev(VALUE self, VALUE order, VALUE jobvl, VALUE
   }
 }
 
+/* 
+ * GEQRF calculates the QR factorization for an MxN real or complex matrix.
+ *  
+ * The QR factorization is A = QR, where Q is orthogonal and R is Upper Triangular
+ * +A+ is overwritten with the elements of R and Q with Q being represented by the 
+ * elements below A's diagonal and an array of scalar factors in the output NMatrix. 
+ *
+ * The matrix Q is represented as a product of elementary reflectors
+ *     Q = H(1) H(2) . . . H(k), where k = min(m,n).
+ *
+ * Each H(i) has the form
+ *
+ *     H(i) = I - tau * v * v'
+ *
+ * http://www.netlib.org/lapack/explore-html/d3/d69/dgeqrf_8f.html
+ */
+
+static VALUE nm_lapacke_lapacke_geqrf(VALUE self, VALUE order, VALUE m, VALUE n, VALUE a, VALUE lda, VALUE tau) {
+  static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER order, const int m, const int n, void* a, const int lda, void* tau) = {
+      NULL, NULL, NULL, NULL, NULL,
+      nm::math::lapacke::lapacke_geqrf<float>,
+      nm::math::lapacke::lapacke_geqrf<double>,
+      nm::math::lapacke::lapacke_geqrf<nm::Complex64>,
+      nm::math::lapacke::lapacke_geqrf<nm::Complex128>,
+      NULL
+  };
+
+  int M = FIX2INT(m),
+      N = FIX2INT(n);
+ 
+  nm::dtype_t dtype = NM_DTYPE(a);
+
+  if (!ttable[dtype]) {
+    rb_raise(nm_eDataTypeError, "this matrix operation is undefined for integer matrices");
+    return Qfalse;
+  } else {
+    int info = ttable[dtype](blas_order_sym(order), M, N, NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), NM_STORAGE_DENSE(tau)->elements);
+    return INT2FIX(info);
+  }
+}
+
+/* ORMQR calculates the orthogonal matrix Q from TAU and A after calling GEQRF on a real matrix
+ *  
+ *
+ * The matrix Q is represented as a product of elementary reflectors
+ *     Q = H(1) H(2) . . . H(k), where k = min(m,n).
+ *
+ * Each H(i) has the form
+ *
+ *     H(i) = I - tau * v * v'
+ *  
+ *  v is contained in the matrix passed to GEQRF     
+ *
+ *  www.netlib.org/lapack/explore-html/da/d82/dormqr_8f.html
+ */
+
+static VALUE nm_lapacke_lapacke_ormqr(VALUE self, VALUE order, VALUE side, VALUE trans, VALUE m, VALUE n, VALUE k, VALUE a, VALUE lda, VALUE tau, VALUE c, VALUE ldc) {
+  static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER order, char side, char trans, const int m, const int n, const int k, void* a, const int lda, void* tau, void* c, const int ldc) = {
+      NULL, NULL, NULL, NULL, NULL,
+      nm::math::lapacke::lapacke_ormqr<float>,
+      nm::math::lapacke::lapacke_ormqr<double>,
+      NULL,NULL,NULL // no complex or Ruby objects
+  };
+
+  int M = FIX2INT(m),
+      N = FIX2INT(n),
+      K = FIX2INT(k); 
+
+  char SIDE  = lapacke_side_sym(side),
+       TRANS = lapacke_transpose_sym(trans);
+
+  nm::dtype_t dtype = NM_DTYPE(a);
+
+
+  if (!ttable[dtype]) {
+    rb_raise(nm_eDataTypeError, "this matrix operation is undefined for integer matrices");
+    return Qfalse;
+  } else {
+    int info = ttable[dtype](blas_order_sym(order), SIDE, TRANS, M, N, K, NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), NM_STORAGE_DENSE(tau)->elements, NM_STORAGE_DENSE(c)->elements, FIX2INT(ldc));
+    return INT2FIX(info);
+  }
+}
+
+/* UNMQR calculates the orthogonal matrix Q from TAU and A after calling GEQRF on a complex matrix.
+ *  
+ *
+ * The matrix Q is represented as a product of elementary reflectors
+ *     Q = H(1) H(2) . . . H(k), where k = min(m,n).
+ *
+ * Each H(i) has the form
+ *
+ *     H(i) = I - tau * v * v'
+ *  
+ *  v is contained in the matrix passed to GEQRF     
+ *
+ *  http://www.netlib.org/lapack/explore-html/d5/d65/zunmqr_8f.html
+ */
+
+static VALUE nm_lapacke_lapacke_unmqr(VALUE self, VALUE order, VALUE side, VALUE trans, VALUE m, VALUE n, VALUE k, VALUE a, VALUE lda, VALUE tau, VALUE c, VALUE ldc) {
+  static int (*ttable[nm::NUM_DTYPES])(const enum CBLAS_ORDER order, char side, char trans, const int m, const int n, const int k, void* a, const int lda, void* tau, void* c, const int ldc) = {
+      NULL, NULL, NULL, NULL, NULL,NULL,NULL, // no non-complex ops
+      nm::math::lapacke::lapacke_unmqr<nm::Complex64>,
+      nm::math::lapacke::lapacke_unmqr<nm::Complex128>,
+      NULL // no Ruby objects
+  };
+
+  int M = FIX2INT(m),
+      N = FIX2INT(n),
+      K = FIX2INT(k); 
+
+  char SIDE  = lapacke_side_sym(side),
+       TRANS = lapacke_transpose_sym(trans);
+
+  nm::dtype_t dtype = NM_DTYPE(a);
+
+  if (!ttable[dtype]) {
+    rb_raise(nm_eDataTypeError, "this matrix operation is valid only for complex datatypes");
+    return Qfalse;
+  } else {
+    int info = ttable[dtype](blas_order_sym(order), SIDE, TRANS, M, N, K, NM_STORAGE_DENSE(a)->elements, FIX2INT(lda), NM_STORAGE_DENSE(tau)->elements, NM_STORAGE_DENSE(c)->elements, FIX2INT(ldc));
+    return INT2FIX(info);
+  }
+}
 
 }

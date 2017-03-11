@@ -140,7 +140,7 @@ namespace nm { namespace dense_storage {
       v                = reinterpret_cast<D*>(t->elements);
       v_size           = nm_storage_count_max_elements(t);
 
-    } else if (TYPE(right) == T_ARRAY) {
+    } else if (RB_TYPE_P(right, T_ARRAY)) {
       
       v_size = RARRAY_LEN(right);
       v      = NM_ALLOC_N(D, v_size);
@@ -875,7 +875,7 @@ namespace nm {
  */
 std::pair<NMATRIX*,bool> interpret_arg_as_dense_nmatrix(VALUE right, nm::dtype_t dtype) {
   NM_CONSERVATIVE(nm_register_value(&right));
-  if (TYPE(right) == T_DATA && (RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete || RDATA(right)->dfree == (RUBY_DATA_FUNC)nm_delete_ref)) {
+  if (IsNMatrixType(right)) {
     NMATRIX *r;
     if (NM_STYPE(right) != DENSE_STORE || NM_DTYPE(right) != dtype || NM_SRC(right) != NM_STORAGE(right)) {
       UnwrapNMatrix( right, r );
@@ -888,7 +888,7 @@ std::pair<NMATRIX*,bool> interpret_arg_as_dense_nmatrix(VALUE right, nm::dtype_t
       return std::make_pair(r, false);
     }
     // Do not set v_alloc = true for either of these. It is the responsibility of r/ldtype_r
-  } else if (TYPE(right) == T_DATA) {
+  } else if (RB_TYPE_P(right, T_DATA)) {
     NM_CONSERVATIVE(nm_unregister_value(&right));
     rb_raise(rb_eTypeError, "unrecognized type for slice assignment");
   }
@@ -1018,7 +1018,7 @@ bool eqeq(const DENSE_STORAGE* left, const DENSE_STORAGE* right) {
 template <typename DType>
 bool is_hermitian(const DENSE_STORAGE* mat, int lda) {
   unsigned int i, j;
-  register DType complex_conj;
+  DType complex_conj;
 
   const DType* els = (DType*) mat->elements;
 

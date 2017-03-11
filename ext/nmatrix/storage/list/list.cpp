@@ -551,7 +551,7 @@ void set(VALUE left, SLICE* slice, VALUE right) {
     v                = reinterpret_cast<D*>(t->elements);
     v_size           = nm_storage_count_max_elements(t);
 
-  } else if (TYPE(right) == T_ARRAY) {
+  } else if (RB_TYPE_P(right, T_ARRAY)) {
     nm_register_nmatrix(nm_and_free.first);
     v_size = RARRAY_LEN(right);
     v      = NM_ALLOC_N(D, v_size);
@@ -1016,7 +1016,7 @@ VALUE nm_list_map_merged_stored(VALUE left, VALUE right, VALUE init) {
   void* scalar_init = NULL;
 
   // right might be a scalar, in which case this is a scalar operation.
-  if (TYPE(right) != T_DATA || (RDATA(right)->dfree != (RUBY_DATA_FUNC)nm_delete && RDATA(right)->dfree != (RUBY_DATA_FUNC)nm_delete_ref)) {
+  if (!IsNMatrixType(right)) {
     nm::dtype_t r_dtype = Upcast[NM_DTYPE(left)][nm_dtype_min(right)];
     scalar_init         = rubyobj_to_cval(right, r_dtype); // make a copy of right
 

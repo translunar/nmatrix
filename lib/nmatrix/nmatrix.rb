@@ -30,21 +30,32 @@
 #++
 
 # For some reason nmatrix.so ends up in a different place during gem build.
-if File.exist?("lib/nmatrix/nmatrix.so") #|| File.exist?("lib/nmatrix/nmatrix.bundle")
-  # Development
-  require "nmatrix/nmatrix.so"
-else
-  # Gem
-  require "nmatrix.so"
+
+# Detect java
+def jruby?
+  /java/ === RUBY_PLATFORM
 end
 
-require_relative './io/mat_reader'
-require_relative './io/mat5_reader'
-require_relative './io/market'
-require_relative './io/point_cloud'
+if jruby?
+  require_relative 'jruby/nmatrix_java'
+else
+  if File.exist?("lib/nmatrix/nmatrix.so") #|| File.exist?("lib/nmatrix/nmatrix.bundle")
+    # Development
+    require_relative "nmatrix/nmatrix.so"
+  else
+    # Gem
+    require_relative "../nmatrix.so"
+    require_relative './math.rb'
+    require_relative './io/mat_reader'
+    require_relative './io/mat5_reader'
+    require_relative './io/market'
+    require_relative './io/point_cloud'
 
-require_relative './lapack_core.rb'
-require_relative './yale_functions.rb'
+    require_relative './lapack_core.rb'
+    require_relative './yale_functions.rb'
+  end
+end
+
 require_relative './monkeys'
 
 # NMatrix is a matrix class that supports both multidimensional arrays
@@ -189,12 +200,14 @@ class NMatrix
           end
         end
       else # dim 2
-        q.group(0, "\n[\n", "]") do
-          self.each_row.with_index do |row,i|
-            q.group(1, "  [", "]") do
-              q.seplist(self.dim > 2 ? row.to_a[0] : row.to_a, lambda { q.text ", " }, :each_with_index) { |v,j| q.text v.inspect.rjust(longest[j]) }
+        q.group(0, "\n[\n ", "]") do
+          self.each_row.with_index do |row, i|
+            q.group(1, " [", "]\n") do
+              q.seplist(row.to_a, -> { q.text ", " }, :each_with_index) do |v,j|
+                q.text v.inspect.rjust(longest[j])
+              end
             end
-            q.breakable
+            q.breakable unless i + 1 == self.shape[0]
           end
         end
       end
@@ -269,14 +282,14 @@ class NMatrix
   end
 
   # Return the main diagonal or antidiagonal a matrix. Only works with 2D matrices.
-  # 
+  #
   # == Arguments
-  # 
-  # * +main_diagonal+ - Defaults to true. If passed 'false', then will return the 
+  #
+  # * +main_diagonal+ - Defaults to true. If passed 'false', then will return the
   #   antidiagonal of the matrix.
-  # 
+  #
   # == References
-  # 
+  #
   # * http://en.wikipedia.org/wiki/Main_diagonal
   def diagonal main_diagonal=true
     diag_size = [cols, rows].min
@@ -367,9 +380,9 @@ class NMatrix
 
   ##
   # call-seq:
-  # 
+  #
   # object_dtype?() -> Boolean
-  # 
+  #
   # Checks if dtype is a ruby object
   def object_dtype?
     dtype == :object
@@ -534,6 +547,16 @@ class NMatrix
     rank(0, row_number, get_by)
   end
 
+  #
+  # call-seq:
+  #     last -> Element of self.dtype
+  #
+  # Returns the last element stored in an NMatrix
+  #
+  def last
+    self[*Array.new(self.dim, -1)]
+  end
+
 
   #
   # call-seq:
@@ -635,7 +658,15 @@ class NMatrix
       t
     else
       # Call C versions of Yale and List transpose, which do their own copies
-      self.clone_transpose
+      if jruby?
+        nmatrix = NMatrix.new :copy
+        nmatrix.shape = [@shape[1],@shape[0]]
+        twoDMat = self.twoDMat.transpose
+        nmatrix.s = ArrayRealVector.new(ArrayGenerator.getArrayDouble(twoDMat.getData(), shape[1],shape[0]))
+        return nmatrix
+      else
+        self.clone_transpose
+      end
     end
   end
 
@@ -700,16 +731,20 @@ class NMatrix
     # Do the actual construction.
     n = NMatrix.new(new_shape, opts)
 
-    # Figure out where to start and stop the concatenation. We'll use NMatrices instead of
-    # Arrays because then we can do elementwise addition.
-    ranges = self.shape.map.with_index { |s,i| 0...self.shape[i] }
+    # Figure out where to start concatenation. We don't know where it will end,
+    # because each matrix may have own size along concat dimension.
+    pos = Array.new(self.dim) { 0 }
 
     matrices.unshift(self)
     matrices.each do |m|
+      # Figure out where to start and stop the concatenation. We'll use
+      # NMatrices instead of Arrays because then we can do elementwise addition.
+      ranges = m.shape.map.with_index { |s,i| pos[i]...(pos[i] + s) }
+
       n[*ranges] = m
 
-      # move over by the requisite amount
-      ranges[rank]  = (ranges[rank].first + m.shape[rank])...(ranges[rank].last + m.shape[rank])
+      # Move over by the requisite amount
+      pos[rank] = pos[rank] + m.shape[rank]
     end
 
     n
@@ -853,7 +888,17 @@ class NMatrix
   #   - A NMatrix representing the requested layer as a layer vector.
   #
   def layer(layer_number, get_by = :copy)
-    rank(2, layer_number, get_by)
+    layer = rank(2, layer_number, get_by)
+
+    if jruby?
+      nmatrix = NMatrix.new :copy
+      nmatrix.shape = layer.shape
+      nmatrix.s = layer.s
+      return nmatrix
+    else
+      layer
+    end
+
   end
 
 
@@ -962,9 +1007,9 @@ class NMatrix
     return self.map_stored.inject(sym)
   end
 
-  # Returns the index of the first occurence of the specified value. Returns 
+  # Returns the index of the first occurence of the specified value. Returns
   # an array containing the position of the value, nil in case the value is not found.
-  # 
+  #
   def index(value)
     index = nil
 
@@ -974,7 +1019,7 @@ class NMatrix
         index = yields
         break
       end
-    end 
+    end
 
     index
   end
@@ -997,7 +1042,7 @@ class NMatrix
   #
   # call-seq:
   #     repeat(count, axis) -> NMatrix
-  # 
+  #
   # * *Arguments* :
   #   - +count+ -> how many times NMatrix should be repeated
   #   - +axis+ -> index of axis along which NMatrix should be repeated
@@ -1011,7 +1056,7 @@ class NMatrix
     raise(ArgumentError, 'Matrix should be repeated at least 2 times.') if count < 2
     new_shape = shape
     new_shape[axis] *= count
-    new_matrix = NMatrix.new(new_shape)
+    new_matrix = NMatrix.new(new_shape, dtype: dtype)
     slice = new_shape.map { |axis_size| 0...axis_size }
     start = 0
     count.times do
@@ -1123,7 +1168,6 @@ protected
 end
 
 require_relative './shortcuts.rb'
-require_relative './math.rb'
 require_relative './enumerate.rb'
 
 require_relative './version.rb'

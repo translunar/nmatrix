@@ -41,6 +41,7 @@ describe "Statistical functions" do
         end
 
         it "should calculate the mean along the specified dimension" do
+          pending("not yet implemented for NMatrix-JRuby") if jruby?
           unless stype == :yale then
             puts nm_1d.mean
             expect(nm_1d.mean).to eq NMatrix.new([1], [2.2], stype: stype, dtype: :float64)
@@ -50,27 +51,32 @@ describe "Statistical functions" do
         end
 
         it "should calculate the minimum along the specified dimension" do
+          pending("not yet implemented for NMatrix-JRuby") if jruby?
           expect(nm_1d.min).to eq 0.0 unless stype == :yale
           expect(nm_2d.min).to eq NMatrix[[0.0, 1.0], stype: stype]
           expect(nm_2d.min(1)).to eq NMatrix[[0.0], [2.0], stype: stype]
         end
 
         it "should calculate the maximum along the specified dimension" do
+          pending("not yet implemented for NMatrix-JRuby") if jruby?
           expect(nm_1d.max).to eq 5.0  unless stype == :yale
           expect(nm_2d.max).to eq NMatrix[[2.0, 3.0], stype: stype]
         end
 
         it "should calculate the variance along the specified dimension" do
+          pending("not yet implemented for NMatrix-JRuby") if jruby?
           expect(nm_1d.variance).to eq NMatrix[3.7, stype: stype] unless stype == :yale
           expect(nm_2d.variance(1)).to eq NMatrix[[0.5], [0.5], stype: stype]
         end
 
         it "should calculate the sum along the specified dimension" do
+          pending("not yet implemented for NMatrix-JRuby") if jruby?
           expect(nm_1d.sum).to eq NMatrix[11.0, stype: stype] unless stype == :yale
           expect(nm_2d.sum).to eq NMatrix[[2.0, 4.0], stype: stype]
         end
 
         it "should calculate the standard deviation along the specified dimension" do
+          pending("not yet implemented for NMatrix-JRuby") if jruby?
           expect(nm_1d.std).to eq NMatrix[Math.sqrt(3.7), stype: stype] unless stype == :yale
           expect(nm_2d.std(1)).to eq NMatrix[[Math.sqrt(0.5)], [Math.sqrt(0.5)], stype: stype]
         end
@@ -128,6 +134,7 @@ describe "Statistical functions" do
         end
 
         it "should iterate correctly for reduce without a block" do
+          pending("not yet implemented for NMatrix-JRuby") if jruby?
           unless stype == :yale then
             en = nm_1d.reduce_along_dim(0, 1.0)
             expect(en.each { |a, e| a+e }.to_f).to eq 12
@@ -170,6 +177,7 @@ describe "Statistical functions" do
         end
 
         it "should allow overriding the dtype for reduce_along_dim" do
+          pending("not yet implemented for NMatrix-JRuby") if jruby?
           m = NMatrix[[1,2,3], [3,4,5], dtype: :complex128]
           m.reduce_along_dim(1, 0.0, :float64) do |acc, sub_m|
             expect(acc.dtype).to eq :float64
@@ -184,16 +192,19 @@ describe "Statistical functions" do
         end
 
         it "should convert integer dtypes to float when calculating mean" do
+          pending("not yet implemented for NMatrix-JRuby") if jruby?
           m = NMatrix[[1,2,3], [3,4,5], dtype: :int32, stype: stype]
           expect(m.mean(0).dtype).to eq :float64
         end
 
         it "should convert integer dtypes to float when calculating variance" do
+          pending("not yet implemented for NMatrix-JRuby") if jruby?
           m = NMatrix[[1,2,3], [3,4,5], dtype: :int32, stype: stype]
           expect(m.variance(0).dtype).to eq :float64
         end
 
         it "should convert integer dtypes to float when calculating standard deviation" do
+          pending("not yet implemented for NMatrix-JRuby") if jruby?
           m = NMatrix[[1,2,3], [3,4,5], dtype: :int32, stype: stype]
           expect(m.std(0).dtype).to eq :float64
         end
