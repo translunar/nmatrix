@@ -203,7 +203,6 @@ describe "math" do
   end
 
   NON_INTEGER_DTYPES.each do |dtype|
-    next if dtype == :object
     context dtype do
       before do
         @m = NMatrix.new([3,4], GETRF_EXAMPLE_ARRAY, dtype: dtype)
@@ -217,11 +216,13 @@ describe "math" do
 
       #haven't check this spec yet. Also it doesn't check all the elements of the matrix.
       it "should correctly factorize a matrix" do
+        pending("not yet implemented for :object dtype") if dtype == :object
         a = @m.factorize_lu
         expect(a).to be_within(@err).of(NMatrix.new([3,4], GETRF_SOLUTION_ARRAY, dtype: dtype))
       end
 
       it "also returns the permutation matrix" do
+        pending("not yet implemented for :object dtype") if dtype == :object
         a, p = @m.factorize_lu perm_matrix: true
 
         expect(a).to be_within(@err).of(NMatrix.new([3,4], GETRF_SOLUTION_ARRAY, dtype: dtype))
@@ -244,6 +245,7 @@ describe "math" do
         # 1 2 6
         # which is symmetric and positive-definite as required, but
         # we need only store the lower-half of the matrix.
+        pending("not yet implemented for :object dtype") if dtype == :object
         a = NMatrix.new([3,3],[1,0,0, 1,2,0, 1,2,6], dtype: dtype)
         begin
           r = a.potrf!(:lower)
@@ -257,6 +259,7 @@ describe "math" do
       end
 
       it "calculates cholesky decomposition using potrf (upper)" do
+        pending("not yet implemented for :object dtype") if dtype == :object
         a = NMatrix.new([3,3],[1,1,1, 0,2,2, 0,0,6], dtype: dtype)
         begin
           r = a.potrf!(:upper)
@@ -270,6 +273,7 @@ describe "math" do
       end
 
       it "calculates cholesky decomposition using #factorize_cholesky" do
+        pending("not yet implemented for :object dtype") if dtype == :object
         a = NMatrix.new([3,3],[1,2,1, 2,13,5, 1,5,6], dtype: dtype)
         begin
           u,l = a.factorize_cholesky
@@ -287,7 +291,6 @@ describe "math" do
 
   ALL_DTYPES.each do |dtype|
     next if dtype == :byte #doesn't work for unsigned types
-    next if dtype == :object
 
     context dtype do
       err = case dtype
@@ -298,6 +301,7 @@ describe "math" do
             end
 
       it "should correctly invert a matrix in place (bang)" do
+        pending("not yet implemented for :object dtype") if dtype == :object
         a = NMatrix.new(:dense, 5, [1, 8,-9, 7, 5, 
                                     0, 1, 0, 4, 4, 
                                     0, 0, 1, 2, 5, 
@@ -319,6 +323,7 @@ describe "math" do
       end
 
       it "should correctly invert a matrix out-of-place" do
+        pending("not yet implemented for :object dtype") if dtype == :object
         a = NMatrix.new(:dense, 3, [1,2,3,0,1,4,5,6,0], dtype)
 
         if a.integer_dtype?
@@ -333,10 +338,11 @@ describe "math" do
   end
 
   NON_INTEGER_DTYPES.each do |dtype|
-    next if dtype == :object
     context dtype do
       err = Complex(1e-3, 1e-3)
       it "should correctly invert a 2x2 matrix" do
+        pending("not yet implemented for NMatrix-JRuby") if jruby?
+        pending("not yet implemented for :object dtype") if dtype == :object
         if dtype == :complex64 || dtype == :complex128
           a = NMatrix.new([2, 2], [Complex(16, 81), Complex(91, 51), \
                                    Complex(13, 54), Complex(71, 24)], dtype: dtype)
@@ -361,6 +367,8 @@ describe "math" do
       end
 
       it "should  verify a.dot(b.dot(a)) == a and b.dot(a.dot(b)) == b" do
+        pending("not yet implemented for NMatrix-JRuby") if jruby?
+        pending("not yet implemented for :object dtype") if dtype == :object
         if dtype == :complex64 || dtype == :complex128
           a = NMatrix.new([3, 2], [Complex(94, 11), Complex(87, 51), Complex(82, 39), \
                                    Complex(45, 16), Complex(25, 32), Complex(91, 43) ], dtype: dtype)
@@ -609,9 +617,9 @@ describe "math" do
 
   context "#solve" do
     NON_INTEGER_DTYPES.each do |dtype|
-      next if dtype == :object # LU factorization doesnt work for :object yet
 
       it "solves linear equation for dtype #{dtype}" do
+        pending("not yet implemented for :object dtype") if dtype == :object
         a = NMatrix.new [2,2], [3,1,1,2], dtype: dtype
         b = NMatrix.new [2,1], [9,8], dtype: dtype
 
@@ -619,6 +627,7 @@ describe "math" do
       end
 
       it "solves linear equation for #{dtype} (non-symmetric matrix)" do
+        pending("not yet implemented for :object dtype") if dtype == :object
         a = NMatrix.new [3,3], [1,1,1, -1,0,1, 3,4,6], dtype: dtype
         b = NMatrix.new [3,1], [6,2,29], dtype: dtype
 
@@ -633,6 +642,7 @@ describe "math" do
       end
 
       it "solves linear equation for dtype #{dtype} (non-vector rhs)" do
+        pending("not yet implemented for :object dtype") if dtype == :object
         a = NMatrix.new [3,3], [1,0,0, -1,0,1, 2,1,1], dtype: dtype
         b = NMatrix.new [3,2], [1,0, 1,2, 4,2], dtype: dtype
 
@@ -814,8 +824,8 @@ describe "math" do
 
   context "determinants" do
     ALL_DTYPES.each do |dtype|
-      next if dtype == :object
       context dtype do
+        pending("not yet implemented for :object dtype") if dtype == :object
         before do
           @a = NMatrix.new([2,2], [1,2,
                                    3,4], dtype: dtype)
@@ -836,15 +846,19 @@ describe "math" do
                 end
         end
         it "computes the determinant of 2x2 matrix" do
+          pending("not yet implemented for :object dtype") if dtype == :object
           expect(@a.det).to be_within(@err).of(-2)
         end
         it "computes the determinant of 3x3 matrix" do
+          pending("not yet implemented for :object dtype") if dtype == :object
           expect(@b.det).to be_within(@err).of(-8)
         end
         it "computes the determinant of 4x4 matrix" do
+          pending("not yet implemented for :object dtype") if dtype == :object
           expect(@c.det).to be_within(@err).of(-18)
         end
         it "computes the exact determinant of 2x2 matrix" do
+          pending("not yet implemented for :object dtype") if dtype == :object
           if dtype == :byte
             expect{@a.det_exact}.to raise_error(DataTypeError)
           else
@@ -852,6 +866,7 @@ describe "math" do
           end
         end
         it "computes the exact determinant of 3x3 matrix" do
+          pending("not yet implemented for :object dtype") if dtype == :objectx
           if dtype == :byte
             expect{@a.det_exact}.to raise_error(DataTypeError)
           else
