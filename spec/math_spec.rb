@@ -209,7 +209,6 @@ describe "math" do
   end
 
   NON_INTEGER_DTYPES.each do |dtype|
-    next if dtype == :object
     context dtype do
       before do
         @m = NMatrix.new([3,4], GETRF_EXAMPLE_ARRAY, dtype: dtype)
@@ -223,13 +222,16 @@ describe "math" do
 
       #haven't check this spec yet. Also it doesn't check all the elements of the matrix.
       it "should correctly factorize a matrix" do
+        pending("not yet implemented for :object dtype") if dtype == :object
         pending("not yet implemented for NMatrix-JRuby") if jruby?
         a = @m.factorize_lu
         expect(a).to be_within(@err).of(NMatrix.new([3,4], GETRF_SOLUTION_ARRAY, dtype: dtype))
       end
 
       it "also returns the permutation matrix" do
+        pending("not yet implemented for :object dtype") if dtype == :object
         pending("not yet implemented for NMatrix-JRuby") if jruby?
+
         a, p = @m.factorize_lu perm_matrix: true
 
         expect(a).to be_within(@err).of(NMatrix.new([3,4], GETRF_SOLUTION_ARRAY, dtype: dtype))
@@ -241,11 +243,9 @@ describe "math" do
   end
 
   NON_INTEGER_DTYPES.each do |dtype|
-    next if dtype == :object
     context dtype do
 
       it "calculates cholesky decomposition using potrf (lower)" do
-        pending("not yet implemented for NMatrix-JRuby") if jruby?
         #a = NMatrix.new([3,3],[1,1,1, 1,2,2, 1,2,6], dtype: dtype)
         # We use the matrix
         # 1 1 1
@@ -253,6 +253,8 @@ describe "math" do
         # 1 2 6
         # which is symmetric and positive-definite as required, but
         # we need only store the lower-half of the matrix.
+        pending("not yet implemented for NMatrix-JRuby") if jruby?
+        pending("not yet implemented for :object dtype") if dtype == :object
         a = NMatrix.new([3,3],[1,0,0, 1,2,0, 1,2,6], dtype: dtype)
         begin
           r = a.potrf!(:lower)
@@ -266,6 +268,7 @@ describe "math" do
       end
 
       it "calculates cholesky decomposition using potrf (upper)" do
+        pending("not yet implemented for :object dtype") if dtype == :object
         pending("not yet implemented for NMatrix-JRuby") if jruby?
 
         a = NMatrix.new([3,3],[1,1,1, 0,2,2, 0,0,6], dtype: dtype)
@@ -281,6 +284,7 @@ describe "math" do
       end
 
       it "calculates cholesky decomposition using #factorize_cholesky" do
+        pending("not yet implemented for :object dtype") if dtype == :object
         a = NMatrix.new([3,3],[1,2,1, 2,13,5, 1,5,6], dtype: dtype)
         begin
           u,l = a.factorize_cholesky
@@ -297,11 +301,10 @@ describe "math" do
   end
 
   NON_INTEGER_DTYPES.each do |dtype|
-    next if dtype == :object
     context dtype do
 
       it "calculates QR decomposition using factorize_qr for a square matrix" do
-
+        pending("not yet implemented for :object dtype") if dtype == :object
         a = NMatrix.new(3, [12.0, -51.0,   4.0,
                              6.0, 167.0, -68.0,
                             -4.0,  24.0, -41.0] , dtype: dtype)
@@ -332,6 +335,7 @@ describe "math" do
 
       it "calculates QR decomposition using factorize_qr for a tall and narrow rectangular matrix" do
         pending("not yet implemented for NMatrix-JRuby") if jruby?
+        pending("not yet implemented for :object dtype") if dtype == :object
 
         a = NMatrix.new([4,2], [34.0, 21.0,
                                 23.0, 53.0,
@@ -365,6 +369,7 @@ describe "math" do
 
       it "calculates QR decomposition using factorize_qr for a short and wide rectangular matrix" do
         pending("not yet implemented for NMatrix-JRuby") if jruby?
+        pending("not yet implemented for :object dtype") if dtype == :object
 
         a = NMatrix.new([3,4], [123,31,57,81,92,14,17,36,42,34,11,28], dtype: dtype)
 
@@ -391,7 +396,7 @@ describe "math" do
       end
 
       it "calculates QR decomposition such that A - QR ~ 0" do
-
+        pending("not yet implemented for :object dtype") if dtype == :object
         a = NMatrix.new([3,3], [ 9.0,  0.0, 26.0,
                                 12.0,  0.0, -7.0,
                                  0.0,  4.0,  0.0] , dtype: dtype)
@@ -416,7 +421,7 @@ describe "math" do
 
 
       it "calculates the orthogonal matrix Q in QR decomposition" do
-
+        pending("not yet implemented for :object dtype") if dtype == :object
         a = N.new([2,2], [34.0, 21, 23, 53] , dtype: dtype)
 
         err = case dtype
@@ -446,7 +451,6 @@ describe "math" do
 
   ALL_DTYPES.each do |dtype|
     next if dtype == :byte #doesn't work for unsigned types
-    next if dtype == :object
 
     context dtype do
       err = case dtype
@@ -457,9 +461,10 @@ describe "math" do
             end
 
       it "should correctly invert a matrix in place (bang)" do
-        a = NMatrix.new(:dense, 5, [1, 8,-9, 7, 5,
-                                    0, 1, 0, 4, 4,
-                                    0, 0, 1, 2, 5,
+        pending("not yet implemented for :object dtype") if dtype == :object
+        a = NMatrix.new(:dense, 5, [1, 8,-9, 7, 5, 
+                                    0, 1, 0, 4, 4, 
+                                    0, 0, 1, 2, 5, 
                                     0, 0, 0, 1,-5,
                                     0, 0, 0, 0, 1 ], dtype)
         b = NMatrix.new(:dense, 5, [1,-8, 9, 7, 17,
@@ -477,7 +482,9 @@ describe "math" do
         end
       end
 
+
       it "should correctly invert a dense matrix out-of-place" do
+        pending("not yet implemented for :object dtype") if dtype == :object
         a = NMatrix.new(:dense, 3, [1,2,3,0,1,4,5,6,0], dtype)
 
         if a.integer_dtype?
@@ -491,9 +498,68 @@ describe "math" do
     end
   end
 
+  NON_INTEGER_DTYPES.each do |dtype|
+    context dtype do
+      err = Complex(1e-3, 1e-3)
+      it "should correctly invert a 2x2 matrix" do
+        pending("not yet implemented for NMatrix-JRuby") if jruby?
+        pending("not yet implemented for :object dtype") if dtype == :object
+        if dtype == :complex64 || dtype == :complex128
+          a = NMatrix.new([2, 2], [Complex(16, 81), Complex(91, 51), \
+                                   Complex(13, 54), Complex(71, 24)], dtype: dtype)
+          b = NMatrix.identity(2, dtype: dtype)
+
+          begin
+            expect(a.dot(a.pinv)).to be_within(err).of(b)
+          rescue NotImplementedError
+            pending "Suppressing a NotImplementedError when the atlas plugin is not available"
+          end
+
+        else
+          a = NMatrix.new([2, 2], [141, 612, 9123, 654], dtype: dtype)
+          b = NMatrix.identity(2, dtype: dtype)
+
+          begin
+            expect(a.dot(a.pinv)).to be_within(err).of(b)
+          rescue NotImplementedError
+            pending "Suppressing a NotImplementedError when the atlas plugin is not available"
+          end
+        end
+      end
+
+      it "should verify a.dot(b.dot(a)) == a and b.dot(a.dot(b)) == b" do
+        pending("not yet implemented for NMatrix-JRuby") if jruby?
+        pending("not yet implemented for :object dtype") if dtype == :object
+        if dtype == :complex64 || dtype == :complex128
+          a = NMatrix.new([3, 2], [Complex(94, 11), Complex(87, 51), Complex(82, 39), \
+                                   Complex(45, 16), Complex(25, 32), Complex(91, 43) ], dtype: dtype)
+
+          begin
+            b = a.pinv # pseudo inverse
+            expect(a.dot(b.dot(a))).to be_within(err).of(a)
+            expect(b.dot(a.dot(b))).to be_within(err).of(b)
+          rescue NotImplementedError
+            pending "Suppressing a NotImplementedError when the atlas plugin is not available"
+          end
+
+        else
+          a = NMatrix.new([3, 3], [9, 4, 52, 12, 52, 1, 3, 55, 6], dtype: dtype)
+
+          begin
+            b = a.pinv # pseudo inverse
+            expect(a.dot(b.dot(a))).to be_within(err).of(a)
+            expect(b.dot(a.dot(b))).to be_within(err).of(b)
+          rescue NotImplementedError
+            pending "Suppressing a NotImplementedError when the atlas plugin is not available"
+          end
+        end
+      end
+    end
+  end
+
+
   ALL_DTYPES.each do |dtype|
     next if dtype == :byte #doesn't work for unsigned types
-    next if dtype == :object
 
     context dtype do
       err = case dtype
@@ -504,6 +570,7 @@ describe "math" do
             end
 
       it "should correctly find adjugate a matrix in place (bang)" do
+        pending("not yet implemented for :object dtype") if dtype == :object
         a = NMatrix.new(:dense, 2, [2, 3, 3, 5], dtype)
         b = NMatrix.new(:dense, 2, [5, -3, -3, 2], dtype)
 
@@ -519,6 +586,7 @@ describe "math" do
 
 
       it "should correctly find adjugate of a matrix out-of-place" do
+        pending("not yet implemented for :object dtype") if dtype == :object
         a = NMatrix.new(:dense, 3, [-3, 2, -5, -1, 0, -2, 3, -4, 1], dtype)
 
         if a.integer_dtype?
@@ -533,6 +601,7 @@ describe "math" do
 
     end
   end
+
 
   # TODO: Get it working with ROBJ too
   [:byte,:int8,:int16,:int32,:int64,:float32,:float64].each do |left_dtype|
@@ -634,7 +703,7 @@ describe "math" do
                                   4.1,2.2,0.63], dtype: dtype)
       end
 
-      it "calculates variance co-variance matrix (sample)" do
+      it "calculates sample covariance matrix" do
         pending("not yet implemented for NMatrix-JRuby") if jruby? and dtype == :object
         expect(@n.cov).to be_within(0.0001).of(NMatrix.new([3,3],
           [0.025  , 0.0075, 0.00175,
@@ -643,7 +712,7 @@ describe "math" do
         )
       end
 
-      it "calculates variance co-variance matrix (population)" do
+      it "calculates population covariance matrix" do
         pending("not yet implemented for NMatrix-JRuby") if jruby? and dtype == :object
         expect(@n.cov(for_sample_data: false)).to be_within(0.0001).of(NMatrix.new([3,3],
                   [2.0000e-02, 6.0000e-03, 1.4000e-03,
@@ -759,9 +828,9 @@ describe "math" do
 
   context "#solve" do
     NON_INTEGER_DTYPES.each do |dtype|
-      next if dtype == :object # LU factorization doesnt work for :object yet
 
       it "solves linear equation for dtype #{dtype}" do
+        pending("not yet implemented for :object dtype") if dtype == :object
         pending("not yet implemented for NMatrix-JRuby") if jruby?
         a = NMatrix.new [2,2], [3,1,1,2], dtype: dtype
         b = NMatrix.new [2,1], [9,8], dtype: dtype
@@ -770,7 +839,9 @@ describe "math" do
       end
 
       it "solves linear equation for #{dtype} (non-symmetric matrix)" do
+        pending("not yet implemented for :object dtype") if dtype == :object
         pending("not yet implemented for NMatrix-JRuby") if jruby?
+
         a = NMatrix.new [3,3], [1,1,1, -1,0,1, 3,4,6], dtype: dtype
         b = NMatrix.new [3,1], [6,2,29], dtype: dtype
 
@@ -785,7 +856,9 @@ describe "math" do
       end
 
       it "solves linear equation for dtype #{dtype} (non-vector rhs)" do
+        pending("not yet implemented for :object dtype") if dtype == :object
         pending("not yet implemented for NMatrix-JRuby") if jruby?
+
         a = NMatrix.new [3,3], [1,0,0, -1,0,1, 2,1,1], dtype: dtype
         b = NMatrix.new [3,2], [1,0, 1,2, 4,2], dtype: dtype
 
@@ -1001,7 +1074,7 @@ describe "math" do
                                    3, 3, 3, 4, 4, 4,
                                    3, 3, 3, 4, 4, 4], dtype: dtype, stype: stype)
         end
-        it "Compute the Kronecker product of two NMatrix" do
+        it "computes the Kronecker product of two NMatrix objects" do
           pending("not yet implemented for NMatrix-JRuby") if jruby? and dtype == :object
           expect(@a.kron_prod(@b)).to eq(@c)
         end
@@ -1012,6 +1085,7 @@ describe "math" do
   context "determinants" do
     ALL_DTYPES.each do |dtype|
       context dtype do
+        pending("not yet implemented for :object dtype") if dtype == :object
         before do
           @a = NMatrix.new([2,2], [1,2,
                                    3,4], dtype: dtype)
@@ -1032,21 +1106,19 @@ describe "math" do
                 end
         end
         it "computes the determinant of 2x2 matrix" do
-          if dtype != :object
-            expect(@a.det).to be_within(@err).of(-2)
-          end
+          pending("not yet implemented for :object dtype") if dtype == :object
+          expect(@a.det).to be_within(@err).of(-2)
         end
         it "computes the determinant of 3x3 matrix" do
-          if dtype != :object
-            expect(@b.det).to be_within(@err).of(-8)
-          end
+          pending("not yet implemented for :object dtype") if dtype == :object
+          expect(@b.det).to be_within(@err).of(-8)
         end
         it "computes the determinant of 4x4 matrix" do
-          if dtype != :object
-            expect(@c.det).to be_within(@err).of(-18)
-          end
+          pending("not yet implemented for :object dtype") if dtype == :object
+          expect(@c.det).to be_within(@err).of(-18)
         end
         it "computes the exact determinant of 2x2 matrix" do
+          pending("not yet implemented for :object dtype") if dtype == :object
           if dtype == :byte
             expect{@a.det_exact}.to raise_error(DataTypeError)
           else
@@ -1055,6 +1127,7 @@ describe "math" do
           end
         end
         it "computes the exact determinant of 3x3 matrix" do
+          pending("not yet implemented for :object dtype") if dtype == :objectx
           if dtype == :byte
             expect{@a.det_exact}.to raise_error(DataTypeError)
           else
@@ -1069,14 +1142,15 @@ describe "math" do
   context "#scale and #scale!" do
     [:dense,:list,:yale].each do |stype|
       ALL_DTYPES.each do |dtype|
-        next if dtype == :object
         context "for #{dtype}" do
           before do
             @m = NMatrix.new([3, 3], [0, 1, 2,
                                       3, 4, 5,
                                       6, 7, 8], stype: stype, dtype: dtype)
           end
+          
           it "scales the matrix by a given factor and return the result" do
+            pending("not yet implemented for :object dtype") if dtype == :object
             if integer_dtype? dtype
               expect{@m.scale 2.0}.to raise_error(DataTypeError)
             else
@@ -1086,16 +1160,18 @@ describe "math" do
                                                              12, 14, 16], stype: stype, dtype: dtype))
             end
           end
+          
           it "scales the matrix in place by a given factor" do
-              if dtype == :int8
-                expect{@m.scale! 2}.to raise_error(DataTypeError)
-              else
-                pending("not yet implemented for NMatrix-JRuby") if jruby? and (dtype == :complex64 || dtype == :complex128)
-                @m.scale! 2
-                expect(@m).to eq(NMatrix.new([3, 3], [0,  2,  4,
-                                                      6,  8,  10,
-                                                      12, 14, 16], stype: stype, dtype: dtype))
-              end
+            pending("not yet implemented for :object dtype") if dtype == :object
+            if dtype == :int8
+              expect{@m.scale! 2}.to raise_error(DataTypeError)
+            else
+              pending("not yet implemented for NMatrix-JRuby") if jruby? and (dtype == :complex64 || dtype == :complex128)
+              @m.scale! 2
+              expect(@m).to eq(NMatrix.new([3, 3], [0,  2,  4,
+                                                    6,  8,  10,
+                                                    12, 14, 16], stype: stype, dtype: dtype))
+            end
           end
         end
       end
