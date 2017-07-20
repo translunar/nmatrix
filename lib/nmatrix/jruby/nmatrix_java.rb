@@ -34,7 +34,7 @@ class NMatrix
             @dtype = hash[:dtype]
             @stype = hash[:stype]
           else
-            @dtype = :double
+            @dtype = :float64
             @stype = :dense
           end
         else
@@ -145,6 +145,11 @@ class NMatrix
   end
 
   def cast_full *args
+    if args.is_a? Hash
+      self.dtype = args[:dtype]
+    else
+      self.dtype = args[1]
+    end
     return self
   end
 
@@ -752,7 +757,7 @@ class NMatrix
 
   protected
 
-  def __inverse__
+  def __inverse__(matrix, bool =true)
     # if (:stype != :dense)
     #   raise Exception.new("needs exact determinant implementation for this matrix stype")
     #   return nil
@@ -767,7 +772,7 @@ class NMatrix
       # to_return = *reinterpret_cast<VALUE*>(result);
     else
       to_return = create_dummy_nmatrix
-      twoDMat = MatrixUtils.inverse(self.twoDMat)
+      twoDMat = MatrixUtils.inverse(matrix.twoDMat)
       to_return.s = ArrayRealVector.new(ArrayGenerator.getArrayDouble(twoDMat.getData, @shape[0], @shape[1]))
     end
 
@@ -829,7 +834,6 @@ end
 
 # load jruby implementation of operators.
 require_relative './slice.rb'
-require_relative './math.rb'
 require_relative './operators.rb'
 require_relative './decomposition.rb'
 require_relative './error.rb'

@@ -119,6 +119,7 @@ describe NMatrix do
   end
 
   it "allows casting from Ruby objects" do
+    pending("not yet implemented for NMatrix-JRuby") if jruby?
     m = NMatrix.new(:dense, [3,3], [0,0,1,0,2,0,3,4,5], :object)
     n = m.cast(:dense, :int64)
     expect(m).to eq(n)

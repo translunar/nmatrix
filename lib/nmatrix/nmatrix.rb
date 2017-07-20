@@ -45,7 +45,6 @@ else
   else
     # Gem
     require_relative "../nmatrix.so"
-    require_relative './math.rb'
     require_relative './io/mat_reader'
     require_relative './io/mat5_reader'
     require_relative './io/market'
@@ -56,6 +55,7 @@ else
   end
 end
 
+require_relative './math.rb'
 require_relative './monkeys'
 
 # NMatrix is a matrix class that supports both multidimensional arrays
