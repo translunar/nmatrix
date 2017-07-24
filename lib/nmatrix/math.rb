@@ -688,16 +688,14 @@ class NMatrix
   def positive_definite?
     raise(ShapeError, "positive definite calculated only for square matrices") unless
       self.dim == 2 && self.shape[0] == self.shape[1]
-    ans = true
     cond = 0
     while cond != self.cols
       if self[0..cond, 0..cond].det <= 0
-        ans = false
-        break
+        return false
       end
       cond += 1
     end
-    ans
+    true
   end
 
 protected
