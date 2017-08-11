@@ -17,25 +17,17 @@ Fast Numerical Linear Algebra Library for Ruby
 == Description
 
 NMatrix is a fast numerical linear algebra library for Ruby, with
-dense and sparse matrices, written mostly in C and C++. It is part of
-the SciRuby project.
-
-Three gems are provided in this repository. The +nmatrix+ gem provides
-all core matrix functionality, and requires minimal external
-dependencies, making it easy to install. The +nmatrix-atlas+ and
-+nmatrix-lapacke+ gems are optional extensions of the main +nmatrix+
-gem that rely on external linear algebra libraries to provide advanced
-features for dense matrices (singular value decomposition,
-eigenvalue/eigenvector finding, Cholesky factorization), as well as
-providing faster implementations of common operations like
-multiplication, inverses, and determinants. +nmatrix-atlas+ requires
-the {ATLAS library}[http://math-atlas.sourceforge.net/], while
-+nmatrix-lapacke+ is designed to work with various LAPACK
-implementations (including ATLAS).  The +nmatrix-atlas+ and
-+nmatrix-lapacke+ gems both provide similar interfaces for using these
-advanced features.
+dense and sparse matrices, written mostly in C and C++ (and with
+experimental JRuby support). It is part of the SciRuby project.
 
 NMatrix was inspired by {NArray}[http://narray.rubyforge.org], by Masahiro Tanaka.
+
+Several gems are provided in this repository:
+* +nmatrix+
+* +nmatrix-java+
+* +nmatrix-atlas+
+* +nmatrix-lapacke+
+* +nmatrix-fftw+
 
 == Installation
 
@@ -43,11 +35,11 @@ To install the latest stable version:
 
     gem install nmatrix
 
-The requirements for NMatrix are:
-* GCC 4.3 or later (clang support is experimental)
-* Ruby 1.9.3 or later
+NMatrix was originally written in C/C++, but an experimental JRuby version is also included (see instructions below for JRuby). For the MRI (C/C++) version, you need:
+* Ruby 2.0 or later
+* a compiler supporting C++11 (clang or GCC)
 
-To install +nmatrix-atlas+ or +nmatrix-lapacke+, an additional requirement is a
+To install the +nmatrix-atlas+ or +nmatrix-lapacke+ extensions, an additional requirement is a
 compatible LAPACK library.
 Detailed directions for this step can be found
 {here}[https://github.com/SciRuby/nmatrix/wiki/Installation].
@@ -101,7 +93,7 @@ commands apply to the +nmatrix+ gem and any additional plugin gems
 specified. For example, <tt>rake spec nmatrix_plugins=atlas</tt> will
 test both the core +nmatrix+ gem and the +nmatrix-atlas+ gem.
 
-== Upgrading from NMatrix 0.1.0
+=== Upgrading from NMatrix 0.1.0
 
 If your code requires features provided by ATLAS (Cholesky
 decomposition, singular value decomposition, eigenvalues/eigenvectors,
@@ -163,7 +155,20 @@ Fast fourier transforms can be conducted with the nmatrix-fftw
 extension, which is an interface to the FFTW C library. Use
 <tt>require 'nmatrix/fftw'</tt> for using this plugin.
 
-== Plugin Details
+== Plugin details
+
+=== ATLAS and LAPACKE
+
+The +nmatrix-atlas+ and +nmatrix-lapacke+ gems are optional extensions 
+of the main +nmatrix+ gem that rely on external linear algebra libraries 
+to provide advanced features for dense matrices (singular value 
+decomposition, eigenvalue/eigenvector finding, Cholesky factorization), 
+as well as providing faster implementations of common operations like 
+multiplication, inverses, and determinants. +nmatrix-atlas+ requires the
+{ATLAS library}[http://math-atlas.sourceforge.net/], while +nmatrix-lapacke+ 
+is designed to work with various LAPACK implementations (including ATLAS). 
+The +nmatrix-atlas+ and +nmatrix-lapacke+ gems both provide similar 
+interfaces for using these advanced features.
 
 === *FFTW*
 
@@ -173,7 +178,7 @@ It has been tested with FFTW 3.3.4.
 It works reliably only with 64 bit numbers (or the NMatrix `:float64`
 or `:complex128` data type). See the docs for more details.
 
-== NArray Compatibility
+== NArray compatibility
 
 When NArray[http://masa16.github.io/narray/] is installed alongside
 NMatrix, <tt>require 'nmatrix'</tt> will inadvertently load NArray's
@@ -230,14 +235,14 @@ The following features exist in the current version of NMatrix (0.1.0.rc1):
 * slice assignments, e.g.,
     x[1..3,0..4] = some_other_matrix
 
-=== Planned Features (Short-to-Medium Term)
+=== Planned features (Short-to-Medium Term)
 
 See the issues tracker for a list of planned features or to request
 new ones.
 
 == License
 
-Copyright (c) 2012--16, John Woods and the Ruby Science Foundation.
+Copyright (c) 2012--17, John Woods and the Ruby Science Foundation.
 
 All rights reserved.
 
