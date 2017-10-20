@@ -240,7 +240,7 @@ task :check_manifest do |task|
   manifest_files  = File.read("Manifest.txt").split
 
   git_files       = `git ls-files |grep -v 'spec/'`.split
-  ignore_files    = %w{.gitignore .rspec ext/nmatrix/binary_format.txt ext/nmatrix/ttable_helper.rb scripts/mac-brew-gcc.sh}
+  ignore_files    = %w{.gitignore .rspec ext/nmatrix/binary_format.txt scripts/ttable_helper.rb}
 
   possible_files  = git_files - ignore_files
 

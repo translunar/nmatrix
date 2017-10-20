@@ -24,9 +24,9 @@ Gem::Specification.new do |gem|
 ***********************************************************
 Welcome to SciRuby: Tools for Scientific Computing in Ruby!
 
-NMatrix requires a C compiler, and has been tested only
-with GCC 4.6+. We are happy to accept contributions
-which improve the portability of this project.
+NMatrix requires a C/C++ compiler. Clang and GCC are 
+recommended. JRuby support is experimental, and requires
+Java.
 
 If you are upgrading from NMatrix 0.1.0 and rely on
 ATLAS features, please check the README.
