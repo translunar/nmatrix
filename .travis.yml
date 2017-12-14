@@ -15,6 +15,7 @@ rvm:
   - 2.1.8
   - 2.2.4
   - 2.3.0
+  - 2.4.2
   - ruby-head
   # The latest stable and head versions built by clang
   - 2.3.0-clang

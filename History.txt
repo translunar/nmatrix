@@ -888,3 +888,22 @@
   * Fixed gem installation problem caused by mkmf
     abstraction (by @mrkn)
 
+=== 0.2.4 / 2017-12-14
+
+* No major enhancements.
+
+* 2 minor enhancements:
+
+  * Eliminated code reuse in math.rb between JRuby and MRI
+    versions of library (by @prasunanand)
+
+  * Slightly simplified #positive_definite? (by
+    @prasunanand)
+
+* 2 bug fixes:
+
+  * Fixed compilation problem on Mac OS X High Sierra (by
+    @mohawkjohn)
+
+  * Fixed failing #block_diagonal spec (due to missing
+    Array#sum) (by @mohawkjohn)
