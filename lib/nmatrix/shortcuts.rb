@@ -494,11 +494,11 @@ class NMatrix
         block_sizes << b.shape[0]
       end
 
-      block_diag_mat = NMatrix.zeros(block_sizes.sum, options)
+      block_diag_mat = NMatrix.zeros(block_sizes.inject(0,:+), options)
       (0...params.length).each do |n|
         # First determine the size and position of the n'th block in the block-diagonal matrix
         block_size = block_sizes[n]
-        block_pos = block_sizes[0...n].sum
+        block_pos = block_sizes[0...n].inject(0,:+)
         # populate the n'th block in the block-diagonal matrix
         (0...block_size).each do |i|
           (0...block_size).each do |j|
