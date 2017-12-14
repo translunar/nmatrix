@@ -91,8 +91,10 @@ $CFLAGS += " -O3 "
 $CXXFLAGS += " -O3 -std=#{$CXX_STANDARD} " #-fmax-errors=10 -save-temps
 #$CXXFLAGS += " -static -O0 -g -std=#{$CXX_STANDARD} "
 
-CONFIG['warnflags'].gsub!('-Wshorten-64-to-32', '') # doesn't work except in Mac-patched gcc (4.2)
-CONFIG['warnflags'].gsub!('-Wdeclaration-after-statement', '')
-CONFIG['warnflags'].gsub!('-Wimplicit-function-declaration', '')
-
+if CONFIG.has_key?('warnflags')
+  CONFIG['warnflags'].gsub!('-Wshorten-64-to-32', '') # doesn't work except in Mac-patched gcc (4.2)
+  CONFIG['warnflags'].gsub!('-Wdeclaration-after-statement', '')
+  CONFIG['warnflags'].gsub!('-Wimplicit-function-declaration', '')
+end
+  
 have_func("rb_array_const_ptr", "ruby.h")
