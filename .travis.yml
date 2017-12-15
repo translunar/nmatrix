@@ -2,7 +2,7 @@ language: ruby
 sudo: required
 cache: bundler
 os:
-  - linux
+  #- linux
   - osx
 env:
   - USE_ATLAS=1       # This configuration installs ATLAS, builds and tests the nmatrix, nmatrix-atlas, and nmatrix-lapacke gems
@@ -75,39 +75,51 @@ matrix:
       compiler: clang
       rvm: 2.5
       env:
-        - ruby_version=2.5.0-dev USE_OPENBLAS=1
+        - ruby_version=2.5.0-dev USE_OPENBLAS=1 CC=clang CXX=clang++
     - os: osx
       osx_image: xcode9.2
       compiler: clang
       rvm: 2.5
       env:
-        - ruby_version=2.5.0-dev NO_EXTERNAL_LIB=1
+        - ruby_version=2.5.0-dev NO_EXTERNAL_LIB=1 CC=clang CXX=clang++
+    - os: osx
+      osx_image: xcode9.2
+      compiler: clang
+      rvm: 2.4
+      env:
+        - ruby_version=2.4.3 USE_OPENBLAS=1 CC=clang CXX=clang++
+    - os: osx
+      osx_image: xcode9.2
+      compiler: clang
+      rvm: 2.4
+      env:
+        - ruby_version=2.4.3 NO_EXTERNAL_LIB=1 CC=clang CXX=clang++
     - os: osx
       osx_image: xcode9.2
       compiler: clang
       rvm: 2.3
       env:
-        - ruby_version=2.3.0 USE_OPENBLAS=1
+        - ruby_version=2.3.0 USE_OPENBLAS=1 CC=clang CXX=clang++
     - os: osx
       osx_image: xcode9.2
       compiler: clang
       rvm: 2.3
       env:
-        - ruby_version=2.3.0 NO_EXTERNAL_LIB=1
+        - ruby_version=2.3.0 NO_EXTERNAL_LIB=1 CC=clang CXX=clang++
     # The latest version of Ruby 2.2.x built by clang on OSX
     - os: osx
       osx_image: xcode9.2
       compiler: clang
       rvm: 2.2
       env:
-        - ruby_version=2.2.9 USE_OPENBLAS=1
+        - ruby_version=2.2.9 USE_OPENBLAS=1 CC=clang CXX=clang++
     # The latest version of Ruby 2.1.x built by clang on OSX
     - os: osx
       osx_image: xcode9.2
       compiler: clang
       rvm: 2.1
       env:
-        - ruby_version=2.1.8 USE_OPENBLAS=1
+        - ruby_version=2.1.8 USE_OPENBLAS=1 CC=clang CXX=clang++
   allow_failures:
     # trunk
     - rvm: ruby-head
@@ -115,12 +127,12 @@ matrix:
       compiler: clang
       rvm: 2.5
       env:
-        - ruby_version=2.5.0-dev USE_OPENBLAS=1
+        - ruby_version=2.5.0-dev USE_OPENBLAS=1 CC=clang CXX=clang++
     - os: osx
       compiler: clang
       rvm: 2.5
       env:
-        - ruby_version=2.5.0-dev NO_EXTERNAL_LIB=1
+        - ruby_version=2.5.0-dev NO_EXTERNAL_LIB=1 CC=clang CXX=clang++
 
 notifications:
   irc: "chat.freenode.net#sciruby"
