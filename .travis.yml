@@ -4,7 +4,6 @@ cache: bundler
 os:
   - linux
   - osx
-osx_image: xcode7.2
 env:
   - USE_ATLAS=1       # This configuration installs ATLAS, builds and tests the nmatrix, nmatrix-atlas, and nmatrix-lapacke gems
   - USE_OPENBLAS=1    # Installs OpenBLAS and reference LAPACK, builds and tests nmatrix, nmatrix-lapacke
@@ -12,14 +11,11 @@ env:
   - NO_EXTERNAL_LIB=1 # No external libraries installed, only nmatrix
 rvm:
   - 2.0.0-p648
-  - 2.1.8
-  - 2.2.4
-  - 2.3.0
-  - 2.4.2
+  - 2.1.10
+  - 2.2.9
+  - 2.3.5
+  - 2.4.3
   - ruby-head
-  # The latest stable and head versions built by clang
-  - 2.3.0-clang
-  - ruby-head-clang
   # JRuby versions --- experimental, pending merging Prasun's GSoC project.
   - jruby-9.0.5.0 # earliest supported version (uncomment when jruby-head is passing)
   - jruby-head    # latest supported JRuby
@@ -53,11 +49,11 @@ matrix:
     - os: osx
       rvm: 2.0.0-p648
     - os: osx
-      rvm: 2.1.8
+      rvm: 2.1.10
     - os: osx
-      rvm: 2.2.4
+      rvm: 2.2.9
     - os: osx
-      rvm: 2.3.0
+      rvm: 2.3.5
     - os: osx
       rvm: ruby-head
     - os: osx
@@ -75,51 +71,56 @@ matrix:
   include:
     # The latest stable and head versions of ruby built by clang on OSX
     - os: osx
+      osx_image: xcode9.2
       compiler: clang
-      rvm: 2.2
+      rvm: 2.5
       env:
-        - ruby_version=2.4.0-dev USE_OPENBLAS=1
+        - ruby_version=2.5.0-dev USE_OPENBLAS=1
     - os: osx
+      osx_image: xcode9.2
       compiler: clang
-      rvm: 2.2
+      rvm: 2.5
       env:
-        - ruby_version=2.4.0-dev NO_EXTERNAL_LIB=1
+        - ruby_version=2.5.0-dev NO_EXTERNAL_LIB=1
     - os: osx
+      osx_image: xcode9.2
       compiler: clang
-      rvm: 2.2
+      rvm: 2.3
       env:
         - ruby_version=2.3.0 USE_OPENBLAS=1
     - os: osx
+      osx_image: xcode9.2
       compiler: clang
-      rvm: 2.2
+      rvm: 2.3
       env:
         - ruby_version=2.3.0 NO_EXTERNAL_LIB=1
     # The latest version of Ruby 2.2.x built by clang on OSX
     - os: osx
+      osx_image: xcode9.2
       compiler: clang
       rvm: 2.2
       env:
-        - ruby_version=2.2.4 USE_OPENBLAS=1
+        - ruby_version=2.2.9 USE_OPENBLAS=1
     # The latest version of Ruby 2.1.x built by clang on OSX
     - os: osx
+      osx_image: xcode9.2
       compiler: clang
-      rvm: 2.2
+      rvm: 2.1
       env:
         - ruby_version=2.1.8 USE_OPENBLAS=1
   allow_failures:
     # trunk
     - rvm: ruby-head
-    - rvm: ruby-head-clang
     - os: osx
       compiler: clang
-      rvm: 2.2
+      rvm: 2.5
       env:
-        - ruby_version=2.4.0-dev USE_OPENBLAS=1
+        - ruby_version=2.5.0-dev USE_OPENBLAS=1
     - os: osx
       compiler: clang
-      rvm: 2.2
+      rvm: 2.5
       env:
-        - ruby_version=2.4.0-dev NO_EXTERNAL_LIB=1
+        - ruby_version=2.5.0-dev NO_EXTERNAL_LIB=1
 
 notifications:
   irc: "chat.freenode.net#sciruby"
