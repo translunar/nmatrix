@@ -69,6 +69,13 @@ matrix:
       rvm: 2.4
     - os: osx
       rvm: 2.5
+    # NOTE: The following ruby versions we need to explicitly override
+    #       and use clang with.
+    - rvm: 2.1.10-clang
+    - rvm: 2.2.7-clang
+    - rvm: 2.3.4-clang
+    - rvm: 2.4.1-clang
+    - rvm: ruby-head-clang
     # FIXME: The following configuration is unavailable because ATLAS should be built from source.
     #        We need homebrew formula for ATLAS and its bottle.
     - os: osx
