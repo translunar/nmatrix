@@ -10,12 +10,20 @@ env:
   - USE_REF=1         # Installs OpenBLAS and reference LAPACK, builds and tests nmatrix, nmatrix-lapacke
   - NO_EXTERNAL_LIB=1 # No external libraries installed, only nmatrix
 rvm:
+  # The specific versions with clang specified are for Mac. The versions without
+  # -clang are for linux systems. In the matrix, make sure to exclude each non-clang
+  # osx combination.
   - 2.0
   - 2.1
+  - 2.1.10-clang
   - 2.2
+  - 2.2.7-clang
   - 2.3
+  - 2.3.4-clang
   - 2.4
+  - 2.4.1-clang
   - ruby-head
+  - ruby-head-clang
   # JRuby versions --- experimental, pending merging Prasun's GSoC project.
   - jruby-9.0.5.0 # earliest supported version (uncomment when jruby-head is passing)
   - jruby-head    # latest supported JRuby
@@ -49,6 +57,16 @@ matrix:
     # NOTE: See list: http://rubies.travis-ci.org/
     - os: osx
       rvm: 2.0
+    # NOTE: The following ruby versions are GCC are we don't want to do
+    #       these ones with osx, which has clang.
+    - os: osx
+      rvm: 2.1
+    - os: osx
+      rvm: 2.2
+    - os: osx
+      rvm: 2.3
+    - os: osx
+      rvm: 2.4
     - os: osx
       rvm: 2.5
     # FIXME: The following configuration is unavailable because ATLAS should be built from source.
@@ -106,13 +124,25 @@ matrix:
       rvm: 2.2.7-clang
       env:
         - ruby_version=2.2.7 USE_OPENBLAS=1 CC=clang CXX=clang++
+    - os: osx
+      osx_image: xcode9.2
+      compiler: clang
+      rvm: 2.2.7-clang
+      env:
+        - ruby_version=2.2.7 NO_EXTERNAL_LIB=1 CC=clang CXX=clang++	
     # The latest version of Ruby 2.1.x built by clang on OSX
     - os: osx
       osx_image: xcode9.2
       compiler: clang
-      rvm: 2.1
+      rvm: 2.1.10-clang
       env:
-        - ruby_version=2.1.8 USE_OPENBLAS=1 CC=clang CXX=clang++
+        - ruby_version=2.1.10 USE_OPENBLAS=1 CC=clang CXX=clang++
+    - os: osx
+      osx_image: xcode9.2
+      compiler: clang
+      rvm: 2.1.10-clang
+      env:
+        - ruby_version=2.1.10 NO_EXTERNAL_LIB=1 CC=clang CXX=clang++
   allow_failures:
     # trunk    
     - rvm: ruby-head
