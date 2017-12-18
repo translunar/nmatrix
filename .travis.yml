@@ -10,11 +10,11 @@ env:
   - USE_REF=1         # Installs OpenBLAS and reference LAPACK, builds and tests nmatrix, nmatrix-lapacke
   - NO_EXTERNAL_LIB=1 # No external libraries installed, only nmatrix
 rvm:
-  - 2.0.0-p648
-  - 2.1.10
-  - 2.2.9
-  - 2.3.5
-  - 2.4.3
+  - 2.0
+  - 2.1
+  - 2.2
+  - 2.3
+  - 2.4
   - ruby-head
   # JRuby versions --- experimental, pending merging Prasun's GSoC project.
   - jruby-9.0.5.0 # earliest supported version (uncomment when jruby-head is passing)
@@ -45,21 +45,12 @@ matrix:
       env: USE_OPENBLAS=1
     - rvm: jruby-9.0.5.0
       env: USE_REF=1    
-    # NOTE: The following two ruby versions on OSX are currently unavailable
+    # NOTE: The following ruby versions on OSX are currently unavailable
+    # NOTE: See list: http://rubies.travis-ci.org/
     - os: osx
-      rvm: 2.0.0-p648
+      rvm: 2.0
     - os: osx
-      rvm: 2.1.10
-    - os: osx
-      rvm: 2.2.9
-    - os: osx
-      rvm: 2.3.5
-    - os: osx
-      rvm: ruby-head
-    - os: osx
-      rvm: 2.3.0-clang
-    - os: osx
-      rvm: ruby-head-clang
+      rvm: 2.5
     # FIXME: The following configuration is unavailable because ATLAS should be built from source.
     #        We need homebrew formula for ATLAS and its bottle.
     - os: osx
@@ -73,46 +64,48 @@ matrix:
     - os: osx
       osx_image: xcode9.2
       compiler: clang
-      rvm: 2.5
+      rvm: ruby-head-clang
       env:
-        - ruby_version=2.5.0-dev USE_OPENBLAS=1 CC=clang CXX=clang++
+        - ruby_version=2.5.0 USE_OPENBLAS=1 CC=clang CXX=clang++
     - os: osx
       osx_image: xcode9.2
       compiler: clang
-      rvm: 2.5
+      rvm: ruby-head-clang
       env:
-        - ruby_version=2.5.0-dev NO_EXTERNAL_LIB=1 CC=clang CXX=clang++
+        - ruby_version=2.5.0 NO_EXTERNAL_LIB=1 CC=clang CXX=clang++    
+    # The latest version of Ruby 2.4.x built by clang on OSX    
     - os: osx
       osx_image: xcode9.2
       compiler: clang
-      rvm: 2.4
+      rvm: 2.4.1-clang
       env:
-        - ruby_version=2.4.3 USE_OPENBLAS=1 CC=clang CXX=clang++
+        - ruby_version=2.4.1 USE_OPENBLAS=1 CC=clang CXX=clang++
     - os: osx
       osx_image: xcode9.2
       compiler: clang
-      rvm: 2.4
+      rvm: 2.4.1-clang
       env:
-        - ruby_version=2.4.3 NO_EXTERNAL_LIB=1 CC=clang CXX=clang++
+        - ruby_version=2.4.1 NO_EXTERNAL_LIB=1 CC=clang CXX=clang++
+    # The latest version of Ruby 2.3.x built by clang on OSX
     - os: osx
       osx_image: xcode9.2
       compiler: clang
-      rvm: 2.3
+      rvm: 2.3.4-clang
       env:
-        - ruby_version=2.3.0 USE_OPENBLAS=1 CC=clang CXX=clang++
+        - ruby_version=2.3.4 USE_OPENBLAS=1 CC=clang CXX=clang++
     - os: osx
       osx_image: xcode9.2
       compiler: clang
-      rvm: 2.3
+      rvm: 2.3.4-clang
       env:
-        - ruby_version=2.3.0 NO_EXTERNAL_LIB=1 CC=clang CXX=clang++
-    # The latest version of Ruby 2.2.x built by clang on OSX
+        - ruby_version=2.3.4 NO_EXTERNAL_LIB=1 CC=clang CXX=clang++
+    # The latest version of Ruby 2.2.x built by clang on OSX	
     - os: osx
       osx_image: xcode9.2
       compiler: clang
-      rvm: 2.2
+      rvm: 2.2.7-clang
       env:
-        - ruby_version=2.2.9 USE_OPENBLAS=1 CC=clang CXX=clang++
+        - ruby_version=2.2.7 USE_OPENBLAS=1 CC=clang CXX=clang++
     # The latest version of Ruby 2.1.x built by clang on OSX
     - os: osx
       osx_image: xcode9.2
@@ -121,7 +114,7 @@ matrix:
       env:
         - ruby_version=2.1.8 USE_OPENBLAS=1 CC=clang CXX=clang++
   allow_failures:
-    # trunk
+    # trunk    
     - rvm: ruby-head
     - os: osx
       compiler: clang
