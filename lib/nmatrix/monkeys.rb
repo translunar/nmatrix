@@ -46,7 +46,7 @@ class Array
 
     guess_dtype = ->(type) {
       case type
-      when Fixnum   then :int64
+      when Integer  then :int64
       when Float    then :float64
       when Complex  then :complex128
       end
